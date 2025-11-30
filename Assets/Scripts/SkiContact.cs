@@ -53,11 +53,32 @@ public class SkiContact : MonoBehaviour
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {
-        // Simple debug gizmo: show ski forward on assumed up-plane for quick checks.
-        Gizmos.color = isLeftSki ? Color.cyan : Color.magenta;
+        Vector3 pos = transform.position;
+
+        // Ski forward projected onto a flat plane (world up).
         Vector3 up = Vector3.up;
-        Vector3 f = Vector3.ProjectOnPlane(transform.forward, up).normalized;
-        Gizmos.DrawRay(transform.position, f * 0.5f);
+        Vector3 forwardOnPlane = Vector3.ProjectOnPlane(transform.forward, up);
+        if (forwardOnPlane.sqrMagnitude < 0.0001f)
+            forwardOnPlane = transform.forward;
+
+        forwardOnPlane.Normalize();
+
+        // Colour: left = cyan, right = magenta.
+        Color baseColor = isLeftSki ? Color.cyan : Color.magenta;
+        Gizmos.color = baseColor;
+        Gizmos.DrawRay(pos, forwardOnPlane * 0.5f);
+
+        // Stance: show how far this ski is pushed out from center.
+        // Left ski draws to its left, right ski to its right.
+        Vector3 side = Vector3.Cross(up, forwardOnPlane).normalized;
+        float sideSign = isLeftSki ? -1f : 1f;
+
+        Vector3 stanceVec = side * sideSign * stanceOut * 0.4f;
+        Gizmos.color = Color.Lerp(Color.gray, baseColor, stanceOut);
+        Gizmos.DrawRay(pos, stanceVec);
+
+        // Tiny sphere at ski position for reference.
+        Gizmos.DrawWireSphere(pos, 0.02f);
     }
 #endif
 }

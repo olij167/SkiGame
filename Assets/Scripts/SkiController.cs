@@ -16,6 +16,13 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(Rigidbody))]
 public class SkiController : MonoBehaviour
 {
+    public enum PoleStrokePhase
+    {
+        Idle,
+        Entry,
+        Drag,
+        FollowThrough
+    }
     // ----------------------------------------------------------------------
     // REFERENCES
     // ----------------------------------------------------------------------
@@ -105,18 +112,19 @@ public class SkiController : MonoBehaviour
     private float _lastPushTime;
     private float _lastSkateInput;
 
-    // Poles
+    // Poles (row stroke state machine)
     private bool _polePressedPrev;
-    private float _poleHoldTime;
-    private bool _poleTapQueued;
-    private bool _poleBrakeActive;
+    private PoleStrokePhase _polePhase = PoleStrokePhase.Idle;
+    private float _polePhaseTime;
 
     // Jump
-    private bool _jumpCharging;
-    private float _jumpChargeTimer;
     private bool _jumpQueued;
-    private float _jumpQueuedCharge;
+    private bool _jumpHeld;
+    private float _lastJumpPressedTime;
+    private float _lastGroundedTime;
 
+    // Air rotation state (degrees/second around local axes)
+    private Vector3 _airAngularVelocity;
 
     // ----------------------------------------------------------------------
     // PARAMETERS
@@ -179,6 +187,11 @@ public class SkiController : MonoBehaviour
     [Tooltip("Strength of killing any into-ground velocity component.")]
     [SerializeField] private float normalKillStrength = 8f;
 
+    [Tooltip("Maximum upward speed along the ground normal that will be damped while grounded.\n" +
+             "Small upward speeds (typical of riding over small bumps/crests) are reduced so you stay 'glued' to the snow.\n" +
+             "Larger upward impulses (e.g. explicit jumps) are left alone.")]
+    [SerializeField] private float maxStickUpwardSpeed = 2f;
+
     [Header("Carve Steering")]
     [Tooltip("How strongly velocity is rotated toward ski direction when skis are parallel and edged.")]
     [SerializeField] private float carveSteerStrength = 4f;
@@ -213,17 +226,23 @@ public class SkiController : MonoBehaviour
     [SerializeField] private float skateYawPerPush = 4f;
 
     [Header("Poles")]
-    [Tooltip("Max time (seconds) to be considered a tap rather than a hold.")]
-    [SerializeField] private float poleTapThreshold = 0.18f;
+    [Tooltip("Duration (seconds) of the entry phase before the poles are fully in the drag position.")]
+    [SerializeField] private float poleTapThreshold = 0.18f; // now acts as entry duration
 
-    [Tooltip("Impulse applied along ski direction on a pole tap.")]
+    [Tooltip("Duration (seconds) of the follow-through phase after releasing the pole input.")]
+    [SerializeField] private float poleFollowThroughDuration = 0.25f;
+
+    [Tooltip("Impulse applied along ski direction over the course of a full row stroke.")]
     [SerializeField] private float poleImpulse = 3f;
 
-    [Tooltip("Above this planar speed, pole pushes taper off.")]
+    [Tooltip("Above this planar speed, pole row forces taper off.")]
     [SerializeField] private float poleMaxSpeed = 8f;
 
-    [Tooltip("Continuous braking strength when poles are held (acts along ski direction).")]
+    [Tooltip("Drag strength applied along the direction of motion while poles are in the drag phase.")]
     [SerializeField] private float poleBrakeStrength = 10f;
+
+    [Tooltip("Extra lateral 'edge grip' when poles are planted, reducing sideways slide and helping the skier pivot around the planted pole.")]
+    [SerializeField] private float polePivotGripStrength = 20f;
 
     [Header("Landing / Stack")]
     [Tooltip("Max allowed tilt angle (deg) between skier up and ground normal to count as a safe landing.")]
@@ -243,19 +262,30 @@ public class SkiController : MonoBehaviour
     [SerializeField] private float groundTurnSpeed = 8f;
 
     [Header("Air Control (optional)")]
-    [Tooltip("Yaw turn speed in the air (deg/sec), using leg difference as input.")]
-    [SerializeField] private float airYawTurnSpeed = 120f;
+    [Tooltip("Maximum yaw turn speed in the air (deg/sec), using leg difference as input.")]
+    [SerializeField] private float airYawTurnSpeed = 360f;
 
-    [Tooltip("Pitch turn speed in the air (deg/sec), using lean as input.")]
-    [SerializeField] private float airPitchTurnSpeed = 120f;
+    [Tooltip("Maximum pitch turn speed in the air (deg/sec), using lean as input.")]
+    [SerializeField] private float airPitchTurnSpeed = 360f;
+
+    [Tooltip("How quickly air rotation responds to input (deg/sec^2). Higher = snappier spins/flips.")]
+    [SerializeField] private float airAngularAcceleration = 720f;
+
+    [Tooltip("Extra damping applied to air angular velocity when there is little/no input (deg/sec^2).")]
+    [SerializeField] private float airAngularDamping = 360f;
+
+    [Tooltip("Multiplier applied to air spin responsiveness while poles input is held (tuck).")]
+    [SerializeField] private float airTuckSpinMultiplier = 1.5f;
 
     [Header("Jump")]
-    [Tooltip("Min/Max vertical velocity change when releasing a fully charged jump.")]
+    [Tooltip("Min/Max vertical velocity change applied when jumping.")]
     [SerializeField] private Vector2 jumpForceRange = new Vector2(3f, 8f);
 
-    [Tooltip("Time in seconds to fully charge the jump when holding the jump input.")]
-    [SerializeField] private float jumpChargeTime = 0.4f;
+    [Tooltip("Time window after leaving the ground during which a jump press will still be accepted (seconds).")]
+    [SerializeField] private float jumpCoyoteTime = 0.15f;
 
+    [Tooltip("Time window a jump press is buffered so it can fire on the next valid ground contact (seconds).")]
+    [SerializeField] private float jumpBufferTime = 0.10f;
 
     // ----------------------------------------------------------------------
     // PROPERTIES / FLAGS
@@ -275,6 +305,17 @@ public class SkiController : MonoBehaviour
         jumpAction != null && jumpAction.action != null;
 
     public bool IsStacked => _stacked;
+
+    // Public accessors for visuals / other systems that need basic state.
+    public PoleStrokePhase CurrentPolePhase => _polePhase;
+    public float CurrentPolePhaseTime => _polePhaseTime;
+    public float PoleEntryDuration => poleTapThreshold;
+    public float PoleFollowThroughDuration => poleFollowThroughDuration;
+
+    public bool IsRiderGrounded => _isGrounded;
+    public Vector3 Velocity => _rb.linearVelocity;
+    public Vector3 GroundNormal => _groundNormal;
+    public Vector3 SkiForwardOnPlane => _skiForward;
 
     // ----------------------------------------------------------------------
     // PUBLIC API
@@ -409,9 +450,6 @@ public class SkiController : MonoBehaviour
 
         _leftOutLastPhysics = _leftOut;
         _rightOutLastPhysics = _rightOut;
-
-        // pole taps are one-shot per physics step
-        _poleTapQueued = false;
     }
 
     // ----------------------------------------------------------------------
@@ -454,36 +492,67 @@ public class SkiController : MonoBehaviour
     private void UpdatePoleState()
     {
         bool pressed = _rawPolesPressed;
+        float dt = Time.deltaTime;
 
+        // Edge transitions
         if (pressed)
         {
             if (!_polePressedPrev)
             {
-                // just pressed
-                _poleHoldTime = 0f;
-                _poleBrakeActive = false;
-            }
-
-            _poleHoldTime += Time.deltaTime;
-
-            if (_poleHoldTime > poleTapThreshold)
-            {
-                _poleBrakeActive = true;
+                // Just pressed: start a new stroke in the entry phase.
+                _polePhase = PoleStrokePhase.Entry;
+                _polePhaseTime = 0f;
             }
         }
         else
         {
             if (_polePressedPrev)
             {
-                // just released
-                if (_poleHoldTime <= poleTapThreshold)
+                // Just released: if we were mid stroke, go into follow-through.
+                if (_polePhase == PoleStrokePhase.Entry || _polePhase == PoleStrokePhase.Drag)
                 {
-                    _poleTapQueued = true;
+                    _polePhase = PoleStrokePhase.FollowThrough;
+                    _polePhaseTime = 0f;
                 }
             }
+        }
 
-            _poleHoldTime = 0f;
-            _poleBrakeActive = false;
+        // Advance phase timer and handle automatic transitions.
+        switch (_polePhase)
+        {
+            case PoleStrokePhase.Entry:
+                _polePhaseTime += dt;
+
+                // When held past the entry duration, transition into drag.
+                if (pressed && _polePhaseTime >= poleTapThreshold)
+                {
+                    _polePhase = PoleStrokePhase.Drag;
+                    _polePhaseTime = 0f;
+                }
+                break;
+
+            case PoleStrokePhase.Drag:
+                if (pressed)
+                {
+                    _polePhaseTime += dt;
+                }
+                // Release is handled by edge logic above.
+                break;
+
+            case PoleStrokePhase.FollowThrough:
+                _polePhaseTime += dt;
+
+                if (_polePhaseTime >= poleFollowThroughDuration)
+                {
+                    _polePhase = PoleStrokePhase.Idle;
+                    _polePhaseTime = 0f;
+                }
+                break;
+
+            case PoleStrokePhase.Idle:
+            default:
+                _polePhaseTime = 0f;
+                break;
         }
 
         _polePressedPrev = pressed;
@@ -493,59 +562,31 @@ public class SkiController : MonoBehaviour
     {
         if (!HasJumpInput)
         {
-            _jumpCharging = false;
-            _jumpChargeTimer = 0f;
             _jumpQueued = false;
-            _jumpQueuedCharge = 0f;
+            _jumpHeld = false;
             return;
         }
 
         var action = jumpAction.action;
         bool pressedThisFrame = action.WasPressedThisFrame();
-        bool releasedThisFrame = action.WasReleasedThisFrame();
         bool isPressed = action.IsPressed();
 
-        // Start charging only if we're currently on the ground and not stacked.
-        if (pressedThisFrame && _isGrounded && !_stacked)
+        _jumpHeld = isPressed;
+
+        if (pressedThisFrame)
         {
-            _jumpCharging = true;
-            _jumpChargeTimer = 0f;
+            // Buffer the jump so it can fire on the next valid ground / coyote frame.
+            _lastJumpPressedTime = Time.time;
+            _jumpQueued = true;
         }
 
-        if (_jumpCharging)
+        // If the button is NOT held anymore and the buffer window has elapsed,
+        // drop the queued jump. If the button IS still held, we keep the
+        // queued jump alive so it can auto-fire on the next valid frame.
+        if (!isPressed && _jumpQueued && (Time.time - _lastJumpPressedTime > jumpBufferTime))
         {
-            // Continue charging while held and still grounded.
-            if (isPressed && _isGrounded && !_stacked)
-            {
-                _jumpChargeTimer += Time.deltaTime;
-            }
-            else
-            {
-                // Either released, or we left the ground.
-                if (releasedThisFrame)
-                {
-                    QueueJumpFromCharge();
-                }
-                else
-                {
-                    // Cancel charge if we left the ground before release.
-                    _jumpCharging = false;
-                    _jumpChargeTimer = 0f;
-                }
-            }
+            _jumpQueued = false;
         }
-    }
-
-    private void QueueJumpFromCharge()
-    {
-        float maxTime = Mathf.Max(0.01f, jumpChargeTime);
-        float t = Mathf.Clamp01(_jumpChargeTimer / maxTime);
-
-        _jumpQueuedCharge = t;
-        _jumpQueued = true;
-
-        _jumpCharging = false;
-        _jumpChargeTimer = 0f;
     }
 
     // ----------------------------------------------------------------------
@@ -604,16 +645,23 @@ public class SkiController : MonoBehaviour
             _isGrounded = true;
             _groundNormal = sumNormals.normalized;
 
+            // Track timing for coyote jumps and reset air spin on landing.
+            _lastGroundedTime = Time.time;
+
             if (!_wasGrounded)
             {
+                // Just landed this frame.
+                _airAngularVelocity = Vector3.zero;
                 EvaluateLanding();
             }
         }
         else
         {
+           
             _isGrounded = false;
             _groundNormal = Vector3.up;
         }
+
     }
 
     private void EvaluateLanding()
@@ -1028,12 +1076,42 @@ public class SkiController : MonoBehaviour
     {
         Vector3 velocity = _rb.linearVelocity;
 
-        // Remove velocity into the ground so we don't burrow.
+        // ------------------------------------------------------------------
+        // Normal-axis velocity management (ground stickiness)
+        //
+        // 1) Kill any velocity INTO the ground so we don't burrow.
+        // 2) Gently damp SMALL upward velocity along the ground normal so we
+        //    stay "glued" to the surface when riding over small bumps/crests.
+        //    Larger upward impulses (e.g. explicit jumps) are left alone.
+        // ------------------------------------------------------------------
         Vector3 velAlongNormal = Vector3.Project(velocity, _groundNormal);
-        if (Vector3.Dot(velAlongNormal, _groundNormal) < 0f)
+        float normalDot = Vector3.Dot(velAlongNormal, _groundNormal);
+
+        if (normalDot < 0f)
         {
+            // Into the ground: kill aggressively.
             velocity -= velAlongNormal * Mathf.Clamp01(normalKillStrength * Time.fixedDeltaTime);
         }
+        else if (normalDot > 0f && maxStickUpwardSpeed > 0f)
+        {
+            // Away from the ground: if this is a small upward speed (typical of
+            // riding over ripples or gentle crests rather than an explicit jump),
+            // damp it so we don't get lots of tiny unintended hops.
+            float upSpeed = normalDot; // since _groundNormal is unit-length
+
+            if (upSpeed <= maxStickUpwardSpeed)
+            {
+                // Strongest damping at very small upSpeed, fading out as we
+                // approach the stick threshold.
+                float t = upSpeed / maxStickUpwardSpeed;        // 0..1
+                float strength = normalKillStrength * (1f - t); // high at low speed
+
+                velocity -= velAlongNormal * Mathf.Clamp01(strength * Time.fixedDeltaTime);
+            }
+        }
+
+        // Commit any normal-axis changes back to the rigidbody before we compute planar motion.
+        _rb.linearVelocity = velocity;
 
         // Planar velocity on slope
         Vector3 velOnPlane = Vector3.ProjectOnPlane(velocity, _groundNormal);
@@ -1202,18 +1280,47 @@ public class SkiController : MonoBehaviour
         if (!_jumpQueued)
             return;
 
-        // Only allow jump off the ground and when not stacked.
-        if (!_isGrounded || _stacked)
+        // If the button is no longer held AND the buffer window has elapsed,
+        // discard the queued jump.
+        if (!_jumpHeld && (Time.time - _lastJumpPressedTime > jumpBufferTime))
         {
             _jumpQueued = false;
-            _jumpQueuedCharge = 0f;
             return;
         }
 
-        float t = Mathf.Clamp01(_jumpQueuedCharge);
+        if (_stacked)
+            return;
+
+        // Allow jump when grounded, or shortly after leaving the ground (coyote time).
+        bool withinCoyote = !_isGrounded && (Time.time - _lastGroundedTime <= jumpCoyoteTime);
+        if (!_isGrounded && !withinCoyote)
+        {
+            // Still buffered, but not in a valid state to jump yet.
+            return;
+        }
+
+        // ------------------------------------------------------------------
+        // Jump force: small hops at low speed, full pop at higher speeds.
+        // ------------------------------------------------------------------
         float minForce = Mathf.Min(jumpForceRange.x, jumpForceRange.y);
         float maxForce = Mathf.Max(jumpForceRange.x, jumpForceRange.y);
-        float force = Mathf.Lerp(minForce, maxForce, t);
+
+        // Use planar speed on the current ground plane to determine how much
+        // of the full jump force we should apply.
+        Vector3 velocity = _rb.linearVelocity;
+        Vector3 velOnPlane = Vector3.ProjectOnPlane(velocity, _groundNormal);
+        float planarSpeed = velOnPlane.magnitude;
+
+        // Speed at which we reach full jump force.
+        const float speedForMaxJump = 8f;
+
+        float speedT = speedForMaxJump > 0f
+            ? Mathf.Clamp01(planarSpeed / speedForMaxJump)
+            : 1f;
+
+        // Stationary / slow: closer to minForce (small hop).
+        // Fast: closer to maxForce (big pop).
+        float force = Mathf.Lerp(minForce, maxForce, speedT);
 
         Vector3 jumpDir = _groundNormal.sqrMagnitude > 0.0001f
             ? _groundNormal.normalized
@@ -1223,7 +1330,6 @@ public class SkiController : MonoBehaviour
 
         _isGrounded = false;
         _jumpQueued = false;
-        _jumpQueuedCharge = 0f;
     }
 
     // ----------------------------------------------------------------------
@@ -1288,6 +1394,12 @@ public class SkiController : MonoBehaviour
         float leanT = Mathf.Clamp01((_forwardLean + 1f) * 0.5f);
         float impulse = skateImpulse * leanT * speedFactor;
 
+        // If a pole stroke is in its entry phase as we push, treat this as a combined stride.
+        if (_polePhase == PoleStrokePhase.Entry)
+        {
+            impulse *= 1.15f; // mild boost so it feels like legs + poles working together
+        }
+
         _rb.AddForce(pushDir * impulse, ForceMode.VelocityChange);
 
         // Small waddle yaw, but only if we're moving at least a bit.
@@ -1312,11 +1424,12 @@ public class SkiController : MonoBehaviour
 
     private void ApplyPoleForces()
     {
-        if (!_isGrounded)
+        if (!_isGrounded || !HasPolesInput)
             return;
 
         Vector3 vel = _rb.linearVelocity;
         Vector3 velPlane = Vector3.ProjectOnPlane(vel, _groundNormal);
+        float speed = velPlane.magnitude;
 
         Vector3 skiDir = _skiForward;
         if (skiDir.sqrMagnitude < 0.0001f)
@@ -1329,31 +1442,60 @@ public class SkiController : MonoBehaviour
         }
         skiDir.Normalize();
 
-        // Tap: pole push
-        if (_poleTapQueued)
+        float speedFactor = 1f;
+        if (poleMaxSpeed > 0.0001f)
         {
-            float speed = velPlane.magnitude;
-            float speedFactor = Mathf.Clamp01((poleMaxSpeed - speed) / Mathf.Max(poleMaxSpeed, 0.0001f));
-
-            if (speedFactor > 0f)
-            {
-                float leanT = Mathf.Clamp01((_forwardLean + 1f) * 0.5f);
-                float impulse = poleImpulse * speedFactor * leanT;
-                _rb.AddForce(skiDir * impulse, ForceMode.VelocityChange);
-            }
-
-            _poleTapQueued = false;
+            speedFactor = Mathf.Clamp01((poleMaxSpeed - speed) / poleMaxSpeed);
         }
 
-        // Hold: pole brake along ski direction
-        if (_poleBrakeActive)
+        // Map forward lean [-1..1] to [0..1] so neutral = 0.5, full forward = 1.
+        float leanT = Mathf.Clamp01((_forwardLean + 1f) * 0.5f);
+
+        float dt = Time.fixedDeltaTime;
+
+        switch (_polePhase)
         {
-            Vector3 vAlong = Vector3.Project(velPlane, skiDir);
-            if (vAlong.sqrMagnitude > 0.0001f)
-            {
-                Vector3 brakeDir = -vAlong.normalized;
-                _rb.AddForce(brakeDir * poleBrakeStrength, ForceMode.Acceleration);
-            }
+            case PoleStrokePhase.Entry:
+                {
+                    // Small assist as poles move into the snow.
+                    float entryDuration = Mathf.Max(poleTapThreshold, 0.0001f);
+                    float t = Mathf.Clamp01(_polePhaseTime / entryDuration);
+
+                    float entryForce = poleImpulse * 0.4f * speedFactor * leanT * t;
+                    _rb.AddForce(skiDir * entryForce * dt, ForceMode.Acceleration);
+                    break;
+                }
+
+            case PoleStrokePhase.Drag:
+                {
+                    // Drag acts like a soft brake along velocity.
+                    if (velPlane.sqrMagnitude > 0.0001f && poleBrakeStrength > 0f)
+                    {
+                        Vector3 vDir = velPlane.normalized;
+                        Vector3 drag = -vDir * poleBrakeStrength;
+                        _rb.AddForce(drag, ForceMode.Acceleration);
+                    }
+                    break;
+                }
+
+            case PoleStrokePhase.FollowThrough:
+                {
+                    // Forward impulse as poles sweep back behind the rider.
+                    if (poleFollowThroughDuration > 0.0001f)
+                    {
+                        float t = Mathf.Clamp01(_polePhaseTime / poleFollowThroughDuration);
+                        float impulseFraction = 1f - t; // strong at start, fades out
+
+                        float followForce = poleImpulse * speedFactor * leanT * impulseFraction;
+                        _rb.AddForce(skiDir * followForce * dt, ForceMode.Acceleration);
+                    }
+                    break;
+                }
+
+            case PoleStrokePhase.Idle:
+            default:
+                // no forces
+                break;
         }
     }
 
@@ -1391,19 +1533,52 @@ public class SkiController : MonoBehaviour
     // ----------------------------------------------------------------------
     // AIR CONTROL
     // ----------------------------------------------------------------------
-
     private void ApplyAirControl()
     {
-        // Use leg difference for yaw spin, lean for pitch flips.
-        float yawInput = HasLegInputs ? Mathf.Clamp(_rawRightLegInput - _rawLeftLegInput, -1f, 1f) : 0f;
+        // Leg difference controls yaw (spin), lean controls pitch (flip).
+        float yawInput = HasLegInputs
+            ? Mathf.Clamp(_rawRightLegInput - _rawLeftLegInput, -1f, 1f)
+            : 0f;
+
+        // Invert lean so forward lean pitches you slightly back (feels more natural for flips).
         float pitchInput = _rawLeanInput;
 
-        float yawDelta = yawInput * airYawTurnSpeed * Time.fixedDeltaTime;
-        float pitchDelta = pitchInput * airPitchTurnSpeed * Time.fixedDeltaTime;
+        float dt = Time.fixedDeltaTime;
 
-        Quaternion yawRot = Quaternion.AngleAxis(yawDelta, Vector3.up);
-        Quaternion pitchRot = Quaternion.AngleAxis(pitchDelta, transform.right);
+        // Tuck (poles held) increases spin responsiveness.
+        float spinMultiplier = 1f;
+        if (HasPolesInput && _rawPolesPressed)
+        {
+            spinMultiplier *= airTuckSpinMultiplier;
+        }
+
+        // Desired angular velocities based on input.
+        float targetYawSpeed = yawInput * airYawTurnSpeed * spinMultiplier;
+        float targetPitchSpeed = pitchInput * airPitchTurnSpeed * spinMultiplier;
+
+        float accel = Mathf.Max(0f, airAngularAcceleration);
+        float damping = Mathf.Max(0f, airAngularDamping);
+
+        // Accelerate current air angular velocity toward target values.
+        _airAngularVelocity.y = Mathf.MoveTowards(_airAngularVelocity.y, targetYawSpeed, accel * dt);
+        _airAngularVelocity.x = Mathf.MoveTowards(_airAngularVelocity.x, targetPitchSpeed, accel * dt);
+
+        // Apply damping toward zero when there is little/no input so we don't spin forever.
+        if (Mathf.Abs(yawInput) < 0.01f)
+        {
+            _airAngularVelocity.y = Mathf.MoveTowards(_airAngularVelocity.y, 0f, damping * dt);
+        }
+        if (Mathf.Abs(pitchInput) < 0.01f)
+        {
+            _airAngularVelocity.x = Mathf.MoveTowards(_airAngularVelocity.x, 0f, damping * dt);
+        }
+
+        // Apply rotation based on current angular velocity.
+        Quaternion yawRot = Quaternion.AngleAxis(_airAngularVelocity.y * dt, Vector3.up);
+        Quaternion pitchRot = Quaternion.AngleAxis(_airAngularVelocity.x * dt, transform.right);
 
         transform.rotation = yawRot * pitchRot * transform.rotation;
     }
 }
+
+
