@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 50c8f1982e5ee66478581ed2537be35a
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Samples/SharedContent/Particles/SnowHitFX.prefab
+  uploadId: 807396

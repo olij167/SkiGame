@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b2cb61f932483eb418dc7038a621c221
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Samples/SharedContent/Materials/Statue_rain.mat
+  uploadId: 807396

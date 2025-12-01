@@ -268,6 +268,8 @@ MonoBehaviour:
   leftSkiContact: {fileID: 1287872581}
   rightSki: {fileID: 2117120764}
   rightSkiContact: {fileID: 2117120768}
+  leftPoleContact: {fileID: 2026293693}
+  rightPoleContact: {fileID: 670499330}
   leftSkiAction: {fileID: 7076175947647146800, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   rightSkiAction: {fileID: -2709598225501961574, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   leanAction: {fileID: -920512616523522315, guid: 052faaac586de48259a63d0c4782560b, type: 3}
@@ -307,12 +309,12 @@ MonoBehaviour:
   skateCooldown: 0.1
   skateMaxEffectiveSpeed: 20
   skateYawPerPush: 4
-  poleTapThreshold: 1
-  poleFollowThroughDuration: 0.25
+  basePoleStrokeSpeed: 2
+  maxPoleStrokeSpeedBoost: 2
+  strokeSpeedBoostAtSpeed: 10
   poleImpulse: 6
   poleMaxSpeed: 16
   poleBrakeStrength: 2
-  polePivotGripStrength: 5
   maxLandingTiltAngle: 50
   maxLandingMisalignmentAngle: 20
   minLandingSpeedForStackCheck: 7
@@ -548,7 +550,7 @@ GameObject:
   - component: {fileID: 670499331}
   - component: {fileID: 670499330}
   m_Layer: 3
-  m_Name: PoleTip
+  m_Name: Right Pole Tip
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -590,27 +592,24 @@ MonoBehaviour:
   contactNormalLerpSpeed: 25
   skiController: {fileID: 162358099}
   poleRoot: {fileID: 1177871055}
-  idlePitch: 40
-  entryPitch: -40
-  dragPitch: -20
-  followPitch: 60
+  entryEnd: 0.25
+  dragEnd: 0.7
+  idlePitch: 140
+  entryPitch: -80
+  dragPitch: 20
+  followPitch: 160
   idleTilt: 0
-  entryTilt: 0
-  dragTilt: 12
-  followTilt: 4
+  entryTilt: -40
+  dragTilt: -20
+  followTilt: -25
   carveMinSpeed: 3
   carveMaxSpeed: 20
   insideCarvePitchDelta: -12
   outsideCarvePitchDelta: 8
   insideCarveTiltDelta: 8
   outsideCarveTiltDelta: 4
-  outsideCarveTilt: 4
   maxSlopePitchOffset: 10
   poseLerpSpeed: 10
-  idleToEntryLerpSpeed: 14
-  entryToDragLerpSpeed: 18
-  dragToFollowLerpSpeed: 12
-  followToIdleLerpSpeed: 10
 --- !u!135 &670499331
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -1659,7 +1658,7 @@ GameObject:
   - component: {fileID: 2026293694}
   - component: {fileID: 2026293693}
   m_Layer: 3
-  m_Name: PoleTip
+  m_Name: Left Pole Tip
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1701,27 +1700,24 @@ MonoBehaviour:
   contactNormalLerpSpeed: 25
   skiController: {fileID: 162358099}
   poleRoot: {fileID: 1591068950}
-  idlePitch: 40
-  entryPitch: -40
-  dragPitch: -20
-  followPitch: 60
+  entryEnd: 0.25
+  dragEnd: 0.7
+  idlePitch: 140
+  entryPitch: -80
+  dragPitch: 20
+  followPitch: 160
   idleTilt: 0
-  entryTilt: 0
-  dragTilt: 12
-  followTilt: 4
+  entryTilt: -40
+  dragTilt: -20
+  followTilt: 25
   carveMinSpeed: 3
   carveMaxSpeed: 20
   insideCarvePitchDelta: -12
   outsideCarvePitchDelta: 8
   insideCarveTiltDelta: 8
   outsideCarveTiltDelta: 4
-  outsideCarveTilt: 4
   maxSlopePitchOffset: 10
   poseLerpSpeed: 10
-  idleToEntryLerpSpeed: 14
-  entryToDragLerpSpeed: 18
-  dragToFollowLerpSpeed: 12
-  followToIdleLerpSpeed: 10
 --- !u!135 &2026293694
 SphereCollider:
   m_ObjectHideFlags: 0

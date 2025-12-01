@@ -4,7 +4,7 @@ using UnityEngine;
 /// Per-pole helper used to:
 /// 1) Detect ground contact (via raycast) for visuals / context.
 /// 2) Procedurally animate the pole around a root pivot based on SkiController
-///    stroke phase (idle / entry / drag / follow-through) and carving state.
+///    continuous stroke parameter (0..1), slope, carve and speed.
 /// Attach this to the TIP transform of each pole.
 /// Assign:
 /// - skiController: the SkiController on the rider.
@@ -30,17 +30,25 @@ public class PoleContact : MonoBehaviour
     [Tooltip("How quickly the stored contact normal lerps toward the latest hit normal.")]
     [SerializeField] private float contactNormalLerpSpeed = 25f;
 
-    [Header("Visuals / Stroke Poses")]
-    [Tooltip("SkiController used as the source of pole stroke phase and movement context.")]
+    [Header("Visual Stroke Shape")]
+    [Tooltip("SkiController used as the source of stroke parameter and movement context.")]
     [SerializeField] private SkiController skiController;
 
     [Tooltip("Root/pivot transform for this pole (near the top/handle). This transform will be rotated for the pole pose.")]
     [SerializeField] private Transform poleRoot;
 
+    [Tooltip("Normalized stroke value at which entry ends and drag begins (0..1).")]
+    [Range(0.05f, 0.5f)]
+    [SerializeField] private float entryEnd = 0.25f;
+
+    [Tooltip("Normalized stroke value at which drag ends and follow-through begins (entryEnd..1).")]
+    [Range(0.3f, 0.95f)]
+    [SerializeField] private float dragEnd = 0.7f;
+
     [Tooltip("Baseline pitch angle (around local X) in idle stance (negative = pointing slightly back).")]
     [SerializeField] private float idlePitch = -20f;
 
-    [Tooltip("Pitch angle in the entry phase (poles swing forward/down toward the snow).")]
+    [Tooltip("Pitch angle in the entry phase (poles swing forward and up).")]
     [SerializeField] private float entryPitch = 0f;
 
     [Tooltip("Pitch angle while the poles are dug in and dragging.")]
@@ -68,40 +76,24 @@ public class PoleContact : MonoBehaviour
     [Tooltip("Planar speed at which carve-based pole adjustments reach full strength.")]
     [SerializeField] private float carveMaxSpeed = 20f;
 
-    [Tooltip("Extra downward pitch (deg, negative) applied to the INSIDE pole while carving in drag phase.")]
+    [Tooltip("Extra downward pitch (deg, negative) applied to the INSIDE pole while carving in drag region.")]
     [SerializeField] private float insideCarvePitchDelta = -12f;
 
-    [Tooltip("Upward pitch (deg, positive) applied to the OUTSIDE pole while carving in drag phase.")]
+    [Tooltip("Upward pitch (deg, positive) applied to the OUTSIDE pole while carving in drag region.")]
     [SerializeField] private float outsideCarvePitchDelta = 8f;
 
-    [Tooltip("Additional side tilt (deg) for the INSIDE pole when carving in drag phase.")]
+    [Tooltip("Additional side tilt (deg) for the INSIDE pole when carving in drag region.")]
     [SerializeField] private float insideCarveTiltDelta = 8f;
 
-    [Tooltip("Additional side tilt (deg) for the OUTSIDE pole when carving in drag phase.")]
+    [Tooltip("Additional side tilt (deg) for the OUTSIDE pole when carving in drag region.")]
     [SerializeField] private float outsideCarveTiltDelta = 4f;
 
-    [Tooltip("Additional side tilt (deg around local Z) for the OUTSIDE pole when carving.")]
-    [SerializeField] private float outsideCarveTilt = 4f;
-
-    [Header("Slope / Movement Influence")]
+    [Header("Slope / General Visuals")]
     [Tooltip("Maximum extra pitch (deg) added on very steep slopes to point poles more downhill.")]
     [SerializeField] private float maxSlopePitchOffset = 10f;
 
-    [Header("Pose Transition Speeds")]
-    [Tooltip("Default blend speed for poses when the stroke phase is not changing.")]
+    [Tooltip("How quickly the pole blends toward its target pose. Timing of the stroke comes from SkiController; this only smooths jitter.")]
     [SerializeField] private float poseLerpSpeed = 12f;
-
-    [Tooltip("Blend speed used when going from Idle to Entry (lifting poles forward).")]
-    [SerializeField] private float idleToEntryLerpSpeed = 14f;
-
-    [Tooltip("Blend speed used when going from Entry to Drag (digging poles into the snow).")]
-    [SerializeField] private float entryToDragLerpSpeed = 18f;
-
-    [Tooltip("Blend speed used when going from Drag to FollowThrough.")]
-    [SerializeField] private float dragToFollowLerpSpeed = 12f;
-
-    [Tooltip("Blend speed used when going from FollowThrough back to Idle.")]
-    [SerializeField] private float followToIdleLerpSpeed = 10f;
 
     // Public read-only contact data
     public bool IsInContact { get; private set; }
@@ -112,9 +104,6 @@ public class PoleContact : MonoBehaviour
     // Cached base rotation for the pole pivot
     private Quaternion _baseLocalRot;
 
-    // Last stroke phase seen (for picking transition speeds)
-    private SkiController.PoleStrokePhase _lastPhase = SkiController.PoleStrokePhase.Idle;
-
     private void Reset()
     {
         groundMask = Physics.DefaultRaycastLayers;
@@ -122,15 +111,17 @@ public class PoleContact : MonoBehaviour
         contactOffset = 0.02f;
         contactNormalLerpSpeed = 25f;
 
-        // Angles: idle slightly back, entry lifted/forward, drag dug in, follow slightly behind.
+        entryEnd = 0.25f;
+        dragEnd = 0.7f;
+
         idlePitch = -20f;
-        entryPitch = 0f;    // raised higher than idle for the forward "lift"
-        dragPitch = -55f;  // dug into the snow
+        entryPitch = 0f;
+        dragPitch = -55f;
         followPitch = 20f;
 
         idleTilt = 0f;
         entryTilt = 0f;
-        dragTilt = 12f;   // outward, like oars
+        dragTilt = 12f;
         followTilt = 4f;
 
         carveMinSpeed = 3f;
@@ -141,13 +132,7 @@ public class PoleContact : MonoBehaviour
         outsideCarveTiltDelta = 4f;
 
         maxSlopePitchOffset = 10f;
-
-        // Default blend speeds
         poseLerpSpeed = 12f;
-        idleToEntryLerpSpeed = 14f;
-        entryToDragLerpSpeed = 18f;
-        dragToFollowLerpSpeed = 12f;
-        followToIdleLerpSpeed = 10f;
     }
 
     private void Awake()
@@ -204,6 +189,7 @@ public class PoleContact : MonoBehaviour
     // ----------------------------------------------------------------------
     // VISUAL POSE
     // ----------------------------------------------------------------------
+
     private void PosePole()
     {
         if (poleRoot == null || skiController == null)
@@ -211,8 +197,7 @@ public class PoleContact : MonoBehaviour
 
         float dt = Time.deltaTime;
 
-        var phase = skiController.CurrentPolePhase;
-        float phaseTime = skiController.CurrentPolePhaseTime;
+        float t = Mathf.Clamp01(skiController.PoleStrokeT);
         bool grounded = skiController.IsRiderGrounded;
 
         // Determine slope information (how steep & direction).
@@ -257,7 +242,7 @@ public class PoleContact : MonoBehaviour
         float carveIntensity = carveWeight * carveSpeedFactor;
 
         // ------------------------------------------------------------------
-        // 1. Base pitch & tilt from stroke phase (no carve yet)
+        // 1. Base pitch & tilt from stroke parameter (no carve yet)
         // ------------------------------------------------------------------
         float pitch;
         float tilt;
@@ -271,36 +256,42 @@ public class PoleContact : MonoBehaviour
         }
         else
         {
-            switch (phase)
+            float tEntryEnd = Mathf.Max(0.01f, entryEnd);
+            float tDragEnd = Mathf.Clamp(dragEnd, tEntryEnd + 0.05f, 0.99f);
+
+            if (t < tEntryEnd)
             {
-                case SkiController.PoleStrokePhase.Entry:
-                    {
-                        float entryDuration = Mathf.Max(skiController.PoleEntryDuration, 0.0001f);
-                        float t = Mathf.Clamp01(phaseTime / entryDuration);
-                        pitch = Mathf.Lerp(idlePitch, entryPitch, t);
-                        tilt = Mathf.Lerp(idleTilt, entryTilt, t);
-                        break;
-                    }
+                float u = t / tEntryEnd;
+                pitch = Mathf.Lerp(idlePitch, entryPitch, u);
+                tilt = Mathf.Lerp(idleTilt, entryTilt, u);
+            }
+            else if (t < tDragEnd)
+            {
+                float u = (t - tEntryEnd) / (tDragEnd - tEntryEnd);
+                pitch = Mathf.Lerp(entryPitch, dragPitch, u);
+                tilt = Mathf.Lerp(entryTilt, dragTilt, u);
+            }
+            else
+            {
+                float u = (t - tDragEnd) / (1f - tDragEnd);
+                pitch = Mathf.Lerp(dragPitch, followPitch, u);
+                tilt = Mathf.Lerp(dragTilt, followTilt, u);
+            }
 
-                case SkiController.PoleStrokePhase.Drag:
-                    pitch = dragPitch;
-                    tilt = isLeftPole ? +dragTilt : -dragTilt; // outward, like oars
-                    break;
-
-                case SkiController.PoleStrokePhase.FollowThrough:
-                    {
-                        float followDuration = Mathf.Max(skiController.PoleFollowThroughDuration, 0.0001f);
-                        float t = Mathf.Clamp01(phaseTime / followDuration);
-                        pitch = Mathf.Lerp(dragPitch, followPitch, t);
-                        tilt = Mathf.Lerp(dragTilt, followTilt, t) * (isLeftPole ? 1f : -1f);
-                        break;
-                    }
-
-                case SkiController.PoleStrokePhase.Idle:
-                default:
-                    pitch = idlePitch;
-                    tilt = idleTilt;
-                    break;
+            // Make drag outward tilt left/right.
+            if (t >= tEntryEnd && t <= tDragEnd)
+            {
+                float sign = isLeftPole ? 1f : -1f;
+                tilt *= sign;
+            }
+            else
+            {
+                // In non-drag regions, make outward tilt subtle or neutral.
+                if (Mathf.Approximately(tilt, dragTilt))
+                {
+                    float sign = isLeftPole ? 1f : -1f;
+                    tilt = dragTilt * sign;
+                }
             }
         }
 
@@ -310,68 +301,45 @@ public class PoleContact : MonoBehaviour
         pitch += slopePitchExtra;
 
         // ------------------------------------------------------------------
-        // 3. Carve adjustments: only during drag, layered on top of base drag pose
+        // 3. Carve adjustments: only when grounded and in drag-ish region
         // ------------------------------------------------------------------
-        if (grounded && phase == SkiController.PoleStrokePhase.Drag && carveIntensity > 0.01f)
+        if (grounded && carveIntensity > 0.01f)
         {
-            float outwardSign = isLeftPole ? 1f : -1f;
+            float tEntryEnd = Mathf.Max(0.01f, entryEnd);
+            float tDragEnd = Mathf.Clamp(dragEnd, tEntryEnd + 0.05f, 0.99f);
 
-            if (isInside)
+            if (t >= tEntryEnd && t <= tDragEnd)
             {
-                // Inside pole digs in more.
-                pitch += insideCarvePitchDelta * carveIntensity;
-                tilt += outwardSign * insideCarveTiltDelta * carveIntensity;
-            }
-            else
-            {
-                // Outside pole lifts away from the snow a bit.
-                pitch += outsideCarvePitchDelta * carveIntensity;
-                tilt += outwardSign * outsideCarveTiltDelta * carveIntensity;
+                float outwardSign = isLeftPole ? 1f : -1f;
+
+                if (isInside)
+                {
+                    // Inside pole digs in more.
+                    pitch += insideCarvePitchDelta * carveIntensity;
+                    tilt += outwardSign * insideCarveTiltDelta * carveIntensity;
+                }
+                else
+                {
+                    // Outside pole lifts away from the snow a bit.
+                    pitch += outsideCarvePitchDelta * carveIntensity;
+                    tilt += outwardSign * outsideCarveTiltDelta * carveIntensity;
+                }
             }
         }
 
         // ------------------------------------------------------------------
-        // 4. Build final rotation + apply transition-specific lerp speed
+        // 4. Build final rotation and smooth slightly (timing comes from SkiController)
         // ------------------------------------------------------------------
         Quaternion pitchRot = Quaternion.AngleAxis(pitch, Vector3.right);
         Quaternion sideRot = Quaternion.AngleAxis(tilt, Vector3.forward);
 
         Quaternion target = _baseLocalRot * sideRot * pitchRot;
 
-        // Choose lerp speed based on phase transition.
-        float lerpSpeed = poseLerpSpeed;
-
-        if (phase != _lastPhase)
-        {
-            if (_lastPhase == SkiController.PoleStrokePhase.Idle &&
-                phase == SkiController.PoleStrokePhase.Entry)
-            {
-                lerpSpeed = idleToEntryLerpSpeed;
-            }
-            else if (_lastPhase == SkiController.PoleStrokePhase.Entry &&
-                     phase == SkiController.PoleStrokePhase.Drag)
-            {
-                lerpSpeed = entryToDragLerpSpeed;
-            }
-            else if (_lastPhase == SkiController.PoleStrokePhase.Drag &&
-                     phase == SkiController.PoleStrokePhase.FollowThrough)
-            {
-                lerpSpeed = dragToFollowLerpSpeed;
-            }
-            else if (_lastPhase == SkiController.PoleStrokePhase.FollowThrough &&
-                     phase == SkiController.PoleStrokePhase.Idle)
-            {
-                lerpSpeed = followToIdleLerpSpeed;
-            }
-        }
-
         poleRoot.localRotation = Quaternion.Slerp(
             poleRoot.localRotation,
             target,
-            lerpSpeed * dt
+            poseLerpSpeed * dt
         );
-
-        _lastPhase = phase;
     }
 
 #if UNITY_EDITOR

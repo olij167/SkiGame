@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 1eec6dff0fe58e14d81d3965d19f058f
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Shaders/Extra/DepthOccluder.shader
+  uploadId: 807396

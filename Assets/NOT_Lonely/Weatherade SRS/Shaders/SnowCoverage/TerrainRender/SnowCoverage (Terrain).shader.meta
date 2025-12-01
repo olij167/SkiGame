@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: a4df59d0491f2cd4a89a8fec96c11071
+timeCreated: 1508929790
+licenseType: Pro
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Shaders/SnowCoverage/TerrainRender/SnowCoverage
+    (Terrain).shader
+  uploadId: 807396

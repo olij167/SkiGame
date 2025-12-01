@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 8f7eae6e019e7f8439ee282d3495e227
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/TotalBrush/Scripts/NL_TotalBrushStyles.cs
+  uploadId: 807396

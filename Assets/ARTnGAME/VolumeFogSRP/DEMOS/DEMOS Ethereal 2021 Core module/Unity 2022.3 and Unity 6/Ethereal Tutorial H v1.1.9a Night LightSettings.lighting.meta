@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: d74cc41fba086d544a03e2e5b383b3a2
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 4890085278179872738
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274279
+  packageName: Ethereal URP 2024 - Volumetric Lighting & Fog
+  packageVersion: 2.7.1
+  assetPath: Assets/ARTnGAME/VolumeFogSRP/DEMOS/DEMOS Ethereal 2021 Core module/Unity
+    2022.3 and Unity 6/Ethereal Tutorial H v1.1.9a Night LightSettings.lighting
+  uploadId: 826990

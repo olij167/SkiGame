@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: feb132562d1587c4d8b838b26d5eca9f
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Shaders/ParticleSystem/SRS_ParticleSystem_Render.shader
+  uploadId: 807396

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 1fdc60296080d454eaaf7a2e9c50e334
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Samples/SharedContent/Materials/Sky_rainy.mat
+  uploadId: 807396

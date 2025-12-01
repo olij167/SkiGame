@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: dbec0c2667193ec48a2d85b06877f6ea
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Samples/SharedContent/Materials/Bricks_rain.mat
+  uploadId: 807396

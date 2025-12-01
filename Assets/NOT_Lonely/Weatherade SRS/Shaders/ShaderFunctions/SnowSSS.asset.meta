@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: ad9dc9033cde7494ea87ab8f8204ba21
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Shaders/ShaderFunctions/SnowSSS.asset
+  uploadId: 807396

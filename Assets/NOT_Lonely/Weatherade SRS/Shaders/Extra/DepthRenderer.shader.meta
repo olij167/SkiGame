@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: d0b14971f315dd342b652197bb59d6a1
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Shaders/Extra/DepthRenderer.shader
+  uploadId: 807396

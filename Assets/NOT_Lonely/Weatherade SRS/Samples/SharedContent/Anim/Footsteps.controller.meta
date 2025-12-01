@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: cd97d10005c13e94e968b07c3ad3122e
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Samples/SharedContent/Anim/Footsteps.controller
+  uploadId: 807396

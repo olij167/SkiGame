@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: f350b76a67e81404ba5bce32dc34275c
+ShaderIncludeImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Shaders/CGIncludes/SRS_Tessellation.cginc
+  uploadId: 807396

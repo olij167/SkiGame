@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 95d84a5cbc5f7444ba174d20a438cb0b
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Shaders/CGIncludes/SRS_DeferredShading.cginc
+  uploadId: 807396

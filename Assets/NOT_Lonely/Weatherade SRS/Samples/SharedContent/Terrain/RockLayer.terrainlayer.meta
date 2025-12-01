@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5bada478fcab46b49b1a12663befbf44
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 8574412962073106934
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Samples/SharedContent/Terrain/RockLayer.terrainlayer
+  uploadId: 807396

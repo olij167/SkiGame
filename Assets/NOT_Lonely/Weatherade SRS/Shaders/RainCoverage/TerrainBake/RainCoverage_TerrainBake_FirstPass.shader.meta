@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 61b3f551ae3804f498ef95c94378d5e7
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Shaders/RainCoverage/TerrainBake/RainCoverage_TerrainBake_FirstPass.shader
+  uploadId: 807396

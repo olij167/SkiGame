@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f86cb85c0adfa3846b896f1ec477ae88
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/FirstPersonController/CamShakeRun.anim
+  uploadId: 807396

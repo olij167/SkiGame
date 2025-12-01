@@ -41,6 +41,12 @@ public class SkiController : MonoBehaviour
     [Tooltip("Per-ski helper for the right ski (auto-assigned from rightSki if null).")]
     [SerializeField] private SkiContact rightSkiContact;
 
+    [Tooltip("Optional helper for the left pole (for contact & visuals).")]
+    [SerializeField] private PoleContact leftPoleContact;
+
+    [Tooltip("Optional helper for the right pole (for contact & visuals).")]
+    [SerializeField] private PoleContact rightPoleContact;
+
     [Header("Input (New Input System)")]
     [Tooltip("Float action for left leg stance/edge (0..1).")]
     [SerializeField] private InputActionReference leftSkiAction;
@@ -51,7 +57,7 @@ public class SkiController : MonoBehaviour
     [Tooltip("Optional float action for forward/back lean (-1..1). If omitted, lean is neutral.")]
     [SerializeField] private InputActionReference leanAction;
 
-    [Tooltip("Optional button action for poles. Tap = push, Hold = brake.")]
+    [Tooltip("Optional button action for poles. Hold = stroke/drag, Release = follow-through.")]
     [SerializeField] private InputActionReference polesAction;
 
     [Tooltip("Optional button action for jump / hop (hold to charge, release to jump).")]
@@ -112,10 +118,8 @@ public class SkiController : MonoBehaviour
     private float _lastPushTime;
     private float _lastSkateInput;
 
-    // Poles (row stroke state machine)
-    private bool _polePressedPrev;
-    private PoleStrokePhase _polePhase = PoleStrokePhase.Idle;
-    private float _polePhaseTime;
+    // Poles (continuous stroke parameter 0..1)
+    private float _poleStrokeT;
 
     // Jump
     private bool _jumpQueued;
@@ -226,23 +230,23 @@ public class SkiController : MonoBehaviour
     [SerializeField] private float skateYawPerPush = 4f;
 
     [Header("Poles")]
-    [Tooltip("Duration (seconds) of the entry phase before the poles are fully in the drag position.")]
-    [SerializeField] private float poleTapThreshold = 0.18f; // now acts as entry duration
+    [Tooltip("Baseline speed at which the pole stroke value (0..1) moves when the player is stationary.")]
+    [SerializeField] private float basePoleStrokeSpeed = 2f;
 
-    [Tooltip("Duration (seconds) of the follow-through phase after releasing the pole input.")]
-    [SerializeField] private float poleFollowThroughDuration = 0.25f;
+    [Tooltip("Extra stroke speed added as the player's planar speed approaches 'strokeSpeedBoostAtSpeed'.")]
+    [SerializeField] private float maxPoleStrokeSpeedBoost = 2f;
 
-    [Tooltip("Impulse applied along ski direction over the course of a full row stroke.")]
+    [Tooltip("Planar speed (m/s) at which the pole stroke reaches maximum speed boost.")]
+    [SerializeField] private float strokeSpeedBoostAtSpeed = 10f;
+
+    [Tooltip("Impulse magnitude applied by a full effective pole stroke (used during drag/follow-through).")]
     [SerializeField] private float poleImpulse = 3f;
 
-    [Tooltip("Above this planar speed, pole row forces taper off.")]
+    [Tooltip("Above this planar speed, pole stroke propulsion/drag tapers off.")]
     [SerializeField] private float poleMaxSpeed = 8f;
 
-    [Tooltip("Drag strength applied along the direction of motion while poles are in the drag phase.")]
+    [Tooltip("Drag strength applied along the direction of motion while poles are dug in.")]
     [SerializeField] private float poleBrakeStrength = 10f;
-
-    [Tooltip("Extra lateral 'edge grip' when poles are planted, reducing sideways slide and helping the skier pivot around the planted pole.")]
-    [SerializeField] private float polePivotGripStrength = 20f;
 
     [Header("Landing / Stack")]
     [Tooltip("Max allowed tilt angle (deg) between skier up and ground normal to count as a safe landing.")]
@@ -305,17 +309,12 @@ public class SkiController : MonoBehaviour
         jumpAction != null && jumpAction.action != null;
 
     public bool IsStacked => _stacked;
-
-    // Public accessors for visuals / other systems that need basic state.
-    public PoleStrokePhase CurrentPolePhase => _polePhase;
-    public float CurrentPolePhaseTime => _polePhaseTime;
-    public float PoleEntryDuration => poleTapThreshold;
-    public float PoleFollowThroughDuration => poleFollowThroughDuration;
-
-    public bool IsRiderGrounded => _isGrounded;
-    public Vector3 Velocity => _rb.linearVelocity;
+    public float PoleStrokeT => _poleStrokeT;
     public Vector3 GroundNormal => _groundNormal;
+    public Vector3 Velocity => _rb.linearVelocity;
     public Vector3 SkiForwardOnPlane => _skiForward;
+    public bool IsRiderGrounded => _isGrounded;
+
 
     // ----------------------------------------------------------------------
     // PUBLIC API
@@ -491,71 +490,32 @@ public class SkiController : MonoBehaviour
 
     private void UpdatePoleState()
     {
-        bool pressed = _rawPolesPressed;
+        // Continuous stroke parameter 0..1 driven by input + planar speed.
         float dt = Time.deltaTime;
 
-        // Edge transitions
-        if (pressed)
+        // If we have no poles input bound, relax the stroke back toward rest.
+        if (!HasPolesInput)
         {
-            if (!_polePressedPrev)
-            {
-                // Just pressed: start a new stroke in the entry phase.
-                _polePhase = PoleStrokePhase.Entry;
-                _polePhaseTime = 0f;
-            }
-        }
-        else
-        {
-            if (_polePressedPrev)
-            {
-                // Just released: if we were mid stroke, go into follow-through.
-                if (_polePhase == PoleStrokePhase.Entry || _polePhase == PoleStrokePhase.Drag)
-                {
-                    _polePhase = PoleStrokePhase.FollowThrough;
-                    _polePhaseTime = 0f;
-                }
-            }
+            _poleStrokeT = Mathf.MoveTowards(_poleStrokeT, 0f, basePoleStrokeSpeed * dt);
+            return;
         }
 
-        // Advance phase timer and handle automatic transitions.
-        switch (_polePhase)
+        // Planar speed on current ground, used to boost stroke speed.
+        Vector3 velPlane = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal);
+        float speed = velPlane.magnitude;
+
+        float speedFactor = 0f;
+        if (strokeSpeedBoostAtSpeed > 0.001f && maxPoleStrokeSpeedBoost > 0f)
         {
-            case PoleStrokePhase.Entry:
-                _polePhaseTime += dt;
-
-                // When held past the entry duration, transition into drag.
-                if (pressed && _polePhaseTime >= poleTapThreshold)
-                {
-                    _polePhase = PoleStrokePhase.Drag;
-                    _polePhaseTime = 0f;
-                }
-                break;
-
-            case PoleStrokePhase.Drag:
-                if (pressed)
-                {
-                    _polePhaseTime += dt;
-                }
-                // Release is handled by edge logic above.
-                break;
-
-            case PoleStrokePhase.FollowThrough:
-                _polePhaseTime += dt;
-
-                if (_polePhaseTime >= poleFollowThroughDuration)
-                {
-                    _polePhase = PoleStrokePhase.Idle;
-                    _polePhaseTime = 0f;
-                }
-                break;
-
-            case PoleStrokePhase.Idle:
-            default:
-                _polePhaseTime = 0f;
-                break;
+            speedFactor = Mathf.Clamp01(speed / strokeSpeedBoostAtSpeed);
         }
 
-        _polePressedPrev = pressed;
+        float strokeSpeed = Mathf.Max(0f, basePoleStrokeSpeed + maxPoleStrokeSpeedBoost * speedFactor);
+
+        bool pressed = _rawPolesPressed;
+        float targetT = pressed ? 1f : 0f;
+
+        _poleStrokeT = Mathf.MoveTowards(_poleStrokeT, targetT, strokeSpeed * dt);
     }
 
     private void HandleJumpInput()
@@ -1394,11 +1354,11 @@ public class SkiController : MonoBehaviour
         float leanT = Mathf.Clamp01((_forwardLean + 1f) * 0.5f);
         float impulse = skateImpulse * leanT * speedFactor;
 
-        // If a pole stroke is in its entry phase as we push, treat this as a combined stride.
-        if (_polePhase == PoleStrokePhase.Entry)
-        {
-            impulse *= 1.15f; // mild boost so it feels like legs + poles working together
-        }
+        //// If a pole stroke is in its entry phase as we push, treat this as a combined stride.
+        //if (_polePhase == PoleStrokePhase.Entry)
+        //{
+        //    impulse *= 1.15f; // mild boost so it feels like legs + poles working together
+        //}
 
         _rb.AddForce(pushDir * impulse, ForceMode.VelocityChange);
 
@@ -1427,11 +1387,34 @@ public class SkiController : MonoBehaviour
         if (!_isGrounded || !HasPolesInput)
             return;
 
+        float t = _poleStrokeT;
+        if (t <= 0f)
+            return;
+
         Vector3 vel = _rb.linearVelocity;
         Vector3 velPlane = Vector3.ProjectOnPlane(vel, _groundNormal);
         float speed = velPlane.magnitude;
+        if (speed < 0.1f)
+            return;
 
-        Vector3 skiDir = _skiForward;
+        // Speed factor so poles are less effective at very high speeds.
+        float speedFactor = 1f;
+        if (poleMaxSpeed > 0.0001f)
+        {
+            if (speed >= poleMaxSpeed)
+            {
+                speedFactor = 0f;
+            }
+            else
+            {
+                speedFactor = Mathf.Clamp01((poleMaxSpeed - speed) / poleMaxSpeed);
+            }
+        }
+
+        if (speedFactor <= 0f)
+            return;
+
+        Vector3 skiDir = GetCombinedSkiForwardOnPlane();
         if (skiDir.sqrMagnitude < 0.0001f)
         {
             skiDir = Vector3.ProjectOnPlane(transform.forward, _groundNormal);
@@ -1442,60 +1425,53 @@ public class SkiController : MonoBehaviour
         }
         skiDir.Normalize();
 
-        float speedFactor = 1f;
-        if (poleMaxSpeed > 0.0001f)
-        {
-            speedFactor = Mathf.Clamp01((poleMaxSpeed - speed) / poleMaxSpeed);
-        }
+        bool anyPoleContact = false;
+        if (leftPoleContact != null && leftPoleContact.IsInContact)
+            anyPoleContact = true;
+        if (!anyPoleContact && rightPoleContact != null && rightPoleContact.IsInContact)
+            anyPoleContact = true;
 
-        // Map forward lean [-1..1] to [0..1] so neutral = 0.5, full forward = 1.
+        // Interpret t as a continuous stroke:
+        // 0..entryEnd       : idle -> entry (forward & up)
+        // entryEnd..dragEnd : entry -> drag (down into snow)
+        // dragEnd..1        : drag -> follow-through (back & up)
+        const float entryEnd = 0.25f;
+        const float dragEnd = 0.7f;
+        const float dragStart = entryEnd;
+        const float followStart = dragEnd;
+
         float leanT = Mathf.Clamp01((_forwardLean + 1f) * 0.5f);
-
         float dt = Time.fixedDeltaTime;
 
-        switch (_polePhase)
+        // Entry: mild assist even without firm contact.
+        if (t > 0f && t < entryEnd)
         {
-            case PoleStrokePhase.Entry:
-                {
-                    // Small assist as poles move into the snow.
-                    float entryDuration = Mathf.Max(poleTapThreshold, 0.0001f);
-                    float t = Mathf.Clamp01(_polePhaseTime / entryDuration);
+            float u = t / entryEnd;
+            float entryAccel = poleImpulse * 0.4f * speedFactor * leanT * u;
+            _rb.AddForce(skiDir * entryAccel, ForceMode.Acceleration);
+        }
 
-                    float entryForce = poleImpulse * 0.4f * speedFactor * leanT * t;
-                    _rb.AddForce(skiDir * entryForce * dt, ForceMode.Acceleration);
-                    break;
-                }
+        // Drag: soft braking while poles are dug in & in contact.
+        if (anyPoleContact && t >= dragStart && t <= dragEnd)
+        {
+            float u = Mathf.InverseLerp(dragStart, dragEnd, t);
+            Vector3 vAlong = Vector3.Project(velPlane, skiDir);
+            if (vAlong.sqrMagnitude > 0.001f)
+            {
+                Vector3 brakeDir = -vAlong.normalized;
+                float brake = poleBrakeStrength * u * leanT;
+                _rb.AddForce(brakeDir * brake, ForceMode.Acceleration);
+            }
+        }
 
-            case PoleStrokePhase.Drag:
-                {
-                    // Drag acts like a soft brake along velocity.
-                    if (velPlane.sqrMagnitude > 0.0001f && poleBrakeStrength > 0f)
-                    {
-                        Vector3 vDir = velPlane.normalized;
-                        Vector3 drag = -vDir * poleBrakeStrength;
-                        _rb.AddForce(drag, ForceMode.Acceleration);
-                    }
-                    break;
-                }
+        // Follow-through: a forward impulse if we are still in contact.
+        if (anyPoleContact && t > followStart)
+        {
+            float u = Mathf.InverseLerp(followStart, 1f, t);
+            float impulseScale = (1f - u); // strongest near start of follow-through
+            float impulse = poleImpulse * speedFactor * leanT * impulseScale;
 
-            case PoleStrokePhase.FollowThrough:
-                {
-                    // Forward impulse as poles sweep back behind the rider.
-                    if (poleFollowThroughDuration > 0.0001f)
-                    {
-                        float t = Mathf.Clamp01(_polePhaseTime / poleFollowThroughDuration);
-                        float impulseFraction = 1f - t; // strong at start, fades out
-
-                        float followForce = poleImpulse * speedFactor * leanT * impulseFraction;
-                        _rb.AddForce(skiDir * followForce * dt, ForceMode.Acceleration);
-                    }
-                    break;
-                }
-
-            case PoleStrokePhase.Idle:
-            default:
-                // no forces
-                break;
+            _rb.AddForce(skiDir * impulse * dt, ForceMode.Acceleration);
         }
     }
 

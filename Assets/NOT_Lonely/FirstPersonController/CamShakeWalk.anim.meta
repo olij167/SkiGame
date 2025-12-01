@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 37673ff7cc7f02640bd8fd9b8b865b4e
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/FirstPersonController/CamShakeWalk.anim
+  uploadId: 807396

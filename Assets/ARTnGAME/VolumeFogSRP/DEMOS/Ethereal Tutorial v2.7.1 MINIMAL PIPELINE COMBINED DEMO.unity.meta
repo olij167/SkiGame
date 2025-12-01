@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 63fd4f2797e62e04cba06f7065fd9589
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274279
+  packageName: Ethereal URP 2024 - Volumetric Lighting & Fog
+  packageVersion: 2.7.1
+  assetPath: Assets/ARTnGAME/VolumeFogSRP/DEMOS/Ethereal Tutorial v2.7.1 MINIMAL
+    PIPELINE COMBINED DEMO.unity
+  uploadId: 826990

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 9b53fc0f3cd57f74e929fdfbc96fcd0e
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274279
+  packageName: Ethereal URP 2024 - Volumetric Lighting & Fog
+  packageVersion: 2.7.1
+  assetPath: Assets/ARTnGAME/VolumeFogSRP/Ethereal2024/Setting/Volumetric Config
+    4 no sky.asset
+  uploadId: 826990

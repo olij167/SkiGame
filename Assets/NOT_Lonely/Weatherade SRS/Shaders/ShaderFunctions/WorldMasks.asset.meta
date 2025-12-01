@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5b2084510cfd0fe4e9d3a6c572504c23
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Shaders/ShaderFunctions/WorldMasks.asset
+  uploadId: 807396

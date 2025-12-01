@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 1a3062b9f93b3d24688aec46d8690f29
+ShaderIncludeImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Shaders/CGIncludes/SRS_RainCoverage.cginc
+  uploadId: 807396

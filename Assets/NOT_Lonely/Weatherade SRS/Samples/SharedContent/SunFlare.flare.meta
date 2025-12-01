@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b2c46819fddc5d643bf3d6e0eafca5b4
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 12100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Samples/SharedContent/SunFlare.flare
+  uploadId: 807396

@@ -1,0 +1,167 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-5059445978894628734
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5495f09a19ba864e961d11903d4c606, type: 3}
+  m_Name: TAA
+  m_EditorClassIdentifier: 
+  m_Active: 1
+--- !u!114 &-1214628254795055528
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9d225a4cad17704386835b918c7b8ec, type: 3}
+  m_Name: BlitVolumeFogSRP
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    extraCameraID: 0
+    isForDualCameras: 0
+    isForReflections: 0
+    isForSplitScreen: 0
+    blendVolumeLighting: 0
+    _FogColor: {r: 0.5, g: 0.5, b: 0.5, a: 0.5}
+    noiseTexture: {fileID: 0}
+    _startDistance: 30
+    _fogHeight: 0.75
+    _fogDensity: 1
+    _cameraRoll: 0
+    _cameraDiff: {x: 0, y: 0, z: 0, w: 0}
+    _cameraTiltSign: 1
+    heightDensity: 1
+    noiseDensity: 1
+    noiseScale: 1
+    noiseThickness: 1
+    noiseSpeed: {x: 1, y: 1, z: 1}
+    occlusionDrop: 1
+    occlusionExp: 1
+    noise3D: 1
+    startDistance: 1
+    luminance: 1
+    lumFac: 1
+    ScatterFac: 1
+    TurbFac: 1
+    HorizFac: 1
+    turbidity: 1
+    reileigh: 1
+    mieCoefficient: 1
+    mieDirectionalG: 1
+    bias: 1
+    contrast: 1
+    TintColor: {r: 1, g: 1, b: 1, a: 1}
+    TintColorK: {x: 0, y: 0, z: 0}
+    TintColorL: {x: 0, y: 0, z: 0}
+    Sun: {x: 0, y: 0, z: 0, w: 0}
+    FogSky: 1
+    ClearSkyFac: 1
+    PointL: {x: 0, y: 0, z: 0, w: 0}
+    PointLParams: {x: 0, y: 0, z: 0, w: 0}
+    _useRadialDistance: 0
+    _fadeToSkybox: 1
+    inheritFromController: 1
+    enableFog: 1
+    Event: 400
+    blitMaterial: {fileID: 2100000, guid: 35a8f3ff562dfbc44848aa37eaf228b0, type: 2}
+    blitMaterialPassIndex: -1
+    destination: 0
+    textureId: _BlitPassTexture
+    blend: 0.5
+    resolution: 1
+    screenBlendMode: 0
+    sunTransform: {x: 0, y: 0, z: 0}
+    radialBlurIterations: 2
+    sunColor: {r: 1, g: 1, b: 1, a: 1}
+    sunThreshold: {r: 0.87, g: 0.74, b: 0.65, a: 1}
+    sunShaftBlurRadius: 2.5
+    sunShaftIntensity: 1.15
+    maxRadius: 0.75
+    useDepthTexture: 1
+  m_Intensity: 0
+--- !u!114 &-875143917397409294
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b49db325366a51e408a57f6588940f70, type: 3}
+  m_Name: TemporalAAFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  renderOrder: 550
+  TemporalFade: 0.95
+  MovementBlending: 100
+  UseFlipUV: 0
+  ForceFlipUV: 0
+  TAAMaterial: {fileID: 2100000, guid: 2b9d611108abd0047abdd27d7ca47e21, type: 2}
+  JitterSpread: 1
+  HaltonLength: 11
+  useOptimizedMode: 0
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de640fe3d0db1804a85f9fc8f5cadab6, type: 3}
+  m_Name: New Custom Universal Renderer Data NEW TEMPORAL FOG ONLY
+  m_EditorClassIdentifier: 
+  debugShaders:
+    debugReplacementPS: {fileID: 4800000, guid: cf852408f2e174538bcd9b7fda1c5ae7, type: 3}
+    hdrDebugViewPS: {fileID: 4800000, guid: 573620ae32aec764abd4d728906d2587, type: 3}
+    probeVolumeSamplingDebugComputeShader: {fileID: 7200000, guid: 53626a513ea68ce47b59dc1299fe3959, type: 3}
+  probeVolumeResources:
+    probeVolumeDebugShader: {fileID: 0}
+    probeVolumeFragmentationDebugShader: {fileID: 0}
+    probeVolumeOffsetDebugShader: {fileID: 0}
+    probeVolumeSamplingDebugShader: {fileID: 0}
+    probeSamplingDebugMesh: {fileID: 0}
+    probeSamplingDebugTexture: {fileID: 0}
+    probeVolumeBlendStatesCS: {fileID: 0}
+  m_RendererFeatures:
+  - {fileID: -5059445978894628734}
+  - {fileID: -1214628254795055528}
+  - {fileID: -875143917397409294}
+  m_RendererFeatureMap: 8208b533b03cc9b958bec9a209c624eff2012f6c3edddaf3
+  m_UseNativeRenderPass: 0
+  xrSystemData: {fileID: 0}
+  postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
+  m_AssetVersion: 2
+  m_OpaqueLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_TransparentLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_DefaultStencilState:
+    overrideStencilState: 0
+    stencilReference: 0
+    stencilCompareFunction: 8
+    passOperation: 2
+    failOperation: 0
+    zFailOperation: 0
+  m_ShadowTransparentReceive: 1
+  m_RenderingMode: 1
+  m_DepthPrimingMode: 0
+  m_CopyDepthMode: 0
+  m_DepthAttachmentFormat: 0
+  m_DepthTextureFormat: 0
+  m_AccurateGbufferNormals: 0
+  m_IntermediateTextureMode: 1

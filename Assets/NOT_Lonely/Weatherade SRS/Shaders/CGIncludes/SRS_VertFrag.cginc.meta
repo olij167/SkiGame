@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 2144eb20eb0b0f54fb858b20842c7973
+ShaderIncludeImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Shaders/CGIncludes/SRS_VertFrag.cginc
+  uploadId: 807396

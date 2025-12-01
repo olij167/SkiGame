@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 56911b83ef1c07b42b8ba45987f682fe
+ComputeShaderImporter:
+  externalObjects: {}
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/TotalBrush/Shaders/Compute/NL_TotalBrush_Compute.compute
+  uploadId: 807396

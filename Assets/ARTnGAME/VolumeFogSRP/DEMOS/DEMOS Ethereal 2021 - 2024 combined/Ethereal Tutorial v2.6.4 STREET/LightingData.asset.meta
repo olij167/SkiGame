@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 8a4ddaad1f0f7634fb68a7540948ae5f
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 112000000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274279
+  packageName: Ethereal URP 2024 - Volumetric Lighting & Fog
+  packageVersion: 2.7.1
+  assetPath: Assets/ARTnGAME/VolumeFogSRP/DEMOS/DEMOS Ethereal 2021 - 2024 combined/Ethereal
+    Tutorial v2.6.4 STREET/LightingData.asset
+  uploadId: 826990

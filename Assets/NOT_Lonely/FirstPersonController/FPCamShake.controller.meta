@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 49144e671247bd94691da669a6ba7a13
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/FirstPersonController/FPCamShake.controller
+  uploadId: 807396

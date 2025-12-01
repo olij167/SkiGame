@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 5696c7c82ef2577489f84af41a106da7
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 4890085278179872738
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274279
+  packageName: Ethereal URP 2024 - Volumetric Lighting & Fog
+  packageVersion: 2.7.1
+  assetPath: Assets/ARTnGAME/VolumeFogSRP/DEMOS/DEMOS Ethereal 2021 Core module/Unity
+    2022.3 and Unity 6/Ethereal Tutorial H v1.1.9i Dynamic Spot Lights 400m Distance
+    No FogSettings.lighting
+  uploadId: 826990

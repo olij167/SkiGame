@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 4747af1f3e5ccaf488364470933da7a1
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274279
+  packageName: Ethereal URP 2024 - Volumetric Lighting & Fog
+  packageVersion: 2.7.1
+  assetPath: Assets/ARTnGAME/VolumeFogSRP/Ethereal2024/Runtime/Scripts/MaxZPreview.shader
+  uploadId: 826990

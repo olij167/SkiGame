@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 247d28c6109a40740957bfb2bbc52c54
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/TotalBrush/Scripts/Editor/NL_IsolationStage.cs
+  uploadId: 807396

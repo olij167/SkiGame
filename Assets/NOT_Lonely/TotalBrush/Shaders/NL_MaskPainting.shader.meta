@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: db0aef7ce00a60e4ca9343690c9811df
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/TotalBrush/Shaders/NL_MaskPainting.shader
+  uploadId: 807396

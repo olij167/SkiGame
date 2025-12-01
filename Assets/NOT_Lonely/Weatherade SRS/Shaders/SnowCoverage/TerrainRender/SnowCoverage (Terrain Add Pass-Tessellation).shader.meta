@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 76f71885e49659745b7524b1cb212054
+timeCreated: 1508929790
+licenseType: Pro
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Shaders/SnowCoverage/TerrainRender/SnowCoverage
+    (Terrain Add Pass-Tessellation).shader
+  uploadId: 807396

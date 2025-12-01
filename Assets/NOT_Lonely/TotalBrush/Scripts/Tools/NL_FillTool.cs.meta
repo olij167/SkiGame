@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 73c7afd0e5d6eae4bab2b24c34769706
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/TotalBrush/Scripts/Tools/NL_FillTool.cs
+  uploadId: 807396

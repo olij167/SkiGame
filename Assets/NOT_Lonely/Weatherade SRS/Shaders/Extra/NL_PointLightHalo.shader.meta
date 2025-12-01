@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 06f4010b9f4a16e4db0fe182f230d978
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Shaders/Extra/NL_PointLightHalo.shader
+  uploadId: 807396

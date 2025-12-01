@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: e9aa2f24771ed0f448064b84757e0fa2
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Samples/SharedContent/Particles/SnowPieces
+    1.mat
+  uploadId: 807396

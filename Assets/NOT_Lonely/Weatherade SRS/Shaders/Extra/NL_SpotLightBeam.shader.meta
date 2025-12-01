@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: db3aae529ebab82418ac7ee8d7ca805c
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Shaders/Extra/NL_SpotLightBeam.shader
+  uploadId: 807396

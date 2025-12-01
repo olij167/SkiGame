@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: c536e8eacf49eea4c9c53f0e043cf86c
+ShaderIncludeImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 1.1.6
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Shaders/CGIncludes/SRS_Lighting.cginc
+  uploadId: 807396
