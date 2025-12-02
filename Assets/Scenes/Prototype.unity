@@ -156,65 +156,6 @@ RenderTexture:
   m_Dimension: 2
   m_VolumeDepth: 1
   m_ShadowSamplingMode: 2
---- !u!21 &33885797
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Hidden/NOT_Lonely/Weatherade/NL_TraceMaskGen
-  m_Shader: {fileID: 4800000, guid: e1cdf480ab417a14fb2a2441d29872a6, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - _SRS_LastTraceMask:
-        m_Texture: {fileID: 20449575}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _SRS_SurfaceDepth:
-        m_Texture: {fileID: 1650398433}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _SRS_TraceMask:
-        m_Texture: {fileID: 1245674845}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _SRS_TraceMaskBasic:
-        m_Texture: {fileID: 1036769784}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _SRS_TraceObjsDepth:
-        m_Texture: {fileID: 1404786786}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats:
-    - _AreaFalloffHardness: 0.75
-    - _BorderIntensity: 0.35
-    - _DecaySpeed: 0
-    - _DepthBias: -0.010060362
-    - _Indent: 1
-    - _NoiseIntensity: 0.2
-    - _NoiseTiling: 500
-    - _NormalSpread: 0.00040000002
-    - _SourceMaskBrightness: 3
-    - _VolumeDepth: 49.7
-    m_Colors:
-    - _UVOffset: {r: 0, g: 0, b: 0, a: 0}
-  m_BuildTextureStacks: []
-  m_AllowLocking: 1
 --- !u!1 &76939635
 GameObject:
   m_ObjectHideFlags: 0
@@ -328,6 +269,43 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 76939635}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!84 &86324617
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: sceneDepthTex
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 4096
+  m_Height: 4096
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 94
+  m_ColorFormat: 0
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 0
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 0
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &162358098
 GameObject:
   m_ObjectHideFlags: 0
@@ -597,7 +575,7 @@ Camera:
     serializedVersion: 2
     m_Bits: 64
   m_RenderingPath: 1
-  m_TargetTexture: {fileID: 727510370}
+  m_TargetTexture: {fileID: 86324617}
   m_TargetDisplay: 0
   m_TargetEye: 3
   m_HDR: 0
@@ -622,6 +600,43 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1158037695}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!84 &400587191
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 4096
+  m_Height: 4096
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 0
+  m_ColorFormat: 50
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 0
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 0
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 0
+    m_WrapV: 0
+    m_WrapW: 0
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &620650157
 GameObject:
   m_ObjectHideFlags: 0
@@ -666,15 +681,99 @@ MonoBehaviour:
     slopeRange: {x: 0, y: 33.614456}
     curvatureRange: {x: 0, y: 1}
     layerMasks: []
-    instanceCount: 397
+    instanceCount: 0
     prefabs:
     - index: 0
       probability: 4.2
       prefab: {fileID: 7488343770391138834, guid: d269f456157d06948a7ff3854fe78119, type: 3}
     distance: 3.8
-    scaleRange: {x: 0, y: 2}
+    scaleRange: {x: 1, y: 2}
     sinkAmount: 0
-  grassPrefabs: []
+  grassPrefabs:
+  - enabled: 0
+    name: GrassField
+    seed: 3274
+    probability: 3
+    collisionCheck: 0
+    rejectUnderwater: 0
+    heightRange: {x: 0, y: 120}
+    slopeRange: {x: 0, y: 60}
+    curvatureRange: {x: 0, y: 1}
+    layerMasks: []
+    instanceCount: 0
+    index: 0
+    type: 0
+    renderAsBillboard: 1
+    prefab: {fileID: 2080254620369348174, guid: 3f69ce91617ada5408f4e710ccb230eb, type: 3}
+    gpuInstancing: 1
+    holeEdgePadding: 2
+    alignToGround: 100
+    positionJitter: 0
+    useDensityScaling: 1
+    density: 0.2
+    billboard: {fileID: 2800000, guid: 409c39177d5ac5545bede68eed1c290b, type: 3}
+    mainColor: {r: 0.3158022, g: 0.509434, b: 0.17061234, a: 1}
+    secondaryColor: {r: 1, g: 1, b: 1, a: 1}
+    linkColors: 1
+    minMaxHeight: {x: 1, y: 3}
+    minMaxWidth: {x: 1, y: 2}
+    noiseSize: 0.1
+  - enabled: 0
+    name: Grass_03
+    seed: 531429490
+    probability: 1
+    collisionCheck: 0
+    rejectUnderwater: 0
+    heightRange: {x: 75, y: 320}
+    slopeRange: {x: 0, y: 60}
+    curvatureRange: {x: 0, y: 1}
+    layerMasks: []
+    instanceCount: 0
+    index: 1
+    type: 0
+    renderAsBillboard: 1
+    prefab: {fileID: 7733339445370539976, guid: eae282ced33b74140b668fb902af6d44, type: 3}
+    gpuInstancing: 1
+    holeEdgePadding: 0
+    alignToGround: 0
+    positionJitter: 0
+    useDensityScaling: 1
+    density: 0.3
+    billboard: {fileID: 2800000, guid: add9db1e4f4dd694ca64187a4da5d757, type: 3}
+    mainColor: {r: 0.11888893, g: 0.20754719, b: 0.10671058, a: 1}
+    secondaryColor: {r: 0.8039216, g: 0.7372549, b: 0.101960786, a: 1}
+    linkColors: 1
+    minMaxHeight: {x: 1, y: 3}
+    minMaxWidth: {x: 1, y: 2}
+    noiseSize: 0.1
+  - enabled: 0
+    name: Grass_03
+    seed: 531429490
+    probability: 1
+    collisionCheck: 0
+    rejectUnderwater: 0
+    heightRange: {x: 0, y: 90}
+    slopeRange: {x: 0, y: 60}
+    curvatureRange: {x: 0, y: 1}
+    layerMasks: []
+    instanceCount: 0
+    index: 2
+    type: 0
+    renderAsBillboard: 1
+    prefab: {fileID: 3131909291465887847, guid: de0f9463ada7f44488e1849fdf5e1ef8, type: 3}
+    gpuInstancing: 1
+    holeEdgePadding: 0
+    alignToGround: 0
+    positionJitter: 0
+    useDensityScaling: 1
+    density: 0.1
+    billboard: {fileID: 2800000, guid: add9db1e4f4dd694ca64187a4da5d757, type: 3}
+    mainColor: {r: 0.11888893, g: 0.20754719, b: 0.10671058, a: 1}
+    secondaryColor: {r: 0.8039216, g: 0.7372549, b: 0.101960786, a: 1}
+    linkColors: 1
+    minMaxHeight: {x: 1, y: 3}
+    minMaxWidth: {x: 1, y: 2}
+    noiseSize: 0.1
   terrainSettings:
     drawTreesAndFoliage: 1
     preservePrefabLayer: 1
@@ -695,9 +794,9 @@ MonoBehaviour:
   collisionLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  terrainMinMaxHeight: {x: -100, y: 2000}
-  detailResolution: 256
-  detailResolutionIndex: 0
+  terrainMinMaxHeight: {x: -243.69164, y: 974.76654}
+  detailResolution: 1024
+  detailResolutionIndex: 3
   grassPatchSize: 128
   grassPatchSizeIndex: 4
   tempColliders: []
@@ -1017,80 +1116,65 @@ RenderTexture:
   m_Dimension: 2
   m_VolumeDepth: 1
   m_ShadowSamplingMode: 2
---- !u!84 &727510370
-RenderTexture:
+--- !u!21 &796611542
+Material:
+  serializedVersion: 8
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: sceneDepthTex
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 4096
-  m_Height: 4096
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 94
-  m_ColorFormat: 0
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 0
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 0
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
---- !u!84 &758465462
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 4096
-  m_Height: 4096
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 0
-  m_ColorFormat: 50
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 0
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 0
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 0
-    m_WrapV: 0
-    m_WrapW: 0
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
+  m_Name: Hidden/NOT_Lonely/Weatherade/NL_TraceMaskGen
+  m_Shader: {fileID: 4800000, guid: e1cdf480ab417a14fb2a2441d29872a6, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _SRS_LastTraceMask:
+        m_Texture: {fileID: 20449575}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SRS_SurfaceDepth:
+        m_Texture: {fileID: 1650398433}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SRS_TraceMask:
+        m_Texture: {fileID: 1245674845}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SRS_TraceMaskBasic:
+        m_Texture: {fileID: 1036769784}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SRS_TraceObjsDepth:
+        m_Texture: {fileID: 1404786786}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AreaFalloffHardness: 0.75
+    - _BorderIntensity: 0.35
+    - _DecaySpeed: 0
+    - _DepthBias: -0.010060362
+    - _Indent: 1
+    - _NoiseIntensity: 0.2
+    - _NoiseTiling: 500
+    - _NormalSpread: 0.00040000002
+    - _SourceMaskBrightness: 3
+    - _VolumeDepth: 49.7
+    m_Colors:
+    - _UVOffset: {r: 0, g: 0, b: 0, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!84 &1036769784
 RenderTexture:
   m_ObjectHideFlags: 0
@@ -1313,8 +1397,8 @@ MonoBehaviour:
   traceTex: {fileID: 1416264913}
   finalTraceMask: {fileID: 1245674845}
   bluredRT: {fileID: 1036769784}
-  traceMaskCalcMtl: {fileID: 33885797}
-  blurMtl: {fileID: 1417463367}
+  traceMaskCalcMtl: {fileID: 796611542}
+  blurMtl: {fileID: 1738255618}
   lastRes: 4096
 --- !u!114 &1158037694
 MonoBehaviour:
@@ -1362,7 +1446,7 @@ MonoBehaviour:
   blendByNormalsPower: 1
   targetPosOffset: {x: -0, y: 15, z: -0}
   urpAdditionalCamData: {fileID: 360734881}
-  texBlured: {fileID: 758465462}
+  texBlured: {fileID: 400587191}
   texRGBA: {fileID: 687105760}
   materials:
   - {fileID: 2100000, guid: 252455f9835dba746a588bdfabe3d999, type: 2}
@@ -1485,7 +1569,7 @@ Transform:
   m_GameObject: {fileID: 1158037692}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 867.4927, y: 642.54956, z: 594.72656}
+  m_LocalPosition: {x: 1044.9829, y: 372.5105, z: 886.7798}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1843,39 +1927,6 @@ RenderTexture:
   m_Dimension: 2
   m_VolumeDepth: 1
   m_ShadowSamplingMode: 2
---- !u!21 &1417463367
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Hidden/NOT_Lonely/NL_GaussianBlur
-  m_Shader: {fileID: 4800000, guid: de57de671ea300a4294b02d151ddeece, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - _tex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats:
-    - _kernelSize: 4
-    m_Colors: []
-  m_BuildTextureStacks: []
-  m_AllowLocking: 1
 --- !u!1 &1479939467
 GameObject:
   m_ObjectHideFlags: 0
@@ -2501,13 +2552,46 @@ Transform:
   m_GameObject: {fileID: 1717699020}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 867.4927, y: 642.54956, z: 594.72656}
+  m_LocalPosition: {x: 1044.9829, y: 372.5105, z: 886.7798}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1045048119}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!21 &1738255618
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Hidden/NOT_Lonely/NL_GaussianBlur
+  m_Shader: {fileID: 4800000, guid: de57de671ea300a4294b02d151ddeece, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _tex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _kernelSize: 4
+    m_Colors: []
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!1 &1858579216
 GameObject:
   m_ObjectHideFlags: 0
@@ -2915,11 +2999,11 @@ Terrain:
   m_Enabled: 1
   serializedVersion: 6
   m_TerrainData: {fileID: 15600000, guid: 552b008654d497d47a2b57842c000ec2, type: 2}
-  m_TreeDistance: 5000
-  m_TreeBillboardDistance: 50
+  m_TreeDistance: 1000
+  m_TreeBillboardDistance: 300
   m_TreeCrossFadeLength: 5
   m_TreeMaximumFullLODCount: 50
-  m_DetailObjectDistance: 80
+  m_DetailObjectDistance: 200
   m_DetailObjectDensity: 1
   m_HeightmapPixelError: 5
   m_SplatMapDistance: 1000
@@ -2933,8 +3017,8 @@ Terrain:
   m_IgnoreQualitySettings: 0
   m_ReflectionProbeUsage: 1
   m_MaterialTemplate: {fileID: 2100000, guid: 252455f9835dba746a588bdfabe3d999, type: 2}
-  m_BakeLightProbesForTrees: 1
-  m_PreserveTreePrototypeLayers: 0
+  m_BakeLightProbesForTrees: 0
+  m_PreserveTreePrototypeLayers: 1
   m_DeringLightProbesForTrees: 1
   m_ReceiveGI: 1
   m_ScaleInLightmap: 0.0256
