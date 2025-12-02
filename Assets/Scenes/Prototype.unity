@@ -131,8 +131,8 @@ RenderTexture:
     Hash: 00000000000000000000000000000000
   m_IsAlphaChannelOptional: 0
   serializedVersion: 6
-  m_Width: 4096
-  m_Height: 4096
+  m_Width: 2048
+  m_Height: 2048
   m_AntiAliasing: 1
   m_MipCount: -1
   m_DepthStencilFormat: 0
@@ -269,43 +269,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 76939635}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
---- !u!84 &86324617
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: sceneDepthTex
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 4096
-  m_Height: 4096
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 94
-  m_ColorFormat: 0
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 0
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 0
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1 &162358098
 GameObject:
   m_ObjectHideFlags: 0
@@ -353,8 +316,8 @@ MonoBehaviour:
   stanceLerpSpeed: 6
   skiVisualLerpSpeed: 12
   followerStanceLerpSpeed: 3
-  maxSkiOffset: 0.4
-  maxSkiEdgeAngle: 20
+  maxSkiOffset: 0.6
+  maxSkiEdgeAngle: 35
   maxForwardLeanAngle: 10
   maxSideLeanAngle: 13
   groundLayers:
@@ -460,8 +423,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 162358098}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.7114475, z: -0, w: 0.7027393}
-  m_LocalPosition: {x: 641.78, y: 490.04, z: 563.9}
+  m_LocalRotation: {x: -0, y: 0.052189495, z: -0, w: 0.99863726}
+  m_LocalPosition: {x: 227.73, y: 395.1, z: -526.72}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -471,7 +434,62 @@ Transform:
   - {fileID: 1591068950}
   - {fileID: 1177871055}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: -90.706, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 5.983, z: 0}
+--- !u!114 &243638114
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b5a4738b539472faa518e606162927c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: sc.terrain.painter.runtime::sc.terrain.proceduralpainter.Curvature
+  enabled: 1
+  label: Curvature
+  blendMode: 0
+  opacity: 100
+  passIndex: 2
+  solver: 1
+  minMax: {x: 0.29726383, y: 0.6069654}
+  radius: 1
+  minFalloff: 0.104
+  maxFalloff: 0.125
+--- !u!21 &297455583
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Hidden/NOT_Lonely/NL_GaussianBlur
+  m_Shader: {fileID: 4800000, guid: de57de671ea300a4294b02d151ddeece, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _tex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _kernelSize: 6
+    m_Colors: []
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!1 &360734880
 GameObject:
   m_ObjectHideFlags: 1
@@ -575,7 +593,7 @@ Camera:
     serializedVersion: 2
     m_Bits: 64
   m_RenderingPath: 1
-  m_TargetTexture: {fileID: 86324617}
+  m_TargetTexture: {fileID: 1573229432}
   m_TargetDisplay: 0
   m_TargetEye: 3
   m_HDR: 0
@@ -600,43 +618,96 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1158037695}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!84 &400587191
-RenderTexture:
+--- !u!114 &440822568
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2562637f396e4c10acd3fa9926b53a12, type: 3}
   m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
+  m_EditorClassIdentifier: sc.terrain.painter.runtime::sc.terrain.proceduralpainter.Slope
+  enabled: 1
+  label: Slope
+  blendMode: 0
+  opacity: 100
+  passIndex: 1
+  minMax: {x: 75, y: 90}
+  minFalloff: 10
+  maxFalloff: 10
+--- !u!1 &588602335
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
-  m_Width: 4096
-  m_Height: 4096
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 0
-  m_ColorFormat: 50
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 0
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 0
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 0
-    m_WrapV: 0
-    m_WrapW: 0
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
+  m_Component:
+  - component: {fileID: 588602337}
+  - component: {fileID: 588602336}
+  m_Layer: 0
+  m_Name: TerrainPainter
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &588602336
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 588602335}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6af2d410bf489d842a543a60d605af5f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: sc.terrain.painter.runtime::sc.terrain.proceduralpainter.TerrainPainter
+  terrains:
+  - {fileID: 2105189525}
+  - {fileID: 1741692269}
+  splatmapResolution: 256
+  colorMapResolution: 256
+  layerSettings:
+  - enabled: 1
+    layer: {fileID: 8574412962073106934, guid: 5591e962f53205d479423de838f0f06e, type: 2}
+    modifierStack:
+    - {fileID: 1453107311}
+  - enabled: 1
+    layer: {fileID: 8574412962073106934, guid: 5bada478fcab46b49b1a12663befbf44, type: 2}
+    modifierStack:
+    - {fileID: 2141881241}
+    - {fileID: 243638114}
+  - enabled: 1
+    layer: {fileID: 8574412962073106934, guid: 73a16c3980ac26849b1969cd159313ab, type: 2}
+    modifierStack:
+    - {fileID: 1701173659}
+    - {fileID: 440822568}
+  autoRepaint: 0
+  terrainListeners: []
+  bounds:
+    m_Center: {x: 500, y: 450, z: 0}
+    m_Extent: {x: 500, y: 450, z: 1000}
+  filterShader: {fileID: 4800000, guid: 0f44df78e3d64d9cb2616cac3d84cb77, type: 3}
+--- !u!4 &588602337
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 588602335}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 724.772, y: 181.72495, z: -172.34909}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &620650157
 GameObject:
   m_ObjectHideFlags: 0
@@ -668,12 +739,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: sc.vegetationspawner.runtime::sc.terrain.vegetationspawner.VegetationSpawner
   seed: 0
   terrains:
+  - {fileID: 1741692269}
   - {fileID: 2105189525}
   visibleTerrainsOnly: 0
   treeTypes:
   - enabled: 1
     name: DemoSpruce
-    seed: 5979
+    seed: 65563
     probability: 10
     collisionCheck: 1
     rejectUnderwater: 0
@@ -681,7 +753,7 @@ MonoBehaviour:
     slopeRange: {x: 0, y: 33.614456}
     curvatureRange: {x: 0, y: 1}
     layerMasks: []
-    instanceCount: 0
+    instanceCount: 382
     prefabs:
     - index: 0
       probability: 4.2
@@ -794,7 +866,7 @@ MonoBehaviour:
   collisionLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  terrainMinMaxHeight: {x: -243.69164, y: 974.76654}
+  terrainMinMaxHeight: {x: 4.7243958, y: 387.09946}
   detailResolution: 1024
   detailResolutionIndex: 3
   grassPatchSize: 128
@@ -1116,65 +1188,6 @@ RenderTexture:
   m_Dimension: 2
   m_VolumeDepth: 1
   m_ShadowSamplingMode: 2
---- !u!21 &796611542
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Hidden/NOT_Lonely/Weatherade/NL_TraceMaskGen
-  m_Shader: {fileID: 4800000, guid: e1cdf480ab417a14fb2a2441d29872a6, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - _SRS_LastTraceMask:
-        m_Texture: {fileID: 20449575}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _SRS_SurfaceDepth:
-        m_Texture: {fileID: 1650398433}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _SRS_TraceMask:
-        m_Texture: {fileID: 1245674845}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _SRS_TraceMaskBasic:
-        m_Texture: {fileID: 1036769784}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _SRS_TraceObjsDepth:
-        m_Texture: {fileID: 1404786786}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats:
-    - _AreaFalloffHardness: 0.75
-    - _BorderIntensity: 0.35
-    - _DecaySpeed: 0
-    - _DepthBias: -0.010060362
-    - _Indent: 1
-    - _NoiseIntensity: 0.2
-    - _NoiseTiling: 500
-    - _NormalSpread: 0.00040000002
-    - _SourceMaskBrightness: 3
-    - _VolumeDepth: 49.7
-    m_Colors:
-    - _UVOffset: {r: 0, g: 0, b: 0, a: 0}
-  m_BuildTextureStacks: []
-  m_AllowLocking: 1
 --- !u!84 &1036769784
 RenderTexture:
   m_ObjectHideFlags: 0
@@ -1187,8 +1200,8 @@ RenderTexture:
     Hash: 00000000000000000000000000000000
   m_IsAlphaChannelOptional: 0
   serializedVersion: 6
-  m_Width: 4096
-  m_Height: 4096
+  m_Width: 2048
+  m_Height: 2048
   m_AntiAliasing: 1
   m_MipCount: -1
   m_DepthStencilFormat: 0
@@ -1372,12 +1385,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NOT_Lonely.Weatherade.SRS_TraceMaskGenerator
   srs_coverageBase: {fileID: 1158037694}
   allowEditInPlaymode: 1
-  maskRes: 4096
+  maskRes: 2048
   depthBias: -0.5
-  blurKernelSize: 4
-  normalSpread: 1
+  blurKernelSize: 6
+  normalSpread: 2
   sourceMaskBrightness: 3
-  borderIntensity: 0.35
+  borderIntensity: 0.2
   indent: 1
   decaySpeed: 0
   areaFalloffHardness: 0.75
@@ -1397,9 +1410,9 @@ MonoBehaviour:
   traceTex: {fileID: 1416264913}
   finalTraceMask: {fileID: 1245674845}
   bluredRT: {fileID: 1036769784}
-  traceMaskCalcMtl: {fileID: 796611542}
-  blurMtl: {fileID: 1738255618}
-  lastRes: 4096
+  traceMaskCalcMtl: {fileID: 2033245590}
+  blurMtl: {fileID: 297455583}
+  lastRes: 2048
 --- !u!114 &1158037694
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1414,7 +1427,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NOT_Lonely.Weatherade.SnowCoverage
   depthTexProps: 1
   surfaceProps: 1
-  areaMaskFoldout: 0
+  areaMaskFoldout: 1
   distanceFadeFoldout: 0
   blendByNormalFoldout: 0
   areaSize: 250
@@ -1423,7 +1436,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   depthTextureFormat: 0
-  depthTextureResolution: 4096
+  depthTextureResolution: 2048
   blurKernelSize: 20
   coverageAreaFalloffHardness: 0.75
   useFollowTarget: 1
@@ -1446,7 +1459,7 @@ MonoBehaviour:
   blendByNormalsPower: 1
   targetPosOffset: {x: -0, y: 15, z: -0}
   urpAdditionalCamData: {fileID: 360734881}
-  texBlured: {fileID: 400587191}
+  texBlured: {fileID: 1409806724}
   texRGBA: {fileID: 687105760}
   materials:
   - {fileID: 2100000, guid: 252455f9835dba746a588bdfabe3d999, type: 2}
@@ -1462,8 +1475,8 @@ MonoBehaviour:
   tessellationFoldout: 1
   displacementFoldout: 1
   tracesFoldout: 1
-  sparklesFoldout: 1
-  detailMapFoldout: 0
+  sparklesFoldout: 0
+  detailMapFoldout: 1
   foldout_basic_layer0: 1
   foldout_basic_layer1: 0
   foldout_basic_layer2: 0
@@ -1569,7 +1582,7 @@ Transform:
   m_GameObject: {fileID: 1158037692}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1044.9829, y: 372.5105, z: 886.7798}
+  m_LocalPosition: {x: 1801.3916, y: 751.00134, z: -450.80566}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1702,8 +1715,8 @@ RenderTexture:
     Hash: 00000000000000000000000000000000
   m_IsAlphaChannelOptional: 0
   serializedVersion: 6
-  m_Width: 4096
-  m_Height: 4096
+  m_Width: 2048
+  m_Height: 2048
   m_AntiAliasing: 1
   m_MipCount: -1
   m_DepthStencilFormat: 0
@@ -1756,7 +1769,7 @@ Transform:
   m_GameObject: {fileID: 1287872576}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.3, y: -1.1, z: 0}
+  m_LocalPosition: {x: -0.5, y: -1.1, z: 0}
   m_LocalScale: {x: 0.3, y: 0.1, z: 3}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1865,8 +1878,8 @@ RenderTexture:
     Hash: 00000000000000000000000000000000
   m_IsAlphaChannelOptional: 0
   serializedVersion: 6
-  m_Width: 4096
-  m_Height: 4096
+  m_Width: 2048
+  m_Height: 2048
   m_AntiAliasing: 1
   m_MipCount: -1
   m_DepthStencilFormat: 90
@@ -1890,6 +1903,43 @@ RenderTexture:
   m_Dimension: 2
   m_VolumeDepth: 1
   m_ShadowSamplingMode: 2
+--- !u!84 &1409806724
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 2048
+  m_Height: 2048
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 0
+  m_ColorFormat: 50
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 0
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 0
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 0
+    m_WrapV: 0
+    m_WrapW: 0
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!84 &1416264913
 RenderTexture:
   m_ObjectHideFlags: 0
@@ -1902,8 +1952,8 @@ RenderTexture:
     Hash: 00000000000000000000000000000000
   m_IsAlphaChannelOptional: 0
   serializedVersion: 6
-  m_Width: 4096
-  m_Height: 4096
+  m_Width: 2048
+  m_Height: 2048
   m_AntiAliasing: 1
   m_MipCount: -1
   m_DepthStencilFormat: 0
@@ -1927,6 +1977,26 @@ RenderTexture:
   m_Dimension: 2
   m_VolumeDepth: 1
   m_ShadowSamplingMode: 2
+--- !u!114 &1453107311
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2562637f396e4c10acd3fa9926b53a12, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: sc.terrain.painter.runtime::sc.terrain.proceduralpainter.Slope
+  enabled: 1
+  label: Slope
+  blendMode: 0
+  opacity: 100
+  passIndex: 1
+  minMax: {x: 0, y: 4}
+  minFalloff: 10
+  maxFalloff: 10
 --- !u!1 &1479939467
 GameObject:
   m_ObjectHideFlags: 0
@@ -2165,6 +2235,43 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1557720916}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!84 &1573229432
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: sceneDepthTex
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 2048
+  m_Height: 2048
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 94
+  m_ColorFormat: 0
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 0
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 0
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &1591068949
 GameObject:
   m_ObjectHideFlags: 0
@@ -2291,8 +2398,8 @@ RenderTexture:
     Hash: 00000000000000000000000000000000
   m_IsAlphaChannelOptional: 0
   serializedVersion: 6
-  m_Width: 2048
-  m_Height: 2048
+  m_Width: 1024
+  m_Height: 1024
   m_AntiAliasing: 1
   m_MipCount: -1
   m_DepthStencilFormat: 90
@@ -2316,6 +2423,28 @@ RenderTexture:
   m_Dimension: 2
   m_VolumeDepth: 1
   m_ShadowSamplingMode: 2
+--- !u!114 &1701173659
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b5a4738b539472faa518e606162927c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: sc.terrain.painter.runtime::sc.terrain.proceduralpainter.Curvature
+  enabled: 1
+  label: Curvature
+  blendMode: 0
+  opacity: 100
+  passIndex: 2
+  solver: 0
+  minMax: {x: 0, y: 0.25}
+  radius: 1
+  minFalloff: 0.001
+  maxFalloff: 0.001
 --- !u!1 &1715688768
 GameObject:
   m_ObjectHideFlags: 0
@@ -2552,46 +2681,106 @@ Transform:
   m_GameObject: {fileID: 1717699020}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 1044.9829, y: 372.5105, z: 886.7798}
+  m_LocalPosition: {x: 1801.3916, y: 751.00134, z: -450.80566}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1045048119}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!21 &1738255618
-Material:
-  serializedVersion: 8
+--- !u!1 &1741692267
+GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Hidden/NOT_Lonely/NL_GaussianBlur
-  m_Shader: {fileID: 4800000, guid: de57de671ea300a4294b02d151ddeece, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - _tex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats:
-    - _kernelSize: 4
-    m_Colors: []
-  m_BuildTextureStacks: []
-  m_AllowLocking: 1
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1741692270}
+  - component: {fileID: 1741692269}
+  - component: {fileID: 1741692268}
+  m_Layer: 6
+  m_Name: Terrain_(0.00, 0.00, -1000.00)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 2147483647
+  m_IsActive: 1
+--- !u!154 &1741692268
+TerrainCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1741692267}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_TerrainData: {fileID: 15600000, guid: ac12e56293a2cba4f9430a3ba049c64f, type: 2}
+  m_EnableTreeColliders: 1
+--- !u!218 &1741692269
+Terrain:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1741692267}
+  m_Enabled: 1
+  serializedVersion: 6
+  m_TerrainData: {fileID: 15600000, guid: ac12e56293a2cba4f9430a3ba049c64f, type: 2}
+  m_TreeDistance: 1000
+  m_TreeBillboardDistance: 300
+  m_TreeCrossFadeLength: 5
+  m_TreeMaximumFullLODCount: 50
+  m_DetailObjectDistance: 200
+  m_DetailObjectDensity: 1
+  m_HeightmapPixelError: 5
+  m_SplatMapDistance: 1000
+  m_HeightmapMinimumLODSimplification: 0
+  m_HeightmapMaximumLOD: 0
+  m_ShadowCastingMode: 2
+  m_DrawHeightmap: 1
+  m_DrawInstanced: 1
+  m_DrawTreesAndFoliage: 1
+  m_StaticShadowCaster: 0
+  m_IgnoreQualitySettings: 0
+  m_ReflectionProbeUsage: 1
+  m_MaterialTemplate: {fileID: 2100000, guid: 252455f9835dba746a588bdfabe3d999, type: 2}
+  m_BakeLightProbesForTrees: 0
+  m_PreserveTreePrototypeLayers: 1
+  m_DeringLightProbesForTrees: 1
+  m_ReceiveGI: 1
+  m_ScaleInLightmap: 0.0256
+  m_LightmapParameters: {fileID: 15203, guid: 0000000000000000f000000000000000, type: 0}
+  m_GroupingID: 0
+  m_RenderingLayerMask: 1
+  m_AllowAutoConnect: 1
+  m_EnableHeightmapRayTracing: 1
+  m_EnableTreesAndDetailsRayTracing: 0
+  m_TreeMotionVectorModeOverride: 3
+--- !u!4 &1741692270
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1741692267}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -1000}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1858579216
 GameObject:
   m_ObjectHideFlags: 0
@@ -2950,6 +3139,65 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2026293691}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!21 &2033245590
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Hidden/NOT_Lonely/Weatherade/NL_TraceMaskGen
+  m_Shader: {fileID: 4800000, guid: e1cdf480ab417a14fb2a2441d29872a6, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _SRS_LastTraceMask:
+        m_Texture: {fileID: 20449575}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SRS_SurfaceDepth:
+        m_Texture: {fileID: 1650398433}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SRS_TraceMask:
+        m_Texture: {fileID: 1245674845}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SRS_TraceMaskBasic:
+        m_Texture: {fileID: 1036769784}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SRS_TraceObjsDepth:
+        m_Texture: {fileID: 1404786786}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AreaFalloffHardness: 0.75
+    - _BorderIntensity: 0.2
+    - _DecaySpeed: 0
+    - _DepthBias: -0.010060362
+    - _Indent: 1
+    - _NoiseIntensity: 0.2
+    - _NoiseTiling: 500
+    - _NormalSpread: 0.00080000004
+    - _SourceMaskBrightness: 3
+    - _VolumeDepth: 49.7
+    m_Colors:
+    - _UVOffset: {r: 0, g: 0, b: 0, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!1 &2105189523
 GameObject:
   m_ObjectHideFlags: 0
@@ -3011,7 +3259,7 @@ Terrain:
   m_HeightmapMaximumLOD: 0
   m_ShadowCastingMode: 2
   m_DrawHeightmap: 1
-  m_DrawInstanced: 0
+  m_DrawInstanced: 1
   m_DrawTreesAndFoliage: 1
   m_StaticShadowCaster: 0
   m_IgnoreQualitySettings: 0
@@ -3094,7 +3342,7 @@ Transform:
   m_GameObject: {fileID: 2117120763}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.3, y: -1.1, z: 0}
+  m_LocalPosition: {x: 0.5, y: -1.1, z: 0}
   m_LocalScale: {x: 0.3, y: 0.1, z: 3}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3191,6 +3439,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SkiContact
   isLeftSki: 0
   stanceOut: 0
+--- !u!114 &2141881241
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2562637f396e4c10acd3fa9926b53a12, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: sc.terrain.painter.runtime::sc.terrain.proceduralpainter.Slope
+  enabled: 1
+  label: Slope
+  blendMode: 1
+  opacity: 39
+  passIndex: 1
+  minMax: {x: 0, y: 90}
+  minFalloff: 21.6
+  maxFalloff: 10
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -3203,3 +3471,5 @@ SceneRoots:
   - {fileID: 1158037695}
   - {fileID: 1858579218}
   - {fileID: 620650159}
+  - {fileID: 1741692270}
+  - {fileID: 588602337}
