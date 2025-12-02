@@ -104,6 +104,22 @@ public class PoleContact : MonoBehaviour
     // Cached base rotation for the pole pivot
     private Quaternion _baseLocalRot;
 
+    // Cached base position for the pole pivot
+    private Vector3 _baseLocalPos;
+
+    [Header("Stroke Position Offsets")]
+    [Tooltip("Local movement when going Idle -> Entry (forward + up).")]
+    [SerializeField] private float entryForwardOffset = 0.1f;
+    [SerializeField] private float entryUpOffset = 0.05f;
+
+    [Tooltip("Local movement when going Entry -> Drag (backward + down).")]
+    [SerializeField] private float dragBackOffset = 0.05f;
+    [SerializeField] private float dragDownOffset = 0.05f;
+
+    [Tooltip("Local movement when going Drag -> FollowThrough (backward + up).")]
+    [SerializeField] private float followBackOffset = 0.1f;
+    [SerializeField] private float followUpOffset = 0.05f;
+
     private void Reset()
     {
         groundMask = Physics.DefaultRaycastLayers;
@@ -140,6 +156,7 @@ public class PoleContact : MonoBehaviour
         if (poleRoot != null)
         {
             _baseLocalRot = poleRoot.localRotation;
+            _baseLocalPos = poleRoot.localPosition;
         }
     }
 
@@ -197,10 +214,11 @@ public class PoleContact : MonoBehaviour
 
         float dt = Time.deltaTime;
 
-        float t = Mathf.Clamp01(skiController.PoleStrokeT);
+        SkiController.PoleStrokePhase phase = skiController.CurrentPolePhase;
+        float phaseT = Mathf.Clamp01(skiController.PoleStrokeT);
         bool grounded = skiController.IsRiderGrounded;
 
-        // Determine slope information (how steep & direction).
+        // --- Slope and movement context -----------------------------------
         Vector3 groundNormal = skiController.GroundNormal.sqrMagnitude > 0.0001f
             ? skiController.GroundNormal.normalized
             : Vector3.up;
@@ -208,7 +226,6 @@ public class PoleContact : MonoBehaviour
         float slopeSteepness = Vector3.Angle(groundNormal, Vector3.up) / 90f; // 0 flat -> 1 very steep
         float slopePitchExtra = slopeSteepness * maxSlopePitchOffset;
 
-        // Compute planar velocity & ski direction for carving context.
         Vector3 velPlane = Vector3.ProjectOnPlane(skiController.Velocity, groundNormal);
         float planeSpeed = velPlane.magnitude;
 
@@ -229,117 +246,181 @@ public class PoleContact : MonoBehaviour
         bool leftInside = pivotSide < 0f;
         bool rightInside = pivotSide > 0f;
         bool isInside = isLeftPole ? leftInside : rightInside;
-        float carveWeight = Mathf.Clamp01(Mathf.Abs(pivotSide));
 
-        // Speed factor for carve intensity.
-        float carveSpeedFactor = 0f;
-        if (carveMaxSpeed > carveMinSpeed)
-        {
-            carveSpeedFactor = Mathf.Clamp01(
-                Mathf.InverseLerp(carveMinSpeed, carveMaxSpeed, planeSpeed));
-        }
-
-        float carveIntensity = carveWeight * carveSpeedFactor;
-
-        // ------------------------------------------------------------------
-        // 1. Base pitch & tilt from stroke parameter (no carve yet)
-        // ------------------------------------------------------------------
-        float pitch;
-        float tilt;
+        // --- 1. Base pitch & tilt from stroke phase -----------------------
+        float pitch = idlePitch;
+        float tiltBase = idleTilt;
 
         if (!grounded)
         {
-            // In the air: blend between idle and follow-through based on speed.
-            float tSpeed = Mathf.Clamp01(planeSpeed / 10f);
-            pitch = Mathf.Lerp(idlePitch, followPitch, tSpeed);
-            tilt = Mathf.Lerp(idleTilt, followTilt, tSpeed);
+            // In the air: swing towards follow-through based on speed.
+            float airT = Mathf.Clamp01(planeSpeed / 10f);
+            pitch = Mathf.Lerp(idlePitch, followPitch, airT);
+            tiltBase = Mathf.Lerp(idleTilt, followTilt, airT);
         }
         else
         {
-            float tEntryEnd = Mathf.Max(0.01f, entryEnd);
-            float tDragEnd = Mathf.Clamp(dragEnd, tEntryEnd + 0.05f, 0.99f);
+            switch (phase)
+            {
+                case SkiController.PoleStrokePhase.Idle:
+                    pitch = idlePitch;
+                    tiltBase = idleTilt;
+                    break;
 
-            if (t < tEntryEnd)
-            {
-                float u = t / tEntryEnd;
-                pitch = Mathf.Lerp(idlePitch, entryPitch, u);
-                tilt = Mathf.Lerp(idleTilt, entryTilt, u);
-            }
-            else if (t < tDragEnd)
-            {
-                float u = (t - tEntryEnd) / (tDragEnd - tEntryEnd);
-                pitch = Mathf.Lerp(entryPitch, dragPitch, u);
-                tilt = Mathf.Lerp(entryTilt, dragTilt, u);
-            }
-            else
-            {
-                float u = (t - tDragEnd) / (1f - tDragEnd);
-                pitch = Mathf.Lerp(dragPitch, followPitch, u);
-                tilt = Mathf.Lerp(dragTilt, followTilt, u);
-            }
+                case SkiController.PoleStrokePhase.Entry:
+                    {
+                        float u = phaseT; // 0..1 through entry
+                        pitch = Mathf.Lerp(idlePitch, entryPitch, u);
+                        tiltBase = Mathf.Lerp(idleTilt, entryTilt, u);
+                        break;
+                    }
 
-            // Make drag outward tilt left/right.
-            if (t >= tEntryEnd && t <= tDragEnd)
-            {
-                float sign = isLeftPole ? 1f : -1f;
-                tilt *= sign;
-            }
-            else
-            {
-                // In non-drag regions, make outward tilt subtle or neutral.
-                if (Mathf.Approximately(tilt, dragTilt))
-                {
-                    float sign = isLeftPole ? 1f : -1f;
-                    tilt = dragTilt * sign;
-                }
+                case SkiController.PoleStrokePhase.Drag:
+                    pitch = dragPitch;
+                    tiltBase = dragTilt;
+                    break;
+
+                case SkiController.PoleStrokePhase.FollowThrough:
+                    {
+                        float u = phaseT; // 0..1 through follow-through
+                        pitch = Mathf.Lerp(dragPitch, followPitch, u);
+                        tiltBase = Mathf.Lerp(dragTilt, followTilt, u);
+                        break;
+                    }
             }
         }
 
-        // ------------------------------------------------------------------
-        // 2. Add slope influence (on steeper slopes poles point more downhill)
-        // ------------------------------------------------------------------
+        // --- 2. Carve adjustments (only while dragging on the ground) -----
+        if (grounded && planeSpeed > carveMinSpeed && phase == SkiController.PoleStrokePhase.Drag)
+        {
+            float carveSpeedFactor = 0f;
+            if (carveMaxSpeed > carveMinSpeed)
+            {
+                carveSpeedFactor = Mathf.Clamp01(
+                    Mathf.InverseLerp(carveMinSpeed, carveMaxSpeed, planeSpeed));
+            }
+
+            float carveWeight = Mathf.Clamp01(Mathf.Abs(pivotSide));
+            float carveIntensity = carveWeight * carveSpeedFactor;
+
+            if (isInside)
+            {
+                pitch += insideCarvePitchDelta * carveIntensity;
+                tiltBase += insideCarveTiltDelta * carveIntensity;
+            }
+            else
+            {
+                pitch += outsideCarvePitchDelta * carveIntensity;
+                tiltBase += outsideCarveTiltDelta * carveIntensity;
+            }
+        }
+
+        // --- 3. Slope influence -------------------------------------------
         pitch += slopePitchExtra;
 
-        // ------------------------------------------------------------------
-        // 3. Carve adjustments: only when grounded and in drag-ish region
-        // ------------------------------------------------------------------
-        if (grounded && carveIntensity > 0.01f)
+        // --- 4. Extra "digging in" when in drag with real contact ---------
+        if (phase == SkiController.PoleStrokePhase.Drag && IsInContact)
         {
-            float tEntryEnd = Mathf.Max(0.01f, entryEnd);
-            float tDragEnd = Mathf.Clamp(dragEnd, tEntryEnd + 0.05f, 0.99f);
+            // More compression at higher speeds.
+            float dragSpeedT = Mathf.Clamp01(planeSpeed / carveMaxSpeed);
+            pitch = Mathf.Lerp(pitch, dragPitch - 10f, dragSpeedT);
+        }
 
-            if (t >= tEntryEnd && t <= tDragEnd)
+        // --- 5. Mirror tilt per side --------------------------------------
+        float sideSign = isLeftPole ? 1f : -1f;
+        float tilt = tiltBase * sideSign;
+
+        // --- 6. Compose target rotation -----------------------------------
+        Quaternion targetRot =
+            _baseLocalRot *
+            Quaternion.AngleAxis(pitch, Vector3.right) *
+            Quaternion.AngleAxis(tilt, Vector3.forward);
+
+        // --- 7. Position offsets by stroke phase --------------------------
+        // We assume local Z = forward and local Y = up.
+        Vector3 localForward = Vector3.forward;
+        Vector3 localUp = Vector3.up;
+
+        Vector3 offset = Vector3.zero;
+
+        if (grounded)
+        {
+            switch (phase)
             {
-                float outwardSign = isLeftPole ? 1f : -1f;
+                // Idle: no offset.
+                case SkiController.PoleStrokePhase.Idle:
+                    offset = Vector3.zero;
+                    break;
 
-                if (isInside)
-                {
-                    // Inside pole digs in more.
-                    pitch += insideCarvePitchDelta * carveIntensity;
-                    tilt += outwardSign * insideCarveTiltDelta * carveIntensity;
-                }
-                else
-                {
-                    // Outside pole lifts away from the snow a bit.
-                    pitch += outsideCarvePitchDelta * carveIntensity;
-                    tilt += outwardSign * outsideCarveTiltDelta * carveIntensity;
-                }
+                // Idle -> Entry: move forwards + up as phaseT goes 0..1.
+                case SkiController.PoleStrokePhase.Entry:
+                    {
+                        float u = phaseT; // 0..1 across the entry stroke
+                        offset =
+                            localForward * Mathf.Lerp(0f, entryForwardOffset, u) +
+                            localUp * Mathf.Lerp(0f, entryUpOffset, u);
+                        break;
+                    }
+
+                // Entry -> Drag: poles dig backwards + down into the snow.
+                case SkiController.PoleStrokePhase.Drag:
+                    {
+                        // Always move backward & down in Drag so it's visually distinct
+                        // from Entry, even when stationary.
+                        float speedT = Mathf.Clamp01(planeSpeed / carveMaxSpeed);
+                        float contactFactor = IsInContact ? 1f : 0.4f;
+
+                        // 0.5 at standstill / weak contact, up to 1 at speed & solid bite.
+                        float dragScale = Mathf.Lerp(0.5f, 1f, speedT * contactFactor);
+
+                        float back = -dragBackOffset * dragScale;   // negative = backward
+                        float up = -dragDownOffset * dragScale;   // negative = downward
+
+                        offset = localForward * back + localUp * up;
+                        break;
+                    }
+
+                // Drag -> FollowThrough -> Idle: sweep backwards + up over time.
+                case SkiController.PoleStrokePhase.FollowThrough:
+                    {
+                        float u = phaseT; // 0..1 through follow-through
+                        float speedT = Mathf.Clamp01(planeSpeed / carveMaxSpeed);
+                        float contactFactor = IsInContact ? 1f : 0.3f;
+
+                        // Match the drag offset at the start of follow-through.
+                        float dragScale = Mathf.Lerp(0.5f, 1f, speedT * contactFactor);
+                        float dragBack = -dragBackOffset * dragScale;
+                        float dragUp = -dragDownOffset * dragScale;
+
+                        Vector3 dragBase =
+                            localForward * dragBack +
+                            localUp * dragUp;
+
+                        // Target follow-through pose: backwards + up.
+                        Vector3 followTarget =
+                            localForward * (-followBackOffset) +
+                            localUp * followUpOffset;
+
+                        // Lerp from drag pose to follow pose over the phase.
+                        offset = Vector3.Lerp(dragBase, followTarget, u);
+                        break;
+                    }
+
             }
         }
 
-        // ------------------------------------------------------------------
-        // 4. Build final rotation and smooth slightly (timing comes from SkiController)
-        // ------------------------------------------------------------------
-        Quaternion pitchRot = Quaternion.AngleAxis(pitch, Vector3.right);
-        Quaternion sideRot = Quaternion.AngleAxis(tilt, Vector3.forward);
+        // Final target position is base + offset.
+        Vector3 targetLocalPos = _baseLocalPos + offset;
 
-        Quaternion target = _baseLocalRot * sideRot * pitchRot;
+        // --- 8. Smooth rotation & position together -----------------------
+        float lerpFactor = 1f - Mathf.Exp(-poseLerpSpeed * dt);
 
-        poleRoot.localRotation = Quaternion.Slerp(
-            poleRoot.localRotation,
-            target,
-            poseLerpSpeed * dt
-        );
+        poleRoot.localRotation =
+            Quaternion.Slerp(poleRoot.localRotation, targetRot, lerpFactor);
+
+        poleRoot.localPosition =
+            Vector3.Lerp(poleRoot.localPosition, targetLocalPos, lerpFactor);
+
     }
 
 #if UNITY_EDITOR
