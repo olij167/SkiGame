@@ -250,6 +250,10 @@ public class SkiController : MonoBehaviour
     [Tooltip("Drag strength applied along the direction of motion while poles are dug in.")]
     [SerializeField] private float poleBrakeStrength = 10f;
 
+    [Tooltip("Minimum effectiveness of pole strokes at or above poleMaxSpeed (0 = no effect, 1 = full effect).")]
+    [Range(0f, 1f)]
+    [SerializeField] private float minPoleSpeedFactor = 0.1f;
+
     [Header("Landing / Stack")]
     [Tooltip("Max allowed tilt angle (deg) between skier up and ground normal to count as a safe landing.")]
     [SerializeField] private float maxLandingTiltAngle = 50f;
@@ -1507,7 +1511,12 @@ public class SkiController : MonoBehaviour
         if (poleMaxSpeed > 0.01f)
         {
             float tSpeed = Mathf.Clamp01(speed / poleMaxSpeed);
-            speedFactor = 1f - tSpeed;
+
+            // Curved falloff: 1 at low speeds, then easing down as we approach max.
+            float falloff = 1f - tSpeed * tSpeed; // quadratic falloff
+
+            // Blend between full effectiveness (1) and a minimum factor at high speed.
+            speedFactor = Mathf.Lerp(minPoleSpeedFactor, 1f, falloff);
         }
 
         if (speedFactor <= 0f)

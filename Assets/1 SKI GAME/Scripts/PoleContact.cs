@@ -37,13 +37,13 @@ public class PoleContact : MonoBehaviour
     [Tooltip("Root/pivot transform for this pole (near the top/handle). This transform will be rotated for the pole pose.")]
     [SerializeField] private Transform poleRoot;
 
-    [Tooltip("Normalized stroke value at which entry ends and drag begins (0..1).")]
-    [Range(0.05f, 0.5f)]
-    [SerializeField] private float entryEnd = 0.25f;
+    //[Tooltip("Normalized stroke value at which entry ends and drag begins (0..1).")]
+    //[Range(0.05f, 0.5f)]
+    //[SerializeField] private float entryEnd = 0.25f;
 
-    [Tooltip("Normalized stroke value at which drag ends and follow-through begins (entryEnd..1).")]
-    [Range(0.3f, 0.95f)]
-    [SerializeField] private float dragEnd = 0.7f;
+    //[Tooltip("Normalized stroke value at which drag ends and follow-through begins (entryEnd..1).")]
+    //[Range(0.3f, 0.95f)]
+    //[SerializeField] private float dragEnd = 0.7f;
 
     [Tooltip("Baseline pitch angle (around local X) in idle stance (negative = pointing slightly back).")]
     [SerializeField] private float idlePitch = -20f;
@@ -127,8 +127,8 @@ public class PoleContact : MonoBehaviour
         contactOffset = 0.02f;
         contactNormalLerpSpeed = 25f;
 
-        entryEnd = 0.25f;
-        dragEnd = 0.7f;
+        //entryEnd = 0.25f;
+        //dragEnd = 0.7f;
 
         idlePitch = -20f;
         entryPitch = 0f;
@@ -365,16 +365,17 @@ public class PoleContact : MonoBehaviour
                 // Entry -> Drag: poles dig backwards + down into the snow.
                 case SkiController.PoleStrokePhase.Drag:
                     {
-                        // Always move backward & down in Drag so it's visually distinct
-                        // from Entry, even when stationary.
                         float speedT = Mathf.Clamp01(planeSpeed / carveMaxSpeed);
-                        float contactFactor = IsInContact ? 1f : 0.4f;
 
-                        // 0.5 at standstill / weak contact, up to 1 at speed & solid bite.
-                        float dragScale = Mathf.Lerp(0.5f, 1f, speedT * contactFactor);
+                        // BACK offset driven by speed:
+                        //  - at low speed, stay near the forward entry position
+                        //  - at high speed, move back towards the full dragBackOffset.
+                        float back = Mathf.Lerp(entryForwardOffset, -dragBackOffset, speedT);
 
-                        float back = -dragBackOffset * dragScale;   // negative = backward
-                        float up = -dragDownOffset * dragScale;   // negative = downward
+                        // DOWN offset driven purely by being in Drag (input held),
+                        // not by noisy contact state, to avoid vertical jitter.
+                        float downAmount = dragDownOffset;
+                        float up = entryUpOffset - downAmount;
 
                         offset = localForward * back + localUp * up;
                         break;
@@ -385,12 +386,12 @@ public class PoleContact : MonoBehaviour
                     {
                         float u = phaseT; // 0..1 through follow-through
                         float speedT = Mathf.Clamp01(planeSpeed / carveMaxSpeed);
-                        float contactFactor = IsInContact ? 1f : 0.3f;
 
-                        // Match the drag offset at the start of follow-through.
-                        float dragScale = Mathf.Lerp(0.5f, 1f, speedT * contactFactor);
-                        float dragBack = -dragBackOffset * dragScale;
-                        float dragUp = -dragDownOffset * dragScale;
+                        // Recompute the same drag pose used in the Drag case (same back/down logic)
+                        // so FollowThrough starts exactly where Drag visually left off.
+                        float dragBack = Mathf.Lerp(entryForwardOffset, -dragBackOffset, speedT);
+                        float dragDown = dragDownOffset;
+                        float dragUp = entryUpOffset - dragDown;
 
                         Vector3 dragBase =
                             localForward * dragBack +
@@ -401,7 +402,7 @@ public class PoleContact : MonoBehaviour
                             localForward * (-followBackOffset) +
                             localUp * followUpOffset;
 
-                        // Lerp from drag pose to follow pose over the phase.
+                        // Lerp from drag pose to follow-through pose across the phase.
                         offset = Vector3.Lerp(dragBase, followTarget, u);
                         break;
                     }
