@@ -126,8 +126,11 @@ public class SkiController : MonoBehaviour
     // Jump
     private bool _jumpQueued;
     private bool _jumpHeld;
+    private bool _jumpReleaseQueued;
     private float _lastJumpPressedTime;
     private float _lastGroundedTime;
+    private float _lastJumpTime;
+    private float _airborneStartTime;
 
     // Air rotation state (degrees/second around local axes)
     private Vector3 _airAngularVelocity;
@@ -264,6 +267,12 @@ public class SkiController : MonoBehaviour
     [Tooltip("Minimum planar speed where misalignment is considered for stacking.")]
     [SerializeField] private float minLandingSpeedForStackCheck = 5f;
 
+    [Tooltip("Air time below this (seconds) is treated as a 'micro' landing for landing/stack logic.")]
+    [SerializeField] private float minLandingAirTime = 0.12f;
+
+    [Tooltip("Downward speed below this (m/s) is treated as a 'micro' landing for landing/stack logic.")]
+    [SerializeField] private float minLandingDownwardSpeed = 2f;
+
     [Tooltip("Torque impulse applied when stacking (to topple the skier).")]
     [SerializeField] private float stackTorqueImpulse = 30f;
 
@@ -288,7 +297,7 @@ public class SkiController : MonoBehaviour
     [SerializeField] private float airTuckSpinMultiplier = 1.5f;
 
     [Header("Jump")]
-    [Tooltip("Min/Max vertical velocity change applied when jumping.")]
+    [Tooltip("Min/Max velocity change applied along the ground normal when jumping.")]
     [SerializeField] private Vector2 jumpForceRange = new Vector2(3f, 8f);
 
     [Tooltip("Time window after leaving the ground during which a jump press will still be accepted (seconds).")]
@@ -296,6 +305,23 @@ public class SkiController : MonoBehaviour
 
     [Tooltip("Time window a jump press is buffered so it can fire on the next valid ground contact (seconds).")]
     [SerializeField] private float jumpBufferTime = 0.10f;
+
+    [Tooltip("How long holding jump builds up to full charge (seconds).")]
+    [SerializeField] private float maxJumpChargeTime = 0.5f;
+
+    [Tooltip("Time after a jump during which ground 'stickiness' will not damp upward motion (seconds).")]
+    [SerializeField] private float jumpStickSuppressionTime = 0.2f;
+
+    [Tooltip("Minimum time after performing a jump before ground checks will consider the rider grounded again.\n" +
+             "Prevents tiny hops from instantly re-sticking on steep slopes.")]
+    [SerializeField] private float minJumpUngroundedTime = 0.12f;
+
+    [Tooltip("Multiplier applied to jump force when at or above the speed below. " +
+         "1 = no extra boost, 1.5 = 50% stronger jumps at high speed.")]
+    [SerializeField] private float jumpSpeedForceMultiplier = 1.5f;
+
+    [Tooltip("Planar speed (m/s) at which the jump speed multiplier reaches its maximum effect.")]
+    [SerializeField] private float jumpSpeedForMaxMultiplier = 12f;
 
     // ----------------------------------------------------------------------
     // PROPERTIES / FLAGS
@@ -329,6 +355,10 @@ public class SkiController : MonoBehaviour
     public Vector3 Velocity => _rb.linearVelocity;
     public Vector3 SkiForwardOnPlane => _skiForward;
     public bool IsRiderGrounded => _isGrounded;
+
+    // Expose pole contacts for audio / VFX.
+    public PoleContact LeftPoleContact => leftPoleContact;
+    public PoleContact RightPoleContact => rightPoleContact;
 
 
     // ----------------------------------------------------------------------
@@ -440,6 +470,12 @@ public class SkiController : MonoBehaviour
         _wasGrounded = _isGrounded;
 
         CheckGround();
+
+        // Track when we leave the ground for jump/landing severity.
+        if (_wasGrounded && !_isGrounded)
+        {
+            _airborneStartTime = Time.time;
+        }
 
         if (_stacked)
         {
@@ -605,26 +641,42 @@ public class SkiController : MonoBehaviour
         {
             _jumpQueued = false;
             _jumpHeld = false;
+            _jumpReleaseQueued = false;
             return;
         }
 
         var action = jumpAction.action;
         bool pressedThisFrame = action.WasPressedThisFrame();
+        bool releasedThisFrame = action.WasReleasedThisFrame();
         bool isPressed = action.IsPressed();
-
-        _jumpHeld = isPressed;
 
         if (pressedThisFrame)
         {
-            // Buffer the jump so it can fire on the next valid ground / coyote frame.
+            // Start a new charge window.
+            _jumpHeld = true;
             _lastJumpPressedTime = Time.time;
             _jumpQueued = true;
+            _jumpReleaseQueued = false;
+        }
+        else if (releasedThisFrame)
+        {
+            // We only care about a release if we still have a queued jump.
+            _jumpHeld = false;
+
+            if (_jumpQueued)
+            {
+                // Mark that we're ready to actually perform the jump
+                // as soon as we hit a valid jump state (ground / coyote).
+                _jumpReleaseQueued = true;
+            }
         }
 
-        // If the button is NOT held anymore and the buffer window has elapsed,
-        // drop the queued jump. If the button IS still held, we keep the
-        // queued jump alive so it can auto-fire on the next valid frame.
-        if (!isPressed && _jumpQueued && (Time.time - _lastJumpPressedTime > jumpBufferTime))
+        // Drop the queued jump if it's too old and the player isn't actively
+        // holding it OR waiting on a release to fire.
+        if (_jumpQueued &&
+            !_jumpHeld &&
+            !_jumpReleaseQueued &&
+            (Time.time - _lastJumpPressedTime > jumpBufferTime))
         {
             _jumpQueued = false;
         }
@@ -636,6 +688,19 @@ public class SkiController : MonoBehaviour
 
     private void CheckGround()
     {
+        // If we've just jumped, enforce a short ungrounded window so the jump
+        // can actually leave the surface instead of instantly re-sticking on
+        // steep slopes.
+        if (Time.time - _lastJumpTime < minJumpUngroundedTime)
+        {
+            _isGrounded = false;
+            _leftGrounded = false;
+            _rightGrounded = false;
+            _groundNormal = Vector3.up;
+            return;
+        }
+
+
         bool hitSomething = false;
         Vector3 sumNormals = Vector3.zero;
 
@@ -707,9 +772,49 @@ public class SkiController : MonoBehaviour
 
     private void EvaluateLanding()
     {
+        // --- Landing severity: air time + downward speed ---
+        float airTime = 0f;
+        if (_airborneStartTime > 0f)
+        {
+            airTime = Mathf.Max(0f, Time.time - _airborneStartTime);
+        }
+
+        Vector3 vel = _rb.linearVelocity;
+
+        float downwardSpeed = 0f;
+        if (_groundNormal.sqrMagnitude > 0.0001f)
+        {
+            Vector3 groundNormal = _groundNormal.normalized;
+            // Component of velocity moving *into* the ground.
+            downwardSpeed = Mathf.Max(0f, -Vector3.Dot(vel, groundNormal));
+        }
+
+        // Only treat this as a "real" landing if we're actually moving into the ground.
+        if (downwardSpeed <= 0f)
+        {
+            // We may have brushed something at the apex or are still moving away
+            // from the surface. Treat as a soft contact: no stacking / projection.
+            return;
+        }
+
+        // Micro landings = tiny hops / surface chatter.
+        bool isMicroLanding =
+            airTime > 0f &&
+            airTime < minLandingAirTime &&
+            downwardSpeed < minLandingDownwardSpeed;
+
+        if (isMicroLanding)
+        {
+            // For micro landings we rely on the normal grounded movement /
+            // orientation logic to settle us onto the slope over a few frames.
+            // No stacking, projection or hard snap here.
+            return;
+        }
+
+        // --- Existing landing classification (tilt + misalignment) ---
         float tiltAngle = Vector3.Angle(transform.up, _groundNormal);
 
-        Vector3 velOnPlane = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal);
+        Vector3 velOnPlane = Vector3.ProjectOnPlane(vel, _groundNormal);
         float planarSpeed = velOnPlane.magnitude;
 
         float misalignAngle = 0f;
@@ -720,7 +825,7 @@ public class SkiController : MonoBehaviour
             {
                 Vector3 velDir = velOnPlane.normalized;
 
-                // Raw angle between ski forward and planar velocity
+                // Raw angle between ski forward and planar velocity.
                 float rawAngle = Vector3.Angle(skiDir, velDir);
 
                 // Treat 0° and 180° as "aligned" and 90° as most misaligned.
@@ -1135,19 +1240,22 @@ public class SkiController : MonoBehaviour
         }
         else if (normalDot > 0f && maxStickUpwardSpeed > 0f)
         {
-            // Away from the ground: if this is a small upward speed (typical of
-            // riding over ripples or gentle crests rather than an explicit jump),
-            // damp it so we don't get lots of tiny unintended hops.
-            float upSpeed = normalDot; // since _groundNormal is unit-length
+            // If we've just jumped, don't damp upward velocity at all;
+            // we want small pops to fully leave the snow.
+            bool suppressStickiness =
+                (Time.time - _lastJumpTime) <= jumpStickSuppressionTime;
 
-            if (upSpeed <= maxStickUpwardSpeed)
+            if (!suppressStickiness)
             {
-                // Strongest damping at very small upSpeed, fading out as we
-                // approach the stick threshold.
-                float t = upSpeed / maxStickUpwardSpeed;        // 0..1
-                float strength = normalKillStrength * (1f - t); // high at low speed
+                float upSpeed = normalDot; // since _groundNormal is unit-length
 
-                velocity -= velAlongNormal * Mathf.Clamp01(strength * Time.fixedDeltaTime);
+                if (upSpeed <= maxStickUpwardSpeed)
+                {
+                    float t = upSpeed / maxStickUpwardSpeed;        // 0..1
+                    float strength = normalKillStrength * (1f - t); // high at low speed
+
+                    velocity -= velAlongNormal * Mathf.Clamp01(strength * Time.fixedDeltaTime);
+                }
             }
         }
 
@@ -1321,56 +1429,115 @@ public class SkiController : MonoBehaviour
         if (!_jumpQueued)
             return;
 
-        // If the button is no longer held AND the buffer window has elapsed,
-        // discard the queued jump.
-        if (!_jumpHeld && (Time.time - _lastJumpPressedTime > jumpBufferTime))
+        // We only actually perform the jump once the player has released
+        // the button, so they can hold to "wind up" and then choose when
+        // to pop.
+        if (!_jumpReleaseQueued)
+            return;
+
+        // Can't jump while stacked.
+        if (_stacked)
         {
             _jumpQueued = false;
+            _jumpReleaseQueued = false;
             return;
         }
-
-        if (_stacked)
-            return;
 
         // Allow jump when grounded, or shortly after leaving the ground (coyote time).
         bool withinCoyote = !_isGrounded && (Time.time - _lastGroundedTime <= jumpCoyoteTime);
-        if (!_isGrounded && !withinCoyote)
+        bool canJumpNow = _isGrounded || withinCoyote;
+
+        if (!canJumpNow)
         {
-            // Still buffered, but not in a valid state to jump yet.
+            // We have a release queued, but we're not in a valid state yet.
+            // Keep it buffered until we land or it expires.
+            if (Time.time - _lastJumpPressedTime > jumpBufferTime)
+            {
+                _jumpQueued = false;
+                _jumpReleaseQueued = false;
+            }
             return;
         }
 
         // ------------------------------------------------------------------
-        // Jump force: small hops at low speed, full pop at higher speeds.
+        // 1. Compute charge-based jump strength (base force magnitude).
         // ------------------------------------------------------------------
+        float holdDuration = Mathf.Max(0f, Time.time - _lastJumpPressedTime);
+        float chargeT = maxJumpChargeTime > 0f
+            ? Mathf.Clamp01(holdDuration / maxJumpChargeTime)
+            : 1f;
+        Debug.Log($"[Jump] Hold duration: {holdDuration:F3} s (chargeT = {chargeT:F2})");
+
         float minForce = Mathf.Min(jumpForceRange.x, jumpForceRange.y);
         float maxForce = Mathf.Max(jumpForceRange.x, jumpForceRange.y);
+        float jumpForce = Mathf.Lerp(minForce, maxForce, chargeT);
 
-        // Use planar speed on the current ground plane to determine how much
-        // of the full jump force we should apply.
+        // ------------------------------------------------------------------
+        // 1b. Scale jump force based on current planar speed.
+        //     - At low speeds, multiplier ~1 (no change).
+        //     - At high speeds, multiplier -> jumpSpeedForceMultiplier.
+        // ------------------------------------------------------------------
         Vector3 velocity = _rb.linearVelocity;
+
+        // Planar speed relative to the current ground; ignores vertical velocity.
         Vector3 velOnPlane = Vector3.ProjectOnPlane(velocity, _groundNormal);
         float planarSpeed = velOnPlane.magnitude;
 
-        // Speed at which we reach full jump force.
-        const float speedForMaxJump = 8f;
+        float speedT = jumpSpeedForMaxMultiplier > 0f
+            ? Mathf.Clamp01(planarSpeed / jumpSpeedForMaxMultiplier)
+            : 0f;
 
-        float speedT = speedForMaxJump > 0f
-            ? Mathf.Clamp01(planarSpeed / speedForMaxJump)
-            : 1f;
+        float speedMultiplier = Mathf.Lerp(1f, jumpSpeedForceMultiplier, speedT);
 
-        // Stationary / slow: closer to minForce (small hop).
-        // Fast: closer to maxForce (big pop).
-        float force = Mathf.Lerp(minForce, maxForce, speedT);
+        // Apply speed multiplier on top of charge-based force.
+        jumpForce *= speedMultiplier;
 
+        // ------------------------------------------------------------------
+        // 2. Jump direction = pure ground normal (slope "up").
+        //
+        // Flat ground   -> (0,1,0)  = straight up.
+        // 45° slope     -> normal tilted 45° out from world up.
+        // 90° wall      -> normal pointing straight out from wall.
+        // ------------------------------------------------------------------
         Vector3 jumpDir = _groundNormal.sqrMagnitude > 0.0001f
             ? _groundNormal.normalized
             : Vector3.up;
 
-        _rb.AddForce(jumpDir * force, ForceMode.VelocityChange);
+        // We do NOT add any explicit forward component here.
+        // Existing _rb.linearVelocity (whatever speed/direction you had)
+        // plus this jump impulse is all that defines the arc.
 
+        // ------------------------------------------------------------------
+        // 3. Apply the impulse.
+        // ------------------------------------------------------------------
+        _rb.AddForce(jumpDir * jumpForce, ForceMode.VelocityChange);
+
+        // Record that we just jumped so:
+        //  - ground stickiness won't damp this upward motion
+        //  - CheckGround() will respect minJumpUngroundedTime.
+        _lastJumpTime = Time.time;
         _isGrounded = false;
+
+        // Start airborne timing from the moment we actually leave the ground.
+        _airborneStartTime = _lastJumpTime;
+
+        // ------------------------------------------------------------------
+        // 4. Seed aerial rotation based on current inputs ("wind-up").
+        // ------------------------------------------------------------------
+        if (HasLegInputs || HasLeanInput)
+        {
+            float yawInput = HasLegInputs
+                ? Mathf.Clamp(_rawRightLegInput - _rawLeftLegInput, -1f, 1f)
+                : 0f;
+
+            float pitchInput = HasLeanInput ? _rawLeanInput : 0f;
+
+            _airAngularVelocity.y = yawInput * airYawTurnSpeed * 0.5f;
+            _airAngularVelocity.x = pitchInput * airPitchTurnSpeed * 0.5f;
+        }
+
         _jumpQueued = false;
+        _jumpReleaseQueued = false;
     }
 
     // ----------------------------------------------------------------------

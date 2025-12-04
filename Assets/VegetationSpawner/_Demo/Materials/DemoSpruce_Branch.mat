@@ -172,7 +172,7 @@ Material:
     - _Coverage: 1
     - _CoverageAmount: 0.75
     - _CoverageAmountOverride: 0
-    - _CoverageAreaBias: 0.025
+    - _CoverageAreaBias: 0.05
     - _CoverageAreaBiasOverride: 0
     - _CoverageAreaFalloffHardness: 0.75
     - _CoverageAreaMaskRange: 1
@@ -189,7 +189,7 @@ Material:
     - _CoverageDisplacementOffset: 0
     - _CoverageDisplacementOffsetOverride: 0
     - _CoverageDisplacementOverride: 0
-    - _CoverageLeakReduction: 0
+    - _CoverageLeakReduction: 0.1
     - _CoverageLeakReductionOverride: 0
     - _CoverageNormalScale0: 1
     - _CoverageNormalScale0Override: 0
