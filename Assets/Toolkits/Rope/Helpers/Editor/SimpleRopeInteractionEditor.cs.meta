@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 690ba92ccc18546d09d046bf31fa4887
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 154662
+  packageName: Rope Toolkit
+  packageVersion: 2.2.3
+  assetPath: Assets/Toolkits/Rope/Helpers/Editor/SimpleRopeInteractionEditor.cs
+  uploadId: 793792

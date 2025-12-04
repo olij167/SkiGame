@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: fc3b5a3644d842a44a1bc8eb5e72a975
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 154662
+  packageName: Rope Toolkit
+  packageVersion: 2.2.3
+  assetPath: Assets/Toolkits/Rope/Examples/00_Main/Environment/Environment.prefab
+  uploadId: 793792

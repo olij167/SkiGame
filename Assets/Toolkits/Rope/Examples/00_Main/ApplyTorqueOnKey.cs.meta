@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: c1451225f8bdb1545ae082cfd03cddfd
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 154662
+  packageName: Rope Toolkit
+  packageVersion: 2.2.3
+  assetPath: Assets/Toolkits/Rope/Examples/00_Main/ApplyTorqueOnKey.cs
+  uploadId: 793792

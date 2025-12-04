@@ -1172,9 +1172,9 @@ Sky Master ULTIMATE can be upgraded to all other major ARTnGAME
 assets with big (more than 50%) discount.
 
 Sky Master ULTIMATE UPR Beta 25 (Unity 2021.3), Beta 26 (Unity 2022.3),
-Beta 28a for Unity 6 LTS (RenderGraph) and HDRP Beta 17 are available to 
+Beta 28c for Unity 6 LTS (RenderGraph) and HDRP Beta 17 are available to 
 all Sky Master ULTIMATE assets (Standard Pipeline system) users for 
-download in Google Drive on PM request. (12th July 2025 releases)
+download in Google Drive on PM request. (August 2025 release)
 The Beta versions are being developed on Unity LTS versions. 
 InfiniGRASS URP Beta 2.0 and Oceanis Standard Pipeline Beta v0.3f1 
 are also available.(6 May 2025 releases).

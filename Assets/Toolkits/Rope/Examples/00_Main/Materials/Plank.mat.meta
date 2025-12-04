@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b908b9053476d604fae11ed6727c9902
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 154662
+  packageName: Rope Toolkit
+  packageVersion: 2.2.3
+  assetPath: Assets/Toolkits/Rope/Examples/00_Main/Materials/Plank.mat
+  uploadId: 793792

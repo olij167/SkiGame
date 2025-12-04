@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 6ae913a7495f9445da3517bf946c1e9f
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 154662
+  packageName: Rope Toolkit
+  packageVersion: 2.2.3
+  assetPath: Assets/Toolkits/Rope/Examples/01_DynamicAttach/DynamicAttach.cs
+  uploadId: 793792

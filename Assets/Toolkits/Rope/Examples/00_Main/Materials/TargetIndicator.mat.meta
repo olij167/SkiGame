@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f1f2a238089ca461f9383525476c3a2b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 154662
+  packageName: Rope Toolkit
+  packageVersion: 2.2.3
+  assetPath: Assets/Toolkits/Rope/Examples/00_Main/Materials/TargetIndicator.mat
+  uploadId: 793792

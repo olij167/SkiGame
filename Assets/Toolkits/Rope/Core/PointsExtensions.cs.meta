@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 460fdf7888d541b48bd9e15bfcb51528
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 154662
+  packageName: Rope Toolkit
+  packageVersion: 2.2.3
+  assetPath: Assets/Toolkits/Rope/Core/PointsExtensions.cs
+  uploadId: 793792

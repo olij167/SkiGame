@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 05dfe89e2a8b04019aa2fd84b55f8c8e
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 154662
+  packageName: Rope Toolkit
+  packageVersion: 2.2.3
+  assetPath: Assets/Toolkits/Rope/Examples/02_BoxingRing/Ball.mat
+  uploadId: 793792
