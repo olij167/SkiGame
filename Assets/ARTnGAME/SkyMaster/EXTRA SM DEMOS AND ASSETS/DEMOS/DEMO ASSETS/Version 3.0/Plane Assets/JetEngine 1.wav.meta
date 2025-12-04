@@ -1,0 +1,29 @@
+fileFormatVersion: 2
+guid: 372a9db081463bb4fb139942f3f323d4
+timeCreated: 1446931696
+licenseType: Store
+AudioImporter:
+  serializedVersion: 6
+  defaultSettings:
+    loadType: 1
+    sampleRateSetting: 0
+    sampleRateOverride: 0
+    compressionFormat: 0
+    quality: 0
+    conversionMode: 0
+  platformSettingOverrides: {}
+  forceToMono: 0
+  preloadAudioData: 1
+  loadInBackground: 0
+  3D: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/EXTRA SM DEMOS AND ASSETS/DEMOS/DEMO ASSETS/Version
+    3.0/Plane Assets/JetEngine 1.wav
+  uploadId: 828026

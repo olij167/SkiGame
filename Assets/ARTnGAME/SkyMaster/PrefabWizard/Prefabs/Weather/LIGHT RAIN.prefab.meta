@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c2a9c51ddaca2f244a701b18f8e8f012
+timeCreated: 1443836647
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/PrefabWizard/Prefabs/Weather/LIGHT RAIN.prefab
+  uploadId: 828026

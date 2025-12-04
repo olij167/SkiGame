@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 4d3e3435d7cdde24dad627bbcb15b66d
+timeCreated: 1464435960
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V3.4 Scripts/TerrainWaterReflect/SM_Snow_Mud
+    2.mat
+  uploadId: 828026

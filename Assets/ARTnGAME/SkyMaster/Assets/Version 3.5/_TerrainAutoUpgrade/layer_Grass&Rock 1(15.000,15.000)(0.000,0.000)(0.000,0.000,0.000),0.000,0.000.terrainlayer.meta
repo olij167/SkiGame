@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: dcbf7ef035a89e74da1ac2749b898f3f
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 8574412962073106934
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Assets/Version 3.5/_TerrainAutoUpgrade/layer_Grass&Rock
+    1(15.000,15.000)(0.000,0.000)(0.000,0.000,0.000),0.000,0.000.terrainlayer
+  uploadId: 828026

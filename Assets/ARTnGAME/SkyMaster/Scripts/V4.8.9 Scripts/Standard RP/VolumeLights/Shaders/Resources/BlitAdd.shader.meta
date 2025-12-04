@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: c2282c5842bb6d74d999852919953d40
+timeCreated: 1459178236
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V4.8.9 Scripts/Standard RP/VolumeLights/Shaders/Resources/BlitAdd.shader
+  uploadId: 828026

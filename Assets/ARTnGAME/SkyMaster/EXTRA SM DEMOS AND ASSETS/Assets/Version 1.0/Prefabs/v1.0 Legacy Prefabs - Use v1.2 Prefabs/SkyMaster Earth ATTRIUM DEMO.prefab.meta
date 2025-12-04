@@ -1,0 +1,28 @@
+fileFormatVersion: 2
+guid: 6bd5b16f219992c49afd43e127b9a347
+labels:
+- Attractor
+- Dynamic
+- Effect
+- Lightning
+- Particles
+- Wind
+- Sky
+- Master
+- Weather
+- Storm
+- Clouds
+- Seasons
+- Tornado
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/EXTRA SM DEMOS AND ASSETS/Assets/Version 1.0/Prefabs/v1.0
+    Legacy Prefabs - Use v1.2 Prefabs/SkyMaster Earth ATTRIUM DEMO.prefab
+  uploadId: 828026

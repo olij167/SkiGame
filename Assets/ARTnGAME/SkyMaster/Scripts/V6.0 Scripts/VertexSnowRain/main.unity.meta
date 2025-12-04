@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 708a537af732543fe823c8887758066a
+timeCreated: 1450785493
+licenseType: Store
+DefaultImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V6.0 Scripts/VertexSnowRain/main.unity
+  uploadId: 828026

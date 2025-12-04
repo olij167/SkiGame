@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 653c13f27edfcab43ba9908ebbeef23a
+labels:
+- Procedural
+- Noise
+timeCreated: 18446744011573954816
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V5.0 Scripts/Full Volumetric Beta/Turbulence-Library/Resources/shader.template
+  uploadId: 828026

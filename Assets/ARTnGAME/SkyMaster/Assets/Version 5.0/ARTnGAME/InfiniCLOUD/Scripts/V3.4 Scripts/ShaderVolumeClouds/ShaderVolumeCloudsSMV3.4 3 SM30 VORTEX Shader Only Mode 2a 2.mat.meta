@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: af503b3dc0b632d4cbfd35075c7917aa
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Assets/Version 5.0/ARTnGAME/InfiniCLOUD/Scripts/V3.4
+    Scripts/ShaderVolumeClouds/ShaderVolumeCloudsSMV3.4 3 SM30 VORTEX Shader Only
+    Mode 2a 2.mat
+  uploadId: 828026

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 6a407a2d877fce74eafffebc76436773
+timeCreated: 1460412844
+licenseType: Store
+DefaultImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V4.8.9 Scripts/Standard RP/VolumeLights/sun-haze.unity
+  uploadId: 828026

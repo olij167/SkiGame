@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 4c2a45d4284c0624baf12e468dc8a6e4
+timeCreated: 1438566826
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Assets/Version 2.2/TerrainShading/Resources/TreeSoftOcclusionLeaves.shader
+  uploadId: 828026

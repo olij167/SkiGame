@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: ecf0f791f14bdf14ba154eff36a78723
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V5.1 Scripts/unity-deformablesnow/StandAsset/Models/Materials/YellowSmooth.mat
+  uploadId: 828026

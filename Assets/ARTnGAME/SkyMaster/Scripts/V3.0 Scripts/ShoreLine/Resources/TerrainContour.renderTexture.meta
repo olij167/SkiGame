@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 80da2c9a83e305a4a9b1d63c538f090b
+timeCreated: 1446546298
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V3.0 Scripts/ShoreLine/Resources/TerrainContour.renderTexture
+  uploadId: 828026

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: bfde563304acbc248945910285e62e64
+timeCreated: 1468170217
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V5.1 Scripts/GPU-Planetary-Rendering/Models/Materials/Y.mat
+  uploadId: 828026

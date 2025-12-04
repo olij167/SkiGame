@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 2070a5530c303444ab76ad8146f96703
+timeCreated: 1501556287
+licenseType: Store
+ComputeShaderImporter:
+  currentAPIMask: 131076
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/ARTnGAME GI PROXY/SEGI/Resources/SEGITransferInts_C.compute
+  uploadId: 828026

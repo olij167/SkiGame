@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: c225851bfe171124eabf34d3cf87b631
+timeCreated: 1439491620
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Assets/Version 5.0/Skybox-Procedural_SkyMaster
+    MAIN U5 TEXTURED v4.shader
+  uploadId: 828026

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: e43a003dd7c372d44a5991aab71d362b
+timeCreated: 1503605875
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V5.1 Scripts/unity-deformablesnow/Snow/Snow.mat
+  uploadId: 828026

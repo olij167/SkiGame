@@ -3,7 +3,21 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 3
-  tags: []
+  tags:
+  - Flammable
+  - FlameThrow
+  - NoForcePDM
+  - Grass
+  - Freezable
+  - Conductor
+  - Flamer
+  - PPaint
+  - Butter
+  - Enemy
+  - RainSplashManager
+  - Tornado
+  - RainBoxManager
+  - MoodBoxManager
   layers:
   - Default
   - TransparentFX
@@ -12,19 +26,19 @@ TagManager:
   - Water
   - UI
   - Ground
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
+  - Conductor
+  - Tornado
+  - Flamer
+  - Flammable
+  - Grass
+  - Butter
+  - Freezable
+  - PPaint
+  - FlameThrow
+  - VortexSafe
+  - NoForcePDM
+  - PDM_Batch_Pool
+  - PDM_Batch_Pool_Break
   - 
   - 
   - 

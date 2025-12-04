@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: fdc378243b95c2144aa66bfc382d1b75
+timeCreated: 1447332698
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V5.1 Scripts/unity-deformablesnow/StandAsset/Prefabs/CameraSwitch.prefab
+  uploadId: 828026

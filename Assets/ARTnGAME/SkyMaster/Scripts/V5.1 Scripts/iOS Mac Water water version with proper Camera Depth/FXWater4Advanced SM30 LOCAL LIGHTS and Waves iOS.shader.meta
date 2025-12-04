@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 04dfddf7f056abf489dea43639eb9c84
+timeCreated: 1448227151
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V5.1 Scripts/iOS Mac Water water version
+    with proper Camera Depth/FXWater4Advanced SM30 LOCAL LIGHTS and Waves iOS.shader
+  uploadId: 828026

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: e98dc179d97c2e046ba77f27039daa07
+timeCreated: 1514466834
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 15600000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V5.0 Scripts/Full Volumetric Beta/Terrains/Terrain.asset
+  uploadId: 828026

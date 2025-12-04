@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 282978d0526e7234f90826302fe1bf5f
+timeCreated: 1461970588
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V3.4 Scripts/Volume Sun Lighting/AtmosphericScattering_DeferredSM34.shader
+  uploadId: 828026

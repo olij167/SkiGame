@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 7dffa924d7e8bb04d80e4382d53ba6f7
+timeCreated: 1514903861
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 8400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V3.5 Scripts/Full volume clouds/Background
+    Objects.renderTexture
+  uploadId: 828026

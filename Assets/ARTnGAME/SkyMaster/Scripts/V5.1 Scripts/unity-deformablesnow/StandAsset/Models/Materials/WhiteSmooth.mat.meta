@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 90c651011b42ec64d8631df640ad0073
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V5.1 Scripts/unity-deformablesnow/StandAsset/Models/Materials/WhiteSmooth.mat
+  uploadId: 828026

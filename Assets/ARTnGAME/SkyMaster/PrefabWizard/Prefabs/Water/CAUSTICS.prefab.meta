@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: ab835db7d89a93848b6e37586f0a2c01
+timeCreated: 1443134421
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/PrefabWizard/Prefabs/Water/CAUSTICS.prefab
+  uploadId: 828026

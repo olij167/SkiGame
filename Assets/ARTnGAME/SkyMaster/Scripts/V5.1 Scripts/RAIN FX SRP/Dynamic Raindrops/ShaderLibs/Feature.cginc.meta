@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: eea0c01d9a091324eb82f8753fa51ac9
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V5.1 Scripts/RAIN FX SRP/Dynamic Raindrops/ShaderLibs/Feature.cginc
+  uploadId: 828026

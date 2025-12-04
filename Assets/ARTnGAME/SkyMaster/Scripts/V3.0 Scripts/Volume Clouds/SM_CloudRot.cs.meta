@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 921968169efeddb4b99229c4a3198ca7
+timeCreated: 1442168015
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V3.0 Scripts/Volume Clouds/SM_CloudRot.cs
+  uploadId: 828026

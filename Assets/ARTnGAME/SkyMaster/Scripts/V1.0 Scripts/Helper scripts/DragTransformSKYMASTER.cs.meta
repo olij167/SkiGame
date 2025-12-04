@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: b465487f42ea1be4a9dc53b509d2e431
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V1.0 Scripts/Helper scripts/DragTransformSKYMASTER.cs
+  uploadId: 828026

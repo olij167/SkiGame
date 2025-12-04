@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: b64e2266d31642e42bee0433cc2c2af8
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/ARTnGAME GI PROXY/SAs GI PROXY/Characters/FirstPersonCharacter/Scripts/FirstPersonControllerGIPROXY.cs
+  uploadId: 828026

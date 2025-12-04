@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7ecdc8c9438bddc4281777a62d72a11f
+timeCreated: 1440151912
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/PrefabWizard/Prefabs/Water/Tile.prefab
+  uploadId: 828026

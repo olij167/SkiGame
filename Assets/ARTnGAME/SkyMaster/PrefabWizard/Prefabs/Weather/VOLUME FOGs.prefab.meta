@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 333ace8d2bc3df348bb7954cf6d92474
+timeCreated: 1443835574
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/PrefabWizard/Prefabs/Weather/VOLUME FOGs.prefab
+  uploadId: 828026

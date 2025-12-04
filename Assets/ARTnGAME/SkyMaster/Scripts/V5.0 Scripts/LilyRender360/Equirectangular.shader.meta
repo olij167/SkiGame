@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: b3acbe6c17c7f0e4f97ba25b8bce3ff9
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V5.0 Scripts/LilyRender360/Equirectangular.shader
+  uploadId: 828026

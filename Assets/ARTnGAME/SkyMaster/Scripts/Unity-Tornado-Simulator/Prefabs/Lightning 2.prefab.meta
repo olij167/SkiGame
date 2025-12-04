@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 2b996b40c4bb30a47b65e1305a417785
+timeCreated: 1467651566
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/Unity-Tornado-Simulator/Prefabs/Lightning
+    2.prefab
+  uploadId: 828026

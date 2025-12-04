@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 4fbdd1accc8543a4098ff619491cc046
+timeCreated: 1430899744
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V2.0 Scripts/Filters/AntiAliasing/SSAA
+    1.shader
+  uploadId: 828026
