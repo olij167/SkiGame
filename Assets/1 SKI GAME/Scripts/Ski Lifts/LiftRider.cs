@@ -57,7 +57,7 @@ public class LiftRider : MonoBehaviour
         {
             Vector3 forward = currentCarrier.transform.forward;
             // Pull uphill along cable, but let SkiController do terrain work
-            Vector3 targetVel = forward * (currentCarrier.line.speed * 0.9f);
+            Vector3 targetVel = forward * (currentCarrier.line.bandSpeed * 0.9f);
             Vector3 vel = rb.linearVelocity;
             Vector3 velChange = targetVel - vel;
 

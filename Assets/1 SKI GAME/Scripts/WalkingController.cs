@@ -82,6 +82,16 @@ public class WalkingController : MonoBehaviour
     [Tooltip("Horizontal deceleration when no input (m/s^2).")]
     [SerializeField] private float deceleration = 30f;
 
+    [Header("Jump")]
+    [Tooltip("Upward jump speed when walking.")]
+    [SerializeField] private float jumpForce = 5f;
+
+    [Tooltip("Distance below the player to check for ground when walking.")]
+    [SerializeField] private float groundCheckDistance = 0.5f;
+
+    [Tooltip("Radius of the ground check sphere.")]
+    [SerializeField] private float groundCheckRadius = 0.3f;
+
     [Header("Ski Re-Equip")]
     [Tooltip("Layers to consider as ground when nudging player up for skis.")]
     [SerializeField] private LayerMask groundLayers = ~0;
@@ -124,6 +134,10 @@ public class WalkingController : MonoBehaviour
     private Quaternion _rightSkiOriginalLocalRot;
     private Quaternion _leftPoleOriginalLocalRot;
     private Quaternion _rightPoleOriginalLocalRot;
+
+    // Grounded / jump state (walk mode only)
+    private bool _isGrounded;
+    private bool _jumpQueued;
 
     // ----------------------------------------------------------------------
     // UNITY LIFECYCLE
@@ -184,12 +198,15 @@ public class WalkingController : MonoBehaviour
     private void Update()
     {
         HandleToggleInput();
+        HandleJumpInput();
     }
 
     private void FixedUpdate()
     {
         if (!_skisOn)
         {
+            UpdateGroundedState();
+            TryProcessJump();
             ApplyWalkMovement();
         }
     }
@@ -452,4 +469,51 @@ public class WalkingController : MonoBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, 10f * Time.fixedDeltaTime);
         }
     }
+
+    // ----------------------------------------------------------------------
+    // JUMP MOVEMENT
+    // ----------------------------------------------------------------------
+    private void HandleJumpInput()
+    {
+        // Only care about jump when in walk mode
+        if (_skisOn)
+            return;
+
+        if (_player.Jump.WasPressedThisFrame())
+        {
+            _jumpQueued = true;
+        }
+    }
+
+    private void UpdateGroundedState()
+    {
+        // Very simple sphere cast ground check under the player
+        Vector3 origin = transform.position + Vector3.up * 0.1f;
+        _isGrounded = Physics.SphereCast(
+            origin,
+            groundCheckRadius,
+            Vector3.down,
+            out _,
+            groundCheckDistance,
+            groundLayers,
+            QueryTriggerInteraction.Ignore
+        );
+    }
+
+    private void TryProcessJump()
+    {
+        if (!_jumpQueued)
+            return;
+
+        _jumpQueued = false;
+
+        if (!_isGrounded)
+            return;
+
+        // Preserve horizontal velocity, override vertical with jumpForce
+        Vector3 vel = _rb.linearVelocity;
+        vel.y = jumpForce;
+        _rb.linearVelocity = vel;
+    }
+
 }

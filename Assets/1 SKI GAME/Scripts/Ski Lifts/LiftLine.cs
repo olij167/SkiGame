@@ -7,280 +7,449 @@ public enum LiftCarrierMode
     TBar
 }
 
-/// <summary>
-/// Controls a single lift line:
-/// - Defines stations and path (via LiftPath)
-/// - (Optionally) auto-generates towers along the line
-/// - Spawns and advances carriers (chairs / T-bars) along the cable
-/// </summary>
+[AddComponentMenu("Ski Lifts/Lift Line")]
 public class LiftLine : MonoBehaviour
 {
     [Header("Stations")]
-    public LiftStation bottomStation;
-    public LiftStation topStation;
+    [Tooltip("Bottom/first station transform. Should have a SphereCollider on the same GameObject.")]
+    public Transform bottomStation;
 
-    [Tooltip("Optional manually defined control points between stations (e.g. custom towers). Ignored if auto-generate is enabled.")]
-    public Transform[] extraControlPoints;
+    [Tooltip("Top/second station transform. Should have a SphereCollider on the same GameObject.")]
+    public Transform topStation;
 
-    [Header("Path")]
-    public LiftPath path;
-    [Tooltip("Cable speed in metres per second.")]
-    public float speed = 5f;
+    [Header("Curve & Sag")]
+    [Tooltip("Horizontal distance between the uphill and downhill sides of the loop.")]
+    public float horizontalSeparation = 4f;
+
+    [Tooltip("Vertical offset from station center for the rope contacts (0 = through center).")]
+    public float verticalOffset = 0f;
+
+    [Tooltip("Extra clearance added to the sphere radius when placing rope contacts.")]
+    public float ropeClearance = 0.2f;
+
+    [Tooltip("Approximate max distance between control points along each straight side in world units.")]
+    public float sideMaxSegmentLength = 8f;
+
+    [Tooltip("Fraction of the side span used as initial sag depth (0 = no sag, 0.1 = 10% of span).")]
+    [Range(0f, 0.5f)]
+    public float sideSagFraction = 0.1f;
+
+    [Tooltip("Number of Bezier samples per station arc (more = rounder wrap around the sphere).")]
+    [Range(1, 8)]
+    public int arcSamplesPerStation = 3;
+
+    [Header("Motion")]
+    [Tooltip("Speed of the lift along the band in metres per second.")]
+    public float bandSpeed = 5f;
+
+    // Backwards-compatible alias used by LiftRider
+    public float speed => bandSpeed;
 
     [Header("Carriers")]
+    [Tooltip("Prefab for a lift carrier (chair / T-bar). Must have a LiftCarrier component.")]
     public LiftCarrier carrierPrefab;
-    public int carrierCount = 10;
 
-    [Header("Tower Generation")]
-    [Tooltip("Automatically generate towers between bottom and top stations.")]
-    public bool autoGenerateTowers = true;
-    [Tooltip("Prefab for a tower. Its origin is placed at ground level; a child named 'CableTop' is created at the specified height.")]
-    public GameObject towerPrefab;
-    [Tooltip("Approximate spacing between towers along the straight line between stations.")]
-    public float towerSpacing = 30f;
-    [Tooltip("Height of the cable above the tower base (in metres).")]
-    public float towerHeight = 8f;
-    [Tooltip("Maximum height above terrain to start ground raycasts.")]
-    public float towerRaycastHeight = 50f;
-    [Tooltip("Layers considered as 'ground' when placing towers.")]
-    public LayerMask groundMask = ~0;
-    [Tooltip("Parent transform for auto-generated towers. If null, one will be created.")]
-    public Transform towersParent;
+    [Tooltip("Number of carriers to distribute around the loop.")]
+    public int carrierCount = 8;
 
-    private readonly List<LiftCarrier> carriers = new List<LiftCarrier>();
+    [Tooltip("Runtime list of all spawned carriers on this line.")]
+    public List<LiftCarrier> carriers = new List<LiftCarrier>();
 
-    // Internal bookkeeping for generated towers so we can safely clear them
-    [SerializeField, HideInInspector]
-    private List<Transform> generatedTowerInstances = new List<Transform>();
-    [SerializeField, HideInInspector]
-    private List<Transform> generatedTowerPoints = new List<Transform>();
+    // ---- internal analytic loop ----
 
-    // Reusable buffer for building path control points
-    private readonly List<Transform> controlPointsBuffer = new List<Transform>();
+    private class CarrierRuntime
+    {
+        public LiftCarrier carrier;
+        public Transform anchor;      // follows the band loop
+        public float distanceAlong;   // distance (m) along the loop
+    }
+
+    private readonly List<CarrierRuntime> _carrierRuntime = new List<CarrierRuntime>();
+
+    // World-space polyline describing the band loop
+    private readonly List<Vector3> _bandPoints = new List<Vector3>();
+    // Cumulative length at each point index (0..Count)
+    private readonly List<float> _segmentCumulative = new List<float>();
+
+    private float _bandLength;
+    public float BandLength => _bandLength;
+
+    private SphereCollider _bottomCollider;
+    private SphereCollider _topCollider;
+
+    private void Reset()
+    {
+        // Try to auto-assign stations from children
+        if (!bottomStation && transform.childCount > 0)
+            bottomStation = transform.GetChild(0);
+
+        if (!topStation && transform.childCount > 1)
+            topStation = transform.GetChild(1);
+    }
 
     private void Awake()
     {
-        if (!path) path = GetComponent<LiftPath>();
+        if (!ValidateStations())
+        {
+            enabled = false;
+            return;
+        }
 
-        BuildPath();
+        BuildAnalyticLoop();
         SpawnCarriers();
     }
 
     private void FixedUpdate()
     {
-        if (path == null || path.TotalLength <= 0f)
+        if (_bandLength <= 0f || _carrierRuntime.Count == 0 || Mathf.Approximately(bandSpeed, 0f))
             return;
 
         float dt = Time.fixedDeltaTime;
-        for (int i = 0; i < carriers.Count; i++)
+
+        for (int i = 0; i < _carrierRuntime.Count; i++)
         {
-            var carrier = carriers[i];
-            if (carrier == null) continue;
+            CarrierRuntime c = _carrierRuntime[i];
+            if (c == null || c.anchor == null)
+                continue;
 
-            carrier.distanceAlong += speed * dt;
-            Vector3 pos = path.GetPosition(carrier.distanceAlong);
-            Vector3 fwd = path.GetForward(carrier.distanceAlong);
+            c.distanceAlong = Mathf.Repeat(c.distanceAlong + bandSpeed * dt, _bandLength);
 
-            carrier.transform.position = pos;
-            carrier.transform.rotation = Quaternion.LookRotation(fwd, Vector3.up);
+            Vector3 pos = GetBandPosition(c.distanceAlong);
+            Vector3 fwd = GetBandTangent(c.distanceAlong);
+
+            c.anchor.position = pos;
+            c.anchor.rotation = Quaternion.LookRotation(fwd, Vector3.up);
         }
     }
 
+    #region Public API for visuals
+
     /// <summary>
-    /// Build the LiftPath from stations and either generated or manual towers.
+    /// Rebuilds the analytic loop using current station positions/settings.
+    /// Used by LiftRopeVisual to keep the visual band in sync.
     /// </summary>
-    public void BuildPath()
+    public void RebuildAnalyticLoop()
     {
-        if (!path)
+        if (!ValidateStations())
             return;
 
-        controlPointsBuffer.Clear();
-
-        if (bottomStation)
-        {
-            controlPointsBuffer.Add(bottomStation.transform);
-            bottomStation.line = this;
-        }
-
-        // Remove previously generated towers (editor or runtime)
-        ClearGeneratedTowers();
-
-        if (autoGenerateTowers && bottomStation && topStation)
-        {
-            GenerateTowersAlongLine(controlPointsBuffer);
-        }
-        else if (extraControlPoints != null && extraControlPoints.Length > 0)
-        {
-            controlPointsBuffer.AddRange(extraControlPoints);
-        }
-
-        if (topStation)
-        {
-            controlPointsBuffer.Add(topStation.transform);
-            topStation.line = this;
-        }
-
-        path.BuildPath(controlPointsBuffer.ToArray());
+        BuildAnalyticLoop();
     }
 
     /// <summary>
-    /// Generates tower instances along the straight line between bottom and top stations,
-    /// raycasting down to terrain and adding a 'CableTop' child used as a control point.
+    /// Returns world-space position along the analytic loop at a given distance.
     /// </summary>
-    private void GenerateTowersAlongLine(List<Transform> controlPointsAccum)
+    public Vector3 GetBandPosition(float distance)
     {
-        if (!bottomStation || !topStation)
-            return;
+        if (_bandLength <= 0f || _bandPoints.Count == 0)
+            return transform.position;
 
-        Vector3 start = bottomStation.transform.position;
-        Vector3 end = topStation.transform.position;
-        float totalDist = Vector3.Distance(start, end);
+        float s = Mathf.Repeat(distance, _bandLength);
 
-        if (totalDist <= Mathf.Epsilon || towerSpacing <= 0.1f)
-            return;
-
-        int towerCount = Mathf.FloorToInt(totalDist / towerSpacing);
-        if (towerCount <= 0)
-            return;
-
-        if (!towersParent)
+        // Find segment where s falls
+        int segIndex = 0;
+        for (int i = 0; i < _segmentCumulative.Count - 1; i++)
         {
-            GameObject parentObj = new GameObject("GeneratedTowers");
-            parentObj.transform.SetParent(transform, false);
-            towersParent = parentObj.transform;
+            if (s <= _segmentCumulative[i + 1])
+            {
+                segIndex = i;
+                break;
+            }
         }
 
-        Vector3 lineDir = (end - start).normalized;
+        float segStart = _segmentCumulative[segIndex];
+        float segEnd = _segmentCumulative[segIndex + 1];
+        float t = (segEnd > segStart) ? (s - segStart) / (segEnd - segStart) : 0f;
 
-        for (int i = 1; i <= towerCount; i++)
-        {
-            float t = (float)i / (towerCount + 1);
-            Vector3 approxPos = Vector3.Lerp(start, end, t);
+        Vector3 p0 = _bandPoints[segIndex];
+        Vector3 p1 = _bandPoints[(segIndex + 1) % _bandPoints.Count];
 
-            // Raycast down to terrain to find tower base
-            Vector3 rayOrigin = approxPos + Vector3.up * towerRaycastHeight;
-            Vector3 basePos = approxPos;
-            RaycastHit hit;
-
-            if (Physics.Raycast(rayOrigin, Vector3.down, out hit, towerRaycastHeight * 2f, groundMask, QueryTriggerInteraction.Ignore))
-            {
-                basePos = hit.point;
-            }
-
-            Transform towerInstance;
-
-            if (towerPrefab != null)
-            {
-                GameObject go = Instantiate(towerPrefab, basePos, Quaternion.LookRotation(lineDir, Vector3.up), towersParent);
-                towerInstance = go.transform;
-            }
-            else
-            {
-                // Fallback primitive tower
-                GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                go.name = $"Tower_{i}";
-                go.transform.SetParent(towersParent, false);
-                go.transform.position = basePos;
-                go.transform.rotation = Quaternion.LookRotation(lineDir, Vector3.up);
-                go.transform.localScale = new Vector3(0.5f, towerHeight, 0.5f);
-                towerInstance = go.transform;
-            }
-
-            // Create a child representing the cable attachment point at the top of the tower
-            GameObject topGO = new GameObject("CableTop");
-            topGO.transform.SetParent(towerInstance, false);
-            topGO.transform.localPosition = Vector3.up * towerHeight;
-
-            generatedTowerInstances.Add(towerInstance);
-            generatedTowerPoints.Add(topGO.transform);
-
-            controlPointsAccum.Add(topGO.transform);
-        }
+        return Vector3.Lerp(p0, p1, t);
     }
 
-    /// <summary>
-    /// Clears previously generated towers and their control points.
-    /// </summary>
-    private void ClearGeneratedTowers()
+    #endregion
+
+    #region Setup & Validation
+
+    private bool ValidateStations()
     {
-        if (generatedTowerInstances != null)
+        if (bottomStation == null || topStation == null)
         {
-            for (int i = 0; i < generatedTowerInstances.Count; i++)
-            {
-                Transform instance = generatedTowerInstances[i];
-                if (instance == null) continue;
-
-#if UNITY_EDITOR
-                if (!Application.isPlaying)
-                {
-                    DestroyImmediate(instance.gameObject);
-                }
-                else
-#endif
-                {
-                    Destroy(instance.gameObject);
-                }
-            }
-            generatedTowerInstances.Clear();
+            Debug.LogError($"[{nameof(LiftLine)}] Bottom and Top stations must be assigned.", this);
+            return false;
         }
 
-        if (generatedTowerPoints != null)
+        if (_bottomCollider == null)
+            _bottomCollider = bottomStation.GetComponent<SphereCollider>();
+        if (_topCollider == null)
+            _topCollider = topStation.GetComponent<SphereCollider>();
+
+        if (_bottomCollider == null || _topCollider == null)
         {
-            generatedTowerPoints.Clear();
+            Debug.LogError($"[{nameof(LiftLine)}] Both stations must have SphereColliders on the same GameObject.", this);
+            return false;
         }
 
-        // Clean up parent if it is now empty and looks like an auto-generated container
-        if (towersParent != null && towersParent.childCount == 0 && towersParent.name == "GeneratedTowers")
-        {
-#if UNITY_EDITOR
-            if (!Application.isPlaying)
-            {
-                DestroyImmediate(towersParent.gameObject);
-            }
-            else
-#endif
-            {
-                Destroy(towersParent.gameObject);
-            }
+        return true;
+    }
 
-            towersParent = null;
+    /// <summary>
+    /// Build an analytic closed loop around the two station spheres.
+    /// - Two straight sides (up and down) with static sag.
+    /// - Rounded arcs around each sphere using quadratic Bezier curves.
+    /// </summary>
+    private void BuildAnalyticLoop()
+    {
+        _bandPoints.Clear();
+        _segmentCumulative.Clear();
+        _bandLength = 0f;
+
+        Vector3 a = bottomStation.position;
+        Vector3 b = topStation.position;
+
+        // Travel direction projected onto horizontal plane for side separation.
+        Vector3 dir = b - a;
+        Vector3 horizDir = dir;
+        horizDir.y = 0f;
+        if (horizDir.sqrMagnitude < 0.0001f)
+            horizDir = Vector3.forward;
+        horizDir.Normalize();
+
+        // Left/right axis relative to travel direction (for up/down lines).
+        Vector3 right = Vector3.Cross(Vector3.up, horizDir);
+        if (right.sqrMagnitude < 0.0001f)
+            right = Vector3.right;
+        right.Normalize();
+
+        float rA = GetWorldRadius(_bottomCollider) + ropeClearance;
+        float rB = GetWorldRadius(_topCollider) + ropeClearance;
+        float halfSep = horizontalSeparation * 0.5f;
+
+        Vector3 upOffset = Vector3.up * verticalOffset;
+
+        // Contact points on either side of each sphere
+        Vector3 aLeft = a + right * (rA + halfSep) + upOffset;   // Uphill side at bottom
+        Vector3 aRight = a - right * (rA + halfSep) + upOffset;   // Downhill side at bottom
+
+        Vector3 bLeft = b + right * (rB + halfSep) + upOffset;   // Uphill side at top
+        Vector3 bRight = b - right * (rB + halfSep) + upOffset;   // Downhill side at top
+
+        // Arc midpoints: move along travel direction to place control points "outside" the stations.
+        Vector3 cA = a + upOffset;
+        Vector3 cB = b + upOffset;
+
+        float arcDepthA = rA + halfSep;
+        float arcDepthB = rB + halfSep;
+
+        // Station A loop at the "bottom" end (behind A along -dir)
+        Vector3 aMid = cA - horizDir * arcDepthA;
+
+        // Station B loop at the "top" end (ahead of B along +dir)
+        Vector3 bMid = cB + horizDir * arcDepthB;
+
+        // Start at uphill side near bottom station
+        _bandPoints.Add(aLeft);
+
+        // Uphill side A_left -> B_left with analytic sag
+        AddSideSegmentWithSag(_bandPoints, aLeft, bLeft, includeStartPoint: false);
+
+        // Rounded arc around top station: B_left -> B_right
+        AddArcInterior(_bandPoints, bLeft, bMid, bRight);
+
+        // Downhill side B_right -> A_right with analytic sag
+        AddSideSegmentWithSag(_bandPoints, bRight, aRight, includeStartPoint: true);
+
+        // Rounded arc around bottom station: A_right -> A_left (closing loop)
+        AddArcInterior(_bandPoints, aRight, aMid, aLeft);
+        // We do not re-add A_left here; the loop conceptually closes back to the first point.
+
+        // Build cumulative lengths (including last->first segment)
+        _segmentCumulative.Add(0f);
+        for (int i = 0; i < _bandPoints.Count; i++)
+        {
+            Vector3 p0 = _bandPoints[i];
+            Vector3 p1 = _bandPoints[(i + 1) % _bandPoints.Count];
+            float segLen = Vector3.Distance(p0, p1);
+            _bandLength += segLen;
+            _segmentCumulative.Add(_bandLength);
+        }
+
+        if (_bandLength <= 0f)
+        {
+            Debug.LogWarning($"[{nameof(LiftLine)}] Analytic band length is zero after setup.", this);
         }
     }
 
     /// <summary>
-    /// Spawn carriers evenly spaced along the LiftPath.
+    /// Approximate world radius of a SphereCollider accounting for non-uniform scale.
     /// </summary>
+    private float GetWorldRadius(SphereCollider col)
+    {
+        if (!col) return 1f;
+        float maxScale = Mathf.Max(
+            Mathf.Abs(col.transform.lossyScale.x),
+            Mathf.Abs(col.transform.lossyScale.y),
+            Mathf.Abs(col.transform.lossyScale.z));
+        return col.radius * maxScale;
+    }
+
+    #endregion
+
+    #region Analytic loop helpers
+
+    /// <summary>
+    /// Adds a straight side between two points, subdivided with a static parabolic sag profile.
+    /// Number of interior points is based on the distance and sideMaxSegmentLength.
+    /// </summary>
+    private void AddSideSegmentWithSag(List<Vector3> list, Vector3 from, Vector3 to, bool includeStartPoint)
+    {
+        float length = Vector3.Distance(from, to);
+        if (length <= Mathf.Epsilon)
+        {
+            if (includeStartPoint)
+                list.Add(from);
+            list.Add(to);
+            return;
+        }
+
+        float maxSeg = Mathf.Max(0.5f, sideMaxSegmentLength);
+        int segments = Mathf.Max(1, Mathf.RoundToInt(length / maxSeg));
+
+        if (includeStartPoint)
+            list.Add(from);
+
+        float sagDepth = sideSagFraction * length;
+
+        for (int i = 1; i <= segments; i++)
+        {
+            float t = (float)i / (segments + 1);
+            Vector3 pos = Vector3.Lerp(from, to, t);
+
+            // Simple vertical sag: 0 at ends, -sagDepth at the center.
+            float sag = -sagDepth * 4f * t * (1f - t);
+            pos += Vector3.up * sag;
+
+            list.Add(pos);
+        }
+
+        list.Add(to);
+    }
+
+    /// <summary>
+    /// Adds interior points of a quadratic Bezier arc from 'from' to 'to',
+    /// using 'mid' as the control point, but does NOT add the endpoints.
+    /// </summary>
+    private void AddArcInterior(List<Vector3> list, Vector3 from, Vector3 mid, Vector3 to)
+    {
+        int samples = Mathf.Max(1, arcSamplesPerStation);
+
+        for (int i = 1; i <= samples; i++)
+        {
+            float t = (float)i / (samples + 1);
+            Vector3 pt = QuadraticBezier(from, mid, to, t);
+            list.Add(pt);
+        }
+    }
+
+    private static Vector3 QuadraticBezier(Vector3 a, Vector3 b, Vector3 c, float t)
+    {
+        float oneMinusT = 1f - t;
+        return oneMinusT * oneMinusT * a +
+               2f * oneMinusT * t * b +
+               t * t * c;
+    }
+
+    /// <summary>
+    /// Returns an approximate forward direction along the loop at a given distance.
+    /// </summary>
+    private Vector3 GetBandTangent(float distance)
+    {
+        if (_bandLength <= 0f || _bandPoints.Count == 0)
+            return Vector3.forward;
+
+        float lookAhead = 0.5f;
+        Vector3 p0 = GetBandPosition(distance);
+        Vector3 p1 = GetBandPosition(distance + lookAhead);
+
+        Vector3 dir = (p1 - p0);
+        if (dir.sqrMagnitude < 0.0001f)
+        {
+            Vector3 fallback = topStation.position - bottomStation.position;
+            fallback.y = 0f;
+            return fallback.sqrMagnitude > 0.0001f ? fallback.normalized : Vector3.forward;
+        }
+
+        return dir.normalized;
+    }
+
+    #endregion
+
+    #region Carriers
+
     private void SpawnCarriers()
     {
         carriers.Clear();
+        _carrierRuntime.Clear();
 
-        if (!carrierPrefab || path == null || path.TotalLength <= 0f || carrierCount <= 0)
+        if (carrierPrefab == null)
+        {
+            Debug.LogWarning($"[{nameof(LiftLine)}] No carrier prefab assigned. Carriers will not be spawned.", this);
             return;
+        }
 
-        float spacing = path.TotalLength / carrierCount;
+        if (_bandLength <= 0f || carrierCount <= 0)
+        {
+            Debug.LogWarning($"[{nameof(LiftLine)}] Analytic band not ready or invalid parameters for carriers.", this);
+            return;
+        }
+
+        float spacing = _bandLength / carrierCount;
+
         for (int i = 0; i < carrierCount; i++)
         {
-            LiftCarrier instance = Instantiate(carrierPrefab, transform);
-            instance.line = this;
-            instance.distanceAlong = spacing * i;
+            float dist = spacing * i;
 
-            instance.transform.position = path.GetPosition(instance.distanceAlong);
-            instance.transform.rotation = Quaternion.LookRotation(path.GetForward(instance.distanceAlong), Vector3.up);
+            // Create an anchor transform that follows the band
+            GameObject anchorGO = new GameObject($"CarrierAnchor_{i}");
+            anchorGO.transform.SetParent(transform, worldPositionStays: false);
 
-            carriers.Add(instance);
+            CarrierRuntime runtime = new CarrierRuntime();
+            runtime.anchor = anchorGO.transform;
+            runtime.distanceAlong = dist;
+
+            // Initial position and orientation
+            Vector3 pos = GetBandPosition(dist);
+            Vector3 fwd = GetBandTangent(dist);
+            runtime.anchor.position = pos;
+            runtime.anchor.rotation = Quaternion.LookRotation(fwd, Vector3.up);
+
+            // Spawn carrier as child of anchor (so prefab's own rope/seat hangs from this root)
+            LiftCarrier carrierInstance = Instantiate(carrierPrefab, runtime.anchor);
+            carrierInstance.transform.localPosition = Vector3.zero;
+            carrierInstance.transform.localRotation = Quaternion.identity;
+
+            runtime.carrier = carrierInstance;
+            carrierInstance.line = this;
+            carrierInstance.distanceAlong = dist;
+
+            _carrierRuntime.Add(runtime);
+            carriers.Add(carrierInstance);
         }
     }
 
-#if UNITY_EDITOR
-    private void OnValidate()
+    #endregion
+
+    private void OnDrawGizmosSelected()
     {
-        if (!Application.isPlaying)
-        {
-            if (!path) path = GetComponent<LiftPath>();
-            BuildPath();
+        if (_bandPoints == null || _bandPoints.Count < 2)
+            return;
 
-            // Note: we do NOT spawn carriers in edit mode to avoid clutter.
+        Gizmos.color = Color.cyan;
+        for (int i = 0; i < _bandPoints.Count; i++)
+        {
+            Vector3 p0 = _bandPoints[i];
+            Vector3 p1 = _bandPoints[(i + 1) % _bandPoints.Count];
+            Gizmos.DrawLine(p0, p1);
         }
     }
-#endif
 }

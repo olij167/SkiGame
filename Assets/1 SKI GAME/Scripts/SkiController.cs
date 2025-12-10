@@ -23,6 +23,22 @@ public class SkiController : MonoBehaviour
         Drag,
         FollowThrough
     }
+
+    /// <summary>
+    /// High level locomotion state. This is mainly for reasoning about
+    /// behaviour (ground vs air vs landing) and for gating certain effects
+    /// like ground stickiness.
+    /// </summary>
+    private enum MovementMode
+    {
+        Skiing,
+        JumpRising,
+        Airborne,
+        Landing,
+        Stacked
+    }
+
+
     // ----------------------------------------------------------------------
     // REFERENCES
     // ----------------------------------------------------------------------
@@ -88,16 +104,20 @@ public class SkiController : MonoBehaviour
     private RaycastHit _leftHit;
     private RaycastHit _rightHit;
 
-
-    // Previous stance for skate detection
-    private float _leftOutLastPhysics;
-    private float _rightOutLastPhysics;
+    // True if either ski collider is currently reporting ground contact.
+    private bool HasAnySkiContact =>
+        (leftSkiContact != null && leftSkiContact.IsGrounded) ||
+        (rightSkiContact != null && rightSkiContact.IsGrounded);
 
     // Grounding/orientation
     private bool _isGrounded;
     private bool _wasGrounded;
+    private bool _wasControlsGrounded; // previous frame's grounded-for-controls flag
     private Vector3 _groundNormal = Vector3.up;
     private Vector3 _skiForward = Vector3.forward; // combined ski forward on plane
+
+    // High-level locomotion state (for debugging and behaviour gating).
+    private MovementMode _movementMode = MovementMode.Airborne;
 
     // Skis base transforms (for offset & yaw)
     private Vector3 _leftSkiLocalBasePos;
@@ -113,6 +133,9 @@ public class SkiController : MonoBehaviour
 
     // Stack state
     private bool _stacked;
+
+    // Accumulated time spent riding mostly on ski tips while grounded.
+    private float _tipContactAccumTime;
 
     // Skating
     private float _lastPushTime;
@@ -167,6 +190,13 @@ public class SkiController : MonoBehaviour
     [SerializeField] private float groundCheckHeight = 0.6f;
     [SerializeField] private float groundCheckDistance = 1.2f;
 
+    [Tooltip("Vertical gap from the cast origin to count as 'in contact' with the ground.")]
+    [SerializeField] private float groundContactDistance = 0.25f;
+    
+    [Tooltip("Maximum slope angle (deg) considered 'rideable ground' for grounding & landing logic. Steeper surfaces are treated as walls, not ground.")]
+    [SerializeField, Range(0f, 90f)]
+    private float maxGroundSlopeAngle = 80f;
+
     [Header("Ski Suspension")]
     [SerializeField] private float skiHeightOffset = 0.03f; // how much the ski hovers above the hit point
     [SerializeField] private float skiSuspensionLerp = 12f; // how fast skis follow the ground
@@ -201,6 +231,9 @@ public class SkiController : MonoBehaviour
              "Larger upward impulses (e.g. explicit jumps) are left alone.")]
     [SerializeField] private float maxStickUpwardSpeed = 2f;
 
+    [Tooltip("lower = more edge hold, higher = more sliding, even when misaligned with the slope")]
+    [SerializeField] private float minSlideFactor = 0.3f; // tweakable: 
+    
     [Header("Carve Steering")]
     [Tooltip("How strongly velocity is rotated toward ski direction when skis are parallel and edged.")]
     [SerializeField] private float carveSteerStrength = 4f;
@@ -257,6 +290,12 @@ public class SkiController : MonoBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float minPoleSpeedFactor = 0.1f;
 
+    // Tip-contact stability tuning (kept as code constants to avoid more inspector clutter).
+    // If you want to expose these in the inspector later, just turn them into [SerializeField] fields.
+    private const float TipContactStackFraction = 0.7f;  // fraction of grounded skis whose last contact is in the tip region
+    private const float TipContactMinSpeed = 2.5f;    // planar m/s before tip checks matter
+    private const float TipContactStackTime = 0.18f;   // seconds of tip-heavy contact before we stack
+
     [Header("Landing / Stack")]
     [Tooltip("Max allowed tilt angle (deg) between skier up and ground normal to count as a safe landing.")]
     [SerializeField] private float maxLandingTiltAngle = 50f;
@@ -272,6 +311,18 @@ public class SkiController : MonoBehaviour
 
     [Tooltip("Downward speed below this (m/s) is treated as a 'micro' landing for landing/stack logic.")]
     [SerializeField] private float minLandingDownwardSpeed = 2f;
+
+    [Tooltip("Nose /tip dig thresholds in degrees.")]
+    [SerializeField] private float heavyTipStackAngle = 25f;    // big nose-dig on a real landing → stack
+
+    [Header("Landing Projection")]
+    [Tooltip("Base strength of velocity projection onto slope at landing (0 = none, 1 = full).")]
+    [Range(0f, 1f)]
+    [SerializeField] private float landingProjectionStrength = 0.6f;
+
+    [Tooltip("Fraction of planar speed to keep when projecting onto slope.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float landingVelocityRetention = 0.9f;
 
     [Tooltip("Torque impulse applied when stacking (to topple the skier).")]
     [SerializeField] private float stackTorqueImpulse = 30f;
@@ -323,6 +374,9 @@ public class SkiController : MonoBehaviour
     [Tooltip("Planar speed (m/s) at which the jump speed multiplier reaches its maximum effect.")]
     [SerializeField] private float jumpSpeedForMaxMultiplier = 12f;
 
+    [Header("Debug")]
+    [SerializeField] private bool showDebugHUD = true;
+
     // ----------------------------------------------------------------------
     // PROPERTIES / FLAGS
     // ----------------------------------------------------------------------
@@ -355,6 +409,34 @@ public class SkiController : MonoBehaviour
     public Vector3 Velocity => _rb.linearVelocity;
     public Vector3 SkiForwardOnPlane => _skiForward;
     public bool IsRiderGrounded => _isGrounded;
+
+    /// <summary>
+    /// Grounded test used for *controls* (when to use skiing vs air inputs).
+    /// This is intentionally more forgiving than the strict physics grounding:
+    /// - Any ski collider contact counts as grounded.
+    /// - A short coyote window after losing ground keeps you in ski controls
+    ///   so tiny gaps / tip chatter don't instantly flip you into air mode.
+    /// </summary>
+    private bool IsGroundedForControls
+    {
+        get
+        {
+            if (_stacked)
+                return false;
+
+            // Hard grounding: any ski collider currently touching snow.
+            if (HasAnySkiContact)
+                return true;
+
+            // Physics-based grounding from our casts.
+            if (_isGrounded)
+                return true;
+
+            // Soft "control coyote": keep ski controls briefly after leaving ground.
+            const float controlCoyoteTime = 0.08f;
+            return (Time.time - _lastGroundedTime) <= controlCoyoteTime;
+        }
+    }
 
     // Expose pole contacts for audio / VFX.
     public PoleContact LeftPoleContact => leftPoleContact;
@@ -468,8 +550,10 @@ public class SkiController : MonoBehaviour
     private void FixedUpdate()
     {
         _wasGrounded = _isGrounded;
+        bool wasControlsGrounded = _wasControlsGrounded;
 
         CheckGround();
+        UpdateTipContactStability();
 
         // Track when we leave the ground for jump/landing severity.
         if (_wasGrounded && !_isGrounded)
@@ -481,12 +565,23 @@ public class SkiController : MonoBehaviour
         {
             TryAutoRecoverFromStack();
             if (_stacked)
+            {
+                _movementMode = MovementMode.Stacked;
                 return;
+            }
         }
 
         TryConsumeQueuedJump();
 
-        if (_isGrounded)
+        // Decide what mode we're in this frame (Skiing, Airborne, Landing, etc),
+        // using the more forgiving grounded-for-controls test.
+        UpdateMovementMode(wasControlsGrounded);
+
+        // Ground modes: normal skiing and the first landing frame share the
+        // same core force application. The *difference* is how we treat
+        // stickiness inside ApplyGroundForces (see below).
+        if (_movementMode == MovementMode.Skiing ||
+            _movementMode == MovementMode.Landing)
         {
             ApplyGroundForces();
             DetectAndApplySkatePushes();
@@ -495,11 +590,12 @@ public class SkiController : MonoBehaviour
         }
         else
         {
+            // JumpRising / Airborne
             ApplyAirControl();
         }
 
-        _leftOutLastPhysics = _leftOut;
-        _rightOutLastPhysics = _rightOut;
+        // Remember control grounding state for next frame's transition detection.
+        _wasControlsGrounded = IsGroundedForControls;
     }
 
     // ----------------------------------------------------------------------
@@ -682,16 +778,69 @@ public class SkiController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Updates the high-level locomotion mode based on grounded state,
+    /// jump timing, and stacking.
+    /// </summary>
+    /// <summary>
+    /// Updates the high-level locomotion mode based on grounded state,
+    /// jump timing, and stacking. Uses a more forgiving grounded-for-controls
+    /// test so we don't flicker into air controls while still in ski contact.
+    /// </summary>
+    private void UpdateMovementMode(bool wasControlsGrounded)
+    {
+        if (_stacked)
+        {
+            _movementMode = MovementMode.Stacked;
+            return;
+        }
+
+        bool groundedForControls = IsGroundedForControls;
+
+        if (groundedForControls)
+        {
+            // First frame we regain ground for controls => treat as a landing frame
+            // so we stay in ski controls and get a clean transition out of air.
+            if (!wasControlsGrounded)
+            {
+                _movementMode = MovementMode.Landing;
+            }
+            else
+            {
+                _movementMode = MovementMode.Skiing;
+            }
+
+            return;
+        }
+
+        // Controls consider us airborne. Use *physics* state + jump timing to
+        // choose between jump-rising and general airborne.
+        bool recentlyJumped = (Time.time - _lastJumpTime) <= jumpStickSuppressionTime;
+        bool movingUp = Vector3.Dot(_rb.linearVelocity, Vector3.up) > 0.01f;
+
+        if (recentlyJumped && movingUp)
+        {
+            _movementMode = MovementMode.JumpRising;
+        }
+        else
+        {
+            _movementMode = MovementMode.Airborne;
+        }
+    }
+
     // ----------------------------------------------------------------------
     // GROUNDING & LANDING
     // ----------------------------------------------------------------------
 
     private void CheckGround()
     {
+        bool haveSkiContact = HasAnySkiContact;
+
         // If we've just jumped, enforce a short ungrounded window so the jump
         // can actually leave the surface instead of instantly re-sticking on
-        // steep slopes.
-        if (Time.time - _lastJumpTime < minJumpUngroundedTime)
+        // steep slopes. BUT: if a ski is physically colliding (tips or base),
+        // we trust that and allow a landing.
+        if (Time.time - _lastJumpTime < minJumpUngroundedTime && !haveSkiContact)
         {
             _isGrounded = false;
             _leftGrounded = false;
@@ -700,168 +849,380 @@ public class SkiController : MonoBehaviour
             return;
         }
 
-
-        bool hitSomething = false;
+        bool nearGround = false;
         Vector3 sumNormals = Vector3.zero;
-
-        Vector3 centerOrigin = transform.position + Vector3.up * groundCheckHeight;
-        float maxDist = groundCheckHeight + groundCheckDistance;
-
-        if (Physics.SphereCast(centerOrigin, groundCheckRadius, Vector3.down,
-                               out RaycastHit centerHit, maxDist, groundLayers,
-                               QueryTriggerInteraction.Ignore))
-        {
-            hitSomething = true;
-            sumNormals += centerHit.normal;
-        }
 
         _leftGrounded = false;
         _rightGrounded = false;
 
-        // Left ski
+        Vector3 centerOrigin = transform.position + Vector3.up * groundCheckHeight;
+        float maxDist = groundCheckHeight + groundCheckDistance;
+
+        // Helper: only treat a normal as "ground" if it's not too steep.
+        bool IsRideable(Vector3 n)
+        {
+            if (n.sqrMagnitude < 0.0001f) return false;
+            float slopeAngle = Vector3.Angle(n.normalized, Vector3.up);
+            return slopeAngle <= maxGroundSlopeAngle;
+        }
+
+        // ------------------------------------------------------------------
+        // 1) Body sphere cast
+        // ------------------------------------------------------------------
+        if (Physics.SphereCast(centerOrigin, groundCheckRadius, Vector3.down,
+                               out RaycastHit centerHit, maxDist, groundLayers,
+                               QueryTriggerInteraction.Ignore))
+        {
+            float contactGap = Mathf.Max(0f, centerHit.distance - groundCheckHeight);
+            if (contactGap <= groundContactDistance && IsRideable(centerHit.normal))
+            {
+                nearGround = true;
+                sumNormals += centerHit.normal;
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // 2) Downward rays from each ski root
+        // ------------------------------------------------------------------
+
+        // Left ski ray
         if (leftSki != null)
         {
             Vector3 leftOrigin = leftSki.position + Vector3.up * groundCheckHeight;
             if (Physics.Raycast(leftOrigin, Vector3.down, out RaycastHit leftHit, maxDist,
                                 groundLayers, QueryTriggerInteraction.Ignore))
             {
-                hitSomething = true;
-                sumNormals += leftHit.normal;
-                _leftGrounded = true;
-                _leftHit = leftHit;
+                float contactGap = Mathf.Max(0f, leftHit.distance - groundCheckHeight);
+                if (contactGap <= groundContactDistance && IsRideable(leftHit.normal))
+                {
+                    nearGround = true;
+                    sumNormals += leftHit.normal;
+                    _leftGrounded = true;
+                    _leftHit = leftHit;
+                }
             }
         }
 
-        // Right ski
+        // Right ski ray
         if (rightSki != null)
         {
             Vector3 rightOrigin = rightSki.position + Vector3.up * groundCheckHeight;
             if (Physics.Raycast(rightOrigin, Vector3.down, out RaycastHit rightHit, maxDist,
                                 groundLayers, QueryTriggerInteraction.Ignore))
             {
-                hitSomething = true;
-                sumNormals += rightHit.normal;
-                _rightGrounded = true;
-                _rightHit = rightHit;
+                float contactGap = Mathf.Max(0f, rightHit.distance - groundCheckHeight);
+                if (contactGap <= groundContactDistance && IsRideable(rightHit.normal))
+                {
+                    nearGround = true;
+                    sumNormals += rightHit.normal;
+                    _rightGrounded = true;
+                    _rightHit = rightHit;
+                }
             }
         }
 
-        if (hitSomething)
+        // ------------------------------------------------------------------
+        // 3) Integrate SkiContact collisions (primary source for skis)
+        // ------------------------------------------------------------------
+        if (leftSkiContact != null && leftSkiContact.IsGrounded && IsRideable(leftSkiContact.ContactNormal))
+        {
+            nearGround = true;
+            sumNormals += leftSkiContact.ContactNormal;
+            _leftGrounded = true;
+
+            _leftHit.point = leftSkiContact.ContactPoint;
+            _leftHit.normal = leftSkiContact.ContactNormal;
+        }
+
+        if (rightSkiContact != null && rightSkiContact.IsGrounded && IsRideable(rightSkiContact.ContactNormal))
+        {
+            nearGround = true;
+            sumNormals += rightSkiContact.ContactNormal;
+            _rightGrounded = true;
+
+            _rightHit.point = rightSkiContact.ContactPoint;
+            _rightHit.normal = rightSkiContact.ContactNormal;
+        }
+
+        bool wasGroundedBefore = _isGrounded;
+
+        // ------------------------------------------------------------------
+        // 4) Final grounded state + smoothed ground normal
+        // ------------------------------------------------------------------
+        if (nearGround && sumNormals.sqrMagnitude > 0.0001f)
         {
             _isGrounded = true;
-            _groundNormal = sumNormals.normalized;
 
-            // Track timing for coyote jumps and reset air spin on landing.
+            Vector3 rawNormal = sumNormals.normalized;
             _lastGroundedTime = Time.time;
 
-            if (!_wasGrounded)
+            const float GroundNormalSmoothSpeed = 18f;
+
+            if (!wasGroundedBefore || _groundNormal.sqrMagnitude < 0.0001f)
             {
-                // Just landed this frame.
-                _airAngularVelocity = Vector3.zero;
-                EvaluateLanding();
+                _groundNormal = rawNormal;
+            }
+            else
+            {
+                float lerp = 1f - Mathf.Exp(-GroundNormalSmoothSpeed * Time.fixedDeltaTime);
+                _groundNormal = Vector3.Slerp(_groundNormal, rawNormal, lerp);
+            }
+
+            if (!wasGroundedBefore)
+            {
+                // Only treat this as a "real landing" if we've actually been
+                // in the air for a bit. Tiny chatter -> just stick to slope.
+                float airTime = Time.time - _airborneStartTime;
+                if (airTime > minLandingAirTime * 0.5f)
+                {
+                    _airAngularVelocity = Vector3.zero;
+                    EvaluateLanding();
+                }
+                else
+                {
+                    _movementMode = MovementMode.Skiing;
+                }
             }
         }
         else
         {
-           
             _isGrounded = false;
             _groundNormal = Vector3.up;
         }
 
+        // Safety: if any ski is reporting contact but our casts decided we're not grounded,
+        // snap to grounded using the ski normals so controls / landing logic don't go airborne.
+        if (!_isGrounded && HasAnySkiContact)
+        {
+            _isGrounded = true;
+
+            Vector3 n = Vector3.zero;
+            if (leftSkiContact != null && leftSkiContact.IsGrounded && IsRideable(leftSkiContact.ContactNormal))
+                n += leftSkiContact.ContactNormal;
+            if (rightSkiContact != null && rightSkiContact.IsGrounded && IsRideable(rightSkiContact.ContactNormal))
+                n += rightSkiContact.ContactNormal;
+
+            if (n.sqrMagnitude > 0.0001f)
+                _groundNormal = n.normalized;
+
+            _lastGroundedTime = Time.time;
+        }
     }
 
-    private void EvaluateLanding()
+    /// <summary>
+    /// Returns the largest "nose-dig" angle (deg) among the skis, based on how much
+    /// their forward vectors are pointing into the ground *and* are contacting near
+    /// the tip region.
+    /// </summary>
+    private float ComputeTipDigAngle()
     {
-        // --- Landing severity: air time + downward speed ---
-        float airTime = 0f;
-        if (_airborneStartTime > 0f)
-        {
-            airTime = Mathf.Max(0f, Time.time - _airborneStartTime);
-        }
+        if (_groundNormal.sqrMagnitude < 0.0001f)
+            return 0f;
+
+        Vector3 groundNormal = _groundNormal.normalized;
+        float maxDig = 0f;
+
+        maxDig = Mathf.Max(
+            maxDig,
+            ComputeTipDigAngleForSki(leftSki, leftSkiContact, groundNormal));
+
+        maxDig = Mathf.Max(
+            maxDig,
+            ComputeTipDigAngleForSki(rightSki, rightSkiContact, groundNormal));
+
+        return maxDig;
+    }
+
+    /// <summary>
+    /// Computes the nose-dig angle for a single ski, or 0 if it's not a tip-heavy contact.
+    /// </summary>
+    private float ComputeTipDigAngleForSki(
+        Transform ski,
+        SkiContact contact,
+        Vector3 groundNormal)
+    {
+        // Use SkiContact as the primary source of truth for tip digs.
+        // If we don't have an actual tip contact on this ski, treat it as no nose-dig.
+        if (contact == null || !contact.IsGrounded || !contact.HasTipContact)
+            return 0f;
+
+        // Fallback: if the ski transform isn't provided for some reason,
+        // use the contact's transform.
+        if (ski == null)
+            ski = contact.transform;
+
+        if (groundNormal.sqrMagnitude < 0.0001f)
+            return 0f;
+
+        Vector3 f = ski.forward;
+
+        // Only consider when the ski is pointing at least slightly into the surface.
+        float intoGround = Mathf.Max(0f, -Vector3.Dot(f, groundNormal));
+        if (intoGround <= 0f)
+            return 0f;
+
+        // Forward direction flattened onto the slope plane.
+        Vector3 fOnPlane = Vector3.ProjectOnPlane(f, groundNormal);
+        if (fOnPlane.sqrMagnitude < 0.0001f)
+            return 0f;
+
+        fOnPlane.Normalize();
+
+        // Angle between actual forward and its flattened version = nose-dig amount.
+        return Vector3.Angle(fOnPlane, f);
+    }
+
+    void EvaluateLanding()
+    {
+        float now = Time.time;
+        float airTime = Mathf.Max(0f, now - _airborneStartTime);
 
         Vector3 vel = _rb.linearVelocity;
 
-        float downwardSpeed = 0f;
-        if (_groundNormal.sqrMagnitude > 0.0001f)
-        {
-            Vector3 groundNormal = _groundNormal.normalized;
-            // Component of velocity moving *into* the ground.
-            downwardSpeed = Mathf.Max(0f, -Vector3.Dot(vel, groundNormal));
-        }
+        // Use the current ground normal for "up vs down" and planar projections.
+        Vector3 groundNormal = _groundNormal.sqrMagnitude > 0.0001f
+            ? _groundNormal.normalized
+            : Vector3.up;
 
-        // Only treat this as a "real" landing if we're actually moving into the ground.
-        if (downwardSpeed <= 0f)
-        {
-            // We may have brushed something at the apex or are still moving away
-            // from the surface. Treat as a soft contact: no stacking / projection.
-            return;
-        }
+        // Slope steepness in world-space (0° = flat, 90° = vertical).
+        float slopeAngle = Vector3.Angle(groundNormal, Vector3.up);
 
-        // Micro landings = tiny hops / surface chatter.
-        bool isMicroLanding =
-            airTime > 0f &&
-            airTime < minLandingAirTime &&
-            downwardSpeed < minLandingDownwardSpeed;
+        // Downward speed along the ground normal (positive when moving into the ground).
+        float downwardSpeed = Mathf.Max(0f, -Vector3.Dot(vel, groundNormal));
 
-        if (isMicroLanding)
-        {
-            // For micro landings we rely on the normal grounded movement /
-            // orientation logic to settle us onto the slope over a few frames.
-            // No stacking, projection or hard snap here.
-            return;
-        }
+        // Single tip-dig measure reused for all checks.
+        float tipDigAngle = ComputeTipDigAngle();
 
-        // --- Existing landing classification (tilt + misalignment) ---
-        float tiltAngle = Vector3.Angle(transform.up, _groundNormal);
-
-        Vector3 velOnPlane = Vector3.ProjectOnPlane(vel, _groundNormal);
+        // Planar components for tilt / sideways checks.
+        Vector3 velOnPlane = Vector3.ProjectOnPlane(vel, groundNormal);
         float planarSpeed = velOnPlane.magnitude;
 
+        // Tilt relative to the ground.
+        float tiltAngle = Vector3.Angle(transform.up, groundNormal);
+
+        // Misalignment between where we're travelling on the slope and where we're facing.
         float misalignAngle = 0f;
-        if (planarSpeed > 0.01f)
+        if (planarSpeed > 0.1f)
         {
-            Vector3 skiDir = GetCombinedSkiForwardOnPlane();
-            if (skiDir.sqrMagnitude > 0.0001f)
+            Vector3 forwardOnPlane = Vector3.ProjectOnPlane(transform.forward, groundNormal);
+            if (forwardOnPlane.sqrMagnitude > 0.0001f)
             {
-                Vector3 velDir = velOnPlane.normalized;
+                forwardOnPlane.Normalize();
+                velOnPlane.Normalize();
 
-                // Raw angle between ski forward and planar velocity.
-                float rawAngle = Vector3.Angle(skiDir, velDir);
+                float rawAngle = Vector3.Angle(forwardOnPlane, velOnPlane);
 
-                // Treat 0° and 180° as "aligned" and 90° as most misaligned.
-                // This allows landing while sliding backwards along your skis
-                // without being flagged as a sideways crash.
+                // Treat backwards landings (180°) as "aligned" with forwards (0°):
+                // only sideways landings should really punish you.
                 misalignAngle = Mathf.Min(rawAngle, 180f - rawAngle);
             }
         }
 
-        bool tooTilted = tiltAngle > maxLandingTiltAngle;
-        bool tooMisaligned = planarSpeed > minLandingSpeedForStackCheck &&
-                             misalignAngle > maxLandingMisalignmentAngle;
+        // ----- 1. Micro vs non-micro landings -----
 
-        if (tooTilted || tooMisaligned)
+        bool isTinyLanding =
+            airTime < minLandingAirTime ||
+            downwardSpeed < minLandingDownwardSpeed;
+
+        // For tiny landings, always stick and gently glue to the slope.
+        if (isTinyLanding)
+        {
+            float microProjection = Mathf.Clamp01(landingProjectionStrength * 0.5f);
+            PreserveLandingVelocityOnSlope(microProjection);
+            SnapOrientationToGround();
+
+            _movementMode = MovementMode.Skiing;
+            return;
+        }
+
+        // ----- 2. Slope-aware thresholds -----
+
+        const float SteepSlopeStart = 40f; // deg
+        const float VerySteepSlope = 70f;  // deg
+
+        float steepT = Mathf.InverseLerp(SteepSlopeStart, VerySteepSlope, slopeAngle);
+        steepT = Mathf.Clamp01(steepT);
+
+        // Tilt & sideways limits loosen as slopes get steeper.
+        float tiltLimit = maxLandingTiltAngle + 15f * steepT;
+        float misalignLimit = maxLandingMisalignmentAngle + 15f * steepT;
+
+        // Projection strength is slightly softer on very steep slopes so we don't
+        // over-damp velocity when dropping onto a face.
+        float baseProjection = Mathf.Clamp01(landingProjectionStrength);
+        float projectionOnSteep = Mathf.Lerp(baseProjection, baseProjection * 0.7f, steepT);
+
+        // ----- 3. Very steep slopes: only hard nose-digs stack -----
+
+        if (slopeAngle >= VerySteepSlope)
+        {
+            if (tipDigAngle > heavyTipStackAngle)
+            {
+                TriggerStack();
+            }
+            else
+            {
+                PreserveLandingVelocityOnSlope(projectionOnSteep);
+                SnapOrientationToGround();
+                _movementMode = MovementMode.Skiing;
+            }
+            return;
+        }
+
+        // ----- 4. Regular non-micro landing: stick vs stack -----
+
+        bool tooTilted =
+            tiltAngle > tiltLimit;
+
+        bool tooMisaligned =
+            planarSpeed > minLandingSpeedForStackCheck &&
+            misalignAngle > misalignLimit;
+
+        bool tooNoseDown =
+            tipDigAngle > heavyTipStackAngle;
+
+        if (tooTilted || tooMisaligned || tooNoseDown)
         {
             TriggerStack();
+            return;
         }
-        else
-        {
-            PreserveLandingVelocityOnSlope();
-            SnapOrientationToGround();
-        }
+
+        PreserveLandingVelocityOnSlope(projectionOnSteep);
+        SnapOrientationToGround();
+
+        _movementMode = MovementMode.Skiing;
     }
 
-    private void PreserveLandingVelocityOnSlope()
+    private void PreserveLandingVelocityOnSlope(float projectionFactor)
     {
+        // 0 = keep current velocity, 1 = fully project to slope target.
+        projectionFactor = Mathf.Clamp01(projectionFactor);
+        if (projectionFactor <= 0f)
+            return;
+
         Vector3 vel = _rb.linearVelocity;
         float speed = vel.magnitude;
         if (speed < 0.01f)
             return;
 
-        Vector3 planar = Vector3.ProjectOnPlane(vel, _groundNormal);
-        if (planar.sqrMagnitude < 0.0001f)
+        if (_groundNormal.sqrMagnitude < 0.0001f)
             return;
 
-        _rb.linearVelocity = planar.normalized * speed;
+        Vector3 groundNormal = _groundNormal.normalized;
+        Vector3 planar = Vector3.ProjectOnPlane(vel, groundNormal);
+        float planarSpeed = planar.magnitude;
+
+        if (planarSpeed < 0.01f)
+            return;
+
+        // Keep only a fraction of our along-slope speed.
+        float retainedSpeed = planarSpeed * Mathf.Clamp01(landingVelocityRetention);
+        Vector3 targetVel = planar.normalized * retainedSpeed;
+
+        // Blend from current velocity toward the along-slope target based on
+        // how severe the landing was.
+        Vector3 newVel = Vector3.Lerp(vel, targetVel, projectionFactor);
+        _rb.linearVelocity = newVel;
     }
 
     private void TriggerStack()
@@ -916,6 +1277,109 @@ public class SkiController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Uses per-ski contact data to detect when we're effectively "riding on the tips"
+    /// or front/back faces. If we spend too long with most contact in the tip region
+    /// OR if neither ski has a reasonably flat base contact, we stack.
+    /// </summary>
+    private void UpdateTipContactStability()
+    {
+        // If we're stacked or not currently treated as grounded for controls,
+        // tip stability doesn't apply.
+        if (_stacked || !IsGroundedForControls)
+        {
+            _tipContactAccumTime = 0f;
+            return;
+        }
+
+        // We need at least one SkiContact to reason about tips.
+        if (leftSkiContact == null && rightSkiContact == null)
+        {
+            _tipContactAccumTime = 0f;
+            return;
+        }
+
+        // Read per-ski contact state.
+        bool leftGrounded = leftSkiContact != null && leftSkiContact.IsGrounded;
+        bool rightGrounded = rightSkiContact != null && rightSkiContact.IsGrounded;
+
+        if (!leftGrounded && !rightGrounded)
+        {
+            _tipContactAccumTime = 0f;
+            return;
+        }
+
+        int groundedCount = 0;
+        int tipCount = 0;
+
+        if (leftGrounded)
+        {
+            groundedCount++;
+            if (leftSkiContact.HasTipContact)
+                tipCount++;
+        }
+
+        if (rightGrounded)
+        {
+            groundedCount++;
+            if (rightSkiContact.HasTipContact)
+                tipCount++;
+        }
+
+        // Fraction of grounded skis whose last contact is in the tip/tail region.
+        float tipFraction = groundedCount > 0 ? (float)tipCount / groundedCount : 0f;
+
+        // How "flat" are we on our bases? (1 = flat base, 0 = side, <0 = upside down).
+        float leftBaseAlign = leftGrounded ? leftSkiContact.BaseContactAlignment : 0f;
+        float rightBaseAlign = rightGrounded ? rightSkiContact.BaseContactAlignment : 0f;
+
+        // Threshold for "this is still the bottom face of the ski".
+        // Values near 1 are flat on the base, near 0 are side/tip contacts.
+        const float MinBaseAlignmentForStableStance = 0.2f; // ~78° from perfect; generous for carving
+
+        bool leftBaseStable = leftGrounded && leftBaseAlign >= MinBaseAlignmentForStableStance;
+        bool rightBaseStable = rightGrounded && rightBaseAlign >= MinBaseAlignmentForStableStance;
+
+        bool anyStableBase = leftBaseStable || rightBaseStable;
+
+        // If NEITHER ski has a reasonably flat base contact, we're effectively on
+        // edges/tips on both skis – this is not a stable stance. Stack immediately.
+        if (!anyStableBase)
+        {
+            TriggerStack();
+            _tipContactAccumTime = 0f;
+            return;
+        }
+
+        // At least one ski has a decent base contact. Now check whether we're
+        // "riding on the tips" on the dominant contacts.
+        if (tipFraction >= TipContactStackFraction)
+        {
+            // Heavily tip/tail-weighted contact: accumulate time.
+            _tipContactAccumTime += Time.fixedDeltaTime;
+
+            // Leaning strongly forward (positive _forwardLean) makes tip-stands even less stable:
+            // bias the required time down.
+            float forwardLeanFactor = 1f;
+            if (_forwardLean > 0f)
+            {
+                // forwardLean in 0..1 => reduce required time by up to ~50%.
+                forwardLeanFactor = Mathf.Lerp(1f, 0.5f, Mathf.Clamp01(_forwardLean));
+            }
+
+            if (_tipContactAccumTime * forwardLeanFactor >= TipContactStackTime)
+            {
+                TriggerStack();
+                _tipContactAccumTime = 0f;
+            }
+        }
+        else
+        {
+            // Back on our bases / not predominantly on tips: decay timer so short
+            // tip touches don't instantly stack us.
+            _tipContactAccumTime = Mathf.Max(0f, _tipContactAccumTime - Time.fixedDeltaTime);
+        }
+    }
 
     // ----------------------------------------------------------------------
     // LEAN & STANCE (INCLUDING LEAD/FOLLOW)
@@ -1012,8 +1476,6 @@ public class SkiController : MonoBehaviour
         bool rightLead = rightActive && !leftActive;
 
         // Scale how much the skis are allowed to yaw based on speed:
-        // - At low speeds, yaw is clamped so leg pumps mostly act like skating.
-        // - As you speed up, you get the full edge angle for carving.
         float planarSpeed = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal).magnitude;
 
         float carveT = 0f;
@@ -1110,51 +1572,12 @@ public class SkiController : MonoBehaviour
             rightSki.localRotation = _rightSkiLocalBaseRot * Quaternion.Euler(0f, _rightSkiYawCurrent, 0f);
         }
 
-        // Push stance into SkiContact
+        // Push stance into SkiContact once
         if (leftSkiContact != null)
             leftSkiContact.StanceOut = _leftOut;
 
         if (rightSkiContact != null)
             rightSkiContact.StanceOut = _rightOut;
-
-        // We’ll move skis in world space based on hits, then convert to local.
-        if (leftSki != null && _leftGrounded)
-        {
-            Vector3 targetPos = _leftHit.point + _leftHit.normal * skiHeightOffset;
-
-            // Forward on slope from SkiContact, or fallback to projected transform forward
-            Vector3 fwd = leftSkiContact != null
-                ? leftSkiContact.GetForwardOnPlane(_groundNormal)
-                : Vector3.ProjectOnPlane(transform.forward, _groundNormal).normalized;
-
-            if (fwd.sqrMagnitude < 0.0001f)
-                fwd = transform.forward;
-
-            // Add our visual yaw on top of the slope-aligned forward
-            Quaternion yawRot = Quaternion.AngleAxis(_leftSkiYawCurrent, _groundNormal);
-            Quaternion targetRot = Quaternion.LookRotation(fwd, _leftHit.normal) * yawRot;
-
-            leftSki.position = Vector3.Lerp(leftSki.position, targetPos, skiSuspensionLerp * Time.deltaTime);
-            leftSki.rotation = Quaternion.Slerp(leftSki.rotation, targetRot, skiSuspensionLerp * Time.deltaTime);
-        }
-
-        if (rightSki != null && _rightGrounded)
-        {
-            Vector3 targetPos = _rightHit.point + _rightHit.normal * skiHeightOffset;
-
-            Vector3 fwd = rightSkiContact != null
-                ? rightSkiContact.GetForwardOnPlane(_groundNormal)
-                : Vector3.ProjectOnPlane(transform.forward, _groundNormal).normalized;
-            if (fwd.sqrMagnitude < 0.0001f)
-                fwd = transform.forward;
-
-            Quaternion yawRot = Quaternion.AngleAxis(_rightSkiYawCurrent, _groundNormal);
-            Quaternion targetRot = Quaternion.LookRotation(fwd, _rightHit.normal) * yawRot;
-
-            rightSki.position = Vector3.Lerp(rightSki.position, targetPos, skiSuspensionLerp * Time.deltaTime);
-            rightSki.rotation = Quaternion.Slerp(rightSki.rotation, targetRot, skiSuspensionLerp * Time.deltaTime);
-        }
-
     }
 
     // ----------------------------------------------------------------------
@@ -1238,7 +1661,8 @@ public class SkiController : MonoBehaviour
             // Into the ground: kill aggressively.
             velocity -= velAlongNormal * Mathf.Clamp01(normalKillStrength * Time.fixedDeltaTime);
         }
-        else if (normalDot > 0f && maxStickUpwardSpeed > 0f)
+        else if (normalDot > 0f && maxStickUpwardSpeed > 0f &&
+         (_movementMode == MovementMode.Skiing || _movementMode == MovementMode.Landing))
         {
             // If we've just jumped, don't damp upward velocity at all;
             // we want small pops to fully leave the snow.
@@ -1265,16 +1689,9 @@ public class SkiController : MonoBehaviour
         // Planar velocity on slope
         Vector3 velOnPlane = Vector3.ProjectOnPlane(velocity, _groundNormal);
 
-        // Combined ski-forward defines our primary "rail" direction.
+        // --- Downhill acceleration driven by ski direction ---
         _skiForward = GetCombinedSkiForwardOnPlane();
 
-        // --- Downhill acceleration driven by ski direction ---
-        //
-        // We treat the skis as rails on the slope:
-        // - Project gravity onto the slope to get the fall line.
-        // - Measure alignment between ski direction and fall line.
-        // - Only when reasonably aligned do we let gravity pull us downhill,
-        //   and even then we accelerate ALONG the skis (not pure fall line).
         Vector3 fallLine = Vector3.ProjectOnPlane(Physics.gravity, _groundNormal);
         float slopeAngle = Vector3.Angle(_groundNormal, Vector3.up);
         bool onSlope = fallLine.sqrMagnitude > 0.0001f && slopeAngle >= minSlopeAngleForDownhill;
@@ -1288,30 +1705,28 @@ public class SkiController : MonoBehaviour
             float alignment = Vector3.Dot(skiDir, downhillDir);
             float alignAbs = Mathf.Abs(alignment); // facing downhill OR uphill both count
 
-            // If we are essentially traversing across the slope (alignment ~ 0),
-            // don't let gravity drag us downhill. You'll just coast and friction
-            // will bleed speed until you stop, like a strong edge hold.
-            if (alignAbs > minAlignmentForDownhill)
-            {
-                // --------------------------------------------------------------
-                // 1. Baseline downhill pull from gravity along the fall line.
-                //    This is always downhill; lean never reverses it.
-                // --------------------------------------------------------------
-                float alignFactor = Mathf.InverseLerp(minAlignmentForDownhill, 1f, alignAbs);
-                Vector3 baselineAccel = downhillDir * (downhillAccelMin * alignFactor);
-                _rb.AddForce(baselineAccel, ForceMode.Acceleration);
+            // ------------------------------------------------------------------
+            // 1. Baseline downhill slide (always some slip)
+            //
+            // Even if we're traversing (alignment ~ 0), we still want to slide
+            // down the hill a bit instead of "sticking" and losing all momentum.
+            // slideFactor ∈ [minSlideFactor, 1].
+            // ------------------------------------------------------------------
+            float slideAlign = Mathf.Clamp01(alignAbs);
+            float slideFactor = Mathf.Lerp(minSlideFactor, 1f, slideAlign);
 
-                // --------------------------------------------------------------
-                // 2. Lean-based drive & brake
-                //
-                // Lean direction on the slope:
-                // - If it points toward DESCENDING slope => add downhill accel.
-                // - If it points toward ASCENDING slope => apply a SOFT brake,
-                //   opposite current planar velocity.
-                //
-                // Lean never pushes you uphill. It only adds extra downhill
-                // or shaves speed off your current motion.
-                // --------------------------------------------------------------
+            Vector3 baselineAccel = downhillDir * (downhillAccelMin * slideFactor);
+            _rb.AddForce(baselineAccel, ForceMode.Acceleration);
+
+            // ------------------------------------------------------------------
+            // 2. Lean-based drive & brake (requires some alignment)
+            //
+            // Extra acceleration/braking only kicks in when we're at least
+            // somewhat aligned with the fall line.
+            // ------------------------------------------------------------------
+            float driveAlign = Mathf.InverseLerp(minAlignmentForDownhill, 1f, alignAbs);
+            if (driveAlign > 0f)
+            {
                 float leanAbs = Mathf.Clamp01(Mathf.Abs(_forwardLean));
                 if (leanAbs > 0.001f)
                 {
@@ -1322,8 +1737,7 @@ public class SkiController : MonoBehaviour
                     else
                         facingOnPlane = skiDir;
 
-                    // World-space lean direction: forward lean = facing direction,
-                    // backward lean = opposite of facing direction.
+                    // World-space lean direction on slope.
                     Vector3 leanDirOnPlane = facingOnPlane * Mathf.Sign(_forwardLean);
                     Vector3 leanDir = Vector3.ProjectOnPlane(leanDirOnPlane, _groundNormal);
                     if (leanDir.sqrMagnitude > 0.0001f)
@@ -1331,44 +1745,40 @@ public class SkiController : MonoBehaviour
                     else
                         leanDir = downhillDir;
 
-                    // > 0  : leaning toward descending slope
-                    // < 0  : leaning toward ascending slope
                     float leanSlopeDot = Vector3.Dot(leanDir, downhillDir);
 
-                    // Extra accel budget we can use for either driving or braking.
+                    // Extra accel budget for drive/brake.
                     float extraAccelMag = Mathf.Lerp(
                         0f,
                         downhillAccelMax - downhillAccelMin,
                         leanAbs
-                    ) * alignFactor;
+                    ) * driveAlign;
 
                     if (leanSlopeDot > 0.001f)
                     {
-                        // Leaning toward the descending slope: gain momentum.
+                        // Leaning toward descending slope: gain momentum.
                         float scale = leanSlopeDot;
                         Vector3 drive = downhillDir * (extraAccelMag * scale);
                         _rb.AddForce(drive, ForceMode.Acceleration);
                     }
-                    else if (leanSlopeDot < -0.001f && velOnPlane.sqrMagnitude > 0.0001f)
+                    else if (leanSlopeDot < -0.001f)
                     {
-                        // Leaning toward the ascending slope: SOFT brake.
-                        // We brake opposite current planar velocity, scaled:
-                        //  - by how "uphill" the lean is
-                        //  - by current speed (less brake at low speeds)
-                        //  - by a softness factor so it moderates rather than stops.
-                        float scale = -leanSlopeDot;
+                        velOnPlane = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal);
+                        if (velOnPlane.sqrMagnitude > 0.0001f)
+                        {
+                            // Leaning toward ascending slope: SOFT brake opposite planar velocity.
+                            float scale = -leanSlopeDot;
 
-                        Vector3 velDir = velOnPlane.normalized;
-                        float planarSpeed = velOnPlane.magnitude;
+                            Vector3 velDir = velOnPlane.normalized;
+                            float planarSpeed = velOnPlane.magnitude;
 
-                        // 0 at standstill, ~1 around typical cruise speed.
-                        float speedFactor = Mathf.InverseLerp(0f, skateMaxEffectiveSpeed, planarSpeed);
+                            float speedFactor = Mathf.InverseLerp(0f, skateMaxEffectiveSpeed, planarSpeed);
+                            const float brakeSoftness = 0.5f;
 
-                        const float brakeSoftness = 0.5f; // < 1 => softer than full drive
-
-                        float brakeAccelMag = extraAccelMag * scale * speedFactor * brakeSoftness;
-                        Vector3 brake = -velDir * brakeAccelMag;
-                        _rb.AddForce(brake, ForceMode.Acceleration);
+                            float brakeAccelMag = extraAccelMag * scale * speedFactor * brakeSoftness;
+                            Vector3 brake = -velDir * brakeAccelMag;
+                            _rb.AddForce(brake, ForceMode.Acceleration);
+                        }
                     }
                 }
             }
@@ -1821,6 +2231,25 @@ public class SkiController : MonoBehaviour
     // ----------------------------------------------------------------------
     private void ApplyAirControl()
     {
+        float dt = Time.fixedDeltaTime;
+
+        // SAFETY: if we're still grounded or any ski is in contact, do NOT apply
+        // aerial spin/flip controls. Instead, gently damp out any carried air spin.
+        if (_isGrounded || HasAnySkiContact)
+        {
+            float damping = Mathf.Max(0f, airAngularDamping);
+            _airAngularVelocity = Vector3.MoveTowards(
+                _airAngularVelocity,
+                Vector3.zero,
+                damping * dt);
+
+            return;
+        }
+
+        // ------------------------------------------------------------------
+        // True air control (only when fully airborne)
+        // ------------------------------------------------------------------
+
         // Leg difference controls yaw (spin), lean controls pitch (flip).
         float yawInput = HasLegInputs
             ? Mathf.Clamp(_rawRightLegInput - _rawLeftLegInput, -1f, 1f)
@@ -1828,8 +2257,6 @@ public class SkiController : MonoBehaviour
 
         // Invert lean so forward lean pitches you slightly back (feels more natural for flips).
         float pitchInput = _rawLeanInput;
-
-        float dt = Time.fixedDeltaTime;
 
         // Tuck (poles held) increases spin responsiveness.
         float spinMultiplier = 1f;
@@ -1843,28 +2270,66 @@ public class SkiController : MonoBehaviour
         float targetPitchSpeed = pitchInput * airPitchTurnSpeed * spinMultiplier;
 
         float accel = Mathf.Max(0f, airAngularAcceleration);
-        float damping = Mathf.Max(0f, airAngularDamping);
+        float dampingAir = Mathf.Max(0f, airAngularDamping);
 
-        // Accelerate current air angular velocity toward target values.
+        // Accelerate toward target spin speeds.
         _airAngularVelocity.y = Mathf.MoveTowards(_airAngularVelocity.y, targetYawSpeed, accel * dt);
         _airAngularVelocity.x = Mathf.MoveTowards(_airAngularVelocity.x, targetPitchSpeed, accel * dt);
 
         // Apply damping toward zero when there is little/no input so we don't spin forever.
         if (Mathf.Abs(yawInput) < 0.01f)
         {
-            _airAngularVelocity.y = Mathf.MoveTowards(_airAngularVelocity.y, 0f, damping * dt);
+            _airAngularVelocity.y = Mathf.MoveTowards(_airAngularVelocity.y, 0f, dampingAir * dt);
         }
         if (Mathf.Abs(pitchInput) < 0.01f)
         {
-            _airAngularVelocity.x = Mathf.MoveTowards(_airAngularVelocity.x, 0f, damping * dt);
+            _airAngularVelocity.x = Mathf.MoveTowards(_airAngularVelocity.x, 0f, dampingAir * dt);
         }
 
         // Apply rotation based on current angular velocity.
         Quaternion yawRot = Quaternion.AngleAxis(_airAngularVelocity.y * dt, Vector3.up);
         Quaternion pitchRot = Quaternion.AngleAxis(_airAngularVelocity.x * dt, transform.right);
 
-        transform.rotation = yawRot * pitchRot * transform.rotation;
+        _rb.MoveRotation(yawRot * pitchRot * _rb.rotation);
     }
+
+    private void OnGUI()
+    {
+        if (!showDebugHUD)
+            return;
+
+        const int width = 420;
+        const int height = 220;
+
+        // Top-left corner HUD
+        GUI.color = Color.white;
+        GUILayout.BeginArea(new Rect(10, 10, width, height), GUI.skin.box);
+
+        GUILayout.Label($"Mode:              {_movementMode}");
+        GUILayout.Label($"isGrounded (casts): {_isGrounded}");
+        GUILayout.Label($"IsGroundedForCtrl:  {IsGroundedForControls}");
+        GUILayout.Label($"HasAnySkiContact:   {HasAnySkiContact}");
+        GUILayout.Label($"Stacked:            {_stacked}");
+
+        Vector3 velPlane = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal);
+        GUILayout.Label($"PlanarSpeed:        {velPlane.magnitude:F2} m/s");
+        GUILayout.Label($"ForwardLean:        {_forwardLean:F2}");
+        GUILayout.Label($"TipAccumTime:       {_tipContactAccumTime:F3}s");
+
+        if (leftSkiContact != null)
+        {
+            GUILayout.Space(4f);
+            GUILayout.Label($"LEFT: grounded={leftSkiContact.IsGrounded}, tip={leftSkiContact.HasTipContact}, baseAlign={leftSkiContact.BaseContactAlignment:F2}");
+        }
+
+        if (rightSkiContact != null)
+        {
+            GUILayout.Label($"RIGHT: grounded={rightSkiContact.IsGrounded}, tip={rightSkiContact.HasTipContact}, baseAlign={rightSkiContact.BaseContactAlignment:F2}");
+        }
+
+        GUILayout.EndArea();
+    }
+
 }
 
 
