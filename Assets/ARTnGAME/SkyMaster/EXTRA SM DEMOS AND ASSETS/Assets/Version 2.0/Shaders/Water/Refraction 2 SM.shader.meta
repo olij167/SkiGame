@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: c4caff1c15eb7c9429dfdaad0c37742f
+timeCreated: 1430872572
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/EXTRA SM DEMOS AND ASSETS/Assets/Version 2.0/Shaders/Water/Refraction
+    2 SM.shader
+  uploadId: 828026

@@ -1,0 +1,42 @@
+fileFormatVersion: 2
+guid: e50f334e8df25374dac5079bbedd402f
+labels:
+- Day
+- Night
+- Sky
+- Sun
+- Terrain
+- Rendering
+- Atmospheric
+- Scattering
+- Haze
+- Volumetric
+- Clouds
+- Cumulus
+- Effects
+- Rain
+- Snow
+- Lightning
+- Storm
+- Tornado
+- Butterflies
+- Seasons
+- Dome
+- Cycle
+- Moon
+- Volcano
+- Eruption
+- Leaves
+- Trees
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/EXTRA SM DEMOS AND ASSETS/Assets/Version 1.5/Prefabs/Demo/SkyMaster
+    Earth VOLUME CLOUDS v.1.5 MOBILE FASTEST DEMO.prefab
+  uploadId: 828026

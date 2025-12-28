@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: ca70bae7598888441a3b04c70c06e66d
+timeCreated: 1442643253
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V3.0 Scripts/Water/Underwater/WaterCaustics.mat
+  uploadId: 828026

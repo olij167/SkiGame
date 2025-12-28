@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0e793d21c9aad8248ad80f4955e2e5e2
+timeCreated: 1459178233
+licenseType: Store
+DefaultImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V4.8.9 Scripts/Standard RP/VolumeLights/example.unity
+  uploadId: 828026

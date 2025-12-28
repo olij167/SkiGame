@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 344714213bf2a4f419bad2005e3d2622
+timeCreated: 1522324203
+licenseType: Store
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V5.0 Scripts/Full Volumetric Beta/Textures/Resources/noiseErosionPacked.bytes
+  uploadId: 828026

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 82d9fd51e2b254d4d904c415ec3bbba9
+timeCreated: 1443944288
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/PrefabWizard/Prefabs/Weather/Volume Clouds/SETA1_DAY
+    CLOUDS.prefab
+  uploadId: 828026

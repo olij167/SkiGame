@@ -18,6 +18,8 @@ TagManager:
   - Tornado
   - RainBoxManager
   - MoodBoxManager
+  - SkyMasterTree
+  - water
   layers:
   - Default
   - TransparentFX
@@ -39,7 +41,7 @@ TagManager:
   - NoForcePDM
   - PDM_Batch_Pool
   - PDM_Batch_Pool_Break
-  - 
+  - Background
   - 
   - 
   - 

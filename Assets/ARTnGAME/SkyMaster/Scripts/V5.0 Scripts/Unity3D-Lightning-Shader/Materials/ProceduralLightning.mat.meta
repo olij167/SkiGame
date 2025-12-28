@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 4eb2450d95f62e248a997e42f24a67f9
+timeCreated: 1512721373
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V5.0 Scripts/Unity3D-Lightning-Shader/Materials/ProceduralLightning.mat
+  uploadId: 828026

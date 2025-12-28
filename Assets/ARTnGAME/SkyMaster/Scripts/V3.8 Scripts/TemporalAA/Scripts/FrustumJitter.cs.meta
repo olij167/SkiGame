@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 46eabec43be547942a2cf4e7be6ed2db
+timeCreated: 1437991076
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V3.8 Scripts/TemporalAA/Scripts/FrustumJitter.cs
+  uploadId: 828026

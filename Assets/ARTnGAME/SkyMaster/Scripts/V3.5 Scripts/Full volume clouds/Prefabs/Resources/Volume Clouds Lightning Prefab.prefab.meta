@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: aacecd58af4c44f418bddfe0e68ebf2d
+timeCreated: 1517465202
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V3.5 Scripts/Full volume clouds/Prefabs/Resources/Volume
+    Clouds Lightning Prefab.prefab
+  uploadId: 828026

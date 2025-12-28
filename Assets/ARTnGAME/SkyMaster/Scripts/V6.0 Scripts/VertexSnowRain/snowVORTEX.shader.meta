@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 68e2f9475bbc7f44888c29a600880069
+timeCreated: 1450785495
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V6.0 Scripts/VertexSnowRain/snowVORTEX.shader
+  uploadId: 828026

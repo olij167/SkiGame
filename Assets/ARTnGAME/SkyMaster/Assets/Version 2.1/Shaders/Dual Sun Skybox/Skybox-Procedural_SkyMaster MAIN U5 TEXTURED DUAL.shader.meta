@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: f1fcb1b8bab23b4488e69b760c2166a1
+timeCreated: 1433090058
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Assets/Version 2.1/Shaders/Dual Sun Skybox/Skybox-Procedural_SkyMaster
+    MAIN U5 TEXTURED DUAL.shader
+  uploadId: 828026

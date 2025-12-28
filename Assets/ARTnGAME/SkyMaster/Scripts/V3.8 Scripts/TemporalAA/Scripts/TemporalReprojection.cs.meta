@@ -1,0 +1,20 @@
+fileFormatVersion: 2
+guid: e0f3e145a9e3a124b9b3e2cd85a4e7cb
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - reprojectionShader: {fileID: 4800000, guid: 6102861c4fe2b1540ababceef89aafd2,
+      type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V3.8 Scripts/TemporalAA/Scripts/TemporalReprojection.cs
+  uploadId: 828026

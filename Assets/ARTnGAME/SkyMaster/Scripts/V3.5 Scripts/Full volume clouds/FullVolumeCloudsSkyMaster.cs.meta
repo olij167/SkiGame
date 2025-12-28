@@ -1,0 +1,43 @@
+fileFormatVersion: 2
+guid: 72625c6973bc63b45baf0676f7726568
+timeCreated: 1524287742
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences:
+  - cloudsShadowMat: {fileID: 2100000, guid: 985a1108a38c4fd4fafecae3ea8afe18, type: 2}
+  - fluidFlow: {instanceID: 0}
+  - backgroundCam: {instanceID: 0}
+  - backgroundMat: {fileID: 2100000, guid: 292033f419a2e0c4bb1f2be8e0a7c5e0, type: 2}
+  - localLight: {instanceID: 0}
+  - _InteractTexture: {fileID: 2800000, guid: 861f1f6c92c07724cb5e3c3aa1f78525, type: 3}
+  - texture3Dnoise1: {fileID: 11728776, guid: 7ec8b73617a250d45a6a909e3697f16d, type: 2}
+  - texture3Dnoise2: {fileID: 11760204, guid: fb7e5259ba5c62d43966e407cc50468c, type: 2}
+  - Sun: {instanceID: 0}
+  - fogShader: {fileID: 4800000, guid: c7ae7e3bcc6105d479a415ad52f3e350, type: 3}
+  - SkyManager: {instanceID: 0}
+  - Galaxy: {instanceID: 0}
+  - ShadowLayer: {instanceID: 0}
+  - shadowDome: {instanceID: 0}
+  - backCamPrefab: {fileID: 1231789349124392, guid: 238224f01cb88d349a03c5405da252be,
+      type: 2}
+  - shadowDomePrefab: {fileID: 1029584201353536, guid: 5fa3e97aec31b1640b559665cfd253f3,
+      type: 2}
+  - LightningBoxPrefab: {fileID: 1160131017294594, guid: c2c08e75b0d64aa44ae73c31f239ae41,
+      type: 2}
+  - reflectClouds: {instanceID: 0}
+  - LightningPrefab: {fileID: 1042095493030490, guid: aacecd58af4c44f418bddfe0e68ebf2d,
+      type: 2}
+  - LightningBox: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V3.5 Scripts/Full volume clouds/FullVolumeCloudsSkyMaster.cs
+  uploadId: 828026

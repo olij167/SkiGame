@@ -42,8 +42,24 @@ public class LiftLine : MonoBehaviour
     [Tooltip("Speed of the lift along the band in metres per second.")]
     public float bandSpeed = 5f;
 
-    // Backwards-compatible alias used by LiftRider
-    public float speed => bandSpeed;
+    [Header("Terrain Clearance")]
+    [Tooltip("Enable adjusting the cable so it maintains a minimum clearance to terrain between stations.")]
+    public bool terrainClearanceEnabled = false;
+
+    [Tooltip("Layers considered as terrain for cable clearance (e.g. Terrain, ground meshes).")]
+    public LayerMask terrainLayers = ~0;
+
+    [Tooltip("Desired vertical clearance between cable and terrain (in metres).")]
+    public float terrainClearanceHeight = 4f;
+
+    [Tooltip("Height above the sample point to start the downward raycast.")]
+    public float terrainRaycastStartHeight = 50f;
+
+    [Tooltip("Maximum additional distance we will raycast downward from the start height.")]
+    public float terrainRaycastMaxDistance = 200f;
+
+    [Tooltip("Also apply terrain clearance while editing (can be a bit heavier due to frequent rebuilds).")]
+    public bool terrainClearanceInEditMode = false;
 
     [Header("Carriers")]
     [Tooltip("Prefab for a lift carrier (chair / T-bar). Must have a LiftCarrier component.")]
@@ -300,15 +316,21 @@ public class LiftLine : MonoBehaviour
     /// <summary>
     /// Adds a straight side between two points, subdivided with a static parabolic sag profile.
     /// Number of interior points is based on the distance and sideMaxSegmentLength.
+    /// Terrain clearance is applied to every generated point if enabled.
     /// </summary>
     private void AddSideSegmentWithSag(List<Vector3> list, Vector3 from, Vector3 to, bool includeStartPoint)
     {
-        float length = Vector3.Distance(from, to);
+        // First, apply terrain clearance to the endpoints themselves
+        Vector3 adjFrom = ApplyTerrainClearance(from);
+        Vector3 adjTo = ApplyTerrainClearance(to);
+
+        float length = Vector3.Distance(adjFrom, adjTo);
         if (length <= Mathf.Epsilon)
         {
             if (includeStartPoint)
-                list.Add(from);
-            list.Add(to);
+                list.Add(adjFrom);
+
+            list.Add(adjTo);
             return;
         }
 
@@ -316,28 +338,34 @@ public class LiftLine : MonoBehaviour
         int segments = Mathf.Max(1, Mathf.RoundToInt(length / maxSeg));
 
         if (includeStartPoint)
-            list.Add(from);
+            list.Add(adjFrom);
 
         float sagDepth = sideSagFraction * length;
 
         for (int i = 1; i <= segments; i++)
         {
             float t = (float)i / (segments + 1);
-            Vector3 pos = Vector3.Lerp(from, to, t);
+
+            // Base straight-line interpolation
+            Vector3 pos = Vector3.Lerp(adjFrom, adjTo, t);
 
             // Simple vertical sag: 0 at ends, -sagDepth at the center.
             float sag = -sagDepth * 4f * t * (1f - t);
             pos += Vector3.up * sag;
 
+            // Make sure this sagged point still respects terrain clearance
+            pos = ApplyTerrainClearance(pos);
+
             list.Add(pos);
         }
 
-        list.Add(to);
+        list.Add(adjTo);
     }
 
     /// <summary>
     /// Adds interior points of a quadratic Bezier arc from 'from' to 'to',
     /// using 'mid' as the control point, but does NOT add the endpoints.
+    /// Terrain clearance is applied if enabled.
     /// </summary>
     private void AddArcInterior(List<Vector3> list, Vector3 from, Vector3 mid, Vector3 to)
     {
@@ -347,6 +375,9 @@ public class LiftLine : MonoBehaviour
         {
             float t = (float)i / (samples + 1);
             Vector3 pt = QuadraticBezier(from, mid, to, t);
+
+            pt = ApplyTerrainClearance(pt);
+
             list.Add(pt);
         }
     }
@@ -380,6 +411,37 @@ public class LiftLine : MonoBehaviour
         }
 
         return dir.normalized;
+    }
+
+    /// <summary>
+    /// If terrain clearance is enabled, lifts this point up so it stays at least
+    /// terrainClearanceHeight units above any terrain hit directly beneath it.
+    /// Never pushes the point down, only up.
+    /// </summary>
+    private Vector3 ApplyTerrainClearance(Vector3 worldPos)
+    {
+        if (!terrainClearanceEnabled)
+            return worldPos;
+
+        // Optionally skip in edit mode to avoid extra raycasts while moving stations
+        if (!Application.isPlaying && !terrainClearanceInEditMode)
+            return worldPos;
+
+        Vector3 origin = worldPos + Vector3.up * terrainRaycastStartHeight;
+        float maxDistance = terrainRaycastStartHeight + terrainRaycastMaxDistance;
+
+        if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, maxDistance, terrainLayers, QueryTriggerInteraction.Ignore))
+        {
+            float targetY = hit.point.y + terrainClearanceHeight;
+
+            // Only lift the cable if it's below our desired clearance height
+            if (worldPos.y < targetY)
+            {
+                worldPos.y = targetY;
+            }
+        }
+
+        return worldPos;
     }
 
     #endregion

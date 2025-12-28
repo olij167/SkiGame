@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: ff3d5e886099a4045840d869fccc9181
+timeCreated: 1473679369
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V3.4 Scripts/ShaderVolumeClouds/ShaderVolumeCloudsSMV3.4b
+    SM30 v3.4.4 VORTEX Shader Only Mode H.shader
+  uploadId: 828026

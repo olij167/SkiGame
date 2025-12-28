@@ -34,10 +34,10 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Interact",
+                    "name": "Equip",
                     "type": "Button",
                     "id": "852140f2-7766-474d-8707-702459ba45f3",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "Hold",
                     "initialStateCheck": false
@@ -118,6 +118,15 @@
                     "name": "Poles",
                     "type": "Button",
                     "id": "8e22e206-5d34-49da-9770-4a6529458a6a",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "SkiLift",
+                    "type": "Button",
+                    "id": "6c4f4055-07ec-406c-b2d8-4d9cb32f9287",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -469,11 +478,11 @@
                 {
                     "name": "",
                     "id": "1c04ea5f-b012-41d1-a6f7-02e963b52893",
-                    "path": "<Keyboard>/e",
+                    "path": "<Keyboard>/q",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse",
-                    "action": "Interact",
+                    "action": "Equip",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -484,7 +493,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "Gamepad",
-                    "action": "Interact",
+                    "action": "Equip",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -628,6 +637,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "Poles",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "8d447030-2f0f-4935-876e-ff56cfac0f11",
+                    "path": "<Keyboard>/e",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "SkiLift",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

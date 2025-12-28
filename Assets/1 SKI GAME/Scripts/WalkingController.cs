@@ -218,7 +218,7 @@ public class WalkingController : MonoBehaviour
     private void HandleToggleInput()
     {
         // We use Player/Interact as the "take off / put on skis" hold action.
-        bool interactPressed = _player.Interact.IsPressed();
+        bool interactPressed = _player.Equip.IsPressed();
 
         if (interactPressed)
         {

@@ -21,6 +21,9 @@ public class SkiContact : MonoBehaviour
     [Tooltip("Local Z (forward) threshold above which a contact point counts as 'tip region' (0 = at binding, 1 = very tip).")]
     [SerializeField, Range(-1f, 1f)] private float tipRegionLocalZThreshold = 0.3f;
 
+    [Tooltip("Local Z (forward) threshold below which a contact point counts as 'tail region' (0 = at binding, -1 = very tail).")]
+    [SerializeField, Range(-1f, 1f)] private float tailRegionLocalZThreshold = -0.3f;
+
     [Header("Ground Probe (Raycast)")]
     [Tooltip("How far above the ski to start the ground ray (along local +up).")]
     [SerializeField] private float probeUpOffset = 0.05f;
@@ -28,9 +31,18 @@ public class SkiContact : MonoBehaviour
     [Tooltip("Max distance the ray will check for ground from the probe origin.")]
     [SerializeField] private float probeDistance = 0.4f;
 
+    [Tooltip("Max additional distance (beyond probeUpOffset) that still counts as true contact. Lower = stricter grounding.")]
+    [SerializeField] private float probeContactDistance = 0.12f;
+
+    [Tooltip("SphereCast radius used for probing. SphereCasts reduce triangle-to-triangle normal jitter compared to rays.")]
+    [SerializeField] private float probeSphereRadius = 0.04f;
+
+    [Tooltip("If we've been in the air longer than this, snap contact on reacquire instead of lerping (prevents laggy landings).")]
+    [SerializeField] private float hardResetAirTime = 0.15f;
+
     [Header("Contact Smoothing")]
     [Tooltip("How quickly the contact point/normal lerp toward new hits. Higher = snappier, Lower = smoother.")]
-    [SerializeField] private float contactSmoothSpeed = 20f;
+    [SerializeField] private float contactSmoothSpeed = 15f;
 
     [Tooltip("Small grace period where, if rays miss for a frame or two, we keep the last contact instead of dropping to 'air'.")]
     [SerializeField] private float contactCoyoteTime = 0.05f;
@@ -51,6 +63,18 @@ public class SkiContact : MonoBehaviour
     public float LastContactTime { get; private set; }
 
     /// <summary>
+    /// If HasTipContact is true, indicates whether the dominant end contact is at the tip (+1) or tail (-1).
+    /// 0 when no end contact is detected.
+    /// </summary>
+    public int EndContactSign { get; private set; }
+
+    /// <summary>
+    /// Local-Z of the dominant end contact point (in this ski's local space). Useful for debugging.
+    /// </summary>
+    public float EndContactLocalZ { get; private set; }
+
+
+    /// <summary>
     /// How well the ground normal aligns with the ski's 'up' direction.
     /// 1 = flat on the base, 0 = contacting mostly on the side/tip, -1 = on the top.
     /// Used by SkiController to detect unstable tip/tail stands.
@@ -67,13 +91,21 @@ public class SkiContact : MonoBehaviour
         set => stanceOut = Mathf.Clamp01(value);
     }
 
-    private void FixedUpdate()
+    // NOTE: Do not sample in this script's FixedUpdate.
+    // SkiController will call this deterministically at the start of its FixedUpdate.
+    public void ManualSampleGround()
     {
         SampleGround();
     }
 
     private float _localTipZ;
+    private float _localTailZ;
     private bool _geometryInitialized;
+
+    // Collision-based contact cache (used when rays miss but colliders touch).
+    private bool _hasCollisionContact;
+    private Vector3 _collisionContactPoint;
+    private Vector3 _collisionContactNormal;
 
     /// <summary>
     /// Actively probes for ground under this ski using one or two vertical
@@ -89,93 +121,217 @@ public class SkiContact : MonoBehaviour
 
         float maxDist = probeDistance + probeUpOffset;
 
-        // Base / under-foot origin (near the binding / ski root).
+        // Base / under-foot
         Vector3 baseOrigin = transform.position + worldUp * probeUpOffset;
 
-        // Tip origin: forward along local +Z to the tip of the ski mesh.
+        // Tip and tail origins in world space (if we have geometry length)
         Vector3 tipOrigin = baseOrigin;
+        Vector3 tailOrigin = baseOrigin;
+
         if (_geometryInitialized)
         {
             Vector3 localTipPos = new Vector3(0f, 0f, _localTipZ);
             tipOrigin = transform.TransformPoint(localTipPos) + worldUp * probeUpOffset;
+
+            Vector3 localTailPos = new Vector3(0f, 0f, _localTailZ);
+            tailOrigin = transform.TransformPoint(localTailPos) + worldUp * probeUpOffset;
         }
 
-        bool hitSomething = false;
-        RaycastHit bestHit = default;
-        float bestDist = float.MaxValue;
-
-        // Ray 1: under-foot
-        if (Physics.Raycast(baseOrigin, worldDown, out RaycastHit baseHit, maxDist,
-                            groundLayers, QueryTriggerInteraction.Ignore))
+        bool SphereDown(Vector3 origin, out RaycastHit hit)
         {
-            hitSomething = true;
-            bestHit = baseHit;
-            bestDist = baseHit.distance;
+            // SphereCast is significantly more stable than a Raycast on mesh terrain.
+            return Physics.SphereCast(
+                origin,
+                probeSphereRadius,
+                worldDown,
+                out hit,
+                maxDist,
+                groundLayers,
+                QueryTriggerInteraction.Ignore);
         }
 
-        // Ray 2: tip – we keep whichever hit is closer to the origin.
-        if (Physics.Raycast(tipOrigin, worldDown, out RaycastHit tipHit, maxDist,
-                            groundLayers, QueryTriggerInteraction.Ignore))
+        // Gather hits (base / tip / tail + collision fallback)
+        var hits = new System.Collections.Generic.List<RaycastHit>(4);
+
+        // Only count probe hits as "true contact" if they are very close.
+        // This prevents the controller treating near-ground as grounded (and stops false state flips).
+        float contactMaxDist = Mathf.Max(0.001f, probeUpOffset + probeContactDistance);
+
+        if (SphereDown(baseOrigin, out RaycastHit baseHit) && baseHit.distance <= contactMaxDist) hits.Add(baseHit);
+        if (SphereDown(tipOrigin, out RaycastHit tipHit) && tipHit.distance <= contactMaxDist) hits.Add(tipHit);
+        if (SphereDown(tailOrigin, out RaycastHit tailHit) && tailHit.distance <= contactMaxDist) hits.Add(tailHit);
+
+        // If we have collision contact, bias heavily toward it.
+        // This makes contact normals reflect the actual physics solver rather than probe noise.
+        if (_hasCollisionContact)
         {
-            float d = tipHit.distance;
-            if (!hitSomething || d < bestDist)
+            // Add it multiple times to increase its weight in the inverse-distance blend.
+            // Distance is 0 so it already weights strongly, but this makes it dominate.
+            for (int i = 0; i < 2; i++)
             {
-                hitSomething = true;
-                bestHit = tipHit;
-                bestDist = d;
+                RaycastHit ch = new RaycastHit
+                {
+                    point = _collisionContactPoint,
+                    normal = _collisionContactNormal,
+                    distance = 0f
+                };
+                hits.Add(ch);
             }
         }
 
-        // ---------------------------------------------
-        // No hit: use a small coyote window to keep the
-        // previous contact instead of dropping instantly.
-        // ---------------------------------------------
-        if (!hitSomething)
+        // If no hits, apply coyote time (keep last contact briefly)
+        if (hits.Count == 0)
         {
-            bool keepAsGrounded =
+            bool withinCoyote =
                 IsGrounded &&
                 (Time.time - LastContactTime) <= contactCoyoteTime;
 
-            if (keepAsGrounded)
+            if (!withinCoyote)
             {
-                // Don't change ContactPoint/Normal/HasTipContact;
-                // just keep last frame's data to avoid jitter.
-                return;
+                IsGrounded = false;
+                HasTipContact = false;
+                EndContactSign = 0;
+                EndContactLocalZ = 0f;
+                BaseContactAlignment = 0f;
             }
 
-            IsGrounded = false;
-            HasTipContact = false;
-            BaseContactAlignment = 0f;
+            _hasCollisionContact = false;
             return;
         }
 
-        // We have a valid hit: mark grounded and smooth toward it.
-        IsGrounded = true;
+        // Choose ONE primary contact to drive ContactPoint/ContactNormal to avoid jitter.
+        // Priority:
+        //  1) Collision contact (most physically truthful)
+        //  2) Base probe (most stable for stance + slope normal)
+        //  3) Nearest of tip/tail probes (fallback)
+        bool hasPrimary = false;
+        RaycastHit primaryHit = default;
 
-        Vector3 hitPoint = bestHit.point;
-        Vector3 hitNormal = bestHit.normal;
-
-        // First contact or after a long time in the air: snap.
-        if (LastContactTime <= 0f || !IsGrounded)
+        // 1) Collision dominates if present
+        if (_hasCollisionContact)
         {
-            ContactPoint = hitPoint;
-            ContactNormal = hitNormal.normalized;
+            primaryHit = new RaycastHit
+            {
+                point = _collisionContactPoint,
+                normal = _collisionContactNormal,
+                distance = 0f
+            };
+            hasPrimary = true;
+        }
+        else
+        {
+            // Prefer the base probe if we have it; it is the most stable for "am I on my base?"
+            // Tip/tail probes are used for end-contact detection only.
+            bool haveBase = false;
+            RaycastHit best = default;
+
+            // Re-run a base-only cast (cheap) to avoid ambiguity about which hit in the list was "base".
+            if (SphereDown(baseOrigin, out RaycastHit bh) && bh.distance <= contactMaxDist)
+            {
+                best = bh;
+                haveBase = true;
+            }
+
+            if (haveBase)
+            {
+                primaryHit = best;
+                hasPrimary = true;
+            }
+            else
+            {
+                // Fallback: choose the closest hit by distance (stable) rather than local Z.
+                float bestDist = float.PositiveInfinity;
+                for (int i = 0; i < hits.Count; i++)
+                {
+                    if (hits[i].distance < bestDist)
+                    {
+                        bestDist = hits[i].distance;
+                        primaryHit = hits[i];
+                        hasPrimary = true;
+                    }
+                }
+            }
+        }
+
+        if (!hasPrimary)
+        {
+            // Shouldn't happen because hits.Count > 0 earlier, but keep safe.
+            IsGrounded = false;
+            HasTipContact = false;
+            EndContactSign = 0;
+            EndContactLocalZ = 0f;
+            BaseContactAlignment = 0f;
+            _hasCollisionContact = false;
+            return;
+        }
+
+        Vector3 targetPoint = primaryHit.point;
+        Vector3 targetNormal = (primaryHit.normal.sqrMagnitude > 0.0001f) ? primaryHit.normal.normalized : Vector3.up;
+
+        float timeSinceLast = (LastContactTime > 0f) ? (Time.time - LastContactTime) : float.MaxValue;
+        bool shouldSnap = !IsGrounded || timeSinceLast > hardResetAirTime;
+
+        if (shouldSnap)
+        {
+            ContactPoint = targetPoint;
+            ContactNormal = targetNormal;
         }
         else
         {
             float t = 1f - Mathf.Exp(-contactSmoothSpeed * Time.fixedDeltaTime);
-            ContactPoint = Vector3.Lerp(ContactPoint, hitPoint, t);
-            ContactNormal = Vector3.Slerp(ContactNormal, hitNormal.normalized, t);
+            ContactPoint = Vector3.Lerp(ContactPoint, targetPoint, t);
+            ContactNormal = Vector3.Slerp(ContactNormal, targetNormal, t);
         }
 
+        IsGrounded = true;
         LastContactTime = Time.time;
 
-        // 1 = flat on base, 0 = side/tip, -1 = base fully upside-down.
-        BaseContactAlignment = Vector3.Dot(ContactNormal, transform.up);
+        // How "flat" is the ski on the contact? 1 = base-down, 0 = on edge, -1 = upside down.
+        float rawAlign = Mathf.Clamp(Vector3.Dot(transform.up, ContactNormal), -1f, 1f);
 
-        // Classify tip vs under-foot using local Z of the *hit* point.
-        Vector3 local = transform.InverseTransformPoint(bestHit.point);
-        HasTipContact = Mathf.Abs(local.z) > tipRegionLocalZThreshold;
+        if (shouldSnap)
+        {
+            BaseContactAlignment = rawAlign;
+        }
+        else
+        {
+            float tAlign = 1f - Mathf.Exp(-contactSmoothSpeed * Time.fixedDeltaTime);
+            BaseContactAlignment = Mathf.Lerp(BaseContactAlignment, rawAlign, tAlign);
+        }
+
+        // End-region detection (tip OR tail): evaluate individual hits (more stable than testing only blended point)
+        bool endish = false;
+        float bestAbsEndZ = 0f;
+        float bestEndZ = 0f;
+        int bestEndSign = 0;
+
+        for (int i = 0; i < hits.Count; i++)
+        {
+            Vector3 local = transform.InverseTransformPoint(hits[i].point);
+            float z = local.z;
+
+            bool isEnd =
+                (z > tipRegionLocalZThreshold) ||
+                (z < tailRegionLocalZThreshold);
+
+            if (!isEnd) continue;
+
+            endish = true;
+
+            float absZ = Mathf.Abs(z);
+            if (absZ > bestAbsEndZ)
+            {
+                bestAbsEndZ = absZ;
+                bestEndZ = z;
+                bestEndSign = (z >= 0f) ? 1 : -1; // +1 = tip, -1 = tail
+            }
+        }
+
+        // Legacy name: HasTipContact now means "tip OR tail contact"
+        HasTipContact = endish;
+        EndContactLocalZ = endish ? bestEndZ : 0f;
+        EndContactSign = endish ? bestEndSign : 0;
+
     }
 
     private void EnsureGeometry()
@@ -184,9 +340,12 @@ public class SkiContact : MonoBehaviour
             return;
 
         _geometryInitialized = true;
-        _localTipZ = 0.5f; // sensible fallback if we can't find a collider
 
-        // Try to infer the ski's local tip position from its collider bounds.
+        // Sensible fallbacks if we can't inspect a collider.
+        _localTipZ = 0.5f;
+        _localTailZ = -0.5f;
+
+        // Try to infer the ski's local tip & tail positions from its collider bounds.
         Collider col = GetComponentInChildren<Collider>();
         if (col == null)
             return;
@@ -195,10 +354,11 @@ public class SkiContact : MonoBehaviour
         Vector3 c = b.center;
         Vector3 e = b.extents;
 
-        // Build the 8 corners of the bounds, transform to local, and find
-        // the furthest point along local +Z (tip).
         float maxLocalZ = float.NegativeInfinity;
+        float minLocalZ = float.PositiveInfinity;
 
+        // Build the 8 corners of the bounds, transform to local, and find
+        // the furthest points along local +Z (tip) and local -Z (tail).
         for (int ix = -1; ix <= 1; ix += 2)
         {
             for (int iy = -1; iy <= 1; iy += 2)
@@ -211,8 +371,11 @@ public class SkiContact : MonoBehaviour
                         c.z + iz * e.z);
 
                     Vector3 localCorner = transform.InverseTransformPoint(worldCorner);
+
                     if (localCorner.z > maxLocalZ)
                         maxLocalZ = localCorner.z;
+                    if (localCorner.z < minLocalZ)
+                        minLocalZ = localCorner.z;
                 }
             }
         }
@@ -221,6 +384,38 @@ public class SkiContact : MonoBehaviour
         {
             _localTipZ = maxLocalZ;
         }
+
+        if (!float.IsPositiveInfinity(minLocalZ))
+        {
+            _localTailZ = minLocalZ;
+        }
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        // Only care about collisions with ground layers.
+        int otherLayer = collision.gameObject.layer;
+        if ((groundLayers.value & (1 << otherLayer)) == 0)
+            return;
+
+        // Use the first contact as a representative.
+        if (collision.contactCount > 0)
+        {
+            ContactPoint cp = collision.GetContact(0);
+            _hasCollisionContact = true;
+            _collisionContactPoint = cp.point;
+            _collisionContactNormal = cp.normal;
+        }
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        int otherLayer = collision.gameObject.layer;
+        if ((groundLayers.value & (1 << otherLayer)) == 0)
+            return;
+
+        // When we fully lose collision with ground, clear the cache.
+        _hasCollisionContact = false;
     }
 
     /// <summary>

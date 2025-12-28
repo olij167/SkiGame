@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: ec35386c05b5fb642b55484494c1563c
+timeCreated: 1473677979
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V3.4 Scripts/ShaderVolumeClouds/ShaderVolumeCloudsSMV3.4
+    3 SM30 like SM20 H 1 BACK8 use 3 v3.4.3 TOP DOWN LOW FOG 3.mat
+  uploadId: 828026

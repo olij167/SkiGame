@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 8316941ded337c540bc7eb963f4a3ca8
+timeCreated: 1513856912
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V5.0 Scripts/Full Volumetric Beta/Scripts/FirstPersonController.cs
+  uploadId: 828026

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 82ba21ac33de8a047ad3461c0a68e135
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/EXTRA SM DEMOS AND ASSETS/Assets/Version 1.5/Terrain
+    Shaders/UnityTerrain/SMFoggyTerrainFP.shader
+  uploadId: 828026

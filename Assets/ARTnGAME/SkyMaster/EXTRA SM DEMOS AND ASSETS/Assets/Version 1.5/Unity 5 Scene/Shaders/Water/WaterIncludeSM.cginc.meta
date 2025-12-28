@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 05d6d0a6b54fb8949a6949bc50cab4a0
+timeCreated: 1425514007
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/EXTRA SM DEMOS AND ASSETS/Assets/Version 1.5/Unity
+    5 Scene/Shaders/Water/WaterIncludeSM.cginc
+  uploadId: 828026

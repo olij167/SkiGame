@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: DropletsSKYMASTER 4
+  m_Shader: {fileID: 4800000, guid: df084430e0f719448ab0fcc2a1d7e6b7, type: 3}
+  m_ShaderKeywords: 
+  m_LightmapFlags: 5
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3000
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BumpMap:
+        m_Texture: {fileID: 2800000, guid: 8bdcd1e41635e444abe1b65ff44e33f5, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMapWindow:
+        m_Texture: {fileID: 2800000, guid: 1f875020bf6d0fb49a261bf8fc57ca7c, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Drops:
+        m_Texture: {fileID: 2800000, guid: e1f79762204fe9c45aca360a2da3e21c, type: 3}
+        m_Scale: {x: -0.9, y: 3.6}
+        m_Offset: {x: 0, y: 0}
+    - _Drops2:
+        m_Texture: {fileID: 2800000, guid: e1f79762204fe9c45aca360a2da3e21c, type: 3}
+        m_Scale: {x: 20.75, y: 6}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: d649f81c9275c38429ac47bce77cb160, type: 3}
+        m_Scale: {x: 2, y: 2}
+        m_Offset: {x: 1, y: 1}
+    - _Water:
+        m_Texture: {fileID: 2800000, guid: e1f79762204fe9c45aca360a2da3e21c, type: 3}
+        m_Scale: {x: 16, y: 6}
+        m_Offset: {x: 0, y: 0}
+    m_Floats:
+    - _Bloom: 0.0634
+    - _BumpAmt: 61
+    - _BumpAmt2: 96
+    - _FreezeDirection: 0.96
+    - _FreezeFacrorA: -0.42
+    - _FreezeFacrorB: 0.17
+    - _FreezeFacrorC: -0.29
+    - _Slide: 9
+    - _Slide2: 29
+    - _Speed: 11
+    - _Speed2: 4
+    - _TopFade: 1.97
+    - _Transparency2Amount: 1.89
+    - _TransparencyAmount: 7.9
+    - _WaterAmount: 71.84
+    m_Colors:
+    - _Color: {r: 1, g: 1, b: 1, a: 1}

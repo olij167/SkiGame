@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 8acccfb2d8a0eb84c9540b4c75eca920
+timeCreated: 1464643916
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Assets/Version 1.5/Unity 5 Scene/Shaders/Water/FXWater4Advanced
+    SM30 LOCAL LIGHTS and Waves WEBGL.shader
+  uploadId: 828026

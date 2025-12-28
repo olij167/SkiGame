@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class LiftRider : MonoBehaviour
 {
@@ -11,19 +12,93 @@ public class LiftRider : MonoBehaviour
     public float detachForwardImpulse = 3f;
     public float detachDownOffset = 0.2f;
 
+    [Header("Lift detection")]
+    [SerializeField] private LayerMask liftCarrierLayers = ~0;
+
+    [Tooltip("Radius around the player used to search for nearby lift carriers.")]
+    [SerializeField] private float liftDetectionRadius = 3.5f;
+
+    [Tooltip("Optional point used for lift detection (e.g. hips/chest). If null, uses this transform.position.")]
+    [SerializeField] private Transform liftDetectPoint;
+
+    [Tooltip("If true, while the button is held we keep trying to attach every physics frame.")]
+    [SerializeField] private bool holdToAttach = true;
+
+    [Tooltip("If you tap slightly early, we still try to attach for this long (seconds).")]
+    [SerializeField] private float attachInputBuffer = 0.20f;
+
+    [Tooltip("How often (seconds) we attempt to attach while held/buffered.")]
+    [SerializeField] private float attachAttemptInterval = 0.05f;
+
+    [Header("Input")]
+    [Tooltip("Input action used to attach/detach from lifts (e.g. Player/Interact).")]
+    [SerializeField] private InputActionReference liftInput;
+
     private LiftCarrier currentCarrier;
     private bool isAttached;
     private bool isChairMode; // true if attached to chair, false if T-bar
     private bool liftInputHeld;
+
+    private float _attachBufferUntilTime;
+    private float _nextAttachAttemptTime;
+
+    // Non-alloc overlap cache
+    private readonly Collider[] _overlapHits = new Collider[32];
 
     private void Awake()
     {
         if (!rb) rb = GetComponent<Rigidbody>();
     }
 
-    // Call this from your InputSystem wrapper
+    private void OnEnable()
+    {
+        // Hook into the assigned InputActionReference
+        if (liftInput != null && liftInput.action != null)
+        {
+            liftInput.action.started += OnLiftInput;
+            liftInput.action.performed += OnLiftInput;
+            liftInput.action.canceled += OnLiftInput;
+            liftInput.action.Enable();
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (liftInput != null && liftInput.action != null)
+        {
+            liftInput.action.started -= OnLiftInput;
+            liftInput.action.performed -= OnLiftInput;
+            liftInput.action.canceled -= OnLiftInput;
+            liftInput.action.Disable();
+        }
+    }
+
+    /// <summary>
+    /// Callback from the Input System for the configured lift input action.
+    /// This maps the action phases onto the existing SetLiftInput logic.
+    /// </summary>
+    private void OnLiftInput(InputAction.CallbackContext context)
+    {
+        bool isPressed = context.ReadValueAsButton();
+        bool wasPressedThisFrame = context.started;
+
+        if (wasPressedThisFrame)
+        {
+            // Allow "press slightly early" attachment
+            _attachBufferUntilTime = Time.time + attachInputBuffer;
+        }
+
+        SetLiftInput(isPressed, wasPressedThisFrame);
+    }
+
+    /// <summary>
+    /// Core logic for how lift input affects attachment/detachment.
+    /// Now usually driven by OnLiftInput, but you can still call it externally if needed.
+    /// </summary>
     public void SetLiftInput(bool isPressed, bool wasPressedThisFrame)
     {
+        liftInputHeld = isPressed;
+
         // Chair logic: toggle on press
         if (isAttached && isChairMode)
         {
@@ -42,7 +117,6 @@ public class LiftRider : MonoBehaviour
         }
 
         // T-bar logic: must hold
-        liftInputHeld = isPressed;
         if (isAttached && !isChairMode && !liftInputHeld)
         {
             // Released grip
@@ -52,6 +126,20 @@ public class LiftRider : MonoBehaviour
 
     private void FixedUpdate()
     {
+        // Attachment assist: while held or buffered, keep attempting to attach.
+        if (!isAttached)
+        {
+            bool shouldTryAttach =
+                (holdToAttach && liftInputHeld) ||
+                (Time.time <= _attachBufferUntilTime);
+
+            if (shouldTryAttach && Time.time >= _nextAttachAttemptTime)
+            {
+                _nextAttachAttemptTime = Time.time + attachAttemptInterval;
+                TryAttachToNearbyCarrier();
+            }
+        }
+
         // For T-bar, we don't parent; we apply a pull along cable while attached
         if (isAttached && !isChairMode && currentCarrier != null)
         {
@@ -67,24 +155,52 @@ public class LiftRider : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Searches for a LiftCarrier within liftDetectionRadius and attaches if possible.
+    /// This is only called when the lift input is pressed and the rider is not already attached.
+    /// </summary>
     private void TryAttachToNearbyCarrier()
     {
-        // Simple approach: sphere overlap, find closest LiftCarrier
-        float radius = 3f;
-        Collider[] hits = Physics.OverlapSphere(transform.position, radius);
+        Vector3 center = liftDetectPoint ? liftDetectPoint.position : transform.position;
+
+        // Non-alloc overlap (fast, no GC). Explicitly include triggers.
+        int hitCount = Physics.OverlapSphereNonAlloc(
+            center,
+            liftDetectionRadius,
+            _overlapHits,
+            liftCarrierLayers,
+            QueryTriggerInteraction.Collide
+        );
+
+        if (hitCount <= 0)
+            return;
+
         LiftCarrier best = null;
-        float bestDist = Mathf.Infinity;
+        float bestScore = float.NegativeInfinity;
 
-        foreach (var hit in hits)
+        for (int i = 0; i < hitCount; i++)
         {
-            var carrier = hit.GetComponentInParent<LiftCarrier>();
-            if (!carrier) continue;
-            if (!carrier.CanAttach(this)) continue;
+            Collider c = _overlapHits[i];
+            if (!c) continue;
 
-            float dist = Vector3.Distance(transform.position, carrier.attachPoint.position);
-            if (dist < bestDist)
+            var carrier = c.GetComponentInParent<LiftCarrier>();
+            if (!carrier) continue;
+
+            if (!carrier.CanAttach(this))
+                continue;
+
+            // Score: prefer closer + in front (reduces attaching to carriers behind you)
+            Vector3 toAttach = carrier.attachPoint.position - center;
+            float dist = toAttach.magnitude;
+            if (dist < 0.001f) dist = 0.001f;
+
+            Vector3 toAttachDir = toAttach / dist;
+            float facing = Vector3.Dot(transform.forward, toAttachDir); // -1..1
+            float score = (facing * 2f) - dist; // tune weights as needed
+
+            if (score > bestScore)
             {
-                bestDist = dist;
+                bestScore = score;
                 best = carrier;
             }
         }
@@ -92,6 +208,9 @@ public class LiftRider : MonoBehaviour
         if (best != null)
         {
             best.AttachRider(this);
+
+            // Clear buffer once we attach
+            _attachBufferUntilTime = 0f;
         }
     }
 
@@ -119,7 +238,7 @@ public class LiftRider : MonoBehaviour
             transform.SetParent(null);
 
             if (walkingController) walkingController.enabled = false;
-            if (skiController) skiController.enabled = true; // we assume we�re skiing
+            if (skiController) skiController.enabled = true; // we assume we're skiing
 
             // Optionally align facing direction to cable
             Vector3 fwd = carrier.transform.forward;
@@ -157,4 +276,13 @@ public class LiftRider : MonoBehaviour
             currentCarrier.DetachRider(this);
         }
     }
+
+#if UNITY_EDITOR
+    private void OnDrawGizmosSelected()
+    {
+        // Visualise the detection radius in the editor
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(transform.position, liftDetectionRadius);
+    }
+#endif
 }

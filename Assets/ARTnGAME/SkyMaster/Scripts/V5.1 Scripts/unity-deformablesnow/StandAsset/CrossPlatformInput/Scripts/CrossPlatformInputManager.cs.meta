@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 6ac1ce5a5adfd9f46adbf5b6f752a47c
+labels:
+- Done
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: -1010
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 25357
+  packageName: 'Sky Master ULTIMATE: Volumetric Skies, Clouds & Weather'
+  packageVersion: 5.7.8
+  assetPath: Assets/ARTnGAME/SkyMaster/Scripts/V5.1 Scripts/unity-deformablesnow/StandAsset/CrossPlatformInput/Scripts/CrossPlatformInputManager.cs
+  uploadId: 828026
