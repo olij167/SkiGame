@@ -590,7 +590,51 @@ public class SkiController : MonoBehaviour
         if (IsGroundedForControls)
         {
             Vector3 gPlane = Vector3.ProjectOnPlane(Physics.gravity, _groundNormal);
-            _rb.AddForce(gPlane, ForceMode.Acceleration);
+
+            // --- Traverse hold (no new inspector fields) ---
+            // Tuning knobs (code-only):
+            const float HOLD_SPEED = 1.0f;   // m/s along fall line below which we "hold" strongly
+            const float HOLD_DAMP = 8.0f;   // extra damping along fall line when holding
+            const float MIN_SLOPE_ANGLE = 8f; // degrees; below this, don't bother holding
+
+            float slopeAngle = Vector3.Angle(_groundNormal, Vector3.up);
+            if (gPlane.sqrMagnitude > 0.0001f && slopeAngle >= MIN_SLOPE_ANGLE)
+            {
+                Vector3 fallDir = gPlane.normalized;
+
+                // Use combined ski forward on the slope plane (doesn't rely on _skiForward being updated yet here)
+                Vector3 skiDir = GetCombinedSkiForwardOnPlane();
+                if (skiDir.sqrMagnitude > 0.0001f) skiDir.Normalize();
+
+                // Edge factor from stance (already computed elsewhere; no new fields)
+                float edge = Mathf.Clamp01((_leftOut + _rightOut) * 0.5f);
+
+                // 1 when perfectly across slope, 0 when pointing up/down the fall line
+                float perpendicular = (skiDir.sqrMagnitude > 0.0001f)
+                    ? (1f - Mathf.Abs(Vector3.Dot(skiDir, fallDir)))
+                    : 0f;
+
+                // Current fall-line speed
+                Vector3 planeVel = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal);
+                float vFall = Vector3.Dot(planeVel, fallDir);
+
+                // Hold only when moving slowly along fall line, edging, and traversing.
+                float speedT = 1f - Mathf.Clamp01(Mathf.Abs(vFall) / HOLD_SPEED);
+                float hold = Mathf.Clamp01(perpendicular * edge * speedT);
+
+                // Optional: forward lean reduces holding (keeps downhill skiing feeling lively)
+                hold *= 1f - Mathf.Clamp01(_forwardLean);
+
+                // Reduce tangential gravity when holding
+                _rb.AddForce(gPlane * (1f - hold), ForceMode.Acceleration);
+
+                // Dampen residual drift along the fall line
+                _rb.AddForce(-fallDir * vFall * (HOLD_DAMP * hold), ForceMode.Acceleration);
+            }
+            else
+            {
+                _rb.AddForce(gPlane, ForceMode.Acceleration);
+            }
         }
         else
         {

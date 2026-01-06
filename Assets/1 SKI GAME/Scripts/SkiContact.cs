@@ -23,6 +23,9 @@ public class SkiContact : MonoBehaviour
 
     [Tooltip("Local Z (forward) threshold below which a contact point counts as 'tail region' (0 = at binding, -1 = very tail).")]
     [SerializeField, Range(-1f, 1f)] private float tailRegionLocalZThreshold = -0.3f;
+    
+    [Tooltip("Collision contacts with an up-dot below this are ignored (prevents wall contacts counting as ground).")]
+    [SerializeField, Range(0f, 1f)] private float minCollisionUpDot = 0.25f;
 
     [Header("Ground Probe (Raycast)")]
     [Tooltip("How far above the ski to start the ground ray (along local +up).")]
@@ -398,14 +401,35 @@ public class SkiContact : MonoBehaviour
         if ((groundLayers.value & (1 << otherLayer)) == 0)
             return;
 
-        // Use the first contact as a representative.
-        if (collision.contactCount > 0)
+        if (collision.contactCount <= 0)
+            return;
+
+        // Pick the "most ground-like" contact (highest up-dot).
+        float bestUpDot = -1f;
+        Vector3 bestPoint = default;
+        Vector3 bestNormal = default;
+
+        for (int i = 0; i < collision.contactCount; i++)
         {
-            ContactPoint cp = collision.GetContact(0);
-            _hasCollisionContact = true;
-            _collisionContactPoint = cp.point;
-            _collisionContactNormal = cp.normal;
+            ContactPoint cp = collision.GetContact(i);
+            Vector3 n = cp.normal.sqrMagnitude > 0.0001f ? cp.normal.normalized : Vector3.up;
+
+            float upDot = Vector3.Dot(n, Vector3.up);
+            if (upDot > bestUpDot)
+            {
+                bestUpDot = upDot;
+                bestPoint = cp.point;
+                bestNormal = n;
+            }
         }
+
+        // Ignore wall-ish contacts.
+        if (bestUpDot < minCollisionUpDot)
+            return;
+
+        _hasCollisionContact = true;
+        _collisionContactPoint = bestPoint;
+        _collisionContactNormal = bestNormal;
     }
 
     private void OnCollisionExit(Collision collision)

@@ -272,6 +272,7 @@ public class WalkingController : MonoBehaviour
 
     private void EnterWalkMode()
     {
+        if (_rb.useGravity != true) _rb.useGravity = true;
         _skisOn = false;
 
         // Kill sliding when entering walk mode but preserve vertical motion.
@@ -287,6 +288,7 @@ public class WalkingController : MonoBehaviour
     private void EnterSkiMode()
     {
         _skisOn = true;
+        if (_rb.useGravity == true) _rb.useGravity = false;
 
         // When going back to skiing, ensure we're slightly above the snow
         // so the skis don't clip, then restore their idle pose.

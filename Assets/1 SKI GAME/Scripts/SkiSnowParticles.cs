@@ -114,7 +114,7 @@ public class SkiSnowParticles : MonoBehaviour
 
     private void Update()
     {
-        if (!skiController)
+        if (!skiController || !skiController.isActiveAndEnabled)
             return;
 
         Vector3 velocity = skiController.Velocity;
