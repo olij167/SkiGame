@@ -206,24 +206,13 @@ namespace TimeWeather
 
                 for (int i = 0; i < hourlyForcast.arraySize; i++)
                 {
-                    int c = hourlyForcast.GetArrayElementAtIndex(i).FindPropertyRelative("hourlyClouds").arraySize;
-                    if ((backwardHours > 0 && i < weatherController.timeController.timeHours && i >= weatherController.timeController.timeHours - backwardHours) || //if 
-                    (i >= weatherController.timeController.timeHours && i < weatherController.timeController.timeHours + numOfHoursToDisplay))
+                    if ((backwardHours > 0 && i < weatherController.timeController.timeHours && i >= weatherController.timeController.timeHours - backwardHours) ||
+                        (i >= weatherController.timeController.timeHours && i < weatherController.timeController.timeHours + numOfHoursToDisplay))
                     {
-                        SetHourForcast(i, c);
+                        SetHourForcast(i);
                     }
-
-                    //EditorGUILayout.PropertyField(forcastTime);
-                    //EditorGUILayout.PropertyField(temp);
-                    //EditorGUILayout.PropertyField(chanceOfRain);
-                    //EditorGUILayout.PropertyField(weatherCondition);
-                    //EditorGUILayout.PropertyField(cloudPower);
-                    //EditorGUILayout.PropertyField(windSpeed);
-                    //EditorGUILayout.PropertyField(wetness);
-                    //EditorGUILayout.PropertyField(snowiness);
-                    //EditorGUILayout.PropertyField(isRaining);
-
                 }
+
             }
 
             if (GUILayout.Button("Reset Daily Forecast"))
@@ -236,71 +225,47 @@ namespace TimeWeather
 
         }
 
-        public void SetHourForcast(int i, int c)
+        public void SetHourForcast(int i)
         {
-            SerializedProperty MyListRef = hourlyForcast.GetArrayElementAtIndex(i);
-            SerializedProperty forcastTime = MyListRef.FindPropertyRelative("forcastTime");
-            SerializedProperty temp = MyListRef.FindPropertyRelative("temp");
-            SerializedProperty rainChance = MyListRef.FindPropertyRelative("rainChance");
-            SerializedProperty weatherCondition = MyListRef.FindPropertyRelative("weatherCondition");
-            //SerializedProperty cloudPower = MyListRef.FindPropertyRelative("cloudPower");
-            SerializedProperty windSpeed = MyListRef.FindPropertyRelative("windSpeed");
-            //SerializedProperty wetness = MyListRef.FindPropertyRelative("wetness");
-            //SerializedProperty snowiness = MyListRef.FindPropertyRelative("snowiness");
-            SerializedProperty isRaining = MyListRef.FindPropertyRelative("isRaining");
+            SerializedProperty hourProp = hourlyForcast.GetArrayElementAtIndex(i);
 
-            //SerializedProperty cloudListRef = hourlyForcast.GetArrayElementAtIndex(i).FindPropertyRelative("hourlyClouds").GetArrayElementAtIndex(c);
+            SerializedProperty forcastTime = hourProp.FindPropertyRelative("forcastTime");
+            SerializedProperty temp = hourProp.FindPropertyRelative("temp");
+            SerializedProperty rainChance = hourProp.FindPropertyRelative("rainChance");
+            SerializedProperty weatherCondition = hourProp.FindPropertyRelative("weatherCondition");
+            SerializedProperty cloudPower = hourProp.FindPropertyRelative("cloudPower");
+            SerializedProperty isRaining = hourProp.FindPropertyRelative("isRaining");
 
-            //SerializedProperty cloudRenderer = cloudListRef.FindPropertyRelative("cloudRenderer");
-            //SerializedProperty cloudPower = cloudListRef.FindPropertyRelative("cloudPower");
-            //SerializedProperty cloudAlpha = cloudListRef.FindPropertyRelative("cloudAlpha");
+            // Header
+            GUILayout.Label(forcastTime.intValue.ToString("00") + ":00 Forecast", EditorStyles.boldLabel);
 
-
-            // Display the property fields
-            GUILayout.Label(forcastTime.intValue.ToString("00") + ":00 Forcast ", EditorStyles.boldLabel);
+            // Row 1: temp + condition
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.Slider(temp.floatValue, -100f, 100f);
-            GUILayout.Label("°", EditorStyles.boldLabel);
-            EditorGUILayout.Space(5);
-
+            temp.floatValue = EditorGUILayout.Slider(temp.floatValue, -30f, 40f);
+            GUILayout.Label("°C", GUILayout.Width(30));
+            EditorGUILayout.Space(6);
             GUILayout.Label(weatherCondition.stringValue, EditorStyles.boldLabel);
             EditorGUILayout.EndHorizontal();
 
+            // Row 2: rain + raining toggle
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.Space(5);
-            GUILayout.Label("Rain %", EditorStyles.boldLabel);
-            EditorGUILayout.Slider(rainChance.floatValue, -100f, 100f);
-            EditorGUILayout.Space(5);
-            GUILayout.Label("Raining ", EditorStyles.boldLabel);
-            EditorGUILayout.Toggle(isRaining.boolValue);
+            GUILayout.Label("Rain %", GUILayout.Width(50));
+            rainChance.floatValue = EditorGUILayout.Slider(rainChance.floatValue, 0f, 100f);
+            EditorGUILayout.Space(6);
+            GUILayout.Label("Raining", GUILayout.Width(55));
+            isRaining.boolValue = EditorGUILayout.Toggle(isRaining.boolValue, GUILayout.Width(20));
             EditorGUILayout.EndHorizontal();
 
+            // Row 3: clouds (your system uses cloudPower 0..5)
             EditorGUILayout.BeginHorizontal();
-            //cloudFoldOut = EditorGUILayout.Foldout(forcastFoldOut, "Cloud Values", true);
-            ////EditorGUILayout.Slider(cloudPower.floatValue, -10f, 10f);
-            //if (cloudFoldOut)
-            //{
-            //    EditorGUILayout.BeginVertical();
-            //    GUILayout.Label(cloudRenderer.name);
-            //    EditorGUILayout.Slider(cloudPower.floatValue, 0f, 5f);
-            //    EditorGUILayout.Slider(cloudAlpha.floatValue, 0f, 25f);
-
-            //    EditorGUILayout.EndVertical();
-            //}
-            GUILayout.Label("Wind Speed ");
-            EditorGUILayout.Slider(windSpeed.floatValue, -10f, 10f);
+            GUILayout.Label("Clouds", GUILayout.Width(50));
+            cloudPower.floatValue = EditorGUILayout.Slider(cloudPower.floatValue, 0f, 5f);
             EditorGUILayout.EndHorizontal();
-
-            //EditorGUILayout.BeginHorizontal();
-            //GUILayout.Label("Wetness ");
-            //EditorGUILayout.Slider(wetness.floatValue, 0f, 5f);
-            //GUILayout.Label("Snowiness ");
-            //EditorGUILayout.Slider(snowiness.floatValue, 0f, 1f);
-            //EditorGUILayout.EndHorizontal();
 
             DrawUILine(new Color(1f, 1f, 1f, 0.25f));
             EditorGUILayout.Space(5);
         }
+
         public static void DrawUILine(Color color, int thickness = 2, int padding = 10)
         {
             Rect r = EditorGUILayout.GetControlRect(GUILayout.Height(padding + thickness));

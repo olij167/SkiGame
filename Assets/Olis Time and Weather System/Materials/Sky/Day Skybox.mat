@@ -136,8 +136,8 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _SunDisk: 1
-    - _SunIntensity: 0.36167184
-    - _SunScale: 0.27125406
+    - _SunIntensity: 0.81307256
+    - _SunScale: 0.6098041
     - _SunSize: 0.04
     - _SunSizeConvergence: 10
     - _Surface: 0
@@ -149,9 +149,9 @@ Material:
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _GroundColor: {r: 0.36899996, g: 0.34899998, b: 0.34099993, a: 1}
     - _MoonColor: {r: 0.7264151, g: 0.7162395, b: 0.6144832, a: 0.5176471}
-    - _SkyColor1: {r: 0.3205819, g: 0.41584924, b: 0.68153596, a: 1}
-    - _SkyColor2: {r: 0.81576335, g: 0.931758, b: 0.8462073, a: 1}
-    - _SkyColor3: {r: 0.56739026, g: 0.77538353, b: 0.75641793, a: 0.8024847}
+    - _SkyColor1: {r: 0.4144691, g: 0.74027866, b: 0.8279357, a: 1}
+    - _SkyColor2: {r: 0.5072825, g: 0.83503497, b: 0.9957217, a: 1}
+    - _SkyColor3: {r: 0.5536426, g: 0.9175179, b: 0.99786204, a: 0.59045357}
     - _SkyTint: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _SunColor: {r: 1, g: 0.9857807, b: 0.83647794, a: 1}

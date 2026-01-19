@@ -90,6 +90,98 @@ public class LiftLine : MonoBehaviour
     private float _bandLength;
     public float BandLength => _bandLength;
 
+    // ----------------------------------------------------------------------
+    // GRINDING SUPPORT (lightweight runtime registry + closest point queries)
+    // ----------------------------------------------------------------------
+
+    /// <summary>
+    /// Lightweight runtime registry so SkiController can query lift cables
+    /// without requiring extra colliders along the rope.
+    /// </summary>
+    public static readonly List<LiftLine> ActiveLiftLines = new List<LiftLine>(16);
+
+    private void OnEnable()
+    {
+        if (!ActiveLiftLines.Contains(this))
+            ActiveLiftLines.Add(this);
+    }
+
+    private void OnDisable()
+    {
+        ActiveLiftLines.Remove(this);
+    }
+
+    /// <summary>
+    /// Public tangent accessor (wrapper around internal tangent method).
+    /// </summary>
+    public Vector3 GetBandTangentPublic(float distance) => GetBandTangent(distance);
+
+    /// <summary>
+    /// Finds the closest point on the analytic band polyline to a world position.
+    /// Returns:
+    /// - distanceAlong: distance (m) along the loop
+    /// - closestPoint: closest world point on the polyline
+    /// - tangent: forward tangent (unit) along the polyline at that point
+    /// </summary>
+    public bool TryGetClosestPointOnBand(
+        Vector3 worldPos,
+        out float distanceAlong,
+        out Vector3 closestPoint,
+        out Vector3 tangent)
+    {
+        distanceAlong = 0f;
+        closestPoint = transform.position;
+        tangent = Vector3.forward;
+
+        if (_bandPoints == null || _bandPoints.Count < 2 || _segmentCumulative == null || _segmentCumulative.Count < 2 || _bandLength <= 0f)
+            return false;
+
+        float bestSq = float.PositiveInfinity;
+        float bestAlong = 0f;
+        Vector3 bestPoint = closestPoint;
+        Vector3 bestTan = tangent;
+
+        int n = _bandPoints.Count;
+        // The loop is closed implicitly (segment i goes to (i+1)%n).
+        for (int i = 0; i < n; i++)
+        {
+            int j = (i + 1) % n;
+
+            Vector3 a = _bandPoints[i];
+            Vector3 b = _bandPoints[j];
+            Vector3 ab = b - a;
+
+            float abLenSq = ab.sqrMagnitude;
+            if (abLenSq < 0.000001f)
+                continue;
+
+            float t = Vector3.Dot(worldPos - a, ab) / abLenSq;
+            t = Mathf.Clamp01(t);
+
+            Vector3 p = a + ab * t;
+            float sq = (worldPos - p).sqrMagnitude;
+
+            if (sq < bestSq)
+            {
+                bestSq = sq;
+                bestPoint = p;
+
+                float segLen = Mathf.Sqrt(abLenSq);
+                float segStart = (i < _segmentCumulative.Count) ? _segmentCumulative[i] : 0f;
+                bestAlong = segStart + t * segLen;
+
+                Vector3 dir = ab / segLen;
+                bestTan = (dir.sqrMagnitude > 0.0001f) ? dir : GetBandTangent(bestAlong);
+            }
+        }
+
+        distanceAlong = Mathf.Repeat(bestAlong, _bandLength);
+        closestPoint = bestPoint;
+        tangent = (bestTan.sqrMagnitude > 0.0001f) ? bestTan.normalized : GetBandTangent(distanceAlong);
+
+        return true;
+    }
+
     private SphereCollider _bottomCollider;
     private SphereCollider _topCollider;
 

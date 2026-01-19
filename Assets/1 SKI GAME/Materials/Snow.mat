@@ -223,7 +223,7 @@ Material:
     - _CoverageAreaMaskRangeOverride: 0
     - _CoverageColor1Override: 0
     - _CoverageColor2Override: 0
-    - _CoverageColorOverride: 0
+    - _CoverageColorOverride: 1
     - _CoverageDetailTexOverride: 0
     - _CoverageDisplacement: 1.5
     - _CoverageDisplacement1: 1
@@ -268,8 +268,8 @@ Material:
     - _DisplacementOverride: 0
     - _DistanceFadeFalloff: 50
     - _DistanceFadeFalloffOverride: 0
-    - _DistanceFadeStart: 1000
-    - _DistanceFadeStartOverride: 0
+    - _DistanceFadeStart: 5000
+    - _DistanceFadeStartOverride: 1
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnableHeightBlend: 0
@@ -405,7 +405,7 @@ Material:
     - _Cov0Smoothness: {r: 0, g: 1, b: 0, a: 0}
     - _Cov1Smoothness: {r: 0, g: 1, b: 0, a: 0}
     - _Cov2Smoothness: {r: 0, g: 1, b: 0, a: 0}
-    - _CoverageColor: {r: 1, g: 1, b: 1, a: 1}
+    - _CoverageColor: {r: 0.8002056, g: 0.8805031, b: 0.87692, a: 1}
     - _CoverageColor1: {r: 1, g: 1, b: 1, a: 1}
     - _CoverageColor2: {r: 1, g: 1, b: 1, a: 1}
     - _DetailTexRemap: {r: 0.05, g: 0.5, b: 0, a: 0}

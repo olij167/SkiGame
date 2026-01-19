@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using SkiGame.Progression;
 
 public class LiftRider : MonoBehaviour
 {
@@ -38,12 +39,34 @@ public class LiftRider : MonoBehaviour
     private bool isAttached;
     private bool isChairMode; // true if attached to chair, false if T-bar
     private bool liftInputHeld;
+    private bool _blockAttachUntilRelease;
 
     private float _attachBufferUntilTime;
     private float _nextAttachAttemptTime;
 
     // Non-alloc overlap cache
     private readonly Collider[] _overlapHits = new Collider[32];
+
+    private bool _prevKinematic;
+    private bool _prevDetectCollisions;
+    private bool _prevSkiEnabled;
+    private bool _prevWalkEnabled;
+
+    /// <summary>
+    /// True while the rider is currently attached to a lift carrier (chair or T-bar).
+    /// Exposed for VFX/audio gating.
+    /// </summary>
+    public bool IsAttached => isAttached;
+
+    /// <summary>
+    /// True if the currently attached carrier is a chair.
+    /// </summary>
+    public bool IsChairMode => isAttached && isChairMode;
+
+    /// <summary>
+    /// True if the currently attached carrier is a T-bar.
+    /// </summary>
+    public bool IsTBarMode => isAttached && !isChairMode;
 
     private void Awake()
     {
@@ -99,35 +122,45 @@ public class LiftRider : MonoBehaviour
     {
         liftInputHeld = isPressed;
 
-        // Chair logic: toggle on press
+        // When the player releases the button, allow attaching again.
+        if (!liftInputHeld)
+            _blockAttachUntilRelease = false;
+
+        // Chair logic: toggle detach on press
         if (isAttached && isChairMode)
         {
             if (wasPressedThisFrame)
             {
                 RequestDetach();
+
+                // Prevent immediately re-attaching to the same chair while the button remains held.
+                _blockAttachUntilRelease = true;
             }
-        }
-        else if (!isAttached)
-        {
-            // Not attached: trying to attach to closest carrier within range
-            if (wasPressedThisFrame)
-            {
-                TryAttachToNearbyCarrier();
-            }
+
+            return; // important: don’t fall through into attach logic while attached
         }
 
-        // T-bar logic: must hold
-        if (isAttached && !isChairMode && !liftInputHeld)
+        // T-bar logic: must hold; release detaches
+        if (isAttached && !isChairMode)
         {
-            // Released grip
-            RequestDetach();
+            if (!liftInputHeld)
+                RequestDetach();
+
+            return;
+        }
+
+        // Not attached: allow attaching, unless we're blocking until release (post-chair detach)
+        if (!isAttached && !_blockAttachUntilRelease)
+        {
+            if (wasPressedThisFrame)
+                TryAttachToNearbyCarrier();
         }
     }
 
     private void FixedUpdate()
     {
         // Attachment assist: while held or buffered, keep attempting to attach.
-        if (!isAttached)
+        if (!isAttached && !_blockAttachUntilRelease)
         {
             bool shouldTryAttach =
                 (holdToAttach && liftInputHeld) ||
@@ -220,10 +253,25 @@ public class LiftRider : MonoBehaviour
         isAttached = true;
         isChairMode = (carrier.mode == LiftCarrierMode.Chair);
 
+        RegisterLiftUsed();
+
         if (isChairMode)
         {
-            // Chair: fully parent + disable ski/walk controllers
-            rb.isKinematic = true;
+            // Cache previous states so detach restores correctly
+            _prevSkiEnabled = (skiController != null && skiController.enabled);
+            _prevWalkEnabled = (walkingController != null && walkingController.enabled);
+
+            if (rb)
+            {
+                _prevKinematic = rb.isKinematic;
+                _prevDetectCollisions = rb.detectCollisions;
+
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.isKinematic = true;
+                rb.detectCollisions = false;
+            }
+
             transform.SetParent(carrier.attachPoint, true);
             transform.localPosition = Vector3.zero;
             transform.localRotation = Quaternion.identity;
@@ -234,7 +282,7 @@ public class LiftRider : MonoBehaviour
         else
         {
             // T-bar: keep physics, just gently snap horizontally behind bar
-            rb.isKinematic = false;
+            //rb.isKinematic = false;
             transform.SetParent(null);
 
             if (walkingController) walkingController.enabled = false;
@@ -251,22 +299,35 @@ public class LiftRider : MonoBehaviour
     public void OnDetachedFromCarrier(LiftCarrier carrier)
     {
         if (carrier != currentCarrier) return;
-
         // Common detach behaviour
         transform.SetParent(null);
-        rb.isKinematic = false;
-        if (skiController) skiController.enabled = true;
 
-        // Small forward nudge along cable direction
-        Vector3 forward = carrier.transform.forward;
-        rb.linearVelocity = Vector3.ProjectOnPlane(rb.linearVelocity, Vector3.up);
-        rb.AddForce(forward * detachForwardImpulse, ForceMode.VelocityChange);
+        if (rb)
+        {
+            rb.isKinematic = _prevKinematic;
+            rb.detectCollisions = _prevDetectCollisions;
+
+            rb.angularVelocity = Vector3.zero;
+
+            // Give a predictable launch aligned to the cable direction (horizontal only)
+            Vector3 fwd = carrier.transform.forward;
+            fwd = Vector3.ProjectOnPlane(fwd, Vector3.up).normalized;
+
+            // Preserve any existing horizontal motion lightly, but ensure we don't "dead drop"
+            Vector3 horiz = Vector3.ProjectOnPlane(rb.linearVelocity, Vector3.up);
+            rb.linearVelocity = horiz + fwd * detachForwardImpulse;
+        }
+
+        // Restore prior controller state
+        if (skiController) skiController.enabled = _prevSkiEnabled;
+        if (walkingController) walkingController.enabled = _prevWalkEnabled;
 
         // Nudge down a bit so we don't hover
         transform.position += Vector3.down * detachDownOffset;
 
         isAttached = false;
         currentCarrier = null;
+
     }
 
     private void RequestDetach()
@@ -275,6 +336,22 @@ public class LiftRider : MonoBehaviour
         {
             currentCarrier.DetachRider(this);
         }
+    }
+
+    private static void RegisterLiftUsed()
+    {
+        var mgr = PlayerStatsManager.Instance;
+        if (mgr == null) return;
+
+        // Ensure profile exists (safety if manager was created but profile wasn't loaded yet).
+        if (mgr.Profile == null)
+            mgr.Load();
+
+        var p = mgr.Profile;
+        if (p == null) return;
+
+        p.lifetime.totalLiftsUsed++;
+        p.session.liftsUsed++;
     }
 
 #if UNITY_EDITOR

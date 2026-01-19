@@ -1,0 +1,1674 @@
+/* Root placement: bottom-right, always on-screen */
+.phonehud-root {
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    width: 360px;
+    height: 560px;
+    justify-content: flex-end;
+    align-items: flex-end;
+}
+
+/* ---------- WATCH (collapsed) ---------- */
+.watch-collapsed {
+    width: 200px;
+    height: 200px;
+    display: flex;
+}
+
+.watch-frame {
+    width: 200px;
+    height: 200px;
+    border-radius: 18px;
+    padding: 10px;
+    background-color: rgba(18, 18, 18, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+}
+
+.watch-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.watch-title {
+    font-size: 12px;
+    color: rgba(255,255,255,0.80);
+    unity-font-style: bold;
+}
+
+.watch-dots {
+    flex-direction: row;
+    align-items: center;
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    margin-left: 3px;
+    background-color: rgba(255,255,255,0.20);
+}
+
+.dot.is-on {
+    background-color: rgba(255,255,255,0.85);
+}
+
+.watch-pages {
+    flex-grow: 1;
+}
+
+.watch-page {
+    flex-grow: 1;
+    display: none;
+    padding-right: 2px;
+}
+
+.watch-page.is-active {
+    display: flex;
+}
+
+/* ---------- Tasks (cards) ---------- */
+
+.task-list,
+.tasks-list {
+    margin-top: 8px;
+    gap: 8px;
+    flex-direction: column;
+}
+
+
+.task-card {
+    padding: 10px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.05);
+    border-left-width: 3px;
+    border-left-color: rgba(255,255,255,0.12);
+}
+
+.task-card.is-complete {
+    background-color: rgba(255,255,255,0.07);
+    border-left-color: rgba(255,255,255,0.45);
+}
+
+.task-row-top {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.task-title {
+    font-size: 13px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    flex-grow: 1;
+    margin-right: 8px;
+}
+
+.task-badge {
+    font-size: 10px;
+    color: rgba(255,255,255,0.65);
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    border-radius: 999px;
+    background-color: rgba(255,255,255,0.07);
+}
+
+.task-card.is-complete .task-badge {
+    color: rgba(255,255,255,0.90);
+    background-color: rgba(255,255,255,0.12);
+}
+
+.task-progress-bar {
+    height: 6px;
+    border-radius: 999px;
+    background-color: rgba(255,255,255,0.06);
+    overflow: hidden;
+}
+
+.task-progress-fill {
+    height: 100%;
+    width: 0%;
+    background-color: rgba(255,255,255,0.55);
+}
+
+.task-card.is-complete .task-progress-fill {
+    background-color: rgba(255,255,255,0.85);
+}
+
+.task-row-bottom {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.task-progress-text {
+    font-size: 11px;
+    color: rgba(255,255,255,0.70);
+}
+
+.task-hint {
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+}
+
+/* --- Speed watch layout --- */
+.watch-speed-topbar {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2px;
+    margin-bottom: 4px;
+}
+
+/* Notification bar look: minimal, no outlines */
+.watch-speed-time {
+    font-size: 11px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.88);
+}
+
+.watch-speed-weather {
+    font-size: 10px;
+    color: rgba(255,255,255,0.70);
+}
+
+/* Fills vertical space so bottom row anchors cleanly */
+.watch-speed-spacer {
+    flex-grow: 1;
+}
+
+/* Bottom row: airtime left, speed gauge right */
+.watch-speed-bottom {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+/* Airtime box (smaller than speed) */
+.watch-air {
+    width: 62px;
+    border-radius: 12px;
+    padding: 6px;
+    background-color: rgba(255,255,255,0.04);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.08);
+    border-right-color: rgba(255,255,255,0.08);
+    border-top-color: rgba(255,255,255,0.08);
+    border-bottom-color: rgba(255,255,255,0.08);
+}
+
+.watch-air-label {
+    font-size: 9px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.40);
+}
+
+.watch-air-value {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.40);
+    margin-top: 2px;
+}
+
+.watch-air-sub {
+    font-size: 9px;
+    color: rgba(255,255,255,0.32);
+    margin-top: 2px;
+}
+
+/* Minimal airtime (Home watch) */
+.watch-air-min {
+    width: 62px;
+    padding: 0px;
+    background-color: rgba(0,0,0,0); /* no box */
+    border-width: 0px;
+    justify-content: flex-end;
+    align-items: flex-start;
+}
+
+.watch-air-time {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.35);
+}
+
+.watch-air-tag {
+    font-size: 9px;
+    unity-font-style: bold;
+    letter-spacing: 0.5px;
+    color: rgba(255,255,255,0.25);
+    margin-top: 2px;
+}
+
+/* When airborne, brighten */
+.watch-air-min.is-active-air .watch-air-time,
+.watch-air-min.is-active-air .watch-air-tag {
+    color: rgba(255,255,255,0.92);
+}
+
+/* Active airtime: turns white */
+.watch-air.is-active .watch-air-label,
+.watch-air.is-active .watch-air-value,
+.watch-air.is-active .watch-air-sub {
+    color: rgba(255,255,255,0.92);
+}
+
+/* Right side container: keeps your existing watch-big size but anchors it bottom-right */
+.watch-speed-gauge {
+    justify-content: flex-end;
+    align-items: flex-end;
+}
+
+.watch-big {
+    font-size: 34px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-top: 6px;
+}
+
+.watch-unit {
+    font-size: 12px;
+    color: rgba(255,255,255,0.65);
+    margin-top: -4px;
+    margin-bottom: 6px;
+}
+
+.watch-sub {
+    font-size: 12px;
+    color: rgba(255,255,255,0.70);
+}
+
+.watch-section {
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.88);
+    margin-bottom: 6px;
+}
+
+.watch-kv {
+    font-size: 12px;
+    color: rgba(255,255,255,0.75);
+    margin-bottom: 2px;
+
+    /* subtle “tracker row” styling */
+    padding-left: 6px;
+    border-left-width: 2px;
+    border-left-color: rgba(255,255,255,0.14);
+}
+
+.watch-divider {
+    height: 1px;
+    background-color: rgba(255,255,255,0.10);
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+.watch-hint {
+    font-size: 10px;
+    color: rgba(255,255,255,0.45);
+    margin-top: 6px;
+}
+
+.watch-action {
+    height: 46px;
+    border-radius: 12px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255,255,255,0.10);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.10);
+    border-right-color: rgba(255,255,255,0.10);
+    border-top-color: rgba(255,255,255,0.10);
+    border-bottom-color: rgba(255,255,255,0.10);
+}
+
+.watch-action:hover {
+    background-color: rgba(255,255,255,0.16);
+}
+
+.watch-action-text {
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.90);
+}
+
+/* ---------- Achievements (minimal, matches phone pages) ---------- */
+
+.ach-summary {
+    margin-top: 2px;
+    margin-bottom: 8px;
+}
+
+.ach-summary-text {
+    font-size: 12px;
+    color: rgba(255,255,255,0.72);
+}
+
+.ach-info {
+    margin-top: 6px;
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 16px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+}
+
+.ach-info-top {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 6px;
+}
+
+.ach-info-title {
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+}
+
+.ach-info-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.70);
+}
+
+.ach-info-body {
+    font-size: 12px;
+    color: rgba(255,255,255,0.78);
+    white-space: normal;
+    margin-bottom: 8px;
+}
+
+.ach-info-bar {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    overflow: hidden;
+}
+
+.ach-info-barfill {
+    height: 100%;
+    width: 0%;
+    background-color: rgba(255,255,255,0.45);
+}
+
+.ach-info-bartext {
+    margin-top: 6px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.70);
+}
+
+.ach-content {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ach-section {
+    margin-top: 2px;
+}
+
+.ach-section-title {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.70);
+    margin-bottom: 4px;
+}
+
+.ach-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.ach-row-card {
+    padding: 8px;
+    border-radius: 14px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.06);
+    gap: 6px;
+}
+
+.ach-row-label {
+    width: 150px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.85);
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ach-cell {
+    width: 32px;
+    height: 28px;
+    padding: 0px;
+    border-radius: 12px;
+    background-color: rgba(0,0,0,0.10);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+}
+
+.ach-cell.is-empty {
+    opacity: 0.25;
+}
+
+.ach-cell.is-selected {
+    background-color: rgba(255,255,255,0.10);
+    border-color: rgba(255,255,255,0.22);
+}
+
+.ach-cell-icon {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: auto;
+    margin-bottom: auto;
+    background-color: rgba(255,255,255,0.70);
+}
+
+.ach-cell.is-locked .ach-cell-icon  { background-color: rgba(255,255,255,0.55); }
+.ach-cell.is-unlocked .ach-cell-icon { background-color: rgba(255,255,255,0.95); }
+
+/* tiny check overlay (no sprite required) */
+.ach-cell-check {
+    position: absolute;
+    right: 6px;
+    top: 6px;
+    width: 6px;
+    height: 10px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-right-color: rgba(255,255,255,0.0);
+    border-bottom-color: rgba(255,255,255,0.0);
+    rotate: 45deg;
+    opacity: 0.0;
+}
+
+.ach-cell.is-unlocked .ach-cell-check {
+    border-right-color: rgba(255,255,255,0.92);
+    border-bottom-color: rgba(255,255,255,0.92);
+    opacity: 0.9;
+}
+
+/* Difficulty ladder: same palette, distinct silhouettes */
+.ach-tier-icon-0 { width: 8px; height: 8px; opacity: 0.85; }
+
+.ach-tier-icon-1 {
+    background-color: rgba(255,255,255,0.06);
+    border-width: 2px;
+    border-color: rgba(255,255,255,0.70);
+}
+
+.ach-tier-icon-2 {
+    border-width: 2px;
+    border-color: rgba(255,255,255,0.80);
+}
+
+.ach-tier-icon-3 {
+    border-width: 2px;
+    border-color: rgba(255,255,255,0.90);
+}
+
+.ach-tier-icon-4 {
+    width: 12px;
+    height: 12px;
+    border-width: 2px;
+    border-color: rgba(255,255,255,0.95);
+}
+
+/* ---------- Category cards (replaces pill chips) ---------- */
+
+.ach-cat-row {
+    flex-direction: row;
+    gap: 8px;
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+.ach-cat-title {
+    font-size: 11px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0,0,0,0.55);
+}
+
+.ach-cat-sub {
+    font-size: 10px;
+    color: rgba(255,255,255,0.70);
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0,0,0,0.55);
+}
+
+/* ---------- Achievements: text readability override ---------- */
+/* Force clean, un-stroked light text (prevents the unreadable bordered look) */
+.ach-summary-text,
+.ach-section-title,
+.ach-row-label,
+.ach-info-title,
+.ach-info-sub,
+.ach-info-body,
+.ach-info-bartext,
+.ach-cat-title,
+.ach-cat-sub,
+.ach-grid-htier {
+    color: rgba(255,255,255,0.85);
+    -unity-text-outline-width: 0px;
+    -unity-text-outline-color: rgba(0,0,0,0);
+}
+
+.ach-info-title {
+    color: rgba(255,255,255,0.95);
+}
+
+/* ---------- Achievements: readable text override ---------- */
+.ach-summary-text,
+.ach-section-title,
+.ach-row-label,
+.ach-info-title,
+.ach-info-sub,
+.ach-info-body,
+.ach-info-bartext,
+.ach-cat-title,
+.ach-cat-sub,
+.ach-grid-htier,
+.ach-matrix-coltitle,
+.ach-matrix-rowtitle,
+.ach-matrix-celltext,
+.ach-slice-title,
+.ach-card-title,
+.ach-card-sub,
+.ach-card-meta {
+    color: rgba(255,255,255,0.86);
+    -unity-text-outline-width: 0px;
+    -unity-text-outline-color: rgba(0,0,0,0);
+}
+
+.ach-info-title { color: rgba(255,255,255,0.95); }
+.ach-card-title { color: rgba(255,255,255,0.92); }
+
+/* ---------- Achievements: matrix ---------- */
+.ach-matrix {
+    margin-top: 8px;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.ach-matrix-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.ach-matrix-headerrow {
+    margin-top: 2px;
+    margin-bottom: 4px;
+    opacity: 0.9;
+}
+
+.ach-matrix-corner {
+    width: 34px;
+    margin-right: 6px;
+    opacity: 0.6;
+}
+
+.ach-matrix-coltitle {
+    flex-grow: 1;
+    text-align: center;
+    font-size: 11px;
+    opacity: 0.85;
+}
+
+.ach-matrix-rowtitle {
+    width: 34px;
+    margin-right: 6px;
+    text-align: center;
+    font-size: 12px;
+    opacity: 0.85;
+}
+
+.ach-matrix-cell {
+    flex-grow: 1;
+    min-height: 44px;
+    margin-left: 4px;
+    margin-right: 4px;
+
+    padding: 6px;
+    border-radius: 10px;
+
+    background-color: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.10);
+    border-width: 1px;
+}
+
+.ach-matrix-cell.is-empty {
+    background-color: rgba(255,255,255,0.03);
+    border-color: rgba(255,255,255,0.05);
+}
+
+.ach-matrix-cell.is-selected {
+    background-color: rgba(255,255,255,0.10);
+    border-color: rgba(255,255,255,0.18);
+}
+
+.ach-matrix-celltext {
+    font-size: 12px;
+    unity-font-style: normal;
+    margin-bottom: 4px;
+    text-align: center;
+    opacity: 0.9;
+}
+
+.ach-matrix-cellbar {
+    height: 4px;
+    border-radius: 4px;
+    background-color: rgba(255,255,255,0.07);
+}
+
+.ach-matrix-cellbarfill {
+    height: 4px;
+    border-radius: 4px;
+    background-color: rgba(255,255,255,0.25);
+    width: 0%;
+}
+
+/* ---------- Achievements: slice (drill-in) ---------- */
+.ach-slice {
+    margin-top: 10px;
+    padding: 8px;
+    border-radius: 12px;
+
+    background-color: rgba(0,0,0,0.12);
+    border-color: rgba(255,255,255,0.08);
+    border-width: 1px;
+}
+
+.ach-slice-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.ach-slice-back {
+    min-width: 72px;
+    height: 28px;
+
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.10);
+    border-width: 1px;
+
+    color: rgba(255,255,255,0.85);
+}
+
+.ach-slice-title {
+    margin-left: 8px;
+    font-size: 13px;
+    opacity: 0.95;
+}
+
+.ach-slice-list {
+    flex-direction: column;
+}
+
+/* ---------- Achievements: cards in slice ---------- */
+.ach-card {
+    margin-top: 6px;
+    padding: 10px;
+    border-radius: 12px;
+
+    background-color: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.08);
+    border-width: 1px;
+}
+
+.ach-card.is-unlocked {
+    background-color: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.12);
+}
+
+.ach-card.is-selected {
+    background-color: rgba(255,255,255,0.10);
+    border-color: rgba(255,255,255,0.18);
+}
+
+.ach-card-title {
+    font-size: 13px;
+    margin-bottom: 2px;
+}
+
+.ach-card-sub {
+    font-size: 11px;
+    opacity: 0.75;
+    margin-bottom: 6px;
+}
+
+.ach-card-bar {
+    height: 4px;
+    border-radius: 4px;
+    background-color: rgba(255,255,255,0.07);
+}
+
+.ach-card-barfill {
+    height: 4px;
+    border-radius: 4px;
+    background-color: rgba(255,255,255,0.25);
+    width: 0%;
+}
+
+.ach-card-meta {
+    margin-top: 6px;
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+/* ---------- Achievements (Metric × Tier blocks) ---------- */
+
+.ach-matrix2 {
+    margin-top: 2px;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.ach-metric-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.ach-metric-label {
+    width: 120px;            /* fixed label column so the tier blocks align visually */
+    margin-right: 8px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.70);
+    -unity-text-outline-width: 0px;
+    -unity-text-outline-color: rgba(0,0,0,0);
+}
+
+.ach-tier-row {
+    flex-direction: row;
+    flex-grow: 1;
+    min-width: 0px;          /* critical so the row can shrink without forcing horizontal scroll */
+}
+
+.ach-tier-cell {
+    flex-grow: 1;            /* makes the cells cumulatively fill the full row width */
+    min-width: 0px;          /* prevents overflow */
+    height: 18px;
+    margin-left: 3px;
+    margin-right: 3px;
+
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.10);
+
+    background-color: rgba(255,255,255,0.08);
+}
+
+.ach-tier-cell.is-selected {
+    border-color: rgba(255,255,255,0.28);
+}
+
+/* ---------- Single detail panel (beneath matrix) ---------- */
+
+.ach-detail {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 12px;
+
+    background-color: rgba(0,0,0,0.12);
+    border-color: rgba(255,255,255,0.08);
+    border-width: 1px;
+}
+
+.ach-detail-top {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.ach-detail-title {
+    font-size: 13px;
+    color: rgba(255,255,255,0.92);
+    -unity-text-outline-width: 0px;
+    -unity-text-outline-color: rgba(0,0,0,0);
+}
+
+.ach-detail-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.70);
+    -unity-text-outline-width: 0px;
+    -unity-text-outline-color: rgba(0,0,0,0);
+}
+
+.ach-detail-body {
+    font-size: 11px;
+    color: rgba(255,255,255,0.80);
+    -unity-text-outline-width: 0px;
+    -unity-text-outline-color: rgba(0,0,0,0);
+    margin-bottom: 8px;
+}
+
+.ach-detail-bar {
+    height: 4px;
+    border-radius: 4px;
+    background-color: rgba(255,255,255,0.07);
+}
+
+.ach-detail-barfill {
+    height: 4px;
+    border-radius: 4px;
+    background-color: rgba(255,255,255,0.25);
+    width: 0%;
+}
+
+.ach-detail-bartext {
+    margin-top: 6px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.75);
+    -unity-text-outline-width: 0px;
+    -unity-text-outline-color: rgba(0,0,0,0);
+}
+
+/* ---------- PHONE (expanded) ---------- */
+.phone-expanded {
+    width: 360px;
+    height: 560px;
+    display: none;
+}
+
+.phone-expanded.is-open {
+    display: flex;
+}
+
+.phone-shell {
+    width: 360px;
+    height: 560px;
+    border-radius: 22px;
+    background-color: rgba(14, 14, 14, 0.94);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+    padding: 10px;
+}
+
+.phone-topbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    height: 36px;
+    margin-bottom: 6px;
+}
+
+.icon-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255,255,255,0.10);
+}
+
+.icon-btn:hover {
+    background-color: rgba(255,255,255,0.16);
+}
+
+.icon-btn-text {
+    font-size: 18px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-top: -2px;
+}
+
+.phone-title {
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.88);
+}
+
+.phone-navbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    height: 32px;
+    margin-bottom: 8px;
+}
+
+.nav-spacer {
+    flex-grow: 1;
+}
+
+.nav-currency {
+    font-size: 12px;
+    color: rgba(255,255,255,0.85);
+    background-color: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+.nav-btn {
+    height: 28px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 10px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255,255,255,0.08);
+}
+
+.nav-btn:hover {
+    background-color: rgba(255,255,255,0.14);
+}
+
+.nav-btn-text {
+    font-size: 12px;
+    color: rgba(255,255,255,0.85);
+}
+
+.nav-title {
+    font-size: 12px;
+    color: rgba(255,255,255,0.70);
+}
+
+.phone-spacer {
+    width: 34px;
+    height: 34px;
+}
+
+.phone-pages {
+    flex-grow: 1;
+}
+
+.phone-page {
+    flex-grow: 1;
+    display: none;
+    padding-right: 2px;
+}
+
+.phone-page.is-active {
+    display: flex;
+}
+
+/* Time & Weather page: force “no vertical scrolling” and allow inner regions to flex */
+#Page_TimeWeather {
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#Page_TimeWeather .unity-scroll-view__content-viewport {
+    overflow: hidden;
+}
+
+#Page_TimeWeather .unity-scroll-view__content-container {
+    flex-direction: column;
+    flex-grow: 1;
+    min-height: 0;
+    padding-bottom: 0px;
+}
+
+/* Hide the vertical scroller explicitly (belt + braces with UXML visibility setting) */
+#Page_TimeWeather .unity-scroll-view__vertical-scroller {
+    display: none;
+}
+
+.page-h1 {
+    font-size: 18px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-bottom: 6px;
+}
+
+.page-h2 {
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.80);
+    margin-top: 10px;
+    margin-bottom: 6px;
+}
+
+.page-body {
+    font-size: 12px;
+    color: rgba(255,255,255,0.72);
+    white-space: normal;
+}
+
+.page-divider {
+    height: 1px;
+    background-color: rgba(255,255,255,0.10);
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+/* Segmented tabs (Session / Lifetime) */
+.seg-tabs {
+    flex-direction: row;
+    background-color: rgba(255,255,255,0.06);
+    border-radius: 14px;
+    padding: 3px;
+    margin-bottom: 10px;
+}
+
+.seg-tab {
+    flex-grow: 1;
+    height: 28px;
+    border-radius: 12px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255,255,255,0.00);
+}
+
+.seg-tab.is-on {
+    background-color: rgba(255,255,255,0.14);
+}
+
+.seg-tab:hover {
+    background-color: rgba(255,255,255,0.10);
+}
+
+.seg-tab-text {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.80);
+}
+
+/* Panels */
+.stats-panel {
+    display: none;
+}
+
+.stats-panel.is-active {
+    display: flex;
+}
+
+/* Metric grid */
+.metric-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.metric-card {
+    width: 48%;
+    border-radius: 14px;
+    padding: 8px;
+    background-color: rgba(255,255,255,0.06);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.06);
+    border-right-color: rgba(255,255,255,0.06);
+    border-top-color: rgba(255,255,255,0.06);
+    border-bottom-color: rgba(255,255,255,0.06);
+}
+
+.metric-key {
+    font-size: 10px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.62);
+    margin-bottom: 2px;
+}
+
+.metric-val {
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+}
+
+/* Secondary metric grid (smaller tiles under the primary row) */
+.metric-grid-secondary {
+    margin-top: 6px;
+}
+
+.metric-card-secondary {
+    padding: 6px;
+    background-color: rgba(255,255,255,0.045);
+}
+
+.metric-val-secondary {
+    font-size: 12px;
+}
+
+/* Details section (smaller, less "wall of text") */
+.stats-details-h2 {
+    margin-top: 2px;
+    margin-bottom: 4px;
+}
+
+.stats-details {
+    font-size: 11px;
+    color: rgba(255,255,255,0.68);
+}
+
+/* Home grid / tiles */
+.home-grid {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.home-row {
+    flex-direction: row;
+    gap: 8px;
+}
+
+/* These totals are tuned to fit the available viewport without forcing a scroll bar. */
+.row-small { height: 78px; }
+.row-tall { height: 132px; }
+.row-medium { height: 104px; }
+.row-mini { height: 60px; }
+.row-mini3 { height: 60px; }
+
+.tile {
+    flex-grow: 1;
+    border-radius: 16px;
+    padding: 8px;
+    overflow: hidden; /* prevents text from spilling out of the tile */
+    background-color: rgba(255,255,255,0.08);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.08);
+    border-right-color: rgba(255,255,255,0.08);
+    border-top-color: rgba(255,255,255,0.08);
+    border-bottom-color: rgba(255,255,255,0.08);
+}
+.tile-head {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.tile-badge {
+    font-size: 10px;
+    color: rgba(255,255,255,0.85);
+    background-color: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+.tile-value {
+    font-size: 17px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-top: 2px;
+    margin-bottom: 6px;
+}
+
+.tile-minirow {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tile-progress {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    margin-bottom: 6px;
+}
+
+.tile-progress-fill {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.40);
+    width: 0%;
+}
+
+.tile:hover {
+    background-color: rgba(255,255,255,0.12);
+}
+
+.tile-title {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 2px;
+}
+
+.tile-sub {
+    font-size: 10px;
+    color: rgba(255,255,255,0.70);
+    margin-top: 1px;
+}
+
+/* Make a tile span the whole row when it's the only tile */
+.tile-wide {
+    flex-grow: 1;
+}
+
+.status-body {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.status-left {
+    flex-grow: 1;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+
+.status-right {
+    width: 128px;
+    justify-content: flex-start;
+    align-items: flex-end;
+}
+
+/* Left stack */
+.status-time {
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-bottom: 2px;
+}
+
+.status-date {
+    font-size: 11px;
+    color: rgba(255,255,255,0.70);
+    margin-bottom: 2px;
+}
+
+.status-sun {
+    font-size: 10px;
+    color: rgba(255,255,255,0.55);
+}
+
+/* Right stack */
+.status-temp {
+    font-size: 16px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-bottom: 2px;
+}
+
+.status-cond {
+    font-size: 11px;
+    color: rgba(255,255,255,0.78);
+    margin-bottom: 2px;
+}
+
+.status-rain {
+    font-size: 10px;
+    color: rgba(255,255,255,0.55);
+}
+
+.big-action {
+    height: 54px;
+    border-radius: 16px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255,255,255,0.10);
+    margin-top: 12px;
+}
+
+.big-action:hover {
+    background-color: rgba(255,255,255,0.16);
+}
+
+.big-action-text {
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+}
+
+    /* ---------- Minimal scrollbars ---------- */
+.watch-page .unity-scroll-view__vertical-scroller,
+.phone-page .unity-scroll-view__vertical-scroller {
+    width: 4px;
+    min-width: 4px;
+    background-color: rgba(255,255,255,0.00);
+}
+
+.watch-page .unity-scroll-view__vertical-scroller .unity-scroller__track,
+.phone-page .unity-scroll-view__vertical-scroller .unity-scroller__track {
+    background-color: rgba(255,255,255,0.05);
+    border-radius: 6px;
+}
+
+.watch-page .unity-scroll-view__vertical-scroller .unity-scroller__thumb,
+.phone-page .unity-scroll-view__vertical-scroller .unity-scroller__thumb {
+    background-color: rgba(255,255,255,0.26);
+    border-radius: 6px;
+}
+
+.watch-page .unity-scroll-view__vertical-scroller:hover .unity-scroller__thumb,
+.phone-page .unity-scroll-view__vertical-scroller:hover .unity-scroller__thumb {
+    background-color: rgba(255,255,255,0.40);
+}
+
+    /* --- Tasks header (currency + claim all) --- */
+.tasks-headerbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background-color: rgba(0,0,0,0.25);
+}
+
+.tasks-currency {
+    unity-font-style: bold;
+    font-size: 13px;
+    color: rgba(255,255,255,0.95);
+}
+
+.tasks-claimall {
+    font-size: 12px;
+    padding-left: 10px;
+    padding-right: 10px;
+    height: 24px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.95);
+}
+
+/* --- Task card claim button --- */
+.task-row-right {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+
+.task-claim {
+    font-size: 12px;
+    width: 54px;
+    height: 22px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.16);
+    color: rgba(255,255,255,0.95);
+}
+
+/* Optional state tinting (subtle) */
+.task-card.is-claimable {
+    background-color: rgba(255,255,255,0.06);
+}
+.task-card.is-claimed {
+    opacity: 0.6;
+}
+
+    /* --- Time & Weather page --- */
+.tw-timeheader {
+    margin-bottom: 6px;
+}
+
+.tw-time {
+    font-size: 28px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.95);
+    margin-bottom: 0px;
+}
+
+.tw-time-subrow {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.tw-day,
+.tw-date {
+    font-size: 13px;
+    color: rgba(255,255,255,0.78);
+}
+
+.tw-nowcard {
+    border-radius: 16px;
+    padding: 10px;
+    background-color: rgba(255,255,255,0.06);
+    margin-bottom: 8px;
+}
+
+.tw-now-top {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tw-now-cond {
+    font-size: 16px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.93);
+}
+
+.tw-now-temp {
+    font-size: 26px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.96);
+}
+
+.tw-now-meta {
+    margin-top: 4px;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.tw-meta {
+    font-size: 13px;
+    color: rgba(255,255,255,0.78);
+}
+
+.tw-sunrow {
+    margin-top: 6px;
+    flex-direction: row;
+    gap: 8px;
+}
+
+.tw-sun-chip {
+    flex-grow: 1;
+    border-radius: 12px;
+    padding: 6px;
+    background-color: rgba(255,255,255,0.05);
+}
+
+.tw-chip-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.60);
+    margin-bottom: 0px;
+}
+
+.tw-chip-value {
+    font-size: 13px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+}
+
+.tw-hourly-title {
+    margin-top: 6px;
+    margin-bottom: 4px;
+}
+
+.tw-hourly-region {
+    flex-grow: 0;
+    min-height: 112px; /* was 104 */
+}
+
+.tw-hourly-scroll {
+    flex-grow: 0;
+    height: 112px;     /* was 104 */
+    min-height: 112px;
+    max-height: 112px;
+
+    margin-top: 0px;
+    margin-bottom: 0px;
+    align-self: stretch;
+}
+
+/* Prevent the internal viewport from collapsing (can happen inside nested ScrollViews). */
+.tw-hourly-scroll .unity-scroll-view__viewport {
+    min-height: 0;
+    flex-grow: 1;
+}
+
+/* Stretch cards vertically; reserve only a tiny amount for the scrollbar */
+.tw-hourly-scroll .unity-scroll-view__content-container {
+    flex-direction: row;
+    padding-bottom: 0px;
+    flex-wrap: nowrap;
+}
+
+/* Default Unity scrollbar look, just shorter. */
+.tw-hourly-scroll .unity-scroll-view__horizontal-scroller {
+    height: 6px;          /* shorter than default but still readable */
+    min-height: 6px;
+    max-height: 6px;
+
+    margin-top: 6px;      /* puts it directly under the cards row */
+    margin-bottom: 0px;
+    padding: 0px;
+}
+
+/* Remove arrow buttons (if present in your Unity version) */
+.tw-hourly-scroll .unity-scroll-view__horizontal-scroller .unity-scroller__low-button,
+.tw-hourly-scroll .unity-scroll-view__horizontal-scroller .unity-scroller__high-button {
+    display: none;
+    width: 0px;
+    min-width: 0px;
+    max-width: 0px;
+    height: 0px;
+    min-height: 0px;
+    max-height: 0px;
+    margin: 0px;
+    padding: 0px;
+}
+
+/* IMPORTANT:
+   Do NOT set colors/radius for tracker/dragger.
+   Only constrain their height so they inherit the default theme visuals. */
+.tw-hourly-scroll .unity-scroll-view__horizontal-scroller .unity-base-slider__tracker,
+.tw-hourly-scroll .unity-scroll-view__horizontal-scroller .unity-base-slider__dragger {
+    height: 100%;
+    min-height: 0px;
+    margin: 0px;
+}
+
+/* Row container */
+.tw-hourly-row {
+    flex-direction: row;
+    gap: 6px;
+    align-items: stretch;
+
+    /* Critical: do not wrap or shrink the row */
+    flex-wrap: nowrap;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+/* Hour cards: wider, slightly tighter padding, vertical stack */
+.tw-hour {
+    background-color: rgba(255,255,255,0.06);
+
+    /* Critical: fixed, non-shrinking cards so horizontal overflow happens */
+    width: 118px;
+    min-width: 118px;
+    max-width: 118px;
+    flex-grow: 0;
+    flex-shrink: 0;
+    flex-basis: 118px;
+
+    border-radius: 10px;
+    padding: 7px;
+
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+/* Current hour emphasis */
+.tw-hour.is-now {
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.35);
+}
+
+/* Top row: time (left) + sunrise/sunset tag (right) */
+.tw-hour-top {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1px;
+}
+
+/* Text stack: tighten spacing to avoid height pressure */
+.tw-hour-time {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-bottom: 0px; /* was 1px */
+}
+
+.tw-hour-cond {
+    font-size: 10px;
+    color: rgba(255,255,255,0.90);
+
+    /* Critical: keep within card width */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Bottom row: rain chance on the left, anchored to the bottom */
+.tw-hour-bottom {
+    flex-grow: 1;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: flex-end;
+}
+
+.tw-hour-sun {
+    font-size: 9px;
+    color: rgba(255,255,255,0.78);
+    unity-text-align: upper-right;
+
+    /* Keep it compact in the top-right corner */
+    flex-grow: 0;
+    flex-shrink: 0;
+    max-width: 56px;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-left: 6px;
+}
+
+.tw-hour-rain {
+    font-size: 9px;
+    color: rgba(255,255,255,0.78);
+    unity-text-align: lower-left;
+
+    flex-grow: 0;
+    flex-shrink: 0;
+    min-width: 58px;
+}
+

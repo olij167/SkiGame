@@ -166,6 +166,10 @@ namespace TimeWeather
 
         public bool showDebugLogs;
 
+        private static readonly int ID_CloudAlpha = Shader.PropertyToID("_CloudAlpha");
+        private static readonly int ID_CloudPower = Shader.PropertyToID("_CloudPower");
+        private static readonly int ID_CloudSpeed = Shader.PropertyToID("_CloudSpeed");
+
         private void OnEnable()
         {
             timeController = TimeController.instance;
@@ -199,7 +203,23 @@ namespace TimeWeather
 
             for (int i = 0; i < cloudRenderer.Length; i++)
             {
-                cloudRenderer[i].baseAlpha = cloudRenderer[i].cloudRenderer.material.GetFloat("_CloudAlpha");
+                if (cloudRenderer[i].cloudRenderer == null) continue;
+
+                if (cloudRenderer[i].mpb == null)
+                    cloudRenderer[i].mpb = new MaterialPropertyBlock();
+
+                // Use sharedMaterial to avoid forcing a unique material instance
+                var mat = cloudRenderer[i].cloudRenderer.sharedMaterial;
+                if (mat != null)
+                    cloudRenderer[i].baseAlpha = mat.GetFloat(ID_CloudAlpha);
+                else
+                    cloudRenderer[i].baseAlpha = 1f;
+
+                // Seed the property block from current renderer state
+                cloudRenderer[i].cloudRenderer.GetPropertyBlock(cloudRenderer[i].mpb);
+                cloudRenderer[i].mpb.SetFloat(ID_CloudAlpha, cloudRenderer[i].baseAlpha);
+                cloudRenderer[i].mpb.SetFloat(ID_CloudPower, cloudRenderer[i].cloudPower);
+                cloudRenderer[i].cloudRenderer.SetPropertyBlock(cloudRenderer[i].mpb);
             }
 
         }
@@ -241,14 +261,20 @@ namespace TimeWeather
 
         public void SetDailyConditions()
         {
-            HourlyWeather midnightCondition = new HourlyWeather();
+            // Ensure list exists and reset it deterministically each day
+            if (hourlyWeather == null)
+                hourlyWeather = new List<HourlyWeather>(24);
 
-            if (hourlyWeather.Count > 24)
+            HourlyWeather midnightCondition = null;
+
+            // If we had a previous day, carry over the last hour as "midnight" seed (optional)
+            if (hourlyWeather.Count >= 24)
             {
                 midnightCondition = hourlyWeather[23];
                 midnightCondition.isMidnight = true;
-                //Debug.Log("Midnight condition set");
             }
+
+            hourlyWeather.Clear();
 
             float highTemp = Random.Range(currentSeasonConditions.tempRange.x + Mathf.Abs(currentSeasonConditions.tempRange.x * 0.5f), currentSeasonConditions.tempRange.y);
             float lowTemp = Random.Range(currentSeasonConditions.tempRange.x, currentSeasonConditions.tempRange.y - Mathf.Abs(currentSeasonConditions.tempRange.y * 0.5f));
@@ -291,7 +317,7 @@ namespace TimeWeather
             {
                 HourlyWeather hourly = new HourlyWeather();
 
-                if (midnightCondition.isMidnight && i == 0)
+                if (midnightCondition != null && midnightCondition.isMidnight && i == 0)
                 {
                     hourly.forcastTime = i;
                     hourly.temp = midnightCondition.temp;
@@ -321,23 +347,40 @@ namespace TimeWeather
                     {
                         hourly.temp = lowTemp;
                     }
-                    else // lerp unspecifed temps between the highs and lows
+                    else // lerp unspecified temps between the highs and lows
                     {
-                        if (i <= coldestMorningTime)
+                        if (i < coldestMorningTime)
                         {
-                            hourly.temp = coldestMorningTime;
+                            // Night -> coldest morning (approach lowTemp)
+                            // If we have a previous hour, lerp from it toward lowTemp; otherwise start from lowTemp
+                            float prev = (i > 0) ? hourlyWeather[i - 1].temp : lowTemp;
+                            float t = 1f / Mathf.Max(1, (coldestMorningTime - i));
+                            hourly.temp = Mathf.Lerp(prev, lowTemp, t);
                         }
-                        else if (i > coldestMorningTime && i <= hottestTime)
+                        else if (i > coldestMorningTime && i < hottestTime)
                         {
-                            hourly.temp = Mathf.Lerp(hourlyWeather[i - 1].temp, highTemp, 1f / (hottestTime - hourly.forcastTime));
+                            // Cold morning -> hottest time (approach highTemp)
+                            float prev = hourlyWeather[i - 1].temp;
+                            float t = 1f / Mathf.Max(1, (hottestTime - i));
+                            hourly.temp = Mathf.Lerp(prev, highTemp, t);
                         }
                         else if (i > hottestTime && i < coldestNightTime)
                         {
-                            hourly.temp = Mathf.Lerp(hourlyWeather[i - 1].temp, lowTemp, 1f / (coldestNightTime - hourly.forcastTime));
+                            // Hottest -> coldest night (approach lowTemp)
+                            float prev = hourlyWeather[i - 1].temp;
+                            float t = 1f / Mathf.Max(1, (coldestNightTime - i));
+                            hourly.temp = Mathf.Lerp(prev, lowTemp, t);
                         }
-                        else if (i >= coldestNightTime)
+                        else if (i > coldestNightTime)
                         {
-                            hourly.temp = coldestNightTime;
+                            // Coldest night -> midnight (hold toward lowTemp)
+                            float prev = hourlyWeather[i - 1].temp;
+                            hourly.temp = Mathf.Lerp(prev, lowTemp, 0.5f);
+                        }
+                        else
+                        {
+                            // Exactly on key hours is handled above; this is a safe fallback
+                            hourly.temp = hourlyWeather[i - 1].temp;
                         }
                     }
 
@@ -376,34 +419,24 @@ namespace TimeWeather
                     //Check required temp and chance of rain rnages, and whether it is raining
                     //Select the most appropriate weather
 
-                    for (int w = 0; w < weatherDataPresets.Length; w++)
+                    int idx = ResolvePresetIndex(hourly.temp, hourly.rainChance, hourly.isRaining);
+                    hourly.presetIndex = idx;
+
+                    if (idx >= 0)
                     {
-                        if (hourly.temp >= weatherDataPresets[w].tempRange.x && hourly.temp <= weatherDataPresets[w].tempRange.y)
-                        {
-                            if (hourly.rainChance >= weatherDataPresets[w].rainRange.x && hourly.rainChance <= weatherDataPresets[w].rainRange.y)
-                            {
-                                if (hourly.isRaining == weatherDataPresets[w].isRaining)
-                                {
-                                    hourly.weatherCondition = weatherDataPresets[w].weatherCondition;
-                                    hourly.cloudPower = Random.Range(weatherDataPresets[w].cloudPowerRange.x, weatherDataPresets[w].cloudPowerRange.y);
+                        hourly.weatherCondition = weatherDataPresets[idx].weatherCondition;
+                        hourly.cloudPower = Random.Range(weatherDataPresets[idx].cloudPowerRange.x, weatherDataPresets[idx].cloudPowerRange.y);
 
-                                    if (weatherDataPresets[w].clips != null && weatherDataPresets[w].clips.Length > 0)
-                                    {
-                                        hourly.weatherAudio = weatherDataPresets[w].clips[Random.Range(0, weatherDataPresets[w].clips.Length)];
-                                    }
-
-                                    //if (i > 0)
-                                    //{
-                                    //    hourly.windSpeed = Random.Range(hourlyWeather[i - 1].windSpeed - 2f, hourlyWeather[i - 1].windSpeed + 2f);
-                                    //}
-                                    //else
-                                    //    hourly.windSpeed = Random.Range(windSpeed - 2f, windSpeed + 2f);
-
-                                    break;
-                                }
-                            }
-                        }
+                        if (weatherDataPresets[idx].clips != null && weatherDataPresets[idx].clips.Length > 0)
+                            hourly.weatherAudio = weatherDataPresets[idx].clips[Random.Range(0, weatherDataPresets[idx].clips.Length)];
                     }
+                    else
+                    {
+                        // Fallback if no preset matches
+                        hourly.weatherCondition = string.Empty;
+                        hourly.cloudPower = 0f;
+                    }
+
                 }
 
                 hourlyWeather.Add(hourly);
@@ -422,31 +455,23 @@ namespace TimeWeather
             hourlyWeather[hour].rainChance = rainChance;
             hourlyWeather[hour].isRaining = isRaining;
 
-            for (int w = 0; w < weatherDataPresets.Length; w++)
+            int idx = ResolvePresetIndex(hourlyWeather[hour].temp, hourlyWeather[hour].rainChance, hourlyWeather[hour].isRaining);
+            hourlyWeather[hour].presetIndex = idx;
+
+            if (idx >= 0)
             {
-                if (hourlyWeather[hour].temp >= weatherDataPresets[w].tempRange.x && hourlyWeather[hour].temp <= weatherDataPresets[w].tempRange.y)
-                {
-                    if (hourlyWeather[hour].rainChance >= weatherDataPresets[w].rainRange.x && hourlyWeather[hour].rainChance <= weatherDataPresets[w].rainRange.y)
-                    {
-                        if (hourlyWeather[hour].isRaining == weatherDataPresets[w].isRaining)
-                        {
-                            hourlyWeather[hour].weatherCondition = weatherDataPresets[w].weatherCondition;
+                hourlyWeather[hour].weatherCondition = weatherDataPresets[idx].weatherCondition;
+                hourlyWeather[hour].cloudPower = Random.Range(weatherDataPresets[idx].cloudPowerRange.x, weatherDataPresets[idx].cloudPowerRange.y);
 
-                            hourlyWeather[hour].cloudPower = Random.Range(weatherDataPresets[w].cloudPowerRange.x, weatherDataPresets[w].cloudPowerRange.y);
-
-                            if (weatherDataPresets[w].clips != null)
-                            {
-                                hourlyWeather[hour].weatherAudio = weatherDataPresets[w].clips[Random.Range(0, weatherDataPresets[w].clips.Length)];
-                            }
-
-                            //hourlyWeather[hour].wetness = weatherDataPresets[w].wetness;
-                            //hourlyWeather[hour].snowiness = weatherDataPresets[w].snowiness;
-
-                            break;
-                        }
-                    }
-                }
+                if (weatherDataPresets[idx].clips != null && weatherDataPresets[idx].clips.Length > 0)
+                    hourlyWeather[hour].weatherAudio = weatherDataPresets[idx].clips[Random.Range(0, weatherDataPresets[idx].clips.Length)];
             }
+            else
+            {
+                hourlyWeather[hour].weatherCondition = string.Empty;
+                hourlyWeather[hour].cloudPower = 0f;
+            }
+
         }
 
         public void SetCurrentConditions()
@@ -489,67 +514,68 @@ namespace TimeWeather
 
                     for (int r = 0; r < cloudRenderer.Length; r++)
                     {
-                        if (currentWeatherPreset.activeClouds.Contains(cloudRenderer[r].cloudRenderer))
+                        var hc = cloudRenderer[r];
+                        if (hc == null || hc.cloudRenderer == null) continue;
+
+                        // Ensure MPB exists (it should be created in Start(), but keep this robust)
+                        if (hc.mpb == null) hc.mpb = new MaterialPropertyBlock();
+
+                        bool isActive = (currentWeatherPreset != null
+                            && currentWeatherPreset.activeClouds != null
+                            && currentWeatherPreset.activeClouds.Contains(hc.cloudRenderer));
+
+                        // 1) Power + alpha targets
+                        if (isActive)
                         {
-                            for (int i = 0; i < currentWeatherPreset.activeClouds.Count; i++)
-                            {
+                            // Drive power toward the next hour’s target power (smooth hour blending)
+                            desiredPower = Mathf.Lerp(hc.cloudPower, hourlyWeather[timeController.timeHours + 1].cloudPower, hourlyTimePercent);
+                            hc.cloudPower = Mathf.Lerp(hc.cloudPower, desiredPower, hourlyTimePercent);
 
+                            // Drive alpha toward a stable target within the preset’s alpha range.
+                            // IMPORTANT: do NOT call Random.Range every frame; use a stable noise-based target.
+                            float noise = Mathf.PerlinNoise(r * 17.123f, timeController.timePercent * 2.0f);
+                            float targetAlpha = Mathf.Lerp(currentWeatherPreset.cloudAlphaRange.x, currentWeatherPreset.cloudAlphaRange.y, noise);
 
-                                if (cloudRenderer[r].cloudRenderer == currentWeatherPreset.activeClouds[i])
-                                {
-
-                                    desiredPower = Mathf.Lerp(cloudRenderer[r].cloudPower, hourlyWeather[timeController.timeHours + 1].cloudPower, hourlyTimePercent);
-
-                                    if (cloudRenderer[r].cloudRenderer.material.GetFloat("_CloudAlpha") != cloudRenderer[r].baseAlpha)
-                                        desiredAlpha = Mathf.Lerp(cloudRenderer[r].cloudRenderer.material.GetFloat("_CloudAlpha"), cloudRenderer[r].baseAlpha, hourlyTimePercent * 0.5f);
-                                    else
-                                    {
-                                        desiredAlpha = Mathf.Lerp(cloudRenderer[r].baseAlpha, Random.Range(currentWeatherPreset.cloudAlphaRange.x, currentWeatherPreset.cloudAlphaRange.y), hourlyTimePercent);
-                                    }
-
-                                    if (cloudRenderer[r].cloudAlpha != desiredAlpha)
-                                        cloudRenderer[r].cloudAlpha = Mathf.Lerp(cloudRenderer[r].cloudAlpha, desiredAlpha, hourlyTimePercent * 0.5f);
-
-                                    if (cloudRenderer[r].cloudPower != desiredPower)
-                                        cloudRenderer[r].cloudPower = Mathf.Lerp(cloudRenderer[r].cloudPower, desiredPower, hourlyTimePercent);
-                                }
-                            }
+                            // Blend from baseAlpha toward targetAlpha (and keep smoothing gentle)
+                            desiredAlpha = Mathf.Lerp(hc.baseAlpha, targetAlpha, hourlyTimePercent);
+                            hc.cloudAlpha = Mathf.Lerp(hc.cloudAlpha, desiredAlpha, hourlyTimePercent * 0.5f);
                         }
                         else
                         {
-                            cloudRenderer[r].cloudAlpha = Mathf.Lerp(cloudRenderer[r].cloudAlpha, 0, hourlyTimePercent * 0.05f);
+                            // Fade out inactive planes
+                            hc.cloudAlpha = Mathf.Lerp(hc.cloudAlpha, 0f, hourlyTimePercent * 0.05f);
+                            // Optionally also ease power toward clear-sky if your shader interprets higher as clearer
+                            // hc.cloudPower = Mathf.Lerp(hc.cloudPower, 5f, hourlyTimePercent * 0.05f);
                         }
-                        cloudRenderer[r].cloudRenderer.material.SetFloat("_CloudAlpha", cloudRenderer[r].cloudAlpha);
 
-                        cloudRenderer[r].cloudRenderer.material.SetFloat("_CloudPower", cloudRenderer[r].cloudPower);
-
+                        // 2) Wind smoothing (your existing logic, but we keep it inside the same loop)
                         if (desiredWindSpeed == rand)
-                        {
                             rand = Random.Range(windSpeed - 0.05f, windSpeed + 0.05f);
-                        }
                         else
-                        {
                             desiredWindSpeed = Mathf.Lerp(windSpeed, rand, hourlyTimePercent);
-                        }
 
                         windSpeed = Mathf.Lerp(windSpeed, desiredWindSpeed, hourlyTimePercent * 0.5f);
 
                         wind.x = Mathf.Lerp(wind.x, windSpeed * windMultiplier, hourlyTimePercent * 0.5f);
                         wind.y = Mathf.Lerp(wind.y, windSpeed * windMultiplier, hourlyTimePercent * 0.5f);
-                        Vector2 cloudSpeed; 
 
+                        Vector2 cloudSpeed;
                         if (timeController.timeOfDay <= 12)
-                        {
-                            cloudSpeed = wind * timeController.timeScale * (timeController.timeOfDay * 0.5f) * (timeController.timePercent * 25);
-                        }
+                            cloudSpeed = wind * timeController.timeScale * (timeController.timeOfDay * 0.5f) * (timeController.timePercent * 25f);
                         else
-                        {
-                            cloudSpeed = wind * timeController.timeScale * (23 - timeController.timeOfDay) * (timeController.timePercent * 25);
-                        }
+                            cloudSpeed = wind * timeController.timeScale * (23 - timeController.timeOfDay) * (timeController.timePercent * 25f);
 
-                        cloudRenderer[r].cloudRenderer.material.SetVector("_CloudSpeed", cloudSpeed * 0.5f);
+                        // 3) Apply to shader via MPB (no material instancing)
+                        hc.cloudRenderer.GetPropertyBlock(hc.mpb);
+                        hc.mpb.SetFloat(ID_CloudAlpha, hc.cloudAlpha);
+                        hc.mpb.SetFloat(ID_CloudPower, hc.cloudPower);
+                        hc.mpb.SetVector(ID_CloudSpeed, new Vector4(cloudSpeed.x * 0.5f, cloudSpeed.y * 0.5f, 0f, 0f));
+                        hc.cloudRenderer.SetPropertyBlock(hc.mpb);
+
+                        // Write back (because HourlyClouds is a class, this is technically not required,
+                        // but leaving this makes it explicit if you ever convert it to a struct)
+                        cloudRenderer[r] = hc;
                     }
-
 
                     if (currentWeatherPreset.snowiness < snowiness)
                     {
@@ -650,12 +676,39 @@ namespace TimeWeather
             }
         }
 
+        private bool _lastToggleTempUI, _lastToggleRainUI, _lastToggleWeatherUI;
 
         private void Update()
         {
             SetCurrentConditions();
-            ToggleUI();
+
+            // Only toggle GameObjects when toggles change
+            if (_lastToggleTempUI != toggleTempUI ||
+                _lastToggleRainUI != toggleRainUI ||
+                _lastToggleWeatherUI != toggleWeatherUI)
+            {
+                _lastToggleTempUI = toggleTempUI;
+                _lastToggleRainUI = toggleRainUI;
+                _lastToggleWeatherUI = toggleWeatherUI;
+                ToggleUI();
+            }
         }
+
+        private int ResolvePresetIndex(float temp, float rain, bool isRaining)
+        {
+            for (int w = 0; w < weatherDataPresets.Length; w++)
+            {
+                var p = weatherDataPresets[w];
+
+                if (temp < p.tempRange.x || temp > p.tempRange.y) continue;
+                if (rain < p.rainRange.x || rain > p.rainRange.y) continue;
+                if (isRaining != p.isRaining) continue;
+
+                return w;
+            }
+            return -1;
+        }
+
     }
 
     [System.Serializable]
@@ -708,6 +761,8 @@ namespace TimeWeather
         [HideInInspector] public bool isMidnight = false;
         [Tooltip("The audio clip to play during this hours weather. \n selected randomly from 'clips' in the weather preset")]
         public AudioClip weatherAudio;
+        [HideInInspector] public int presetIndex = -1;
+
     }
 
     [System.Serializable]
@@ -717,6 +772,8 @@ namespace TimeWeather
         public float cloudPower;
         public float cloudAlpha;
         [field: ReadOnlyField] public float baseAlpha;
+        // Add this field inside the HourlyClouds class:
+        [System.NonSerialized] public MaterialPropertyBlock mpb;
 
     }
 }

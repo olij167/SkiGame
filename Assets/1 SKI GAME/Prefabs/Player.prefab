@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 3328149746602923328}
   - component: {fileID: 4111373406727744186}
   - component: {fileID: 5130916524721657879}
+  - component: {fileID: 2015925916295891446}
   - component: {fileID: 3102456178366848837}
   - component: {fileID: 551110874092663367}
   - component: {fileID: 6544998573832570742}
@@ -94,7 +95,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 80
+  m_Constraints: 0
   m_CollisionDetection: 0
 --- !u!114 &5130916524721657879
 MonoBehaviour:
@@ -120,8 +121,6 @@ MonoBehaviour:
   leanAction: {fileID: -920512616523522315, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   polesAction: {fileID: 4017610858538729280, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   jumpAction: {fileID: -2099379676528639254, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-  alignNormalSmoothSpeed: 10
-  alignMaxDegreesPerSec: 120
   forwardLeanLerpSpeed: 4
   stanceLerpSpeed: 6
   skiVisualLerpSpeed: 12
@@ -138,49 +137,56 @@ MonoBehaviour:
   groundCheckDistance: 1.4
   groundContactDistance: 0.5
   groundContactDistanceWhenSkiContact: 0.55
-  maxGroundSlopeAngle: 80
-  minSlopeAngleForDownhill: 1
-  forwardFriction: 0.2
-  sideFriction: 0.7
+  maxGroundSlopeAngle: 75
+  groundNormalSmoothSpeed: 12
+  controlCoyoteTime: 0.08
+  alignNormalSmoothSpeed: 10
+  alignMaxDegreesPerSec: 120
+  preventSkiTerrainClipping: 1
+  skiClearance: 0.03
+  skiProbeUp: 0.35
+  skiProbeDown: 0.9
+  maxLiftPerFixedStep: 0.15
+  liftResponse: 18
+  minSlopeAngleForDownhill: 8
+  groundedSlopeGravityScale: 3
+  forwardFriction: 0.1
+  sideFriction: 1.2
   normalKillStrength: 8
   maxStickUpwardSpeed: 6
-  tuckFrictionReduction: 0.35
-  brakeFrictionIncrease: 0.9
-  neutralSlipBoost: 0.25
+  tuckFrictionReduction: 0.7
+  brakeFrictionIncrease: 1.2
+  neutralSlipBoost: 0.1
+  groundTurnSpeed: 3
+  groundAlignSpeed: 25
   carveSteerStrength: 4
   minCarveSpeed: 4
   maxCarveSpeed: 12
   lowSpeedMaxYaw: 20
   minSpeedForSkateYaw: 1.5
+  enableTraverseHold: 1
+  traverseHoldSpeed: 4
+  traverseHoldDamp: 12
+  traverseHoldMinSlopeAngle: 1
+  traverseHoldAcrossThreshold: 0.25
+  traverseHoldStrength: 1
   minForwardLeanForPush: 0
-  skateImpulse: 4
+  skateImpulse: 3
   skateCooldown: 0.1
   skateMaxEffectiveSpeed: 10
+  skateUphillPenaltyStartAngle: 20
+  skateUphillPenaltyEndAngle: 60
+  skateUphillMinImpulseFactor: 0.08
+  skateUphillDownPull: 3.5
   skateYawPerPush: 4
   basePoleStrokeSpeed: 2
   maxPoleStrokeSpeedBoost: 6
   strokeSpeedBoostAtSpeed: 45
-  poleImpulse: 15
+  poleImpulse: 10
   poleMaxSpeed: 75
-  poleBrakeStrength: 1.5
+  poleBrakeStrength: 5
   minPoleSpeedFactor: 0.1
-  maxLandingTiltAngle: 60
-  maxLandingMisalignmentAngle: 20
-  minLandingSpeedForStackCheck: 7
-  minLandingAirTime: 0.16
-  minLandingDownwardSpeed: 4
-  heavyTipStackAngle: 25
-  landingProjectionStrength: 0.6
-  landingVelocityRetention: 0.7
-  stackTorqueImpulse: 5
-  groundTurnSpeed: 5
-  groundAlignSpeed: 25
-  airYawTurnSpeed: 160
-  airPitchTurnSpeed: 80
-  airAngularAcceleration: 720
-  airAngularDamping: 360
-  airTuckSpinMultiplier: 1.5
-  jumpForceRange: {x: 5, y: 10}
+  jumpForceRange: {x: 3, y: 6}
   jumpCoyoteTime: 0.2
   jumpBufferTime: 0.15
   maxJumpChargeTime: 1.5
@@ -188,7 +194,59 @@ MonoBehaviour:
   minJumpUngroundedTime: 0.3
   jumpSpeedForceMultiplier: 1.5
   jumpSpeedForMaxMultiplier: 12
+  jumpUpBlendStartAngle: 55
+  jumpUpBlendEndAngle: 80
+  airYawTurnSpeed: 160
+  airPitchTurnSpeed: 80
+  airAngularAcceleration: 720
+  airAngularDamping: 360
+  airTuckSpinMultiplier: 1.5
+  airControlBlendInTime: 0.12
+  airPitchUseDeltaFromTakeoff: 0.75
+  airPitchDeadzone: 0.05
+  landingSteepSlopeStartAngle: 40
+  landingVerySteepSlopeAngle: 70
+  landingAlignBoostDuration: 0.1
+  landingAlignBoostMultiplier: 0.7
+  landingProjectionStrength: 1
+  landingVelocityRetention: 1
+  maxLandingTiltAngle: 60
+  maxLandingMisalignmentAngle: 40
+  minLandingSpeedForStackCheck: 4
+  minLandingAirTime: 0.16
+  minLandingDownwardSpeed: 2
+  hardLandingMinFallHeight: 4
+  hardLandingMinDownwardSpeed: 6
+  hardLandingMinImpactAngleFromPlane: 40
+  heavyTipStackAngle: 20
+  stackTorqueImpulse: 8
+  stackPlanarVelocityRetention: 0.4
   showDebugHUD: 0
+  debugShowInputs: 1
+  debugShowTraverseHold: 1
+  debugShowJumpLanding: 1
+  debugShowSkiContacts: 1
+  debugDrawGizmosSelected: 1
+  debugHUDScale: 1
+--- !u!114 &2015925916295891446
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 891564543262492690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d182bbfb94aefcd49894a03a54327f5f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.PlayerStatsTracker
+  skiController: {fileID: 5130916524721657879}
+  rb: {fileID: 4111373406727744186}
+  includeWhileStacked: 0
+  minActiveSpeedMps: 0.25
+  trackAir: 1
+  teleportDistanceThresholdMeters: 25
+  autosaveIntervalSeconds: 30
 --- !u!114 &3102456178366848837
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -249,8 +307,8 @@ MonoBehaviour:
   liftCarrierLayers:
     serializedVersion: 2
     m_Bits: 2097149
-  liftDetectionRadius: 10
-  liftDetectPoint: {fileID: 0}
+  liftDetectionRadius: 30
+  liftDetectPoint: {fileID: 3477672529516182850}
   holdToAttach: 1
   attachInputBuffer: 0.2
   attachAttemptInterval: 0.05
@@ -7042,6 +7100,7 @@ MonoBehaviour:
     m_Bits: 64
   tipRegionLocalZThreshold: 0.5
   tailRegionLocalZThreshold: -0.3
+  minCollisionUpDot: 0.25
   probeUpOffset: 0.1
   probeDistance: 0.5
   probeContactDistance: 0.18
@@ -7450,6 +7509,7 @@ MonoBehaviour:
     m_Bits: 64
   tipRegionLocalZThreshold: 0.5
   tailRegionLocalZThreshold: -0.3
+  minCollisionUpDot: 0.25
   probeUpOffset: 0.1
   probeDistance: 0.5
   probeContactDistance: 0.18

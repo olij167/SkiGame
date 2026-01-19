@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0a8b3c2643c51a4fa971b32924a702c, type: 3}
+  m_Name: RunDifficultyProfile
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Runs.RunDifficultyProfileSO
+  thresholds:
+  - difficulty: 0
+    minAngle: 0
+    maxAngle: 15
+    color: {r: 0.2, g: 0.85, b: 0.2, a: 1}
+  - difficulty: 1
+    minAngle: 15
+    maxAngle: 25
+    color: {r: 0.2, g: 0.4, b: 0.95, a: 1}
+  - difficulty: 2
+    minAngle: 25
+    maxAngle: 35
+    color: {r: 0.95, g: 0.2, b: 0.2, a: 1}
+  - difficulty: 3
+    minAngle: 35
+    maxAngle: 90
+    color: {r: 0.1, g: 0.1, b: 0.1, a: 1}
+  useMaxSlopeForClassification: 0

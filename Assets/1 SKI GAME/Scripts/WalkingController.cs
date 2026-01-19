@@ -114,6 +114,17 @@ public class WalkingController : MonoBehaviour
     // Mode flag
     private bool _skisOn = true;
 
+    /// <summary>
+    /// True when the player is currently in ski mode (SkiController-driven).
+    /// Exposed for VFX/audio systems that need to suppress ski-specific effects while walking.
+    /// </summary>
+    public bool SkisOn => _skisOn;
+
+    /// <summary>
+    /// True when the player is currently walking (WalkingController-driven).
+    /// </summary>
+    public bool IsWalkingMode => !_skisOn;
+
     // Toggle/hold state
     private bool _toggleHeld;
     private bool _toggleTriggeredThisHold;
@@ -294,7 +305,13 @@ public class WalkingController : MonoBehaviour
         // so the skis don't clip, then restore their idle pose.
         NudgeUpForSkis();
         ForceSkiPose();
+
+        // Extra safety: let SkiController do a terrain-normal-aware clearance snap on enable.
+        if (skiController != null)
+            skiController.SnapToGroundClearance(resetDownwardVelocity: true);
+
         EnableSkiSystems(true);
+
     }
 
     private void EnableSkiSystems(bool enabled)
@@ -316,23 +333,75 @@ public class WalkingController : MonoBehaviour
     }
 
     // Gently nudge the player up so skis are not embedded in the ground.
+    // This version considers BOTH ski positions (much more robust on slopes and during transitions).
     private void NudgeUpForSkis()
     {
-        Vector3 origin = transform.position + Vector3.up * skiGroundRayHeight;
-        if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, skiGroundRayDistance, groundLayers, QueryTriggerInteraction.Ignore))
+        // If skis are missing, fall back to body-based ray.
+        bool hasAnySki = (leftSki != null) || (rightSki != null);
+
+        float requiredRootY = transform.position.y;
+        bool foundGround = false;
+
+        // Helper to compute a root Y that keeps a given point (ski) above ground + clearance.
+        void ConsiderPoint(Transform t)
         {
-            float desiredY = hit.point.y + skiGroundClearance;
-            Vector3 pos = transform.position;
-            if (pos.y < desiredY)
+            if (t == null) return;
+
+            Vector3 rayOrigin = t.position + Vector3.up * skiGroundRayHeight;
+            if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, skiGroundRayDistance, groundLayers, QueryTriggerInteraction.Ignore))
             {
-                pos.y = desiredY;
-                transform.position = pos;
+                foundGround = true;
+
+                // We want: t.position.y >= hit.point.y + clearance
+                // RootY must shift by the same delta as the ski point.
+                float skiToRootOffsetY = t.position.y - transform.position.y;
+                float desiredRootYForThisSki = (hit.point.y + skiGroundClearance) - skiToRootOffsetY;
+
+                if (desiredRootYForThisSki > requiredRootY)
+                    requiredRootY = desiredRootYForThisSki;
+            }
+        }
+
+        if (hasAnySki)
+        {
+            ConsiderPoint(leftSki);
+            ConsiderPoint(rightSki);
+        }
+
+        // Fallback: body-based ray if no skis or no hits.
+        if (!foundGround)
+        {
+            Vector3 origin = transform.position + Vector3.up * skiGroundRayHeight;
+            if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, skiGroundRayDistance, groundLayers, QueryTriggerInteraction.Ignore))
+            {
+                requiredRootY = Mathf.Max(requiredRootY, hit.point.y + skiGroundClearance);
+                foundGround = true;
+            }
+        }
+
+        if (foundGround)
+        {
+            Vector3 pos = _rb != null ? _rb.position : transform.position;
+            if (pos.y < requiredRootY)
+            {
+                pos.y = requiredRootY;
+
+                if (_rb != null)
+                    _rb.MovePosition(pos);
+                else
+                    transform.position = pos;
             }
         }
         else
         {
-            // Fallback: small upward nudge.
-            transform.position += Vector3.up * skiGroundClearance;
+            // Last resort: small upward nudge.
+            Vector3 pos = _rb != null ? _rb.position : transform.position;
+            pos += Vector3.up * skiGroundClearance;
+
+            if (_rb != null)
+                _rb.MovePosition(pos);
+            else
+                transform.position = pos;
         }
     }
 

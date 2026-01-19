@@ -94,6 +94,61 @@ public class SkiContact : MonoBehaviour
         set => stanceOut = Mathf.Clamp01(value);
     }
 
+    public enum SkiProbeRegion
+    {
+        Front, // tip probe
+        Mid,   // base probe
+        Rear   // tail probe
+    }
+
+    /// <summary>
+    /// Returns the latest grounded probe contact for a specific region.
+    /// If the probe didn't hit, this can optionally fall back to collision contact if present.
+    /// </summary>
+    public bool TryGetProbeContact(SkiProbeRegion region, out Vector3 point, out Vector3 normal)
+    {
+        // Prefer probe hits
+        switch (region)
+        {
+            case SkiProbeRegion.Front:
+                if (_probeTipHit) { point = _probeTipPoint; normal = _probeTipNormal; return true; }
+                break;
+
+            case SkiProbeRegion.Mid:
+                if (_probeBaseHit) { point = _probeBasePoint; normal = _probeBaseNormal; return true; }
+                break;
+
+            case SkiProbeRegion.Rear:
+                if (_probeTailHit) { point = _probeTailPoint; normal = _probeTailNormal; return true; }
+                break;
+        }
+
+        // Fallback: collision contact (keeps particles stable when probes miss but physics contact exists)
+        if (_hasCollisionContact)
+        {
+            point = _collisionContactPoint;
+            normal = (_collisionContactNormal.sqrMagnitude > 0.0001f) ? _collisionContactNormal.normalized : Vector3.up;
+            return true;
+        }
+
+        point = default;
+        normal = Vector3.up;
+        return false;
+    }
+
+    // Latest probe hits (within probeContactDistance threshold)
+    private bool _probeBaseHit;
+    private Vector3 _probeBasePoint;
+    private Vector3 _probeBaseNormal;
+
+    private bool _probeTipHit;
+    private Vector3 _probeTipPoint;
+    private Vector3 _probeTipNormal;
+
+    private bool _probeTailHit;
+    private Vector3 _probeTailPoint;
+    private Vector3 _probeTailNormal;
+
     // NOTE: Do not sample in this script's FixedUpdate.
     // SkiController will call this deterministically at the start of its FixedUpdate.
     public void ManualSampleGround()
@@ -160,9 +215,34 @@ public class SkiContact : MonoBehaviour
         // This prevents the controller treating near-ground as grounded (and stops false state flips).
         float contactMaxDist = Mathf.Max(0.001f, probeUpOffset + probeContactDistance);
 
-        if (SphereDown(baseOrigin, out RaycastHit baseHit) && baseHit.distance <= contactMaxDist) hits.Add(baseHit);
-        if (SphereDown(tipOrigin, out RaycastHit tipHit) && tipHit.distance <= contactMaxDist) hits.Add(tipHit);
-        if (SphereDown(tailOrigin, out RaycastHit tailHit) && tailHit.distance <= contactMaxDist) hits.Add(tailHit);
+        // Reset probe hits each sample (unless we are in coyote time; see no-hit branch below)
+        _probeBaseHit = false;
+        _probeTipHit = false;
+        _probeTailHit = false;
+
+        if (SphereDown(baseOrigin, out RaycastHit baseHit) && baseHit.distance <= contactMaxDist)
+        {
+            hits.Add(baseHit);
+            _probeBaseHit = true;
+            _probeBasePoint = baseHit.point;
+            _probeBaseNormal = (baseHit.normal.sqrMagnitude > 0.0001f) ? baseHit.normal.normalized : Vector3.up;
+        }
+
+        if (SphereDown(tipOrigin, out RaycastHit tipHit) && tipHit.distance <= contactMaxDist)
+        {
+            hits.Add(tipHit);
+            _probeTipHit = true;
+            _probeTipPoint = tipHit.point;
+            _probeTipNormal = (tipHit.normal.sqrMagnitude > 0.0001f) ? tipHit.normal.normalized : Vector3.up;
+        }
+
+        if (SphereDown(tailOrigin, out RaycastHit tailHit) && tailHit.distance <= contactMaxDist)
+        {
+            hits.Add(tailHit);
+            _probeTailHit = true;
+            _probeTailPoint = tailHit.point;
+            _probeTailNormal = (tailHit.normal.sqrMagnitude > 0.0001f) ? tailHit.normal.normalized : Vector3.up;
+        }
 
         // If we have collision contact, bias heavily toward it.
         // This makes contact normals reflect the actual physics solver rather than probe noise.
@@ -196,6 +276,10 @@ public class SkiContact : MonoBehaviour
                 EndContactSign = 0;
                 EndContactLocalZ = 0f;
                 BaseContactAlignment = 0f;
+                _probeBaseHit = false;
+                _probeTipHit = false;
+                _probeTailHit = false;
+
             }
 
             _hasCollisionContact = false;

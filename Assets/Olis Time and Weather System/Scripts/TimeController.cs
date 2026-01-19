@@ -135,6 +135,20 @@ namespace TimeWeather
 
         public bool showDebugLogs;
 
+        // --- UI / perf caching ---
+        private bool _lastToggleTimeUI;
+        private bool _lastToggleUITimeControls;
+        private bool _lastToggleSunTimeUI;
+
+        private bool _isScrubbingTimeOfDay;
+        private int _lastShownHour = -1;
+        private int _lastShownMinute = -1;
+        private int _lastShownSecond = -1;
+        private bool _lastShowSeconds;
+        private bool _lastTwelveHourTime;
+
+        private bool _didInitSliders;
+
 
         [Header("Debug")]
         private bool useSmoothLerp = true;
@@ -229,6 +243,27 @@ namespace TimeWeather
 
         public void ToggleUI()
         {
+            // SAFETY: never allow UI toggles to deactivate this controller's GameObject or any of its parents.
+            // If timeControlsParent is mis-assigned, it can disable this script and make time appear to "freeze".
+            if (timeControlsParent != null)
+            {
+                Transform tcp = timeControlsParent.transform;
+                Transform self = transform;
+
+                // If timeControlsParent is this object OR a parent of this object, disabling it will disable TimeController.
+                if (tcp == self || self.IsChildOf(tcp))
+                {
+                    Debug.LogWarning(
+                        $"[TimeController] timeControlsParent is assigned to '{timeControlsParent.name}', " +
+                        "which is this object or a parent of it. This would disable TimeController when UI is hidden. " +
+                        "Ignoring timeControlsParent SetActive calls. Assign timeControlsParent to a UI-only object instead.",
+                        this);
+
+                    // Null it so we don't keep spamming warnings / toggling.
+                    timeControlsParent = null;
+                }
+            }
+
             if (!toggleTimeUI)
             {
                 if (timeText != null) timeText.gameObject.SetActive(false);
@@ -274,102 +309,54 @@ namespace TimeWeather
             }
         }
 
-        void Update()
+        private void Update()
         {
-            if (Application.isPlaying)
+            if (!Application.isPlaying)
+                return;
+
+            // Only toggle UI objects when settings actually change (prevents per-frame SetActive churn)
+            RefreshUIActivationIfDirty();
+
+            // Time controls (only if enabled)
+            if (toggleUITimeControls)
             {
+                if (timeScaleSlider != null)
+                    secondsPerMinuteInGame = timeScaleSlider.value;
 
-                if (toggleUITimeControls)
+                // If user is scrubbing, read the slider (avoid pushing values back while scrubbing)
+                if (timeOfDaySlider != null && _isScrubbingTimeOfDay)
                 {
-                    if (timeScaleSlider != null)
-                        secondsPerMinuteInGame = timeScaleSlider.value;
-
-                    //if (timeOfDay <= 23.9f)
-                    if (timeOfDaySlider != null && timeOfDaySlider.value > 0 && timeOfDaySlider.value < 24)
-                    {
-                        if (timeOfDaySlider.value <= 23.99f && timeOfDay <= 23.99f)
-                            timeOfDay = timeOfDaySlider.value;
-                        else
-                            timeOfDaySlider.value = timeOfDay;
-                    }
+                    float v = Mathf.Clamp(timeOfDaySlider.value, 0f, 24f);
+                    // Avoid exactly 24 to prevent wrap jitter
+                    timeOfDay = Mathf.Min(v, 23.999f);
                 }
-
-                if (timeOfDaySlider != null) timeOfDaySlider.value = timeOfDay;
-
-                timeScale = 24 / (secondsPerMinuteInGame / 60);
-
-                timeOfDay += Time.deltaTime * timeScale / 86400; // seconds in a day
-
-                timePercent = (timeOfDay %= 24f) / 24f;
-                UpdateLighting();
-
-                timeHours = (int)timeOfDay;
-                timeMinutes = Mathf.Clamp((timeOfDay - timeHours) * 60, 0f, 59.49f);
-                timeSeconds = Mathf.Clamp((timeMinutes - (int)timeMinutes) * 60, 0f, 59.49f);
-
-                hourlyTimePercent = (timeMinutes %= 60f) / 60f;
-
-                if (toggleTimeUI)
-                {
-                    if (twelveHourTime)
-                    {
-                        if (timeOfDay < 12)
-                        {
-                            if (showSeconds)
-                                timeString = timeHours.ToString("00") + ":" + timeMinutes.ToString("00") + ":" + timeSeconds.ToString("00");
-                            else
-                                timeString = timeHours.ToString("00") + ":" + timeMinutes.ToString("00");
-
-                            if (timeText != null)
-                                timeText.text = timeString + " am";
-                        }
-                        else if (timeOfDay > 12 && timeOfDay < 13)
-                        {
-                            if (showSeconds)
-                                timeString = timeHours.ToString("00") + ":" + timeMinutes.ToString("00") + ":" + timeSeconds.ToString("00");
-                            else
-                                timeString = timeHours.ToString("00") + ":" + timeMinutes.ToString("00");
-
-                            if (timeText != null)
-                                timeText.text = timeString + " pm";
-                        }
-                        else
-                        {
-                            if (showSeconds)
-                                timeString = (timeHours - 12).ToString("00") + ":" + timeMinutes.ToString("00") + ":" + timeSeconds.ToString("00");
-                            else
-                                timeString = (timeHours - 12).ToString("00") + ":" + timeMinutes.ToString("00");
-
-                            if (timeText != null)
-                                timeText.text = timeString + " pm";
-
-
-                            if (timeOfDay >= 23.9f)
-                            {
-                                isNewDay = true;
-                                //timeOfDaySlider.value = 0f;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (showSeconds)
-                            timeString = timeHours.ToString("00") + ":" + timeMinutes.ToString("00") + ":" + timeSeconds.ToString("00");
-                        else
-                            timeString = timeHours.ToString("00") + ":" + timeMinutes.ToString("00");
-
-                        if (timeText != null)
-                            timeText.text = timeString;
-                    }
-                }
-
-                if (isNewDay && timeOfDay < 1f)
-                {
-                    ProgressDays(1);
-                }
-
-                ToggleUI();
             }
+
+            // Simulation
+            timeScale = 24f / (secondsPerMinuteInGame / 60f);
+            timeOfDay += Time.deltaTime * timeScale / 86400f; // seconds in a day
+            timePercent = (timeOfDay %= 24f) / 24f;
+
+            UpdateLighting();
+
+            timeHours = (int)timeOfDay;
+            timeMinutes = Mathf.Clamp((timeOfDay - timeHours) * 60f, 0f, 59.49f);
+            timeSeconds = Mathf.Clamp((timeMinutes - (int)timeMinutes) * 60f, 0f, 59.49f);
+            hourlyTimePercent = (timeMinutes %= 60f) / 60f;
+
+            // Push time into slider only when not scrubbing (prevents feedback-loop jitter)
+            if (toggleUITimeControls && timeOfDaySlider != null && !_isScrubbingTimeOfDay)
+                timeOfDaySlider.value = timeOfDay;
+
+            // Update time text only when displayed units actually change (perf + avoids string churn)
+            UpdateTimeTextIfNeeded();
+
+            // Day rollover logic
+            if (timeOfDay >= 23.9f)
+                isNewDay = true;
+
+            if (isNewDay && timeOfDay < 1f)
+                ProgressDays(1);
         }
 
         public void ProgressDays(int numToProgress = 1)
@@ -799,6 +786,131 @@ namespace TimeWeather
             public MonthData month;
             public int year;
         }
+
+        private void OnEnable()
+        {
+            // Cache initial toggle states so we don't spam ToggleUI()
+            _lastToggleTimeUI = toggleTimeUI;
+            _lastToggleUITimeControls = toggleUITimeControls;
+            _lastToggleSunTimeUI = toggleSunTimeUI;
+
+            TryInitSliderListeners();
+        }
+
+        private void OnDisable()
+        {
+            RemoveSliderListeners();
+        }
+
+        private void TryInitSliderListeners()
+        {
+            if (_didInitSliders) return;
+            _didInitSliders = true;
+
+            if (timeOfDaySlider != null)
+            {
+                // Detect scrubbing to prevent feedback loop while dragging
+                timeOfDaySlider.onValueChanged.AddListener(OnTimeOfDaySliderChanged);
+            }
+
+            // Time scale slider is safe to read directly, but we can also cache if you want.
+            if (timeScaleSlider != null)
+            {
+                // No-op listener; we read value in Update while enabled.
+                // Left intentionally blank to avoid unnecessary runtime allocations.
+            }
+        }
+
+        private void RemoveSliderListeners()
+        {
+            if (timeOfDaySlider != null)
+                timeOfDaySlider.onValueChanged.RemoveListener(OnTimeOfDaySliderChanged);
+
+            _didInitSliders = false;
+        }
+
+        private void OnTimeOfDaySliderChanged(float value)
+        {
+            // Treat any value changes as scrubbing while time controls are enabled.
+            // This keeps Update from pushing timeOfDay back into the slider while the user drags.
+            _isScrubbingTimeOfDay = toggleUITimeControls;
+        }
+
+        private void RefreshUIActivationIfDirty()
+        {
+            if (_lastToggleTimeUI != toggleTimeUI ||
+                _lastToggleUITimeControls != toggleUITimeControls ||
+                _lastToggleSunTimeUI != toggleSunTimeUI)
+            {
+                _lastToggleTimeUI = toggleTimeUI;
+                _lastToggleUITimeControls = toggleUITimeControls;
+                _lastToggleSunTimeUI = toggleSunTimeUI;
+
+                ToggleUI();
+
+                // If time controls were disabled, stop scrubbing mode
+                if (!toggleUITimeControls)
+                    _isScrubbingTimeOfDay = false;
+            }
+        }
+
+        private void UpdateTimeTextIfNeeded()
+        {
+            if (!toggleTimeUI || timeText == null) return;
+
+            int h = timeHours;
+            int m = (int)timeMinutes;
+            int s = (int)timeSeconds;
+
+            // If not showing seconds, only update when minute changes
+            bool unitChanged =
+                (_lastShowSeconds != showSeconds) ||
+                (_lastTwelveHourTime != twelveHourTime) ||
+                (_lastShownHour != h) ||
+                (_lastShownMinute != m) ||
+                (showSeconds && _lastShownSecond != s);
+
+            if (!unitChanged) return;
+
+            _lastShownHour = h;
+            _lastShownMinute = m;
+            _lastShownSecond = s;
+            _lastShowSeconds = showSeconds;
+            _lastTwelveHourTime = twelveHourTime;
+
+            if (twelveHourTime)
+            {
+                int displayHour = h;
+                string suffix = " am";
+
+                if (timeOfDay >= 12f)
+                {
+                    suffix = " pm";
+                    if (h > 12) displayHour = h - 12;
+                    if (h == 12) displayHour = 12;
+                }
+                else
+                {
+                    // 12am should display as 12
+                    if (h == 0) displayHour = 12;
+                }
+
+                timeString = showSeconds
+                    ? $"{displayHour:00}:{m:00}:{s:00}"
+                    : $"{displayHour:00}:{m:00}";
+
+                timeText.text = timeString + suffix;
+            }
+            else
+            {
+                timeString = showSeconds
+                    ? $"{h:00}:{m:00}:{s:00}"
+                    : $"{h:00}:{m:00}";
+
+                timeText.text = timeString;
+            }
+        }
+
     }
 
 }
