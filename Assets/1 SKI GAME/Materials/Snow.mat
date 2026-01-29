@@ -214,7 +214,7 @@ Material:
     - _Cov1SmoothnessOverride: 0
     - _Cov2SmoothnessOverride: 0
     - _Coverage: 1
-    - _CoverageAmount: 0.6
+    - _CoverageAmount: 0.75
     - _CoverageAmountOverride: 0
     - _CoverageAreaBias: 0.05
     - _CoverageAreaBiasOverride: 0
@@ -358,7 +358,7 @@ Material:
     - _TessEdgeLOverride: 0
     - _TessFactorSnow: 0.5
     - _TessFactorSnowOverride: 0
-    - _TessMaxDisp: 0.5
+    - _TessMaxDisp: 0.35
     - _TessMaxDispOverride: 0
     - _TessSnowdriftRangeOverride: 0
     - _Tessellation: 1
@@ -413,7 +413,7 @@ Material:
     - _EnhanceRemap0: {r: 0, g: 1, b: 0, a: 0}
     - _EnhanceRemap1: {r: 0, g: 1, b: 0, a: 0}
     - _EnhanceRemap2: {r: 0, g: 1, b: 0, a: 0}
-    - _HeightMap0Contrast: {r: 0, g: 1, b: 0, a: 0}
+    - _HeightMap0Contrast: {r: 0, g: 1.0000001, b: 0, a: 0}
     - _HeightMap1Contrast: {r: 0, g: 1, b: 0, a: 0}
     - _HeightMap2Contrast: {r: 0, g: 1, b: 0, a: 0}
     - _PrecipitationDirRange: {r: 0, g: 1, b: 0, a: 0}

@@ -318,10 +318,10 @@ MonoBehaviour:
   bodyTransform: {fileID: 3477672529516182850}
   leftSki: {fileID: 1500085997925863974}
   leftSkiContact: {fileID: 5191879904404988712}
-  leftSkiVisualDefault: {fileID: 0}
+  leftSkiVisualDefault: {fileID: 5477471834623578040}
   rightSki: {fileID: 8235596220883930978}
   rightSkiContact: {fileID: 3070408007898728858}
-  rightSkiVisualDefault: {fileID: 0}
+  rightSkiVisualDefault: {fileID: 3204729474797573038}
   leftPoleContact: {fileID: 858128058096335000}
   rightPoleContact: {fileID: 5727976740622543823}
   sorenessMeter: {fileID: 8355405585811782512}
@@ -353,7 +353,7 @@ MonoBehaviour:
   controlCoyoteTime: 0.08
   alignNormalSmoothSpeed: 10
   alignMaxDegreesPerSec: 120
-  preventSkiTerrainClipping: 1
+  preventSkiTerrainClipping: 0
   skiClearance: 0.03
   skiProbeUp: 0.35
   skiProbeDown: 0.9
@@ -426,7 +426,7 @@ MonoBehaviour:
   grindCaptureRadius: 0.45
   grindableLayers:
     serializedVersion: 2
-    m_Bits: 1
+    m_Bits: 65
   grindMinPlanarSpeed: 0
   grindSidewaysDotBegin: 0.5
   grindSpring: 20
@@ -1147,7 +1147,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0777d029ed3dffa4692f417d4aba19ca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.DecalProjector
-  m_Material: {fileID: 2100000, guid: 31d0dcc6f2dd4e4408d18036a2c93862, type: 2}
+  m_Material: {fileID: 2100000, guid: 1909739c3d2e22d4cb54ff47d79b400f, type: 2}
   m_DrawDistance: 1000
   m_FadeScale: 0.9
   m_StartAngleFade: 180
@@ -1431,7 +1431,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0777d029ed3dffa4692f417d4aba19ca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.DecalProjector
-  m_Material: {fileID: 2100000, guid: 31d0dcc6f2dd4e4408d18036a2c93862, type: 2}
+  m_Material: {fileID: 2100000, guid: 1909739c3d2e22d4cb54ff47d79b400f, type: 2}
   m_DrawDistance: 1000
   m_FadeScale: 0.9
   m_StartAngleFade: 180
@@ -7426,7 +7426,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  m_Size: {x: 0.3, y: 0.1, z: 3}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &5191879904404988712
 MonoBehaviour:
@@ -7780,7 +7780,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  m_Size: {x: 0.3, y: 0.1, z: 3}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &3070408007898728858
 MonoBehaviour:
