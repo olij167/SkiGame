@@ -10,6 +10,7 @@ namespace SkiGame.Progression
         {
             Metric = 0,
             VisitPOIsInGroup = 10,
+            VisitRunsInGroup = 20,
         }
 
         public enum VisitScope
@@ -31,6 +32,10 @@ namespace SkiGame.Progression
         public ProgressionMetric metric;
         public float target = 1f;
 
+        [Header("Requirement: Run Target (Optional)")]
+        [Tooltip("If set, run-specific metrics evaluate against this run id (SkiRunLine.RunId).")]
+        public string runId;
+
         [Header("Requirement: POI Group Visit")]
         public POIGroupDefinitionSO poiGroup;
 
@@ -39,6 +44,23 @@ namespace SkiGame.Progression
 
         [Tooltip("If enabled, target is kept equal to poiGroup.Count in the editor.")]
         public bool autoTargetFromPOIGroup = true;
+
+        public enum RunGroupMeasure
+        {
+            Visited = 0,
+            Completed = 10,
+        }
+
+        [Header("Requirement: Run Group")]
+        public RunGroupDefinitionSO runGroup;
+
+        [Tooltip("Should Run completion/visitation be measured against session lists or lifetime lists/records.")]
+        public VisitScope runVisitScope = VisitScope.Lifetime;
+
+        public RunGroupMeasure runGroupMeasure = RunGroupMeasure.Completed;
+
+        [Tooltip("If enabled, target is kept equal to runGroup.Count in the editor.")]
+        public bool autoTargetFromRunGroup = true;
 
         public float ReadCurrent(PlayerStatsProfile profile)
         {
@@ -76,6 +98,52 @@ namespace SkiGame.Progression
                 return count;
             }
 
+            if (requirementKind == RequirementKind.VisitRunsInGroup)
+            {
+                if (runGroup == null || runGroup.Count <= 0) return 0f;
+
+                var ids = runGroup.RunIds;
+                if (ids == null || ids.Count == 0) return 0f;
+
+                int count = 0;
+
+                for (int i = 0; i < ids.Count; i++)
+                {
+                    var id = ids[i];
+                    if (string.IsNullOrEmpty(id)) continue;
+
+                    if (runGroupMeasure == RunGroupMeasure.Visited)
+                    {
+                        if (runVisitScope == VisitScope.Session)
+                        {
+                            if (profile.sessionVisitedRunIds != null && profile.sessionVisitedRunIds.Contains(id))
+                                count++;
+                        }
+                        else
+                        {
+                            if (profile.visitedRunIds != null && profile.visitedRunIds.Contains(id))
+                                count++;
+                        }
+                    }
+                    else // Completed
+                    {
+                        if (runVisitScope == VisitScope.Session)
+                        {
+                            if (profile.sessionCompletedRunIds != null && profile.sessionCompletedRunIds.Contains(id))
+                                count++;
+                        }
+                        else
+                        {
+                            if (profile.HasCompletedRunEver(id))
+                                count++;
+                        }
+                    }
+                }
+
+                return count;
+            }
+
+
             // Default: Metric
             return metric switch
             {
@@ -109,19 +177,132 @@ namespace SkiGame.Progression
                 ProgressionMetric.LifetimeGrindTimeSeconds => l.totalGrindTimeSeconds,
                 ProgressionMetric.LifetimeGrindDistanceMeters => l.totalGrindDistanceMeters,
 
+                ProgressionMetric.SessionRunsVisited => profile.sessionVisitedRunIds != null ? profile.sessionVisitedRunIds.Count : 0,
+                ProgressionMetric.SessionRunsCompletedClean => s.runsCompletedClean,
+                ProgressionMetric.SessionTopRunSpeedMps => s.topRunSpeedMps,
+
+                ProgressionMetric.LifetimeRunsVisited => profile.visitedRunIds != null ? profile.visitedRunIds.Count : 0,
+                ProgressionMetric.LifetimeRunsCompletedClean => l.totalRunsCompletedClean,
+                ProgressionMetric.LifetimeTopRunSpeedMps => l.topRunSpeedMps,
+
+                ProgressionMetric.LifetimeRunVisited => (!string.IsNullOrEmpty(runId) && profile.visitedRunIds != null && profile.visitedRunIds.Contains(runId)) ? 1f : 0f,
+                ProgressionMetric.LifetimeRunCompletedCount => ReadRunRecordValue(profile, runId, cleanOnly: false),
+                ProgressionMetric.LifetimeRunCompletedCleanCount => ReadRunRecordValue(profile, runId, cleanOnly: true),
+
+
                 _ => 0f
             };
+        }
+
+        public string GetRequirementText()
+        {
+            // Keep this intentionally short + UI-friendly.
+            // (PhoneHUD can still override formatting if needed.)
+
+            if (requirementKind == RequirementKind.VisitPOIsInGroup)
+                return $"Visit {Mathf.FloorToInt(target)} places";
+
+            if (requirementKind == RequirementKind.VisitRunsInGroup)
+            {
+                string verb = (runGroupMeasure == RunGroupMeasure.Completed) ? "Complete" : "Visit";
+                return $"{verb} {Mathf.FloorToInt(target)} runs";
+            }
+
+            return metric switch
+            {
+                ProgressionMetric.SessionDistanceMeters or
+                ProgressionMetric.LifetimeDistanceMeters or
+                ProgressionMetric.SessionAirDistanceMeters or
+                ProgressionMetric.LifetimeAirDistanceMeters or
+                ProgressionMetric.SessionVerticalDescentMeters or
+                ProgressionMetric.LifetimeVerticalDescentMeters
+                    => $"Reach {FormatMeters(target)}",
+
+                ProgressionMetric.SessionTopSpeedMps or
+                ProgressionMetric.LifetimeTopSpeedMps
+                    => $"Reach {target:0.0} m/s",
+
+                ProgressionMetric.SessionAirTimeSeconds or
+                ProgressionMetric.LifetimeAirTimeSeconds
+                    => $"Reach {target:0.0} s",
+
+                ProgressionMetric.SessionGrindTimeSeconds or
+                ProgressionMetric.LifetimeGrindTimeSeconds
+                    => $"Reach {target:0.0} s",
+
+                ProgressionMetric.SessionGrindDistanceMeters or
+                ProgressionMetric.LifetimeGrindDistanceMeters
+                    => $"Reach {FormatMeters(target)}",
+
+                ProgressionMetric.SessionRunsCompleted or
+                ProgressionMetric.LifetimeRunsCompleted
+                    => $"Complete {Mathf.FloorToInt(target)} runs",
+
+                ProgressionMetric.SessionLiftsUsed or
+                ProgressionMetric.LifetimeLiftsUsed
+                    => $"Ride {Mathf.FloorToInt(target)} lifts",
+
+                ProgressionMetric.SessionRunsVisited => $"Visit {Mathf.FloorToInt(target)} runs",
+                ProgressionMetric.LifetimeRunsVisited => $"Visit {Mathf.FloorToInt(target)} runs",
+
+                ProgressionMetric.SessionRunsCompletedClean => $"Complete {Mathf.FloorToInt(target)} clean runs",
+                ProgressionMetric.LifetimeRunsCompletedClean => $"Complete {Mathf.FloorToInt(target)} clean runs",
+
+                ProgressionMetric.SessionTopRunSpeedMps or
+                ProgressionMetric.LifetimeTopRunSpeedMps
+                    => $"Reach {target:0.0} m/s",
+
+                ProgressionMetric.LifetimeRunVisited
+                    => string.IsNullOrEmpty(runId) ? $"Visit run" : $"Visit {runId}",
+
+                ProgressionMetric.LifetimeRunCompletedCount
+                    => string.IsNullOrEmpty(runId) ? $"Complete {Mathf.FloorToInt(target)} runs" : $"Complete {runId} x{Mathf.FloorToInt(target)}",
+
+                ProgressionMetric.LifetimeRunCompletedCleanCount
+                    => string.IsNullOrEmpty(runId) ? $"Complete {Mathf.FloorToInt(target)} clean runs" : $"Clean-complete {runId} x{Mathf.FloorToInt(target)}",
+
+                _ => $"Target {target:0.##}"
+            };
+        }
+
+        private static string FormatMeters(float meters)
+        {
+            if (meters >= 1000f) return $"{meters / 1000f:0.0}km";
+            return $"{meters:0}m";
+        }
+
+        private static float ReadRunRecordValue(PlayerStatsProfile profile, string runId, bool cleanOnly)
+        {
+            if (profile == null || string.IsNullOrEmpty(runId) || profile.runRecords == null) return 0f;
+
+            for (int i = 0; i < profile.runRecords.Count; i++)
+            {
+                var rr = profile.runRecords[i];
+                if (rr == null) continue;
+                if (rr.runId != runId) continue;
+
+                return cleanOnly ? rr.timesCompletedClean : rr.timesCompleted;
+            }
+
+            return 0f;
         }
 
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            if (!autoTargetFromPOIGroup) return;
-            if (requirementKind != RequirementKind.VisitPOIsInGroup) return;
-            if (poiGroup == null) return;
+            // POI group auto-target
+            if (autoTargetFromPOIGroup && requirementKind == RequirementKind.VisitPOIsInGroup && poiGroup != null)
+            {
+                target = Mathf.Max(1f, poiGroup.Count);
+            }
 
-            target = Mathf.Max(1f, poiGroup.Count);
+            // Run group auto-target
+            if (autoTargetFromRunGroup && requirementKind == RequirementKind.VisitRunsInGroup && runGroup != null)
+            {
+                target = Mathf.Max(1f, runGroup.Count);
+            }
         }
 #endif
+
     }
 }

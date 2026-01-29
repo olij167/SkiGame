@@ -12,7 +12,7 @@ namespace SkiGame.Progression
         SessionRunsCompleted,
         SessionLiftsUsed,
 
-        // NEW: Session POI + Grind
+        //Session POI + Grind
         SessionPlacesVisited,
         SessionGrindTimeSeconds,
         SessionGrindDistanceMeters,
@@ -27,9 +27,33 @@ namespace SkiGame.Progression
         LifetimeRunsCompleted,
         LifetimeLiftsUsed,
 
-        // NEW: Lifetime POI + Grind
+        //Lifetime POI + Grind
         LifetimePlacesVisited,
         LifetimeGrindTimeSeconds,
         LifetimeGrindDistanceMeters,
+
+        //  Daily Task Matrix
+        SessionVerticalAscentMeters,
+        SessionAverageSpeedMps,
+
+        LifetimeTotalDistanceMeters,
+        LifetimeTotalVerticalAscentMeters,
+        LifetimeTotalVerticalDescentMeters,
+        LifetimeAverageSpeedMps,
+
+        // --- Run Progress (generic + run-specific) ---
+        SessionRunsVisited,
+        SessionRunsCompletedClean,
+        SessionTopRunSpeedMps,
+
+        LifetimeRunsVisited,
+        LifetimeRunsCompletedClean,
+        LifetimeTopRunSpeedMps,
+
+        // Run-specific (requires Task/Achievement runId field)
+        LifetimeRunVisited,
+        LifetimeRunCompletedCount,
+        LifetimeRunCompletedCleanCount,
+
     }
 }

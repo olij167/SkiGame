@@ -253,7 +253,13 @@ public class LiftRider : MonoBehaviour
         isAttached = true;
         isChairMode = (carrier.mode == LiftCarrierMode.Chair);
 
-        RegisterLiftUsed();
+        string liftId = null;
+        if (carrier != null && carrier.line != null)
+            liftId = carrier.line.gameObject.name; // stable enough if LiftLine names are unique
+        else if (carrier != null)
+            liftId = carrier.gameObject.name;
+
+        RegisterLiftUsed(liftId);
 
         if (isChairMode)
         {
@@ -338,12 +344,11 @@ public class LiftRider : MonoBehaviour
         }
     }
 
-    private static void RegisterLiftUsed()
+    private static void RegisterLiftUsed(string liftId)
     {
         var mgr = PlayerStatsManager.Instance;
         if (mgr == null) return;
 
-        // Ensure profile exists (safety if manager was created but profile wasn't loaded yet).
         if (mgr.Profile == null)
             mgr.Load();
 
@@ -352,6 +357,12 @@ public class LiftRider : MonoBehaviour
 
         p.lifetime.totalLiftsUsed++;
         p.session.liftsUsed++;
+
+        if (!string.IsNullOrEmpty(liftId))
+        {
+            p.IncrementLiftRideCount(liftId, session: true);
+            p.IncrementLiftRideCount(liftId, session: false);
+        }
     }
 
 #if UNITY_EDITOR

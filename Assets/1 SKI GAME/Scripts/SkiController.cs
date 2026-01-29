@@ -52,17 +52,41 @@ public class SkiController : MonoBehaviour
     [SerializeField] private Transform leftSki;
     [Tooltip("Per-ski helper for the left ski (auto-assigned from leftSki if null).")]
     [SerializeField] private SkiContact leftSkiContact;
+    [Tooltip("Direct reference to the DEFAULT left ski visual object in the scene (the mesh/model under LeftSki). " +
+             "This object will be destroyed and replaced when equipping different skis.")]
+    [SerializeField] private Transform leftSkiVisualDefault;
 
     [Tooltip("Right ski transform (child of this object).")]
     [SerializeField] private Transform rightSki;
     [Tooltip("Per-ski helper for the right ski (auto-assigned from rightSki if null).")]
     [SerializeField] private SkiContact rightSkiContact;
+    [Tooltip("Direct reference to the DEFAULT right ski visual object in the scene (the mesh/model under RightSki). " +
+             "This object will be destroyed and replaced when equipping different skis.")]
+    [SerializeField] private Transform rightSkiVisualDefault;
 
     [Tooltip("Optional helper for the left pole (for contact & visuals).")]
     [SerializeField] private PoleContact leftPoleContact;
 
     [Tooltip("Optional helper for the right pole (for contact & visuals).")]
     [SerializeField] private PoleContact rightPoleContact;
+
+    [Tooltip("Optional. If assigned, this controller will scale certain exertion-related forces by the soreness performance multiplier.")]
+    [SerializeField] private SorenessMeter sorenessMeter;
+
+    [Tooltip("Optional: gear loadout that provides runtime tuning multipliers for skis/poles.")]
+    [SerializeField] private SkiGearLoadout gearLoadout;
+
+    [Header("Gear Visuals")]
+    [Tooltip("If enabled, swapping equipped skis will replace the visual child object under each ski root (leftSki/rightSki).\n" +
+         "This does NOT replace the ski root transforms, so SkiContact references remain valid.")]
+    [SerializeField] private bool autoSwapSkiVisuals = true;
+
+    // Cached profile so poles changes don't unnecessarily swap ski visuals.
+    private SkiGearProfileSO _cachedSkisProfile;
+
+    // Cached current visual child transforms (purely internal convenience; we still re-find safely if needed).
+    private Transform _leftSkiVisual;
+    private Transform _rightSkiVisual;
 
     [Header("Input Actions")]
     [Tooltip("Float action for left leg stance/edge (0..1).")]
@@ -86,6 +110,7 @@ public class SkiController : MonoBehaviour
     // ----------------------------------------------------------------------
 
     private Rigidbody _rb;
+    private SkiGearTuning _gearTuning = SkiGearTuning.Default;
 
     // Raw inputs
     private float _rawLeftLegInput;
@@ -99,29 +124,45 @@ public class SkiController : MonoBehaviour
     private float _leftOut;        // [0..1]   "edge/spread" factor
     private float _rightOut;       // [0..1]
 
-    //// Fields
-    //private bool _leftGrounded;
-    //private bool _rightGrounded;
-    //private RaycastHit _leftHit;
-    //private RaycastHit _rightHit;
-
     // True if either ski collider is currently reporting ground contact.
     private bool HasAnySkiContact =>
         (leftSkiContact != null && leftSkiContact.IsGrounded) ||
         (rightSkiContact != null && rightSkiContact.IsGrounded);
 
+    // True only when a ski has an actual collision contact (NOT just probe/coyote).
+    private bool HasAnySkiCollisionContact =>
+        (leftSkiContact != null && leftSkiContact.HasCollisionContact) ||
+        (rightSkiContact != null && rightSkiContact.HasCollisionContact);
+
     // Grounding/orientation
     private bool _isGrounded;
     private bool _wasGrounded;
     private bool _wasControlsGrounded; // previous frame's grounded-for-controls flag
+    private bool _nearGroundForJump; // body spherecast says we are within contact distance
+
     private Vector3 _groundNormal = Vector3.up;
     private Vector3 _skiForward = Vector3.forward; // combined ski forward on plane
+
+    // Cached slope info (computed once per FixedUpdate when grounded-for-controls)
+    private float _slopeAngleDeg;   // 0..90
+    private float _slopeT20;        // InverseLerp(minSlopeAngleForDownhill..20deg)
+    private float _slopeT35;        // InverseLerp(minSlopeAngleForDownhill..35deg)
+
+    // Cached rideable-slope threshold (avoids Vector3.Angle in ground checks)
+    private float _cachedMaxGroundSlopeAngle = float.NaN;
+    private float _cosMaxGroundSlope = -1f;
+
 
     // Separate from _groundNormal: used only for visual/orientation alignment (pitch/roll).
     private Vector3 _alignNormal = Vector3.up;
 
     // High-level locomotion state (for debugging and behaviour gating).
     private MovementMode _movementMode = MovementMode.Airborne;
+
+    // Anti-clipping cadence state (reduces raycasts when stable).
+    private int _antiClipStableFrames;
+    private int _antiClipLastCheckedFrame = -999;
+    private float _antiClipLastLiftNeeded;
 
     // Skis base transforms (for offset & yaw)
     private Vector3 _leftSkiLocalBasePos;
@@ -150,6 +191,19 @@ public class SkiController : MonoBehaviour
     private Vector3 _nonSkiGroundContactNormal;
     private float _nonSkiGroundContactUpDot;
 
+    /// <summary>
+    /// Used by external impact/VFX systems to ignore ski collider contacts.
+    /// </summary>
+    public bool IsSkiCollider(Collider c)
+    {
+        return c != null && _skiColliders.Contains(c);
+    }
+
+    /// <summary>
+    /// Allows external systems to re-use SkiController's ground filtering.
+    /// </summary>
+    public LayerMask GroundLayers => groundLayers;
+
     // Accumulated time spent riding mostly on ski tips while grounded.
     private float _tipContactAccumTime;
 
@@ -174,6 +228,8 @@ public class SkiController : MonoBehaviour
     private float _lastJumpPressedTime;
     private float _lastGroundedTime;
     private float _lastJumpTime;
+    private float _lastJumpReleasedTime;
+
     private float _airborneStartTime;
     private float _airbornePeakY;
 
@@ -189,7 +245,7 @@ public class SkiController : MonoBehaviour
     // ----------------------------------------------------------------------
 
     private bool _grindActive;
-    private bool _grindDetachRequested;
+    private float _grindTime;
     private float _grindStrengthSmoothed;
     private float _grindReattachCooldownUntil;
 
@@ -199,6 +255,16 @@ public class SkiController : MonoBehaviour
     private Vector3 _grindDeltaToRail;
     private string _dbgGrindSource;
     private Vector3 _grindNormal = Vector3.up;
+
+    // Per-frame cache to avoid repeated GetComponentInParent calls during probe evaluation.
+    private int _grindProviderCacheFrame = -1;
+    private Collider _grindProviderCacheColA;
+    private Collider _grindProviderCacheColB;
+    private LiftLine _grindProviderCacheLiftA;
+    private LiftLine _grindProviderCacheLiftB;
+    private FencePath _grindProviderCacheFenceA;
+    private FencePath _grindProviderCacheFenceB;
+
 
     // ----------------------------------------------------------------------
     // PARAMETERS (Inspector order = declaration order)
@@ -333,10 +399,6 @@ public class SkiController : MonoBehaviour
     [Tooltip("How fast the root yaws toward the desired direction on the slope. Higher = faster heading changes.")]
     [SerializeField] private float groundTurnSpeed = 8f;
 
-    [Tooltip("How fast pitch/roll aligns to the slope (separate from yaw). Higher = stronger slope alignment.")]
-    [SerializeField] private float groundAlignSpeed = 18f;
-
-
     [Header("Turning & Steering (Carve vs Skate)")]
     [Tooltip("How strongly planar velocity is rotated toward ski direction when skis are parallel and edged. Higher = more 'carve lock' at speed.")]
     [SerializeField] private float carveSteerStrength = 4f;
@@ -362,7 +424,7 @@ public class SkiController : MonoBehaviour
     [Tooltip("Minimum planar speed (m/s) before quick-stop can engage.")]
     [SerializeField] private float quickStopMinSpeed = 7f;
 
-    [Tooltip("Minimum angle (deg) between current travel direction and ski direction before quick-stop engages.")]
+    [Tooltip("Minimum angle (deg) between current travel direction and ski direction before quick-stop engages (requires leaning backwards).")]
     [SerializeField, Range(0f, 90f)] private float quickStopMinTurnAngle = 40f;
 
     [Header("Traverse Hold (Anti-Creep)")]
@@ -436,6 +498,10 @@ public class SkiController : MonoBehaviour
     [Tooltip("Minimum effectiveness of pole strokes at/above poleMaxSpeed (0 = none, 1 = full).")]
     [SerializeField, Range(0f, 1f)] private float minPoleSpeedFactor = 0.1f;
 
+    [Tooltip("Effectiveness multiplier for pole propulsion when moving fully uphill (downhillDot = -1). " +
+         "1 = same as downhill, >1 boosts uphill pole power, <1 reduces it.")]
+    [SerializeField, Range(0.25f, 2f)] private float poleUphillEffectiveness = 1.25f;
+
 
     // Tip-contact stability tuning (kept as code constants to avoid more inspector clutter).
     // If you want to expose these in the inspector later, just turn them into [SerializeField] fields.
@@ -479,6 +545,20 @@ public class SkiController : MonoBehaviour
     [Tooltip("Slope angle (deg) where jump direction becomes fully world-up (prevents sideways launches on very steep faces).")]
     [SerializeField] private float jumpUpBlendEndAngle = 80f;
 
+    [Header("Soreness (Health + Stamina Combined)")]
+
+    [Tooltip("Soreness added per skate push impulse (velocity change, m/s).")]
+    [SerializeField] private float sorenessPerSkateImpulse = 0.0035f;
+
+    [Tooltip("Soreness added per pole propulsion impulse (approx velocity change, m/s).")]
+    [SerializeField] private float sorenessPerPoleImpulse = 0.0025f;
+
+    [Tooltip("Soreness added per jump impulse (velocity change, m/s).")]
+    [SerializeField] private float sorenessPerJumpImpulse = 0.0025f;
+
+    [Tooltip("Small ongoing soreness per second while braking/dragging poles (very low by default).")]
+    [SerializeField] private float sorenessPerPoleDragSecond = 0.00035f;
+
 
     [Header("Air Control")]
     [Tooltip("Maximum yaw turn speed in the air (deg/sec), using leg difference as input.")]
@@ -508,78 +588,79 @@ public class SkiController : MonoBehaviour
     [SerializeField] private float airPitchDeadzone = 0.05f;
 
     [Header("Grinding (Air Edge Assist)")]
-    [Tooltip("If enabled, while airborne the rider can 'lock' onto nearby grindable features using air controls.\n" +
-         "This is not a snap-on: it applies a spring + friction only when close and the skis are sufficiently sideways to the rail.")]
-    [SerializeField] private bool grindEnabled = true;
 
-    [Tooltip("Layer mask used for detecting nearby grindable colliders (optional). Fence segments usually work well here.\n" +
-             "Lift cables do NOT require colliders (LiftLine is queried via a lightweight runtime registry).")]
-    [SerializeField] private LayerMask grindLayers = 0;
+    [SerializeField, Tooltip("How long we keep grinding after losing contact (prevents 1-frame drops).")]
+    private float grindCoyoteTime = 0.06f;
 
-    [Tooltip("Radius (m) around the skis used to search for grind candidates.")]
-    [SerializeField] private float grindSearchRadius = 1.2f;
+    private float _grindLastTouchTime;
 
     [Tooltip("Maximum distance (m) from skis to the rail centerline to apply assist.")]
     [SerializeField] private float grindCaptureRadius = 0.45f;
 
+    [Tooltip("Layers searched for nearby grindables (LiftLine/FencePath) when airborne.\n" +
+         "For best performance, restrict this to only your rail/cable/fence layers.\n" +
+         "Use Collide triggers if your grind colliders are triggers.")]
+    [SerializeField] private LayerMask grindableLayers = ~0;
+
+    // Non-alloc buffer for overlap queries (keeps grind assist cheap).
+    private Collider[] _grindOverlap = new Collider[64];
+
     [Tooltip("Minimum planar speed required before grind assist will engage.")]
     [SerializeField] private float grindMinPlanarSpeed = 2.0f;
 
-    [Tooltip("How sideways the skis must be to the rail tangent before assist engages.\n" +
-             "This is a dot threshold on |dot(skiForward, railTangent)|. Smaller = more sideways.\n" +
-             "Example: 0.45 means assist begins when skis are at least ~63 degrees sideways.")]
-    [Range(0.0f, 0.95f)]
-    [SerializeField] private float grindSidewaysDotBegin = 0.45f;
+    [Tooltip("How aligned the skis/planar movement must be with the rail tangent before assist engages.\n" +
+         "This is a dot threshold on |dot(direction, railTangent)|. Larger = more aligned.\n" +
+         "Example: 0.65 means assist begins once you're within ~49 degrees of the tangent.\n" +
+         "The 'fully aligned' dot is derived from this value to reduce tuning parameters.")]
+    [Range(0.0f, 0.99f)]
+    [SerializeField] private float grindSidewaysDotBegin = 0.65f;
 
-    [Tooltip("Dot value for 'fully sideways' where assist reaches max contribution (strong boardslide).\n" +
-             "Example: 0.15 means ~81 degrees sideways.")]
-    [Range(0.0f, 0.95f)]
-    [SerializeField] private float grindSidewaysDotFull = 0.15f;
+    // Derived from grindSidewaysDotBegin to avoid a second serialized threshold.
+    private const float GRIND_ALIGN_FULL_FRAC = 0.65f; // fullDot = Lerp(beginDot, 1, frac)
 
     [Tooltip("Spring strength pulling the skis toward the rail centerline (m/s^2 per metre).")]
     [SerializeField] private float grindSpring = 55f;
 
-    [Tooltip("Damping against motion into/out of the rail (m/s^2 per m/s).")]
-    [SerializeField] private float grindRadialDamping = 14f;
+    [Header("Grinding - Surface Support (Simple)")]
+    [Tooltip("Vertical offset (m) above the grind path centerline that we try to keep the rider's reference point at while grinding. Helps 'sit' on cables/fences instead of falling through.")]
+    [SerializeField] private float grindSupportOffset = 0.07f;
 
-    [Tooltip("Friction damping applied to velocity OFF the rail tangent (m/s^2 per m/s). Higher = more 'locked' and less drift.")]
-    [SerializeField] private float grindOffTangentFriction = 6f;
+    [Tooltip("Extra damping applied to velocity along the grind support normal while grinding (m/s^2 per m/s). Reduces pogo / launchiness when landing on rails.")]
+    [SerializeField] private float grindNormalDamping = 14f;
 
-    [Tooltip("Optional friction damping applied ALONG the rail tangent (m/s^2 per m/s). Keep small to avoid killing speed.")]
-    [SerializeField] private float grindAlongTangentFriction = 0.6f;
-    [Header("Grinding - Friction Feel")]
-    [SerializeField, Range(0f, 2f)] private float grindFrictionMultiplier = 1f; // <1 = slipperier, >1 = stickier
+    [Tooltip("Multiplier for slope-parallel gravity while grinding (relative to grounded slope gravity). Higher = faster acceleration on rails/fences.")]
+    [SerializeField, Range(0f, 3f)] private float grindSlopeGravityScale = 1.6f;
+
+    [Tooltip("Multiplier applied to air-control yaw/pitch while grinding. 0 = no aerial control, 1 = same as air.")]
+    [SerializeField, Range(0f, 1.5f)] private float grindAirControlMultiplier = 0.65f;
 
     [Header("Grinding - Alignment")]
-    [SerializeField] private bool grindAlignEnabled = true;
-    [SerializeField, Range(0f, 1f)] private float grindAlignUpBias = 0.15f; // 0 = pure rail normal, 1 = world up
-    [SerializeField] private float grindAlignMaxDegreesPerSec = 720f;
-    [SerializeField] private float grindAlignStrength = 1.0f; // scales with grind strength (0..1)
-
-    [Tooltip("Extra acceleration applied ALONG the rail tangent while grinding (m/s^2). 0 disables drive.")]
-    [SerializeField] private float grindDriveAcceleration = 3.0f;
-
-    [Tooltip("Max speed along the rail that the drive term tries to approach (m/s).")]
-    [SerializeField] private float grindDriveMaxSpeed = 18.0f;
-
-    [Tooltip("Additional damping applied to aerial angular velocity while grinding (deg/sec^2).")]
-    [SerializeField] private float grindAngularDamping = 520f;
-
-    [Tooltip("How much to reduce aerial angular acceleration while grinding (0 = none, 1 = no air spin accel).")]
-    [Range(0f, 1f)]
-    [SerializeField] private float grindAngularAccelReduction = 0.5f;
 
     [Tooltip("How quickly grind strength ramps in/out (per second). Higher = snappier engagement.")]
     [SerializeField] private float grindStrengthResponse = 10f;
 
     [Tooltip("Cooldown (seconds) after detaching before grind assist can reattach.")]
     [SerializeField] private float grindReattachCooldown = 0.25f;
+    // Grinding alignment is always active while grinding.
+    // Reuse the main ground alignment rate (alignMaxDegreesPerSec) with a small multiplier.
+    private const float GRIND_ALIGN_UP_BIAS = 0.15f;
+    private const float GRIND_ALIGN_RATE_MULT = 1.25f;
 
-    [Tooltip("Velocity change added when detaching from a grind (upwards).")]
-    [SerializeField] private float grindDetachUpVel = 2.5f;
+    [Header("Grinding - Drive & Balance")]
+    [Tooltip("Overall scale for along-rail gravity drive while grinding. 0 disables drive, 1 = physical gravity component.")]
+    [SerializeField, Range(0f, 2f)] private float grindDriveScale = 1.0f;
 
-    [Tooltip("Velocity change added when detaching from a grind (away from rail).")]
-    [SerializeField] private float grindDetachAwayVel = 2.0f;
+    // Fixed boost fraction to reduce tuning params (was time-boost max).
+    private const float GRIND_DRIVE_TIME_BOOST_FRAC = 0.35f;
+
+    // Kept constant to reduce tuning params (was grindTimeToMaxBoost).
+    private const float GRIND_TIME_TO_MAX_BOOST = 1.5f;
+
+    [Tooltip("Balance gating using dot(rbUp, supportUp). Below this, grinding rapidly weakens.")]
+    [SerializeField, Range(0f, 1f)] private float grindBalanceUpDotBegin = 0.55f;
+
+    // Derived from grindBalanceUpDotBegin to avoid a second serialized threshold (was grindBalanceUpDotFull).
+    private const float GRIND_BALANCE_DOT_WINDOW = 0.30f;
 
     [Header("Landing: Stabilization & Projection")]
     [Tooltip("Slope angle (deg) where landing steepness adjustments begin.")]
@@ -655,6 +736,9 @@ public class SkiController : MonoBehaviour
     [Tooltip("Show traverse-hold calculations and gates in the debug HUD.")]
     [SerializeField] private bool debugShowTraverseHold = true;
 
+    [Tooltip("Show grinding diagnostics in the debug HUD.")]
+    [SerializeField] private bool debugShowGrinding = true;
+
     [Tooltip("Show jump / landing / stack checks in the debug HUD.")]
     [SerializeField] private bool debugShowJumpLanding = true;
 
@@ -720,6 +804,25 @@ public class SkiController : MonoBehaviour
 
     public bool IsStacked => _stacked;
 
+    public readonly struct StackEventInfo
+    {
+        public readonly Vector3 position;
+        public readonly Vector3 velocity;
+        public readonly float severity01;
+        public readonly string reason;
+
+        public StackEventInfo(Vector3 position, Vector3 velocity, float severity01, string reason)
+        {
+            this.position = position;
+            this.velocity = velocity;
+            this.severity01 = severity01;
+            this.reason = reason ?? "";
+        }
+    }
+
+    public event System.Action<StackEventInfo> OnStacked;
+
+
     // Stroke progress 0..1 within the CURRENT phase (Entry / FollowThrough).
     public float PoleStrokeT => _poleStrokeT;
 
@@ -748,8 +851,12 @@ public class SkiController : MonoBehaviour
     {
         get
         {
-            if (_stacked)
-                return false;
+            //if (_stacked)
+            //    return false;
+
+            // If we are actively grinding, we want the same control path as grounded skiing.
+            if (_grindActive)
+                return true;
 
             // Hard grounding: any ski collider currently touching snow.
             if (HasAnySkiContact)
@@ -818,16 +925,25 @@ public class SkiController : MonoBehaviour
         _skiForward = transform.forward;
         CacheSkiColliders();
 
+        if (sorenessMeter == null)
+            sorenessMeter = GetComponent<SorenessMeter>();
+
+        BindGearLoadout();
     }
     private void CacheSkiColliders()
     {
         _skiColliders.Clear();
 
+        Transform leftVis = (_leftSkiVisual != null) ? _leftSkiVisual : leftSkiVisualDefault;
+        Transform rightVis = (_rightSkiVisual != null) ? _rightSkiVisual : rightSkiVisualDefault;
+
         if (leftSki != null)
         {
             foreach (var c in leftSki.GetComponentsInChildren<Collider>(true))
             {
-                if (c != null) _skiColliders.Add(c);
+                if (c == null) continue;
+                if (leftVis != null && c.transform.IsChildOf(leftVis)) continue;
+                _skiColliders.Add(c);
             }
         }
 
@@ -835,11 +951,121 @@ public class SkiController : MonoBehaviour
         {
             foreach (var c in rightSki.GetComponentsInChildren<Collider>(true))
             {
-                if (c != null) _skiColliders.Add(c);
+                if (c == null) continue;
+                if (rightVis != null && c.transform.IsChildOf(rightVis)) continue;
+                _skiColliders.Add(c);
             }
         }
     }
 
+    private void RefreshGearTuning()
+    {
+        _gearTuning = (gearLoadout != null) ? gearLoadout.GetTuning() : SkiGearTuning.Default;
+    }
+    private void HandleGearChanged()
+    {
+        RefreshGearTuning();
+
+        if (autoSwapSkiVisuals)
+            RefreshSkiVisualsIfNeeded(force: false);
+    }
+
+    private void RefreshSkiVisualsIfNeeded(bool force)
+    {
+        if (gearLoadout == null) return;
+
+        var skisProfile = gearLoadout.EquippedSkis;
+        if (!force && skisProfile == _cachedSkisProfile) return;
+
+        _cachedSkisProfile = skisProfile;
+        if (skisProfile == null) return;
+
+        // Swap only sides that have prefabs assigned; if null, keep the existing visual.
+        if (skisProfile.skiPrefab != null)
+            SwapSkiVisual(leftSki, ref _leftSkiVisual, skisProfile.skiPrefab);
+
+        if (skisProfile.skiPrefab != null)
+            SwapSkiVisual(rightSki, ref _rightSkiVisual, skisProfile.skiPrefab);
+
+        CacheSkiColliders();
+    }
+
+    private void SwapSkiVisual(Transform skiRoot, ref Transform currentVisual, GameObject prefab)
+    {
+        if (skiRoot == null || prefab == null) return;
+
+        // We require an explicit current visual reference (bound from inspector defaults).
+        // If it's missing, we refuse to guess, because guessing causes the “wrong child destroyed” bugs.
+        if (currentVisual == null)
+        {
+            Debug.LogWarning($"[{nameof(SkiController)}] Cannot swap ski visual on '{skiRoot.name}' because currentVisual is null. " +
+                             $"Assign Left/Right Ski Visual Default references in the inspector.");
+            return;
+        }
+
+        // Preserve the CURRENT visual child's local transform so the new prefab inherits the correct mount + scale.
+        Vector3 keepLocalPos = currentVisual.localPosition;
+        Quaternion keepLocalRot = currentVisual.localRotation;
+        Vector3 keepLocalScale = currentVisual.localScale;
+        int keepSiblingIndex = currentVisual.GetSiblingIndex();
+
+        DestroySafe(currentVisual.gameObject);
+        currentVisual = null;
+
+        var go = Instantiate(prefab);
+        var t = go.transform;
+
+        t.SetParent(skiRoot, worldPositionStays: false);
+        t.localPosition = keepLocalPos;
+        t.localRotation = keepLocalRot;
+        t.localScale = keepLocalScale;
+        t.SetSiblingIndex(keepSiblingIndex);
+
+        currentVisual = t;
+    }
+
+    private static void DestroySafe(UnityEngine.Object obj)
+    {
+        if (obj == null) return;
+
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+            DestroyImmediate(obj);
+        else
+            Destroy(obj);
+#else
+        Destroy(obj);
+#endif
+    }
+ 
+    private void BindGearLoadout()
+    {
+        if (gearLoadout == null)
+            gearLoadout = GetComponent<SkiGearLoadout>();
+
+        if (gearLoadout != null)
+            gearLoadout.OnTuningChanged += HandleGearChanged;
+
+        RefreshGearTuning();
+
+        // Directly bind the scene-authored default visuals (no “find root/child” logic).
+        _leftSkiVisual = leftSkiVisualDefault;
+        _rightSkiVisual = rightSkiVisualDefault;
+
+        // Reset cached profile so first refresh can apply.
+        _cachedSkisProfile = null;
+
+        if (autoSwapSkiVisuals)
+            RefreshSkiVisualsIfNeeded(force: true);
+
+        CacheSkiColliders();
+    }
+
+    private void UnbindGearLoadout()
+    {
+        if (gearLoadout != null)
+            gearLoadout.OnTuningChanged -= HandleGearChanged;
+    }
 
     private void OnEnable()
     {
@@ -891,6 +1117,9 @@ public class SkiController : MonoBehaviour
         {
             jumpAction.action.Disable();
         }
+
+        UnbindGearLoadout();
+
     }
     // ----------------------------------------------------------------------
     // COLLISIONS (ANTI "SLIDE ON HEAD")
@@ -978,91 +1207,112 @@ public class SkiController : MonoBehaviour
 
         CheckGround();
 
-        // Continuous safety: if a landing/align step forces skis below terrain, lift out smoothly.
-        if (preventSkiTerrainClipping && (HasAnySkiContact || IsGroundedForControls))
+        UpdateSlopeCache();
+        _skiForward = GetCombinedSkiForwardOnPlane();
+
+        UpdateGrinding(Time.fixedDeltaTime);
+
+        bool grindingSurface = _grindActive && !HasAnySkiContact && !_isGrounded;
+
+        // Do not run terrain penetration correction while grinding in-air;
+        // it can fight rail motion and adds unnecessary work every physics step.
+        if (preventSkiTerrainClipping && !grindingSurface && (HasAnySkiContact || _isGrounded))
             ResolveSkiTerrainPenetration(hardSnap: false);
+
 
         // Custom gravity: full gravity in air, tangential-only gravity when grounded.
         // This prevents "stalling mid-slope" and removes double-gravity ambiguity.
         if (IsGroundedForControls)
         {
-            Vector3 gPlane = Vector3.ProjectOnPlane(Physics.gravity, _groundNormal);
-
-            // Optional "game feel" boost: scale tangential gravity on actual slopes.
-            // Blends in from minSlopeAngleForDownhill so flat ground isn't affected.
-            float slopeAngleForBoost = Vector3.Angle(_groundNormal, Vector3.up);
-            float slopeBoostT = Mathf.InverseLerp(minSlopeAngleForDownhill, 35f, slopeAngleForBoost);
-            float gScale = Mathf.Lerp(1f, groundedSlopeGravityScale, Mathf.Clamp01(slopeBoostT));
-            gPlane *= gScale;
-
-            // Always apply slope-parallel gravity, but optionally reduce + damp fall-line drift
-            // when the player is strongly traversing and edging at low fall-line speed.
-            if (enableTraverseHold && gPlane.sqrMagnitude > 0.0001f)
+            if (grindingSurface)
             {
-                float slopeAngle = Vector3.Angle(_groundNormal, Vector3.up);
-                _dbgSlopeAngle = slopeAngle;
-                _dbgTraverseGPlane = gPlane;
-                _dbgTraverseHold = 0f; // will be overwritten if we engage
+                // While grinding we treat gravity like grounded skiing, but on the grind support normal
+                // and with a stronger scale so rails/fences accelerate faster than terrain.
+                Vector3 n = (_groundNormal.sqrMagnitude > 0.0001f) ? _groundNormal.normalized : Vector3.up;
+                Vector3 gPlane = Vector3.ProjectOnPlane(Physics.gravity, n);
 
-                if (slopeAngle >= traverseHoldMinSlopeAngle)
+                float gScale = Mathf.Max(0f, grindSlopeGravityScale) * groundedSlopeGravityScale * _gearTuning.downhillAccelMul;
+                gPlane *= gScale;
+
+                _rb.AddForce(gPlane, ForceMode.Acceleration);
+            }
+            else
+            {
+                Vector3 gPlane = Vector3.ProjectOnPlane(Physics.gravity, _groundNormal);
+
+                float gScale = Mathf.Lerp(1f, groundedSlopeGravityScale * _gearTuning.downhillAccelMul, _slopeT35);
+                gPlane *= gScale;
+
+                // Always apply slope-parallel gravity, but optionally reduce + damp fall-line drift
+                // when the player is strongly traversing and edging at low fall-line speed.
+                if (enableTraverseHold && !_grindActive && gPlane.sqrMagnitude > 0.0001f)
                 {
-                    Vector3 fallDir = gPlane.normalized;
-                    _dbgFallDir = fallDir;
 
-                    // IMPORTANT: do not rely on _skiForward being updated later in the frame
-                    Vector3 skiDir = GetCombinedSkiForwardOnPlane();
-                    if (skiDir.sqrMagnitude > 0.0001f) skiDir.Normalize();
+                    float slopeAngle = _slopeAngleDeg;
+                    _dbgSlopeAngle = slopeAngle;
+                    _dbgTraverseGPlane = gPlane;
+                    _dbgTraverseHold = 0f; // will be overwritten if we engage
 
-                    // 1 when perfectly across slope, 0 when pointing up/down the fall line
-                    float across = (skiDir.sqrMagnitude > 0.0001f)
-                        ? (1f - Mathf.Abs(Vector3.Dot(skiDir, fallDir)))
-                        : 0f;
-                    _dbgTraverseAcross = across;
-
-                    // Fall-line speed we want to resist (unwanted sideways slide down the hill)
-                    Vector3 planeVel = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal);
-                    float vFall = Vector3.Dot(planeVel, fallDir);
-                    _dbgTraversePlaneVel = planeVel;
-                    _dbgTraverseVFall = vFall;
-
-                    // Engage only when:
-                    //  - we're sufficiently across the fall line
-                    //  - and fall-line speed is low (standing / slow traverse)
-                    // Strength rises as we get more across + more under the speed limit.
-                    float acrossGate = Mathf.InverseLerp(traverseHoldAcrossThreshold, 1f, across);
-                    float speedGate = 1f - Mathf.Clamp01(Mathf.Abs(vFall) / Mathf.Max(0.01f, traverseHoldSpeed));
-                    float hold = Mathf.Clamp01(acrossGate * speedGate) * Mathf.Clamp01(traverseHoldStrength);
-                    _dbgTraverseAcrossGate = acrossGate;
-                    _dbgTraverseSpeedGate = speedGate;
-                    _dbgTraverseHold = hold;
-
-                    // Optional: forward lean reduces holding (keeps downhill skiing lively)
-                    hold *= 1f - Mathf.Clamp01(_forwardLean);
-
-                    // 1) Apply tangential gravity, reduced while holding (but never removed entirely)
-                    _rb.AddForce(gPlane * (1f - hold), ForceMode.Acceleration);
-
-                    // 2) Extra damping along the fall line to kill slow drift down the hill
-                    if (hold > 0f)
+                    if (slopeAngle >= traverseHoldMinSlopeAngle)
                     {
-                        float damp = traverseHoldDamp * hold;
-                        _rb.AddForce(-fallDir * vFall * damp, ForceMode.Acceleration);
+                        Vector3 fallDir = gPlane.normalized;
+                        _dbgFallDir = fallDir;
+
+                        // IMPORTANT: do not rely on _skiForward being updated later in the frame
+                        Vector3 skiDir = GetCombinedSkiForwardOnPlane();
+                        if (skiDir.sqrMagnitude > 0.0001f) skiDir.Normalize();
+
+                        // 1 when perfectly across slope, 0 when pointing up/down the fall line
+                        float across = (skiDir.sqrMagnitude > 0.0001f)
+                            ? (1f - Mathf.Abs(Vector3.Dot(skiDir, fallDir)))
+                            : 0f;
+                        _dbgTraverseAcross = across;
+
+                        // Fall-line speed we want to resist (unwanted sideways slide down the hill)
+                        Vector3 planeVel = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal);
+                        float vFall = Vector3.Dot(planeVel, fallDir);
+                        _dbgTraversePlaneVel = planeVel;
+                        _dbgTraverseVFall = vFall;
+
+                        // Engage only when:
+                        //  - we're sufficiently across the fall line
+                        //  - and fall-line speed is low (standing / slow traverse)
+                        // Strength rises as we get more across + more under the speed limit.
+                        float acrossGate = Mathf.InverseLerp(traverseHoldAcrossThreshold, 1f, across);
+                        float speedGate = 1f - Mathf.Clamp01(Mathf.Abs(vFall) / Mathf.Max(0.01f, traverseHoldSpeed));
+                        float hold = Mathf.Clamp01(acrossGate * speedGate) * Mathf.Clamp01(traverseHoldStrength * _gearTuning.traverseHoldMul);
+                        _dbgTraverseAcrossGate = acrossGate;
+                        _dbgTraverseSpeedGate = speedGate;
+                        _dbgTraverseHold = hold;
+
+                        // Optional: forward lean reduces holding (keeps downhill skiing lively)
+                        hold *= 1f - Mathf.Clamp01(_forwardLean);
+
+                        // 1) Apply tangential gravity, reduced while holding (but never removed entirely)
+                        _rb.AddForce(gPlane * (1f - hold), ForceMode.Acceleration);
+
+                        // 2) Extra damping along the fall line to kill slow drift down the hill
+                        if (hold > 0f)
+                        {
+                            float damp = traverseHoldDamp * hold;
+                            _rb.AddForce(-fallDir * vFall * damp, ForceMode.Acceleration);
+                        }
+                    }
+                    else
+                    {
+                        // Too flat for traverse hold to matter
+                        _rb.AddForce(gPlane, ForceMode.Acceleration);
+                        _dbgTraverseHold = 0f;
+
                     }
                 }
                 else
                 {
-                    // Too flat for traverse hold to matter
+                    // Traverse hold disabled or no tangential component
                     _rb.AddForce(gPlane, ForceMode.Acceleration);
                     _dbgTraverseHold = 0f;
 
                 }
-            }
-            else
-            {
-                // Traverse hold disabled or no tangential component
-                _rb.AddForce(gPlane, ForceMode.Acceleration);
-                _dbgTraverseHold = 0f;
-
             }
         }
         else
@@ -1070,21 +1320,25 @@ public class SkiController : MonoBehaviour
             _rb.AddForce(Physics.gravity, ForceMode.Acceleration);
         }
 
-
-        // Ensure _skiForward is available for alignment sampling even before ApplyGroundForces.
-        _skiForward = GetCombinedSkiForwardOnPlane();
-
         if (IsGroundedForControls)
         {
-            // Simplification: use the same ground plane for physics AND alignment to avoid
-            // competing "up" targets that create pitch rocking on steepening slopes.
             float t = 1f - Mathf.Exp(-alignNormalSmoothSpeed * Time.fixedDeltaTime);
-            _alignNormal = Vector3.Slerp(_alignNormal, _groundNormal.sqrMagnitude > 0.0001f ? _groundNormal.normalized : Vector3.up, t);
+
+            Vector3 targetUp;
+            if (grindingSurface && _grindNormal.sqrMagnitude > 0.0001f)
+                targetUp = _grindNormal.normalized;
+            else if (_groundNormal.sqrMagnitude > 0.0001f)
+                targetUp = _groundNormal.normalized;
+            else
+                targetUp = Vector3.up;
+
+            _alignNormal = Vector3.Slerp(_alignNormal, targetUp, t);
         }
         else
         {
             _alignNormal = Vector3.Slerp(_alignNormal, Vector3.up, 0.05f);
         }
+
         UpdateBodyCollisionStability();
         UpdateTipContactStability();
 
@@ -1119,8 +1373,17 @@ public class SkiController : MonoBehaviour
         // Ground modes: normal skiing and the first landing frame share the
         // same core force application. The *difference* is how we treat
         // stickiness inside ApplyGroundForces (see below).
-        if (_movementMode == MovementMode.Skiing ||
-            _movementMode == MovementMode.Landing)
+        //
+        // While grinding-in-air we intentionally skip ski steering / skate / poles / slope alignment.
+        // The rail constraint (UpdateGrinding) + gravity should dominate.
+        if (grindingSurface)
+        {
+            // No snow friction/steering, but allow hybrid yaw/pitch control.
+            ApplyGroundForces(); // early-outs while grinding so no snow friction is applied
+            ApplyGrindControl();
+        }
+        else if (_movementMode == MovementMode.Skiing ||
+                 _movementMode == MovementMode.Landing)
         {
             ApplyGroundForces();
             DetectAndApplySkatePushes();
@@ -1272,47 +1535,42 @@ public class SkiController : MonoBehaviour
 
     private void HandleJumpInput()
     {
-        if (!HasJumpInput)
-        {
-            _jumpQueued = false;
-            _jumpHeld = false;
-            _jumpReleaseQueued = false;
-            _jumpMustFireWhileGrinding = false;
+        if (jumpAction == null || jumpAction.action == null)
             return;
-        }
 
         var action = jumpAction.action;
+
+        // IMPORTANT: do NOT use else-if here.
+        // The Input System can report pressed+released in the same Update for quick taps.
         bool pressedThisFrame = action.WasPressedThisFrame();
         bool releasedThisFrame = action.WasReleasedThisFrame();
 
         if (pressedThisFrame)
         {
-            // If jump begins while grinding, allow it to fire only while grind remains active
-            // (prevents buffered "surprise jump" after falling off the rail).
-            if (_grindActive)
-                _jumpMustFireWhileGrinding = true;
-
-            _jumpHeld = true;
-            _lastJumpPressedTime = Time.time;
+            // Arm a charged jump (fires on release)
             _jumpQueued = true;
+            _jumpHeld = true;
             _jumpReleaseQueued = false;
+            _lastJumpPressedTime = Time.time;
+
+            // If jump was initiated while grinding, require it to fire while still grinding.
+            _jumpMustFireWhileGrinding = _grindActive;
         }
-        else if (releasedThisFrame)
+
+        if (releasedThisFrame)
         {
             _jumpHeld = false;
 
+            // If we have a queued jump, release will trigger it (or buffer it briefly).
             if (_jumpQueued)
-            {
-                // We jump on release (existing behavior)
                 _jumpReleaseQueued = true;
-            }
         }
 
-        // Drop stale queued jumps (unless we're still holding, or waiting for release to fire).
+        // Drop stale queued jump if not held and not released for too long.
         if (_jumpQueued &&
             !_jumpHeld &&
             !_jumpReleaseQueued &&
-            (Time.time - _lastJumpPressedTime > jumpBufferTime))
+            (Time.time - _lastJumpPressedTime) > jumpBufferTime)
         {
             _jumpQueued = false;
             _jumpMustFireWhileGrinding = false;
@@ -1333,6 +1591,14 @@ public class SkiController : MonoBehaviour
         if (_stacked)
         {
             _movementMode = MovementMode.Stacked;
+            return;
+        }
+
+        // Grinding-in-air is a separate constraint system (rail spring/damp + alignment + rail gravity).
+        // Do not treat it as grounded locomotion or we will run ground forces/alignment that fight the rail.
+        if (_grindActive && !HasAnySkiContact && !_isGrounded)
+        {
+            _movementMode = MovementMode.Airborne;
             return;
         }
 
@@ -1376,16 +1642,14 @@ public class SkiController : MonoBehaviour
     private void CheckGround()
     {
         bool haveSkiContact = HasAnySkiContact;
+        bool haveSkiHardContact = HasAnySkiCollisionContact;
 
         // If we've just jumped, enforce a short ungrounded window so the jump
-        // can actually leave the surface instead of instantly re-sticking on
-        // steep slopes. BUT: if a ski is physically colliding (tips or base),
-        // we trust that and allow a landing.
-        if (Time.time - _lastJumpTime < minJumpUngroundedTime && !haveSkiContact)
+        // can actually leave the surface instead of instantly re-sticking.
+        // We ONLY allow bypassing this window if we have a real collision contact.
+        if (Time.time - _lastJumpTime < minJumpUngroundedTime && !haveSkiHardContact)
         {
             _isGrounded = false;
-            //_leftGrounded = false;
-            //_rightGrounded = false;
             _groundNormal = Vector3.up;
             return;
         }
@@ -1406,12 +1670,8 @@ public class SkiController : MonoBehaviour
         Vector3 centerOrigin = transform.position + Vector3.up * groundCheckHeight;
         float maxDist = groundCheckHeight + groundCheckDistance;
 
-        bool IsRideable(Vector3 n)
-        {
-            if (n.sqrMagnitude < 0.0001f) return false;
-            float slopeAngle = Vector3.Angle(n.normalized, Vector3.up);
-            return slopeAngle <= maxGroundSlopeAngle;
-        }
+        bool IsRideable(Vector3 n) => IsRideableNormal(n);
+
 
         if (Physics.SphereCast(centerOrigin, groundCheckRadius, Vector3.down,
                                out RaycastHit centerHit, maxDist, groundLayers,
@@ -1427,6 +1687,8 @@ public class SkiController : MonoBehaviour
                 _lastGroundedTime = Time.time;
             }
         }
+
+        _nearGroundForJump = nearGround;
 
         bool wasGroundedBefore = _isGrounded;
 
@@ -1499,23 +1761,93 @@ public class SkiController : MonoBehaviour
 
     }
 
+    private void UpdateSlopeCache()
+    {
+        // Cache slope info once per FixedUpdate to avoid repeated Angle/acos calls across systems.
+        if (!IsGroundedForControls || _groundNormal.sqrMagnitude < 0.0001f)
+        {
+            _slopeAngleDeg = 0f;
+            _slopeT20 = 0f;
+            _slopeT35 = 0f;
+            return;
+        }
+
+        Vector3 n = _groundNormal.normalized;
+        float upDot = Mathf.Clamp(Vector3.Dot(n, Vector3.up), -1f, 1f);
+
+        _slopeAngleDeg = Mathf.Acos(upDot) * Mathf.Rad2Deg;
+        _slopeT20 = Mathf.Clamp01(Mathf.InverseLerp(minSlopeAngleForDownhill, 20f, _slopeAngleDeg));
+        _slopeT35 = Mathf.Clamp01(Mathf.InverseLerp(minSlopeAngleForDownhill, 35f, _slopeAngleDeg));
+    }
+
     // ----------------------------------------------------------------------
     // ANTI-CLIPPING (SKI CLEARANCE)
     // ----------------------------------------------------------------------
+    private void RefreshRideableSlopeCache()
+    {
+        // Keep this robust for runtime tuning (inspector edits during play).
+        if (!Mathf.Approximately(_cachedMaxGroundSlopeAngle, maxGroundSlopeAngle))
+        {
+            _cachedMaxGroundSlopeAngle = maxGroundSlopeAngle;
+            _cosMaxGroundSlope = Mathf.Cos(maxGroundSlopeAngle * Mathf.Deg2Rad);
+        }
+    }
+    // ----------------------------------------------------------------------
+    // Cached slope values for grounded systems (friction, traverse hold, etc.)
+    // ----------------------------------------------------------------------
+    private void RefreshSlopeCache()
+    {
+        if (_groundNormal.sqrMagnitude < 0.0001f)
+        {
+            _slopeAngleDeg = 0f;
+            _slopeT20 = 0f;
+            _slopeT35 = 0f;
+            return;
+        }
+
+        // _groundNormal is expected to be normalized, but clamp defensively.
+        float y = Mathf.Clamp(_groundNormal.y, -1f, 1f);
+        _slopeAngleDeg = Mathf.Acos(y) * Mathf.Rad2Deg;
+        _slopeT20 = Mathf.InverseLerp(minSlopeAngleForDownhill, 20f, _slopeAngleDeg);
+        _slopeT35 = Mathf.InverseLerp(minSlopeAngleForDownhill, 35f, _slopeAngleDeg);
+    }
+
+    private void RefreshMaxGroundSlopeCache()
+    {
+        if (float.IsNaN(_cachedMaxGroundSlopeAngle) || !Mathf.Approximately(_cachedMaxGroundSlopeAngle, maxGroundSlopeAngle))
+        {
+            _cachedMaxGroundSlopeAngle = maxGroundSlopeAngle;
+            _cosMaxGroundSlope = Mathf.Cos(maxGroundSlopeAngle * Mathf.Deg2Rad);
+        }
+    }
 
     private bool IsRideableNormal(Vector3 n)
     {
-        if (n.sqrMagnitude < 0.0001f) return false;
-        float slopeAngle = Vector3.Angle(n.normalized, Vector3.up);
-        return slopeAngle <= maxGroundSlopeAngle;
+        if (n.sqrMagnitude < 0.0001f)
+            return false;
+
+        RefreshMaxGroundSlopeCache();
+
+        // Rideable when the normal is within maxGroundSlopeAngle of world-up.
+        // Equivalent to Angle(n, up) <= maxAngle, but avoids acos/Angle cost.
+        float upDot = Vector3.Dot(n.normalized, Vector3.up);
+        return upDot >= _cosMaxGroundSlope;
     }
 
     private bool TryComputeRequiredLift(Vector3 up, out float requiredLift)
     {
         float lift = 0f;
 
+        // Be robust: treat input as potentially un-normalized.
         if (up.sqrMagnitude < 0.0001f) up = Vector3.up;
-        up.Normalize();
+        else up = up.normalized;
+
+        float dist = skiProbeUp + skiProbeDown;
+        if (dist <= 0.0001f)
+        {
+            requiredLift = 0f;
+            return false;
+        }
 
         bool gotAnyHit = false;
 
@@ -1524,14 +1856,13 @@ public class SkiController : MonoBehaviour
             if (skiT == null) return;
 
             Vector3 origin = skiT.position + up * skiProbeUp;
-            float dist = skiProbeUp + skiProbeDown;
 
             if (Physics.Raycast(origin, -up, out RaycastHit hit, dist, groundLayers, QueryTriggerInteraction.Ignore))
             {
+                gotAnyHit = true;
+
                 if (!IsRideableNormal(hit.normal))
                     return;
-
-                gotAnyHit = true;
 
                 // Signed distance of ski point above ground along "up".
                 float signedDist = Vector3.Dot(skiT.position - hit.point, up);
@@ -1558,8 +1889,54 @@ public class SkiController : MonoBehaviour
         // Prefer ground normal when grounded; otherwise use world up.
         Vector3 up = (_groundNormal.sqrMagnitude > 0.0001f) ? _groundNormal.normalized : Vector3.up;
 
+        int frame = Time.frameCount;
+
+        // Adaptive cadence: when we're stably skiing and last checks found no lift required,
+        // avoid raycasting every physics step.
+        if (!hardSnap)
+        {
+            // Only treat "stable" as Skiing. During Landing/Airborne states, never skip.
+            if (_movementMode == MovementMode.Skiing)
+            {
+                float vIntoGround = Vector3.Dot(_rb.linearVelocity, -up); // positive = moving into ground along up
+                bool highRisk = (vIntoGround > 1.0f); // impacts / steep compressions
+
+                // Ramp up skip cadence as stability increases:
+                // 0–3 stable frames: check every frame
+                // 4–11 stable frames: check every 2 frames
+                // 12+ stable frames: check every 3 frames
+                int cadence = (_antiClipStableFrames >= 12) ? 3 : (_antiClipStableFrames >= 4) ? 2 : 1;
+
+                if (!highRisk && _antiClipLastLiftNeeded <= 0.0001f && cadence > 1)
+                {
+                    if ((frame - _antiClipLastCheckedFrame) < cadence)
+                        return; // Skip raycasts this step
+                }
+            }
+            else
+            {
+                _antiClipStableFrames = 0;
+            }
+        }
+
+        _antiClipLastCheckedFrame = frame;
+
         if (!TryComputeRequiredLift(up, out float liftNeeded))
+        {
+            _antiClipLastLiftNeeded = 0f;
+
+            // Only count stability while actually skiing (prevents “stable” buildup while in air).
+            if (!hardSnap && _movementMode == MovementMode.Skiing)
+                _antiClipStableFrames = Mathf.Min(_antiClipStableFrames + 1, 60);
+            else
+                _antiClipStableFrames = 0;
+
             return;
+        }
+
+        // We have positive lift requirement.
+        _antiClipLastLiftNeeded = liftNeeded;
+        _antiClipStableFrames = 0;
 
         // Cap + smooth the correction to avoid pops.
         float dt = Time.fixedDeltaTime;
@@ -1720,8 +2097,18 @@ public class SkiController : MonoBehaviour
         if (isHardSlam)
         {
             _dbgLastStackReason = "HardSlam";
-            TriggerStack(ComputeStackTorqueAxisFromContacts());
+
+            float sevHardSlam;
+            {
+                float sFall = Mathf.InverseLerp(hardLandingMinFallHeight, hardLandingMinFallHeight * 2.5f, fallHeight);
+                float sDown = Mathf.InverseLerp(hardLandingMinDownwardSpeed, hardLandingMinDownwardSpeed * 2.5f, downwardSpeed);
+                float sAng = Mathf.InverseLerp(hardLandingMinImpactAngleFromPlane, 90f, impactAngleFromPlane);
+                sevHardSlam = Mathf.Clamp01(Mathf.Max(sFall, sDown) * 0.7f + sAng * 0.3f);
+            }
+
+            TriggerStack(sevHardSlam, ComputeStackTorqueAxisFromContacts());
             return;
+
         }
 
         // Misalignment between where we're travelling on the slope and where we're facing.
@@ -1791,7 +2178,14 @@ public class SkiController : MonoBehaviour
         {
             if (tipDigAngle > heavyTipStackAngle)
             {
-                TriggerStack(ComputeStackTorqueAxisFromContacts());
+                float sevNose;
+                {
+                    float sNose = Mathf.InverseLerp(heavyTipStackAngle, heavyTipStackAngle + 45f, tipDigAngle);
+                    float sDown = Mathf.InverseLerp(hardLandingMinDownwardSpeed * 0.6f, hardLandingMinDownwardSpeed * 2.0f, downwardSpeed);
+                    sevNose = Mathf.Clamp01(Mathf.Max(sNose, sDown));
+                }
+                _dbgLastStackReason = "Tip Dig";
+                TriggerStack(sevNose, ComputeStackTorqueAxisFromContacts());
             }
             else
             {
@@ -1816,9 +2210,20 @@ public class SkiController : MonoBehaviour
 
         if (tooTilted || tooMisaligned || tooNoseDown)
         {
-            TriggerStack(ComputeStackTorqueAxisFromContacts());
+            float sev;
+            {
+                float sTilt = Mathf.InverseLerp(maxLandingTiltAngle, maxLandingTiltAngle + 60f, tiltAngle);
+                float sMis = Mathf.InverseLerp(misalignLimit, misalignLimit + 90f, misalignAngle);
+                float sNose = Mathf.InverseLerp(heavyTipStackAngle, heavyTipStackAngle + 45f, tipDigAngle);
+                float sSpeed = Mathf.InverseLerp(minLandingSpeedForStackCheck, minLandingSpeedForStackCheck + 12f, planarSpeed);
+
+                sev = Mathf.Clamp01(Mathf.Max(sTilt, sMis, sNose) * 0.85f + sSpeed * 0.15f);
+            }
+            _dbgLastStackReason = "Bad Landing";
+            TriggerStack(sev, ComputeStackTorqueAxisFromContacts());
             return;
         }
+
 
         PreserveLandingVelocityOnSlope(projectionOnSteep);
         _landingAssistUntil = Time.time + landingAlignBoostDuration;
@@ -1864,14 +2269,20 @@ public class SkiController : MonoBehaviour
         _rb.linearVelocity = newVel;
     }
 
-    private void TriggerStack()
-    {
-        TriggerStack(ComputeStackTorqueAxisFromContacts());
-    }
-
     private void TriggerStack(Vector3 torqueAxisWorld)
     {
+        TriggerStack(ComputeGenericStackSeverity01(), torqueAxisWorld);
+    }
+
+    private void TriggerStack(float severity01, Vector3 torqueAxisWorld)
+    {
         if (_stacked) return;
+
+        severity01 = Mathf.Clamp01(severity01);
+
+        // Apply soreness impact before we freeze state.
+        if (sorenessMeter != null)
+            sorenessMeter.AddImpact(severity01);
 
         _stacked = true;
         _rb.freezeRotation = false;
@@ -1884,6 +2295,8 @@ public class SkiController : MonoBehaviour
         {
             Vector3 n = _groundNormal.sqrMagnitude > 0.0001f ? _groundNormal.normalized : Vector3.up;
             Vector3 v = _rb.linearVelocity;
+            Vector3 p0 = _hasNonSkiGroundContact ? _nonSkiGroundContactPoint : transform.position;
+            OnStacked?.Invoke(new StackEventInfo(p0, n, severity01, _dbgLastStackReason));
 
             float into = Vector3.Dot(v, n);
             if (into < 0f)
@@ -2007,24 +2420,6 @@ public class SkiController : MonoBehaviour
         return transform.forward * sign;
     }
 
-    private void SnapOrientationToGround()
-    {
-        Vector3 skiDir = GetCombinedSkiForwardOnPlane();
-        if (skiDir.sqrMagnitude < 0.0001f)
-        {
-            skiDir = Vector3.ProjectOnPlane(transform.forward, _groundNormal);
-            if (skiDir.sqrMagnitude < 0.0001f)
-            {
-                skiDir = Vector3.ProjectOnPlane(Vector3.forward, _groundNormal);
-            }
-        }
-
-        Quaternion targetRot = Quaternion.LookRotation(skiDir.normalized, _groundNormal);
-        transform.rotation = targetRot;
-
-        _rb.angularVelocity = Vector3.zero;
-        _rb.freezeRotation = true;
-    }
     private void TryAutoRecoverFromStack()
     {
         if (!_stacked || !_isGrounded)
@@ -2459,18 +2854,18 @@ public class SkiController : MonoBehaviour
 
         float frictionScale =
             1f
-            - tuck * tuckFrictionReduction
-            + brake * brakeFrictionIncrease;
+            - tuck * (tuckFrictionReduction * _gearTuning.tuckEffectMul)
+            + brake * (brakeFrictionIncrease * _gearTuning.brakeEffectMul);
 
         // Slight extra slip when neutral leaning on slopes (feels like gravity is doing the work).
         // Only apply when we're actually on a slope.
-        float slopeAngle = Vector3.Angle(_groundNormal, Vector3.up);
-        float slopeT = Mathf.InverseLerp(minSlopeAngleForDownhill, 20f, slopeAngle);
+        float slopeT = _slopeT20;
+
         float neutral = 1f - Mathf.Clamp01(Mathf.Abs(_forwardLean));
         frictionScale *= 1f - neutralSlipBoost * neutral * slopeT;
 
-        float forwardFric = forwardFriction * edgeFactor * frictionScale;
-        float sideFric = sideFriction * edgeFactor * frictionScale;
+        float forwardFric = (forwardFriction * _gearTuning.forwardFrictionMul) * edgeFactor * frictionScale;
+        float sideFric = (sideFriction * _gearTuning.sideFrictionMul) * edgeFactor * frictionScale;
 
         friction += -vAlongVec * forwardFric;
         friction += -vAcrossVec * sideFric;
@@ -2485,6 +2880,11 @@ public class SkiController : MonoBehaviour
     private void ApplyGroundForces()
     {
         Vector3 velocity = _rb.linearVelocity;
+
+        // While grinding (and not actually on snow), let the grind constraint + gravity drive motion.
+        // This avoids snow friction / carve steering fighting a rail slide.
+        if (_grindActive && !HasAnySkiContact && !_isGrounded)
+            return;
 
         // ------------------------------------------------------------------
         // Normal-axis velocity management (ground stickiness)
@@ -2572,12 +2972,9 @@ public class SkiController : MonoBehaviour
             {
                 Vector3 skiDirN = skiDir.normalized;
 
-                // Angle between current travel direction and where the skis are pointing.
-                // Large angle + high carveFactor at speed => intentional skid/quick-stop.
-                float turnAngle = Vector3.Angle(planeDir, skiDirN);
-
                 // Normal carve steering (existing behaviour).
-                float steerAmount = carveFactor * carveSteerStrength * Time.fixedDeltaTime;
+                float dt = Time.fixedDeltaTime;
+                float steerAmount = carveFactor * (carveSteerStrength * _gearTuning.carveSteerMul) * dt;
                 Vector3 steeredDir = Vector3.Slerp(planeDir, skiDirN, steerAmount).normalized;
 
                 // Apply steering while preserving speed (for now).
@@ -2585,16 +2982,24 @@ public class SkiController : MonoBehaviour
                 float newPlaneSpeed = planeSpeed;
 
                 // --- Quick Stop: extra planar damping when turning sharply at speed ---
-                // Uses exponential damping for stability across framerates.
-                if (quickStopStrength > 0f && planeSpeed >= quickStopMinSpeed && turnAngle >= quickStopMinTurnAngle)
+                // Avoid Angle/acos unless the dot test says we are past the minimum angle.
+                float quickStopEff = quickStopStrength * _gearTuning.quickStopMul;
+                if (_forwardLean < 0f && quickStopEff > 0f && planeSpeed >= quickStopMinSpeed)
                 {
-                    float angleT = Mathf.InverseLerp(quickStopMinTurnAngle, 90f, turnAngle);
-                    float stopT = carveFactor * angleT;
+                    float dot = Mathf.Clamp(Vector3.Dot(planeDir, skiDirN), -1f, 1f);
+                    float cosMin = Mathf.Cos(quickStopMinTurnAngle * Mathf.Deg2Rad);
 
-                    // Exponential damping: speed *= exp(-k * dt)
-                    float k = quickStopStrength * stopT;
-                    float speedMul = Mathf.Exp(-k * Time.fixedDeltaTime);
-                    newPlaneSpeed *= speedMul;
+                    // dot <= cos(minAngle)  <=>  angle >= minAngle
+                    if (dot <= cosMin)
+                    {
+                        float turnAngle = Mathf.Acos(dot) * Mathf.Rad2Deg;
+                        float angleT = Mathf.InverseLerp(quickStopMinTurnAngle, 90f, turnAngle);
+                        float stopT = carveFactor * angleT;
+
+                        // Exponential damping: speed *= exp(-k * dt)
+                        float k = quickStopEff * stopT;
+                        newPlaneSpeed *= Mathf.Exp(-k * dt);
+                    }
                 }
 
                 newVel = steeredDir * newPlaneSpeed + normalComponent;
@@ -2609,7 +3014,7 @@ public class SkiController : MonoBehaviour
         if (!_jumpQueued)
             return;
 
-        // We only jump on release (your existing design).
+        // We only jump on release (existing design).
         if (!_jumpReleaseQueued)
             return;
 
@@ -2622,9 +3027,14 @@ public class SkiController : MonoBehaviour
             return;
         }
 
-        // Allow jump when grounded, shortly after leaving ground (coyote), OR while grinding.
-        bool withinCoyote = !_isGrounded && (Time.time - _lastGroundedTime <= jumpCoyoteTime);
-        bool canJumpNow = _isGrounded || withinCoyote || _grindActive;
+        // Strict rule: only allow jumping when truly grounded (body spherecast / hard collision)
+        // or while the rail-assist ("grind") is active.
+        bool hardGrounded =
+            _nearGroundForJump ||
+            (leftSkiContact != null && leftSkiContact.HasCollisionContact) ||
+            (rightSkiContact != null && rightSkiContact.HasCollisionContact);
+
+        bool canJumpNow = (_isGrounded || hardGrounded || _grindActive);
 
         if (!canJumpNow)
         {
@@ -2656,13 +3066,16 @@ public class SkiController : MonoBehaviour
             return;
         }
 
-        // If we are grinding, detach right before applying the impulse so grind forces do not dampen it.
+        // If we are grinding, capture rail frame data, then detach right before applying the impulse
+        // so assist forces do not dampen it.
+        bool jumpedFromGrind = _grindActive;
+        Vector3 grindTan = _grindTangent;
+        Vector3 grindUp = _grindNormal;
+        Vector3 grindDeltaToRail = _grindDeltaToRail; // closestPoint - referencePoint (points FROM rider TO rail)
+
         if (_grindActive)
         {
-            _grindDetachRequested = false;  // avoid double-pop if you have separate detach logic
             _grindActive = false;
-
-            // If your grind system uses these, keep them; if not present, remove these lines:
             _grindStrengthSmoothed = 0f;
             _grindReattachCooldownUntil = Time.time + Mathf.Max(0f, grindReattachCooldown);
         }
@@ -2674,6 +3087,7 @@ public class SkiController : MonoBehaviour
         float chargeT = maxJumpChargeTime > 0f
             ? Mathf.Clamp01(holdDuration / maxJumpChargeTime)
             : 1f;
+
         _dbgJumpChargeT = chargeT;
 
         float minForce = Mathf.Min(jumpForceRange.x, jumpForceRange.y);
@@ -2696,12 +3110,18 @@ public class SkiController : MonoBehaviour
 
         jumpForce *= speedMultiplier;
 
+        // Scale by soreness performance (exertion affects impulse-producing actions only).
+        float perfMult = GetPerformanceMult();
+        jumpForce *= perfMult;
+
         // ------------------------------------------------------------------
         // 2. Jump direction (slope-aware)
         // ------------------------------------------------------------------
-        Vector3 baseDir = _groundNormal.sqrMagnitude > 0.0001f
-            ? _groundNormal.normalized
-            : Vector3.up;
+        Vector3 baseDir;
+        if (jumpedFromGrind && grindUp.sqrMagnitude > 0.0001f)
+            baseDir = grindUp.normalized;
+        else
+            baseDir = (_groundNormal.sqrMagnitude > 0.0001f) ? _groundNormal.normalized : Vector3.up;
 
         float slopeAngle = Vector3.Angle(baseDir, Vector3.up);
         float upBlendT = Mathf.InverseLerp(jumpUpBlendStartAngle, jumpUpBlendEndAngle, slopeAngle);
@@ -2710,6 +3130,46 @@ public class SkiController : MonoBehaviour
         _dbgJumpSlopeAngle = slopeAngle;
         _dbgJumpUpBlendT = Mathf.Clamp01(upBlendT);
         _dbgJumpDir = jumpDir;
+
+        // If we jumped off a rail, bias the jump slightly away from the rail and cancel "into-rail" velocity
+        // to prevent immediate re-catch / damped pop.
+        if (jumpedFromGrind)
+        {
+            // Outward = rail -> rider (opposite of deltaToRail)
+            Vector3 outward = -grindDeltaToRail;
+
+            // Remove any component along the rail tangent so the bias is genuinely "off the rail", not along it.
+            if (grindTan.sqrMagnitude > 0.0001f)
+                outward = Vector3.ProjectOnPlane(outward, grindTan);
+
+            // Keep outward mostly lateral relative to the primary jump direction (so we don’t kill pop).
+            outward = Vector3.ProjectOnPlane(outward, jumpDir);
+
+            if (outward.sqrMagnitude > 0.0001f)
+            {
+                outward.Normalize();
+
+                // Small constant bias (kept as code constant to avoid adding another inspector parameter).
+                const float outwardBias = 0.45f;
+
+                Vector3 biased = (jumpDir + outward * outwardBias);
+                if (biased.sqrMagnitude > 0.0001f)
+                    jumpDir = biased.normalized;
+            }
+
+            // Cancel velocity into the rail centerline (deltaToRail points rider->rail; positive dot means moving into rail).
+            if (grindDeltaToRail.sqrMagnitude > 0.0001f)
+            {
+                Vector3 radialDir = grindDeltaToRail.normalized;
+                Vector3 v = _rb.linearVelocity;
+                float vIntoRail = Vector3.Dot(v, radialDir);
+                if (vIntoRail > 0f)
+                {
+                    v -= radialDir * vIntoRail;
+                    _rb.linearVelocity = v;
+                }
+            }
+        }
 
         // Cancel any into-surface component so we always "pop".
         float intoSurface = Vector3.Dot(_rb.linearVelocity, jumpDir);
@@ -2725,8 +3185,13 @@ public class SkiController : MonoBehaviour
         // ------------------------------------------------------------------
         _rb.AddForce(jumpDir * jumpForce, ForceMode.VelocityChange);
 
+        // Exertion: jumping costs soreness proportional to the impulse.
+        if (sorenessMeter != null && sorenessPerJumpImpulse > 0f)
+            sorenessMeter.AddExertion(jumpForce * sorenessPerJumpImpulse);
+
         _lastJumpTime = Time.time;
         _isGrounded = false;
+        _nearGroundForJump = false;
         _airborneStartTime = _lastJumpTime;
 
         BeginAirEntry(resetYaw: false);
@@ -2802,13 +3267,13 @@ public class SkiController : MonoBehaviour
         pushDir.Normalize();
 
         float leanT = Mathf.Clamp01((_forwardLean + 1f) * 0.5f);
-        float impulse = skateImpulse * leanT * speedFactor;
+        float impulse = (skateImpulse * _gearTuning.skateImpulseMul) * leanT * speedFactor;
 
         // ------------------------------------------------------------
         // Uphill penalty: reduce (and optionally counter) skate pushes
         // when the skier is attempting to push uphill on steep slopes.
         // ------------------------------------------------------------
-        float slopeAngle = Vector3.Angle(_groundNormal, Vector3.up);
+        float slopeAngle = _slopeAngleDeg;
 
         // Downhill direction on the current ground plane.
         Vector3 downhill = Vector3.ProjectOnPlane(Vector3.down, _groundNormal);
@@ -2843,7 +3308,19 @@ public class SkiController : MonoBehaviour
             }
         }
 
+        // Scale by soreness performance.
+        float perfMult = GetPerformanceMult();
+        impulse *= perfMult;
+
         _rb.AddForce(pushDir * impulse, ForceMode.VelocityChange);
+
+        // Exertion: skating costs more when pushing uphill.
+        if (sorenessMeter != null && sorenessPerSkateImpulse > 0f)
+        {
+            float uphill01 = ComputeUphill01(pushDir);
+            float uphillFactor = (0.25f + 0.75f * uphill01);
+            sorenessMeter.AddExertion(impulse * sorenessPerSkateImpulse * uphillFactor);
+        }
 
         // Small waddle yaw, but only if we're moving at least a bit.
         float planeSpeed = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal).magnitude;
@@ -2878,41 +3355,26 @@ public class SkiController : MonoBehaviour
         Vector3 velPlane = Vector3.ProjectOnPlane(vel, _groundNormal);
         float speed = velPlane.magnitude;
 
-        // Combined ski forward on the plane (our "intended" travel direction).
-        Vector3 skiDir = GetCombinedSkiForwardOnPlane();
-        if (skiDir.sqrMagnitude < 0.0001f)
+        // Downhill direction on the ground plane.
+        Vector3 downhill = Vector3.ProjectOnPlane(Vector3.down, _groundNormal);
+        float downhillMag = downhill.magnitude;
+
+        float downhillDot = 0f;
+        if (downhillMag > 0.0001f && velPlane.sqrMagnitude > 0.0001f)
         {
-            skiDir = Vector3.ProjectOnPlane(transform.forward, _groundNormal);
-            if (skiDir.sqrMagnitude < 0.0001f)
-                return;
+            downhill /= downhillMag;
+            downhillDot = Vector3.Dot(velPlane.normalized, downhill); // +1 downhill, -1 uphill
         }
-        skiDir.Normalize();
 
-        // Downhill direction on the surface.
-        Vector3 downhillDir = Vector3.ProjectOnPlane(Vector3.down, _groundNormal);
-        if (downhillDir.sqrMagnitude > 0.0001f)
-            downhillDir.Normalize();
-        else
-            downhillDir = skiDir;
+        // How effective poles are depending on downhill vs uphill.
+        float downhillFactor = Mathf.Lerp(poleUphillEffectiveness, 1f, Mathf.Clamp01((downhillDot + 1f) * 0.5f));
 
-        // Is any pole actually in contact with the snow?
-        bool anyPoleContact = false;
-        if (leftPoleContact != null && leftPoleContact.IsInContact)
-            anyPoleContact = true;
-        if (!anyPoleContact && rightPoleContact != null && rightPoleContact.IsInContact)
-            anyPoleContact = true;
-
-        // How much our skis point down the hill (1) vs uphill (-1).
-        float downhillDot = Vector3.Dot(skiDir, downhillDir);
-
-        // Use this to tune strength of push/brake by slope angle.
-        float downhillFactor = Mathf.InverseLerp(-0.3f, 0.7f, downhillDot);
-
-        // Poles are less effective at very high speeds.
+        // Cap effectiveness at higher speeds (pushes matter less at high speed).
         float speedFactor = 1f;
-        if (poleMaxSpeed > 0.01f)
+        if (speed > poleMaxSpeed)
         {
-            float tSpeed = Mathf.Clamp01(speed / poleMaxSpeed);
+            float tSpeed = Mathf.InverseLerp(poleMaxSpeed, poleMaxSpeed * 1.7f, speed);
+            float minPoleSpeedFactor = 0.25f;
 
             // Curved falloff: 1 at low speeds, then easing down as we approach max.
             float falloff = 1f - tSpeed * tSpeed; // quadratic falloff
@@ -2929,6 +3391,10 @@ public class SkiController : MonoBehaviour
 
         float phaseT = Mathf.Clamp01(_poleStrokeT);
 
+        float perfMult = GetPerformanceMult();
+        float dt = Time.fixedDeltaTime;
+        float uphill01 = Mathf.Clamp01(-downhillDot); // 0 downhill, 1 fully uphill
+
         switch (_polePhase)
         {
             // ENTRY: pressing poles forward/down before they fully bite.
@@ -2937,84 +3403,94 @@ public class SkiController : MonoBehaviour
                     // A small assist that grows through the entry stroke.
                     float entryStrength = phaseT;
                     float accel =
-                        poleImpulse
+                        ((poleImpulse * _gearTuning.poleImpulseMul) * perfMult)
                         * 0.5f
                         * entryStrength
                         * (0.4f + 0.6f * leanT)
                         * downhillFactor
                         * speedFactor;
 
-                    _rb.AddForce(skiDir * accel, ForceMode.Acceleration);
+                    Vector3 skiDir = GetCombinedSkiForwardOnPlane();
+                    if (skiDir.sqrMagnitude > 0.0001f)
+                    {
+                        _rb.AddForce(skiDir * accel, ForceMode.Acceleration);
+
+                        if (sorenessMeter != null && sorenessPerPoleImpulse > 0f)
+                        {
+                            float dv = Mathf.Max(0f, accel) * dt;
+                            float uphillFactor = (0.35f + 0.65f * uphill01);
+                            sorenessMeter.AddExertion(dv * sorenessPerPoleImpulse * uphillFactor);
+                        }
+                    }
                     break;
                 }
 
             // DRAG: poles are dug in; main braking effect, modulated by slope + speed.
             case PoleStrokePhase.Drag:
                 {
-                    if (!anyPoleContact)
-                        break;
-
-                    Vector3 vAlong = Vector3.Project(velPlane, skiDir);
-                    if (vAlong.sqrMagnitude > 0.0001f)
+                    if (speed > 0.25f && downhillMag > 0.0001f)
                     {
-                        Vector3 brakeDir = -vAlong.normalized;
+                        Vector3 brakeDir = -velPlane.normalized;
 
-                        // More drag when travelling fast, and when aiming more uphill.
-                        float uphillBias = Mathf.Clamp01(-downhillDot); // 0 downhill, 1 fully uphill
-
+                        // Braking strength scales with phase + speed.
                         float brake =
                             poleBrakeStrength
-                            * (0.3f + 0.7f * uphillBias)
-                            * (0.3f + 0.7f * leanT)
-                            * (0.4f + 0.6f * Mathf.Clamp01(speed / poleMaxSpeed));
+                            * (0.35f + 0.65f * phaseT)
+                            * Mathf.Clamp01(speed / 8f)
+                            * (0.7f + 0.3f * (1f - leanT)); // leaning forward reduces brake a touch
 
                         _rb.AddForce(brakeDir * brake, ForceMode.Acceleration);
-                    }
 
+                        if (sorenessMeter != null && sorenessPerPoleDragSecond > 0f)
+                        {
+                            float uphillFactor = (0.25f + 0.75f * uphill01);
+                            sorenessMeter.AddExertion(sorenessPerPoleDragSecond * dt * uphillFactor);
+                        }
+                    }
                     break;
                 }
 
-            // FOLLOW-THROUGH: release input while poles are still biting – forward shove.
+            // FOLLOW-THROUGH: poles release; small forward pop then return to idle.
             case PoleStrokePhase.FollowThrough:
                 {
-                    // Normally we want planted-pole behaviour (require contact),
-                    // but from low speeds we'll allow a small "kick" even if the
-                    // raycast misses, so you can get moving.
-                    bool useContact = anyPoleContact;
-
-                    if (!useContact && speed < 2f)
-                    {
-                        useContact = true;
-                        // At low speed with no clear downhill, bias slightly forward.
-                        downhillFactor = Mathf.Max(downhillFactor, 0.5f);
-                    }
-
-                    if (!useContact)
-                        break;
-
-                    // Strongest push at the start of follow-through, fades toward the end.
-                    float pushProfile = 1f - phaseT;
+                    float followStrength = 1f - phaseT;
 
                     float impulse =
-                        poleImpulse
-                        * pushProfile
-                        * (0.4f + 0.6f * leanT)
+                        (poleImpulse * perfMult)
+                        * 0.35f
+                        * followStrength
+                        * (0.55f + 0.45f * leanT)
                         * downhillFactor
                         * speedFactor;
 
-                    Vector3 push = skiDir * Mathf.Max(0f, impulse);
-
-                    // From low speeds, treat this as a direct velocity kick
-                    // so you clearly feel the pole helping you get moving.
-                    if (speed < 2f)
+                    Vector3 skiDir = GetCombinedSkiForwardOnPlane();
+                    if (skiDir.sqrMagnitude > 0.0001f)
                     {
-                        _rb.AddForce(push, ForceMode.VelocityChange);
-                    }
-                    else
-                    {
-                        _rb.AddForce(push, ForceMode.Acceleration);
-                    }
+                        Vector3 push = skiDir * impulse;
 
+                        if (speed < 2.0f)
+                        {
+                            _rb.AddForce(push, ForceMode.VelocityChange);
+
+                            if (sorenessMeter != null && sorenessPerPoleImpulse > 0f)
+                            {
+                                float dv = push.magnitude; // VelocityChange
+                                float uphillFactor = (0.35f + 0.65f * uphill01);
+                                sorenessMeter.AddExertion(dv * sorenessPerPoleImpulse * uphillFactor);
+                            }
+                        }
+                        else
+                        {
+                            _rb.AddForce(push, ForceMode.Acceleration);
+
+                            if (sorenessMeter != null && sorenessPerPoleImpulse > 0f)
+                            {
+                                float dv = push.magnitude * dt; // Acceleration -> delta-v over dt
+                                float uphillFactor = (0.35f + 0.65f * uphill01);
+                                sorenessMeter.AddExertion(dv * sorenessPerPoleImpulse * uphillFactor);
+                            }
+                        }
+                    }
                     break;
                 }
         }
@@ -3026,6 +3502,11 @@ public class SkiController : MonoBehaviour
 
     private void AlignToSkisAndSlope()
     {
+        // Grinding owns alignment via UpdateGrinding() -> ApplyGrindAlignment().
+        // Prevent slope alignment from overriding rail/cable alignment in the same tick.
+        if (_grindActive)
+            return;
+
         // Desired forward comes from skis (already projected on the physics plane).
         Vector3 skiDir = _skiForward;
         if (skiDir.sqrMagnitude < 0.0001f)
@@ -3075,7 +3556,7 @@ public class SkiController : MonoBehaviour
         if (rightSkiContact != null && rightSkiContact.IsGrounded) baseAlign = Mathf.Max(baseAlign, rightSkiContact.BaseContactAlignment);
 
         float stability = Mathf.Clamp01((baseAlign - 0.15f) / (0.6f - 0.15f));
-        float yawSpeed = (groundTurnSpeed * stability) * landingBoost;
+        float yawSpeed = ((groundTurnSpeed * _gearTuning.turnSpeedMul) * stability) * landingBoost;
 
         Quaternion yawTarget = Quaternion.LookRotation(desiredForward, desiredUp);
         float yawT = 1f - Mathf.Exp(-yawSpeed * Time.fixedDeltaTime);
@@ -3144,281 +3625,205 @@ public class SkiController : MonoBehaviour
 
     private bool TryFindBestGrindCandidate(Vector3 referencePoint, float maxDist, out GrindCandidate best)
     {
-        best = default;
+        GrindCandidate bestLocal = default;
 
         float maxSq = maxDist * maxDist;
         float bestSq = maxSq;
 
-        // 1) Optional collider-based detection (good for fence segments, rails with triggers, etc)
-        if (grindLayers.value != 0)
+        bool found = false;
+
+        // 1) Prefer actual contact colliders first (most reliable).
+        // Use *any* contact (not ground-filtered) so rails/fences can be candidates.
+        if (leftSkiContact != null && leftSkiContact.HasAnyCollisionContact)
         {
-            // Non-alloc overlap
-            int hitCount = Physics.OverlapSphereNonAlloc(referencePoint, grindSearchRadius, _grindOverlap, grindLayers, QueryTriggerInteraction.Collide);
-            for (int i = 0; i < hitCount; i++)
-            {
-                Collider c = _grindOverlap[i];
-                if (c == null) continue;
-
-                // Prefer provider on parent objects.
-                // FencePath:
-                FencePath fp = c.GetComponentInParent<FencePath>();
-                if (fp != null && fp.TryGetClosestPointOnPath(referencePoint, out _, out Vector3 cp, out Vector3 tan))
-                {
-                    Vector3 d = cp - referencePoint;
-                    float sq = d.sqrMagnitude;
-                    if (sq < bestSq)
-                    {
-                        bestSq = sq;
-                        best.closestPoint = cp;
-                        best.tangent = tan;
-                        best.delta = d;
-                        best.sqDist = sq;
-                        best.sourceName = fp.name;
-                    }
-                }
-
-                // LiftLine (in case you later add colliders along the cable)
-                LiftLine ll = c.GetComponentInParent<LiftLine>();
-                if (ll != null)
-                {
-                    // Ensure band exists (some lines may not have rebuilt yet in play mode).
-                    if (ll.BandLength <= 0.0001f)
-                        ll.RebuildAnalyticLoop();
-
-                    if (ll.TryGetClosestPointOnBand(referencePoint, out _, out Vector3 cp2, out Vector3 tan2))
-                    {
-                        Vector3 d2 = cp2 - referencePoint;
-                        float sq2 = d2.sqrMagnitude;
-                        if (sq2 < bestSq)
-                        {
-                            bestSq = sq2;
-                            best.closestPoint = cp2;
-                            best.tangent = tan2;
-                            best.delta = d2;
-                            best.sqDist = sq2;
-                            best.sourceName = ll.name;
-                        }
-                    }
-                }
-
-            }
+            if (TryResolveBestFromCollider(leftSkiContact.AnyCollisionOtherCollider, referencePoint, ref bestSq, ref bestLocal))
+                found = true;
         }
 
-        // 2) Lift cables via registry (no colliders required)
-        for (int i = 0; i < LiftLine.ActiveLiftLines.Count; i++)
+        if (rightSkiContact != null && rightSkiContact.HasAnyCollisionContact)
         {
-            LiftLine ll = LiftLine.ActiveLiftLines[i];
-            if (ll == null) continue;
+            if (TryResolveBestFromCollider(rightSkiContact.AnyCollisionOtherCollider, referencePoint, ref bestSq, ref bestLocal))
+                found = true;
+        }
 
-            // Ensure band exists (TryGetClosestPointOnBand returns false if _bandLength <= 0).
+        // 1b) Also consider any-collision/trigger contacts (not filtered by groundLayers).
+        // This is critical for rails/fences/cables that should not be treated as "ground"
+        // but should still be valid grind sources.
+        if (leftSkiContact != null && leftSkiContact.HasAnyCollisionContact)
+        {
+            if (TryResolveBestFromCollider(leftSkiContact.AnyCollisionOtherCollider, referencePoint, ref bestSq, ref bestLocal))
+                found = true;
+        }
+
+        if (rightSkiContact != null && rightSkiContact.HasAnyCollisionContact)
+        {
+            if (TryResolveBestFromCollider(rightSkiContact.AnyCollisionOtherCollider, referencePoint, ref bestSq, ref bestLocal))
+                found = true;
+        }
+
+
+        // 2) Small allowance / air-assist: find nearby grindables even before collision.
+        int count = Physics.OverlapSphereNonAlloc(
+            referencePoint,
+            maxDist,
+            _grindOverlap,
+            grindableLayers,
+            QueryTriggerInteraction.Collide);
+
+        for (int i = 0; i < count; i++)
+        {
+            Collider col = _grindOverlap[i];
+            if (col == null) continue;
+
+            if (TryResolveBestFromCollider(col, referencePoint, ref bestSq, ref bestLocal))
+                found = true;
+        }
+
+        best = bestLocal;
+        return found;
+    }
+
+    private void ResolveGrindProviders(Collider other, out LiftLine ll, out FencePath fp)
+    {
+        ll = null;
+        fp = null;
+
+        if (other == null)
+            return;
+
+        int frame = Time.frameCount;
+
+        // Reset caches each frame (we only ever care about the current frame's repeated lookups).
+        if (_grindProviderCacheFrame != frame)
+        {
+            _grindProviderCacheFrame = frame;
+            _grindProviderCacheColA = _grindProviderCacheColB = null;
+            _grindProviderCacheLiftA = _grindProviderCacheLiftB = null;
+            _grindProviderCacheFenceA = _grindProviderCacheFenceB = null;
+        }
+
+        if (other == _grindProviderCacheColA)
+        {
+            ll = _grindProviderCacheLiftA;
+            fp = _grindProviderCacheFenceA;
+            return;
+        }
+
+        if (other == _grindProviderCacheColB)
+        {
+            ll = _grindProviderCacheLiftB;
+            fp = _grindProviderCacheFenceB;
+            return;
+        }
+
+        // Resolve
+        ll = other.GetComponentInParent<LiftLine>();
+        fp = other.GetComponentInParent<FencePath>();
+
+        // Store (two-slot cache is enough: left + right contacts)
+        if (_grindProviderCacheColA == null)
+        {
+            _grindProviderCacheColA = other;
+            _grindProviderCacheLiftA = ll;
+            _grindProviderCacheFenceA = fp;
+        }
+        else if (_grindProviderCacheColB == null)
+        {
+            _grindProviderCacheColB = other;
+            _grindProviderCacheLiftB = ll;
+            _grindProviderCacheFenceB = fp;
+        }
+    }
+    private bool TryResolveBestFromCollider(Collider other, Vector3 referencePoint, ref float bestSq, ref GrindCandidate best)
+    {
+        if (other == null)
+            return false;
+
+        // NOTE:
+        // Many grind sources (eg. pooled rope proxy colliders) may NOT be on the grindable layer,
+        // even though they belong to a LiftLine/FencePath that is considered grindable.
+        // So we accept a collider if:
+        //  - it is on grindableLayers, OR
+        //  - it resolves to a LiftLine / FencePath provider in its parent chain.
+        bool layerOk = (grindableLayers.value & (1 << other.gameObject.layer)) != 0;
+
+        ResolveGrindProviders(other, out LiftLine ll, out FencePath fp);
+
+        if (!layerOk && ll == null && fp == null)
+            return false;
+
+        if (ll != null)
+        {
             if (ll.BandLength <= 0.0001f)
                 ll.RebuildAnalyticLoop();
 
-            if (!ll.TryGetClosestPointOnBand(referencePoint, out _, out Vector3 cp, out Vector3 tan))
-                continue;
-
-            Vector3 d = cp - referencePoint;
-            float sq = d.sqrMagnitude;
-            if (sq < bestSq)
+            if (ll.TryGetClosestPointOnBand(referencePoint, out _, out Vector3 cp, out Vector3 tan))
             {
-                bestSq = sq;
-                best.closestPoint = cp;
-                best.tangent = tan;
-                best.delta = d;
-                best.sqDist = sq;
-                best.sourceName = ll.name;
+                Vector3 d = cp - referencePoint;
+                float sq = d.sqrMagnitude;
+                if (sq < bestSq)
+                {
+                    bestSq = sq;
+                    best.closestPoint = cp;
+                    best.tangent = tan;
+                    best.delta = d;
+                    best.sqDist = sq;
+                    best.sourceName = ll.name;
+                }
+                return true;
             }
         }
 
-        // 3) Fence paths via registry (works even if segments have no colliders)
-        for (int i = 0; i < FencePath.ActiveFencePaths.Count; i++)
+        if (fp != null)
         {
-            FencePath fp = FencePath.ActiveFencePaths[i];
-            if (fp == null) continue;
-
-            if (!fp.TryGetClosestPointOnPath(referencePoint, out _, out Vector3 cp, out Vector3 tan))
-                continue;
-
-            Vector3 d = cp - referencePoint;
-            float sq = d.sqrMagnitude;
-            if (sq < bestSq)
+            if (fp.TryGetClosestPointOnPath(referencePoint, out _, out Vector3 cp, out Vector3 tan))
             {
-                bestSq = sq;
-                best.closestPoint = cp;
-                best.tangent = tan;
-                best.delta = d;
-                best.sqDist = sq;
-                best.sourceName = fp.name;
+                Vector3 d = cp - referencePoint;
+                float sq = d.sqrMagnitude;
+                if (sq < bestSq)
+                {
+                    bestSq = sq;
+                    best.closestPoint = cp;
+                    best.tangent = tan;
+                    best.delta = d;
+                    best.sqDist = sq;
+                    best.sourceName = fp.name;
+                }
+                return true;
             }
         }
 
-        return bestSq < maxSq;
+        return false;
     }
 
-    // Non-alloc overlap cache
-    private readonly Collider[] _grindOverlap = new Collider[24];
+    private bool TryResolveBestFromContact(SkiContact contact, Vector3 referencePoint, ref float bestSq, ref GrindCandidate best)
+    {
+        if (contact == null)
+            return false;
+
+        return TryResolveBestFromCollider(contact.CollisionOtherCollider, referencePoint, ref bestSq, ref best);
+    }
 
     private void ApplyAirControl()
     {
         float dt = Time.fixedDeltaTime;
 
-        // SAFETY: if we're still grounded or any ski is in contact, do NOT apply
-        // aerial spin/flip controls. Instead, gently damp out any carried air spin.
-        if (_isGrounded || HasAnySkiContact)
+        // If controls consider us grounded (including grinding), do NOT apply air controls.
+        // Instead gently damp any carried air angular velocity.
+        if (IsGroundedForControls || HasAnySkiContact)
         {
-            float damping = Mathf.Max(0f, airAngularDamping);
-            _airAngularVelocity = Vector3.MoveTowards(_airAngularVelocity, Vector3.zero, damping * dt);
-
-            _grindActive = false;
-            _grindStrengthSmoothed = Mathf.MoveTowards(_grindStrengthSmoothed, 0f, grindStrengthResponse * dt);
-            _dbgGrindSource = null;
-
+            _airAngularVelocity = Vector3.MoveTowards(
+                _airAngularVelocity,
+                Vector3.zero,
+                airAngularDamping * 0.75f * dt
+            );
             return;
-        }
-
-        // ------------------------------------------------------------------
-        // Air-edge assist (Grinding) — sits between airborne and grounded
-        // ------------------------------------------------------------------
-        Vector3 referencePoint = GetGrindReferencePoint();
-
-        float planarSpeed = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal).magnitude;
-        bool speedOk = planarSpeed >= grindMinPlanarSpeed;
-
-        float targetGrindStrength = 0f;
-
-        if (grindEnabled && speedOk && Time.time >= _grindReattachCooldownUntil)
-        {
-            if (TryFindBestGrindCandidate(referencePoint, grindCaptureRadius, out GrindCandidate cand))
-            {
-                Vector3 tan = cand.tangent;
-                if (tan.sqrMagnitude < 0.0001f)
-                    tan = Vector3.forward;
-                tan.Normalize();
-
-                Vector3 skiFwd = _skiForward;
-                if (skiFwd.sqrMagnitude < 0.0001f)
-                    skiFwd = transform.forward;
-                skiFwd.Normalize();
-
-                // Sideways requirement: engage only if skis are sideways to rail tangent.
-                float dot = Mathf.Abs(Vector3.Dot(skiFwd, tan));
-                float sideways01 = 1f - Mathf.InverseLerp(grindSidewaysDotFull, grindSidewaysDotBegin, dot);
-                sideways01 = Mathf.Clamp01(sideways01);
-
-                // Proximity: stronger when closer to the rail.
-                float dist = Mathf.Sqrt(Mathf.Max(0f, cand.sqDist));
-                float prox01 = 1f - Mathf.Clamp01(dist / Mathf.Max(0.0001f, grindCaptureRadius));
-                // Smoothstep for stability.
-                prox01 = prox01 * prox01 * (3f - 2f * prox01);
-
-                targetGrindStrength = prox01 * sideways01;
-
-                _grindClosestPoint = cand.closestPoint;
-                _grindTangent = tan;
-                _grindDeltaToRail = cand.delta;
-                _dbgGrindSource = cand.sourceName;
-            }
-            else
-            {
-                _dbgGrindSource = null;
-            }
-        }
-        else
-        {
-            _dbgGrindSource = null;
-        }
-
-        // Smooth engagement so it feels earned, not snapped.
-        float resp = Mathf.Max(0.1f, grindStrengthResponse);
-        _grindStrengthSmoothed = Mathf.MoveTowards(_grindStrengthSmoothed, targetGrindStrength, resp * dt);
-        _grindActive = _grindStrengthSmoothed > 0.05f;
-
-        // Detach request (Jump while grinding) — apply a small pop and enforce cooldown.
-        if (_grindDetachRequested && _grindActive)
-        {
-            _grindDetachRequested = false;
-
-            Vector3 away = (_grindDeltaToRail.sqrMagnitude > 0.0001f) ? (-_grindDeltaToRail.normalized) : -_grindTangent;
-            Vector3 pop = Vector3.up * grindDetachUpVel + away * grindDetachAwayVel;
-
-            _rb.AddForce(pop, ForceMode.VelocityChange);
-
-            _grindReattachCooldownUntil = Time.time + Mathf.Max(0f, grindReattachCooldown);
-            _grindStrengthSmoothed = 0f;
-            _grindActive = false;
-
-            // Also kill air spin a bit on detach so it doesn’t instantly re-flip.
-            _airAngularVelocity = Vector3.MoveTowards(_airAngularVelocity, Vector3.zero, (airAngularDamping + grindAngularDamping) * dt);
-        }
-
-        // Apply rail constraint + friction if engaged.
-        if (_grindStrengthSmoothed > 0.0001f)
-        {
-            float s = _grindStrengthSmoothed;
-
-            Vector3 delta = _grindDeltaToRail;
-            float dist = delta.magnitude;
-
-            if (dist > 0.0001f)
-            {
-                Vector3 radialDir = delta / dist;
-
-                // Grind "contact normal" points away from the rail toward the skier.
-                _grindNormal = (-radialDir).sqrMagnitude > 0.0001f ? (-radialDir).normalized : Vector3.up;
-
-                // Align the skier's up axis to the grind normal (sits between airborne and grounded).
-                ApplyGrindAlignment(dt, _grindNormal, s);
-
-                // Spring toward rail centerline (clamp magnitude so it can't spike).
-                Vector3 clampedDelta = Vector3.ClampMagnitude(delta, grindCaptureRadius);
-                Vector3 springAcc = clampedDelta * (grindSpring * s);
-
-                // Damping into/out of the rail
-                float vRad = Vector3.Dot(_rb.linearVelocity, radialDir);
-                Vector3 radialDampAcc = -radialDir * (vRad * grindRadialDamping * s);
-
-                // Tangent friction model: damp motion off the tangent strongly, tangent lightly.
-                Vector3 tan = _grindTangent;
-                if (tan.sqrMagnitude < 0.0001f) tan = Vector3.forward;
-                tan.Normalize();
-
-                Vector3 v = _rb.linearVelocity;
-                Vector3 vTan = Vector3.Dot(v, tan) * tan;
-                Vector3 vOff = v - vTan;
-
-                float fric = Mathf.Max(0f, grindFrictionMultiplier);
-
-                Vector3 offAcc = -vOff * (grindOffTangentFriction * fric * s);
-                Vector3 tanAcc = -vTan * (grindAlongTangentFriction * fric * s);
-
-                // Optional "drive" so grinds can build speed over time (especially on flat rails).
-                Vector3 driveAcc = Vector3.zero;
-                if (grindDriveAcceleration > 0.0001f && grindDriveMaxSpeed > 0.1f)
-                {
-                    float vTanSigned = Vector3.Dot(v, tan); // signed speed along tangent
-                    float vTanAbs = Mathf.Abs(vTanSigned);
-
-                    // Asymptotically accelerate toward grindDriveMaxSpeed (no runaway).
-                    float speed01 = Mathf.Clamp01(vTanAbs / grindDriveMaxSpeed);
-                    float grindAccel = grindDriveAcceleration * (1f - speed01);
-
-                    // Keep accelerating in the current travel direction along the rail.
-                    float dir = (vTanSigned >= 0f) ? 1f : -1f;
-                    driveAcc = tan * (grindAccel * dir * s);
-                }
-
-                _rb.AddForce(springAcc + radialDampAcc + offAcc + tanAcc + driveAcc, ForceMode.Acceleration);
-
-            }
         }
 
         // ------------------------------------------------------------------
         // True air control (only when fully airborne)
         // ------------------------------------------------------------------
 
-        // Leg difference controls yaw (spin), lean controls pitch (flip).
-        // Air-entry smoothing: ramp air control in, and use delta-from-takeoff so holding lean
-        // while leaving the ground doesn't instantly pitch the skier forward.
         float ramp = (airControlBlendInTime <= 0f)
             ? 1f
             : Mathf.Clamp01((Time.time - _airEntryTime) / airControlBlendInTime);
@@ -3432,38 +3837,27 @@ public class SkiController : MonoBehaviour
 
         float pitchInput = Mathf.Lerp(pitchAbs, pitchDelta, Mathf.Clamp01(airPitchUseDeltaFromTakeoff));
 
-        // Deadzone after blend.
         if (Mathf.Abs(pitchInput) < airPitchDeadzone)
             pitchInput = 0f;
 
-        // Only allow negative pitch when actively leaning back (prevents unintended backflips).
         if (pitchInput < 0f && pitchAbs > -airPitchDeadzone)
             pitchInput = 0f;
 
         pitchInput *= ramp;
 
-        // Tuck (poles held) increases spin responsiveness.
         float spinMultiplier = 1f;
         if (HasPolesInput && _rawPolesPressed)
             spinMultiplier *= airTuckSpinMultiplier;
 
-        // Grind modifies air control by increasing damping + reducing accel (feels frictiony, not free-rotating).
-        float grindS = Mathf.Clamp01(_grindStrengthSmoothed);
-        float accelScale = 1f - (grindS * Mathf.Clamp01(grindAngularAccelReduction));
-        float accel = Mathf.Max(0f, airAngularAcceleration) * accelScale;
-
+        float accel = Mathf.Max(0f, airAngularAcceleration);
         float dampingAir = Mathf.Max(0f, airAngularDamping);
-        dampingAir += Mathf.Max(0f, grindAngularDamping) * grindS;
 
-        // Desired angular velocities based on input.
         float targetYawSpeed = yawInput * airYawTurnSpeed * spinMultiplier;
         float targetPitchSpeed = pitchInput * airPitchTurnSpeed * spinMultiplier;
 
-        // Accelerate toward target spin speeds.
         _airAngularVelocity.y = Mathf.MoveTowards(_airAngularVelocity.y, targetYawSpeed, accel * dt);
         _airAngularVelocity.x = Mathf.MoveTowards(_airAngularVelocity.x, targetPitchSpeed, accel * dt);
 
-        // Apply damping toward zero when there is little/no input so we don't spin forever.
         if (Mathf.Abs(yawInput) < 0.01f)
             _airAngularVelocity.y = Mathf.MoveTowards(_airAngularVelocity.y, 0f, dampingAir * dt);
 
@@ -3473,41 +3867,442 @@ public class SkiController : MonoBehaviour
             _airAngularVelocity.x = Mathf.MoveTowards(_airAngularVelocity.x, 0f, extra * dt);
         }
 
-        // Extra damping while grinding regardless of input (feels like edge friction).
-        if (grindS > 0.0001f)
-            _airAngularVelocity = Vector3.MoveTowards(_airAngularVelocity, Vector3.zero, dampingAir * 0.35f * dt);
-
-        // Apply rotation based on current angular velocity.
         Quaternion yawRot = Quaternion.AngleAxis(_airAngularVelocity.y * dt, Vector3.up);
         Quaternion pitchRot = Quaternion.AngleAxis(_airAngularVelocity.x * dt, transform.right);
 
         _rb.MoveRotation(yawRot * pitchRot * _rb.rotation);
     }
 
-    private void ApplyGrindAlignment(float dt, Vector3 targetUp, float strength01)
+    private void ApplyGrindAirControl()
     {
-        if (!grindAlignEnabled || dt <= 0f) return;
+        float dt = Time.fixedDeltaTime;
 
+        // Small, forgiving air-like control while grinding.
+        // This bypasses ApplyAirControl()’s grounded check.
+        float yawInput = HasLegInputs
+            ? Mathf.Clamp(_rawRightLegInput - _rawLeftLegInput, -1f, 1f)
+            : 0f;
+
+        float pitchInput = HasLeanInput ? Mathf.Clamp(_rawLeanInput, -1f, 1f) : 0f;
+
+        // Keep it looser than air to avoid fighting the rail constraint.
+        float yawSpeed = airYawTurnSpeed * 0.45f;
+        float pitchSpeed = airPitchTurnSpeed * 0.35f;
+
+        Quaternion yawRot = Quaternion.AngleAxis(yawInput * yawSpeed * dt, Vector3.up);
+        Quaternion pitchRot = Quaternion.AngleAxis(pitchInput * pitchSpeed * dt, transform.right);
+
+        _rb.MoveRotation(yawRot * pitchRot * _rb.rotation);
+    }
+
+    private void ApplyGrindAlignment(float dt, Vector3 railTangent, Vector3 targetUp, float strength01)
+    {
+        if (dt <= 0f) return;
         if (targetUp.sqrMagnitude < 0.0001f) return;
-        targetUp.Normalize();
 
-        // Optionally bias toward world-up to keep it readable and less “clippy” around cables.
-        if (grindAlignUpBias > 0f)
-            targetUp = Vector3.Slerp(targetUp, Vector3.up, Mathf.Clamp01(grindAlignUpBias)).normalized;
+        targetUp.Normalize();
 
         Quaternion current = _rb.rotation;
         Vector3 currentUp = current * Vector3.up;
 
+        // Only correct up vector; preserve yaw freedom.
         Quaternion toUp = Quaternion.FromToRotation(currentUp, targetUp);
         Quaternion desired = toUp * current;
 
-        float s = Mathf.Clamp01(strength01) * Mathf.Max(0f, grindAlignStrength);
-        float maxDeg = grindAlignMaxDegreesPerSec * dt * s;
+        float s = Mathf.Clamp01(strength01);
+        float maxDeg = (alignMaxDegreesPerSec * GRIND_ALIGN_RATE_MULT) * dt * s;
 
         if (maxDeg > 0.0001f)
             _rb.MoveRotation(Quaternion.RotateTowards(current, desired, maxDeg));
     }
 
+    // Align only the rider's "up" axis to the grind support normal.
+    // This avoids the aggressive forward-to-tangent lock that caused flips and ejections on shallow mounts.
+    private void ApplyGrindUpAlignment(float dt, Vector3 targetUp, float strength01)
+    {
+        if (dt <= 0f) return;
+        if (targetUp.sqrMagnitude < 0.0001f) return;
+
+        targetUp.Normalize();
+
+        Quaternion current = _rb.rotation;
+
+        Vector3 curUp = current * Vector3.up;
+        Quaternion upFix = Quaternion.FromToRotation(curUp, targetUp);
+        Quaternion desired = upFix * current;
+
+        float s = Mathf.Clamp01(strength01);
+        float maxDeg = (alignMaxDegreesPerSec * GRIND_ALIGN_RATE_MULT) * dt * s;
+
+        if (maxDeg > 0.0001f)
+            _rb.MoveRotation(Quaternion.RotateTowards(current, desired, maxDeg));
+    }
+
+    // Air-style yaw/pitch control while grinding (scaled), so the player can do emergent tricks
+    // without the full "airborne" physics path taking over.
+    private void ApplyGrindControl()
+    {
+        float dt = Time.fixedDeltaTime;
+
+        if (dt <= 0f) return;
+        if (!_grindActive) return;
+
+        // Only apply this hybrid control when we are grinding and NOT on snow.
+        if (HasAnySkiContact || _isGrounded) return;
+
+        float mul = Mathf.Max(0f, grindAirControlMultiplier);
+
+        float yawInput = HasLegInputs
+            ? Mathf.Clamp(_rawRightLegInput - _rawLeftLegInput, -1f, 1f)
+            : 0f;
+
+        float pitchAbs = HasLeanInput ? _rawLeanInput : 0f;
+        float pitchDelta = HasLeanInput ? (_rawLeanInput - _airLeanBaseline) : 0f;
+
+        float pitchInput = Mathf.Lerp(pitchAbs, pitchDelta, Mathf.Clamp01(airPitchUseDeltaFromTakeoff));
+
+        if (Mathf.Abs(pitchInput) < airPitchDeadzone)
+            pitchInput = 0f;
+
+        if (pitchInput < 0f && pitchAbs > -airPitchDeadzone)
+            pitchInput = 0f;
+
+        float spinMultiplier = 1f;
+        if (HasPolesInput && _rawPolesPressed)
+            spinMultiplier *= airTuckSpinMultiplier;
+
+        float accel = Mathf.Max(0f, airAngularAcceleration) * mul;
+        float dampingAir = Mathf.Max(0f, airAngularDamping);
+
+        float targetYawSpeed = yawInput * airYawTurnSpeed * spinMultiplier * mul;
+        float targetPitchSpeed = pitchInput * airPitchTurnSpeed * spinMultiplier * mul;
+
+        _airAngularVelocity.y = Mathf.MoveTowards(_airAngularVelocity.y, targetYawSpeed, accel * dt);
+        _airAngularVelocity.x = Mathf.MoveTowards(_airAngularVelocity.x, targetPitchSpeed, accel * dt);
+
+        if (Mathf.Abs(yawInput) < 0.01f)
+            _airAngularVelocity.y = Mathf.MoveTowards(_airAngularVelocity.y, 0f, dampingAir * dt);
+
+        if (Mathf.Abs(pitchInput) < 0.01f)
+            _airAngularVelocity.x = Mathf.MoveTowards(_airAngularVelocity.x, 0f, dampingAir * dt);
+
+        Vector3 upAxis = (_groundNormal.sqrMagnitude > 0.0001f) ? _groundNormal.normalized : Vector3.up;
+        Quaternion yawRot = Quaternion.AngleAxis(_airAngularVelocity.y * dt, upAxis);
+
+        // Pitch around the rider's right axis projected onto the grind plane.
+        Vector3 rightAxis = Vector3.Cross(upAxis, transform.forward);
+        if (rightAxis.sqrMagnitude < 0.0001f)
+            rightAxis = transform.right;
+
+        rightAxis.Normalize();
+        Quaternion pitchRot = Quaternion.AngleAxis(_airAngularVelocity.x * dt, rightAxis);
+
+        _rb.MoveRotation(yawRot * pitchRot * _rb.rotation);
+    }
+
+    private void UpdateGrinding(float dt)
+    {
+        if (dt <= 0f) return;
+
+        // Simplified grinding:
+        // - If we are touching ANY collider that belongs to a grind provider (LiftLine/FencePath) or is on grindableLayers,
+        //   we can grind (no alignment/speed gates).
+        // - Grinding provides a support spring so landing "on top" does not behave like free-fall.
+        // - Controls are a hybrid: we keep air-style yaw/pitch (scaled) but we always conform "up" to the grind support normal.
+
+        // If stacked, immediately disengage.
+        if (_stacked)
+        {
+            _grindStrengthSmoothed = Mathf.MoveTowards(_grindStrengthSmoothed, 0f, grindStrengthResponse * dt);
+            _grindActive = _grindStrengthSmoothed > 0.01f;
+            if (!_grindActive) _grindTime = 0f;
+            return;
+        }
+
+        bool wasActive = _grindActive;
+
+        // Reattach cooldown to prevent chatter.
+        bool canAttach = Time.time >= _grindReattachCooldownUntil;
+
+        // Do not grind while we have valid snow/ground contact. (If you want "rail on snow" later, handle explicitly.)
+        bool onSnow = HasAnySkiContact || _isGrounded;
+
+        float targetStrength = 0f;
+        GrindCandidate best = default;
+        bool hasCandidate = false;
+
+        bool touchingGrindable = false;
+        Collider touchCol = null;
+
+        if (!onSnow)
+        {
+            touchingGrindable = IsTouchingGrindable(out touchCol);
+
+            if (canAttach && (touchingGrindable || _grindActive))
+            {
+                Vector3 p = GetGrindReferencePoint();
+
+                float grindRadiusEff = grindCaptureRadius * _gearTuning.grindCaptureRadiusMul;
+
+                if (TryFindBestGrindCandidate(p, grindRadiusEff, out best))
+                {
+                    hasCandidate = true;
+
+                    // Normalize tangent.
+                    Vector3 tan = best.tangent;
+                    float tanSq = tan.sqrMagnitude;
+                    if (tanSq > 0.0001f)
+                    {
+                        if (Mathf.Abs(tanSq - 1f) > 0.001f)
+                            tan /= Mathf.Sqrt(tanSq);
+
+                        Vector3 supportUp = ComputeGrindSupportUp(tan);
+
+                        // Proximity (still useful for the "air capture" use-case).
+                        float dist = Mathf.Sqrt(best.sqDist);
+                        float prox01 = 1f - Mathf.Clamp01(dist / Mathf.Max(0.0001f, grindRadiusEff));
+
+                        // If physically touching a grindable, engage fully. Otherwise, use proximity.
+                        targetStrength = touchingGrindable ? 1f : prox01;
+
+                        // Cache for active application.
+                        if (targetStrength > 0.001f)
+                        {
+                            _grindClosestPoint = best.closestPoint;
+                            _grindTangent = tan;
+                            _grindNormal = supportUp; // used as "up" for support + alignment
+                            _dbgGrindSource = best.sourceName;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Smooth in/out.
+        float grindResponseEff = grindStrengthResponse * _gearTuning.grindResponseMul;
+        _grindStrengthSmoothed = Mathf.MoveTowards(_grindStrengthSmoothed, targetStrength, grindResponseEff * dt);
+        _grindActive = _grindStrengthSmoothed > 0.01f;
+
+        if (_grindActive && hasCandidate && !onSnow)
+        {
+            _grindLastTouchTime = Time.time;
+            _grindTime += dt;
+
+            // Treat as grounded-for-controls while active so jump/air logic doesn't fight it.
+            _lastGroundedTime = Time.time;
+
+            // Use the grind normal as the effective "ground normal" for other grounded helpers (slope cache, etc.).
+            if (_grindNormal.sqrMagnitude > 0.0001f)
+                _groundNormal = _grindNormal.normalized;
+
+            Vector3 referencePoint = GetGrindReferencePoint();
+
+            // Support target: sit slightly ABOVE the centerline so we don't 'fall through' when landing perfectly on it.
+            Vector3 up = (_groundNormal.sqrMagnitude > 0.0001f) ? _groundNormal : Vector3.up;
+            Vector3 desired = _grindClosestPoint + up * Mathf.Max(0f, grindSupportOffset);
+
+            Vector3 toDesired = desired - referencePoint;
+            _grindDeltaToRail = toDesired; // cache for debug/jump logic
+
+            // Acceleration spring towards the desired support position.
+            float grindSpringEff = grindSpring * _gearTuning.grindSpringMul;
+            float c = ComputeGrindCriticalDamping(grindSpringEff, _grindStrengthSmoothed);
+
+            Vector3 vel = _rb.linearVelocity;
+            Vector3 axis = (toDesired.sqrMagnitude > 0.0001f) ? toDesired.normalized : up;
+            Vector3 velAxis = Vector3.Project(vel, axis);
+
+            Vector3 accel = toDesired * (grindSpringEff * _grindStrengthSmoothed) - velAxis * c;
+
+            float grindRadiusEff = grindCaptureRadius * _gearTuning.grindCaptureRadiusMul;
+            float maxAccel = grindSpringEff * grindRadiusEff * 2.0f;
+
+            if (maxAccel > 0f && accel.sqrMagnitude > (maxAccel * maxAccel))
+                accel = accel.normalized * maxAccel;
+
+            _rb.AddForce(accel, ForceMode.Acceleration);
+
+            // Extra damping along support normal to prevent pogo/launchiness on fences.
+            float nDamp = Mathf.Max(0f, grindNormalDamping);
+            if (nDamp > 0f)
+            {
+                float vN = Vector3.Dot(_rb.linearVelocity, up);
+                _rb.AddForce(-up * (vN * nDamp), ForceMode.Acceleration);
+            }
+
+            // Strongly damp rigidbody spin while grinding to prevent exaggerated flips from shallow collisions.
+            _rb.angularVelocity = Vector3.MoveTowards(_rb.angularVelocity, Vector3.zero, 25f * dt);
+
+            // Conform "up" to the grind surface, but do NOT force forward to the tangent.
+            ApplyGrindUpAlignment(dt, up, _grindStrengthSmoothed);
+        }
+        else
+        {
+            // Very short coyote time so we don't drop from a 1-frame miss.
+            bool withinCoyote = wasActive && (Time.time - _grindLastTouchTime) <= grindCoyoteTime;
+
+            if (withinCoyote && !onSnow)
+            {
+                _grindActive = true;
+                _grindStrengthSmoothed = Mathf.Max(_grindStrengthSmoothed, 0.02f);
+            }
+            else
+            {
+                _grindActive = false;
+                _grindTime = 0f;
+                _dbgGrindSource = null;
+            }
+        }
+    }
+
+    private Vector3 ComputeGrindSupportUp(Vector3 tanN)
+    {
+        // Project world-up onto plane perpendicular to tangent.
+        Vector3 up = Vector3.up;
+        Vector3 supportUp = Vector3.ProjectOnPlane(up, tanN);
+
+        if (supportUp.sqrMagnitude < 0.0001f)
+            supportUp = Vector3.up;
+
+        return supportUp.normalized;
+    }
+
+    // ---------------------------
+    // Grinding helpers (reduced tuning params)
+    // ---------------------------
+
+    private bool IsTouchingGrindable(out Collider touchCollider)
+    {
+        touchCollider = null;
+
+        if (leftSkiContact != null && leftSkiContact.HasAnyCollisionContact)
+        {
+            Collider c = leftSkiContact.AnyCollisionOtherCollider;
+            if (c != null && (grindableLayers.value & (1 << c.gameObject.layer)) != 0)
+            {
+                touchCollider = c;
+                return true;
+            }
+        }
+
+        if (rightSkiContact != null && rightSkiContact.HasAnyCollisionContact)
+        {
+            Collider c = rightSkiContact.AnyCollisionOtherCollider;
+            if (c != null && (grindableLayers.value & (1 << c.gameObject.layer)) != 0)
+            {
+                touchCollider = c;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private float ComputeGrindSideways01(float absDotDirToRail)
+    {
+        // Now treated as "alignment": 0 when not aligned enough, 1 when tightly aligned.
+        float begin = Mathf.Clamp(grindSidewaysDotBegin, 0.0f, 0.999f);
+        float full = Mathf.Lerp(begin, 1f, GRIND_ALIGN_FULL_FRAC);
+        return Mathf.InverseLerp(begin, full, absDotDirToRail);
+    }
+
+    private float ComputeGrindBalance01(float upDot)
+    {
+        // Derive the "full balance" threshold from the begin value to avoid a second serialized parameter.
+        float begin = Mathf.Clamp01(grindBalanceUpDotBegin);
+        float full = Mathf.Clamp01(begin + GRIND_BALANCE_DOT_WINDOW);
+
+        if (full <= begin + 0.0001f)
+            return (upDot >= full) ? 1f : 0f;
+
+        return Mathf.InverseLerp(begin, full, upDot);
+    }
+
+    private float ComputeGrindCriticalDamping(float spring, float strength01)
+    {
+        // We operate in "acceleration spring" units: x'' + c x' + k x = 0, where k = spring * strength.
+        // Critical damping: c = 2*sqrt(k). This matches the previous default tuning closely.
+        float k = Mathf.Max(0f, spring) * Mathf.Clamp01(strength01);
+        if (k <= 0f) return 0f;
+        return 2f * Mathf.Sqrt(k);
+    }
+
+    private void ApplyGrindGravity(float dt)
+    {
+        if (dt <= 0f) return;
+
+        float baseScale = Mathf.Max(0f, grindDriveScale * _gearTuning.grindDriveMul);
+        if (baseScale <= 0f) return;
+
+        // If we don't have a valid tangent, don't try to drive along the rail.
+        Vector3 tan = _grindTangent;
+        float tanSq = tan.sqrMagnitude;
+        if (tanSq < 0.0001f)
+            return;
+
+        // _grindTangent is expected to be normalized already, but avoid an unconditional Normalize()
+        // every physics step.
+        if (Mathf.Abs(tanSq - 1f) > 0.001f)
+            tan /= Mathf.Sqrt(tanSq);
+
+        // Gravity component along the rail tangent (correct regardless of what's under the rail).
+        Vector3 gAlong = Vector3.Project(Physics.gravity, tan);
+
+        // Time-based boost is now a fixed fraction to reduce tuning parameters.
+        float t01 = (GRIND_TIME_TO_MAX_BOOST <= 0f) ? 1f : Mathf.Clamp01(_grindTime / GRIND_TIME_TO_MAX_BOOST);
+        t01 = t01 * t01 * (3f - 2f * t01); // smoothstep
+        float boost = 1f + (GRIND_DRIVE_TIME_BOOST_FRAC * t01);
+
+        _rb.AddForce(gAlong * (baseScale * boost), ForceMode.Acceleration);
+    }
+
+    // ----------------------------------------------------------------------
+    // SORENESS HELPERS
+    // ----------------------------------------------------------------------
+    private float GetPerformanceMult()
+    {
+        return sorenessMeter != null ? Mathf.Clamp(sorenessMeter.PerformanceMult, 0.01f, 1f) : 1f;
+    }
+
+    /// <summary>
+    /// Returns 0 when moving flat/downhill, up to 1 when moving directly uphill on the current ground plane.
+    /// </summary>
+    private float ComputeUphill01(Vector3 dirOnPlane)
+    {
+        Vector3 n = (_groundNormal.sqrMagnitude > 0.0001f) ? _groundNormal.normalized : Vector3.up;
+
+        Vector3 downhill = Vector3.ProjectOnPlane(Vector3.down, n);
+        float mag = downhill.magnitude;
+        if (mag < 0.0001f)
+            return 0f;
+
+        downhill /= mag;
+
+        Vector3 d = Vector3.ProjectOnPlane(dirOnPlane, n);
+        if (d.sqrMagnitude < 0.0001f)
+            return 0f;
+
+        d.Normalize();
+        return Mathf.Clamp01(Vector3.Dot(d, -downhill));
+    }
+
+    private float ComputeGenericStackSeverity01()
+    {
+        Vector3 n = (_groundNormal.sqrMagnitude > 0.0001f) ? _groundNormal.normalized : Vector3.up;
+        Vector3 v = _rb != null ? _rb.linearVelocity : Vector3.zero;
+
+        float planar = Vector3.ProjectOnPlane(v, n).magnitude;
+        float down = Mathf.Max(0f, -Vector3.Dot(v, n));
+        float tilt = Vector3.Angle(transform.up, n);
+
+        float sSpeed = Mathf.InverseLerp(2f, 18f, planar + down);
+        float sTilt = Mathf.InverseLerp(maxLandingTiltAngle, 120f, tilt);
+
+        return Mathf.Clamp01(Mathf.Max(sSpeed, sTilt));
+    }
+
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
     private void OnGUI()
     {
         if (!showDebugHUD)
@@ -3540,6 +4335,64 @@ public class SkiController : MonoBehaviour
             GUILayout.Label($"Across: {_dbgTraverseAcross:F2} (gate={_dbgTraverseAcrossGate:F2})");
             GUILayout.Label($"vFall: {_dbgTraverseVFall:F2} m/s (gate={_dbgTraverseSpeedGate:F2})");
             GUILayout.Label($"Hold: {_dbgTraverseHold:F2}    gPlaneMag: {_dbgTraverseGPlane.magnitude:F2}");
+        }
+
+        if (debugShowGrinding)
+        {
+            GUILayout.Space(6);
+            GUILayout.Label("=== Grinding ===");
+
+            bool grindingSurface = _grindActive && !HasAnySkiContact && !_isGrounded;
+            bool onSnow = HasAnySkiContact || _isGrounded;
+
+            float cdLeft = Mathf.Max(0f, _grindReattachCooldownUntil - Time.time);
+            float sinceTouch = Time.time - _grindLastTouchTime;
+
+            float distToSupport = _grindDeltaToRail.magnitude;
+            Vector3 tan = (_grindTangent.sqrMagnitude > 0.0001f) ? _grindTangent.normalized : Vector3.zero;
+            Vector3 up = (_groundNormal.sqrMagnitude > 0.0001f) ? _groundNormal.normalized : Vector3.up;
+
+            bool touchingGrindableHud = IsTouchingGrindable(out Collider touchColHud);
+            string touchName = (touchColHud != null) ? touchColHud.name : "(none)";
+            int touchLayer = (touchColHud != null) ? touchColHud.gameObject.layer : -1;
+
+            float upDot = Vector3.Dot(transform.up, up);
+            float vAlongTan = (tan != Vector3.zero) ? Vector3.Dot(_rb.linearVelocity, tan) : 0f;
+            float vUp = Vector3.Dot(_rb.linearVelocity, up);
+
+            GUILayout.Label($"Active: {_grindActive}    GrindingSurface: {grindingSurface}    OnSnow: {onSnow}");
+            GUILayout.Label($"Strength: {_grindStrengthSmoothed:F2}    Time: {_grindTime:F2}s    SinceTouch: {sinceTouch:F2}s    ReattachCD: {cdLeft:F2}s");
+            GUILayout.Label($"Source: {(_dbgGrindSource ?? "(none)")}    DistToSupport: {distToSupport:F2} m");
+            GUILayout.Label($"Touching: {touchingGrindableHud}    Touch: {touchName}    Layer: {touchLayer}");
+            GUILayout.Label($"UpDot(rbUp,up): {upDot:F2}    vAlongTan: {vAlongTan:F2} m/s    vUp: {vUp:F2} m/s");
+
+            // ---- HUD-only candidate probe (helps diagnose 'never grinds') ----
+            Vector3 refPt = GetGrindReferencePoint();
+            float grindRadiusEff = grindCaptureRadius * _gearTuning.grindCaptureRadiusMul;
+
+            GrindCandidate cand;
+            bool candFound = TryFindBestGrindCandidate(refPt, grindRadiusEff, out cand);
+
+            GUILayout.Space(4);
+            GUILayout.Label("--- Candidate Probe ---");
+            GUILayout.Label($"RefPt: {refPt}    Radius: {grindRadiusEff:F2} m");
+
+            if (!candFound)
+            {
+                GUILayout.Label("Candidate: (none within radius)");
+            }
+            else
+            {
+                float dist = Mathf.Sqrt(cand.sqDist);
+                float prox01 = 1f - Mathf.Clamp01(dist / Mathf.Max(0.0001f, grindRadiusEff));
+                float target = touchingGrindableHud ? 1f : prox01;
+
+                Vector3 tanC = cand.tangent;
+                if (tanC.sqrMagnitude > 0.0001f) tanC.Normalize();
+
+                GUILayout.Label($"Candidate: {cand.sourceName}    Dist: {dist:F2} m    Prox01: {prox01:F2}    TargetStrength: {target:F2}");
+                GUILayout.Label($"CandPoint: {cand.closestPoint}    CandTan: {tanC}");
+            }
         }
 
         if (debugShowJumpLanding)
@@ -3643,7 +4496,7 @@ public class SkiController : MonoBehaviour
             Gizmos.DrawRay(transform.position, _dbgJumpDir.normalized * 1.2f);
         }
     }
-
+#endif
 }
 
 

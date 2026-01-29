@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a59656fd1a978149ac21b2187cc5a74, type: 3}
+  m_Name: Advanced Skis
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGearProfileSO
+  displayName: Advanced Skis
+  shortDescription: 
+  cost: 0
+  skiPrefab: {fileID: 4725918148240965166, guid: 6d2ec0091a99f804980f9640d29e4660, type: 3}
+  speed: 8
+  handling: 8
+  carving: 8
+  stability: 8
+  grind: 8
+  poles: 8
+  tuning:
+    downhillAccelMul: 1.2
+    forwardFrictionMul: 0.9
+    sideFrictionMul: 1
+    tuckEffectMul: 1.12
+    brakeEffectMul: 0.95
+    turnSpeedMul: 1.1
+    carveSteerMul: 1.15
+    quickStopMul: 1.1
+    traverseHoldMul: 1
+    skateImpulseMul: 1.15
+    poleImpulseMul: 1
+    grindMinSpeedMul: 1.15
+    grindCaptureRadiusMul: 1.15
+    grindSpringMul: 1.1
+    grindResponseMul: 1.1
+    grindDriveMul: 1.15

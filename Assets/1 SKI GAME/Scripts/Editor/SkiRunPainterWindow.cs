@@ -7,39 +7,106 @@ namespace SkiGame.RunsEditor
 {
     public sealed class SkiRunPainterWindow : EditorWindow
     {
+        private const string PrefKeyPrefix = "SkiGame.SkiRunPainter.";
+
+        // Persisted settings
+        private bool paintMode;
+        private bool snapToTerrainOnAdd = true;
         private bool autoBakeOnEdit = true;
         private bool autoRebuildFlagsOnEdit = false;
 
-        private bool paintMode;
-        private bool snapToTerrainOnAdd = true;
+        // QoL: allow locking an active run so painting doesn't depend on Unity selection.
+        private bool lockActiveRun = false;
+        private SkiRunLine lockedRun;
 
+        // QoL: lightweight run browser
+        private bool showRunBrowser = true;
+        private string runSearch = "";
+        private Vector2 runBrowserScroll;
+
+        // Cached run list for the Run Browser (avoids FindObjectsOfType allocations every OnGUI repaint)
+        private SkiRunLine[] _runsCache;
+        private double _runsCacheNextRefreshTime;
+        private const double RunsCacheRefreshSeconds = 0.75;
+
+        private SkiRunLine[] GetRunsCached(bool forceRefresh = false)
+        {
+            double t = EditorApplication.timeSinceStartup;
+            if (forceRefresh || _runsCache == null || t >= _runsCacheNextRefreshTime)
+            {
+                _runsCache = FindObjectsOfType<SkiRunLine>(true);
+                _runsCacheNextRefreshTime = t + RunsCacheRefreshSeconds;
+            }
+            return _runsCache;
+        }
+
+        // Safety: reduce accidental edits when paint mode is on
+        private bool requireShiftToPaint = true;
+
+        // Throttle heavy work while painting
+        private const double PostEditDelaySeconds = 0.15;
+        private double lastEditTime;
+        private SkiRunLine pendingPostEditRun;
+
+        // Persisted defaults (assets stored by GUID)
         [SerializeField] private GameObject defaultFlagPrefab;
         [SerializeField] private RunDifficultyProfileSO defaultDifficultyProfile;
+
+        // Not reliably persistable across sessions (scene object)
         [SerializeField] private Terrain defaultExplicitTerrain;
 
         [SerializeField, Range(2f, 200f)] private float defaultRunWidthMeters = 20f;
         [SerializeField, Range(1f, 50f)] private float defaultFlagSpacingMeters = 8f;
 
         [MenuItem("Tools/Ski Game/Ski Run Painter")]
-        public static void Open()
+        public static void Open() => GetWindow<SkiRunPainterWindow>("Ski Run Painter");
+
+        public static void OpenAndSelect(SkiRunLine run, bool enablePaint = false)
         {
-            GetWindow<SkiRunPainterWindow>("Ski Run Painter");
+            var w = GetWindow<SkiRunPainterWindow>("Ski Run Painter");
+            w.Show();
+            w.Focus();
+
+            if (run != null)
+            {
+                w.lockActiveRun = true;
+                w.lockedRun = run;
+                Selection.activeGameObject = run.gameObject;
+                EditorGUIUtility.PingObject(run.gameObject);
+                SceneView.lastActiveSceneView?.FrameSelected();
+            }
+
+            if (enablePaint)
+                w.paintMode = true;
+
+            w.SavePrefs();
+            w.Repaint();
+            SceneView.RepaintAll();
         }
 
         private void OnEnable()
         {
+            LoadPrefs();
             SceneView.duringSceneGui += OnSceneGUI;
+            Selection.selectionChanged += Repaint;
+            EditorApplication.update += OnEditorUpdate;
         }
 
         private void OnDisable()
         {
+            SavePrefs();
             SceneView.duringSceneGui -= OnSceneGUI;
+            Selection.selectionChanged -= Repaint;
+            EditorApplication.update -= OnEditorUpdate;
         }
 
         private SkiRunLine SelectedRun
         {
             get
             {
+                if (lockActiveRun && lockedRun != null)
+                    return lockedRun;
+
                 if (Selection.activeGameObject == null) return null;
                 return Selection.activeGameObject.GetComponent<SkiRunLine>();
             }
@@ -47,16 +114,123 @@ namespace SkiGame.RunsEditor
 
         private void OnGUI()
         {
-            EditorGUILayout.Space(4);
+            EditorGUILayout.Space(6);
 
+            DrawSelectionBlock();
+            EditorGUILayout.Space(6);
+            DrawPaintBlock();
+            EditorGUILayout.Space(6);
+            DrawRunToolsBlock();
+            EditorGUILayout.Space(6);
+            DrawDefaultsBlock();
+            EditorGUILayout.Space(6);
+            DrawQuickCreateBlock();
+        }
+
+        private void DrawSelectionBlock()
+        {
             using (new EditorGUILayout.VerticalScope("box"))
             {
                 EditorGUILayout.LabelField("Selection", EditorStyles.boldLabel);
 
+                // Locking UI
+                var selectionRun = (Selection.activeGameObject != null) ? Selection.activeGameObject.GetComponent<SkiRunLine>() : null;
+
+                EditorGUI.BeginChangeCheck();
+                bool newLock = EditorGUILayout.ToggleLeft("Lock Active Run (ignore Unity selection)", lockActiveRun);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    lockActiveRun = newLock;
+                    if (lockActiveRun && lockedRun == null && selectionRun != null)
+                        lockedRun = selectionRun;
+
+                    SavePrefs();
+                    Repaint();
+                    SceneView.RepaintAll();
+                }
+
+                if (lockActiveRun)
+                {
+                    lockedRun = (SkiRunLine)EditorGUILayout.ObjectField("Locked Run", lockedRun, typeof(SkiRunLine), true);
+
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        using (new EditorGUI.DisabledScope(selectionRun == null))
+                        {
+                            if (GUILayout.Button("Use Current Selection"))
+                            {
+                                lockedRun = selectionRun;
+                                SavePrefs();
+                                Repaint();
+                                SceneView.RepaintAll();
+                            }
+                        }
+
+                        if (GUILayout.Button("Ping"))
+                        {
+                            if (lockedRun != null)
+                            {
+                                EditorGUIUtility.PingObject(lockedRun.gameObject);
+                                Selection.activeGameObject = lockedRun.gameObject;
+                            }
+                        }
+                    }
+
+                    EditorGUILayout.Space(6);
+
+                    showRunBrowser = EditorGUILayout.Foldout(showRunBrowser, "Run Browser", true);
+                    if (showRunBrowser)
+                    {
+                        runSearch = EditorGUILayout.TextField("Search", runSearch);
+                        runBrowserScroll = EditorGUILayout.BeginScrollView(runBrowserScroll, GUILayout.Height(140));
+
+                        // Search term (lower once)
+                        string search = string.IsNullOrWhiteSpace(runSearch) ? null : runSearch.Trim().ToLowerInvariant();
+
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            EditorGUILayout.LabelField("Runs", GUILayout.Width(40));
+                            GUILayout.FlexibleSpace();
+
+                            if (GUILayout.Button("Refresh", GUILayout.Width(70)))
+                            {
+                                GetRunsCached(forceRefresh: true);
+                                Repaint();
+                                SceneView.RepaintAll();
+                            }
+                        }
+
+                        var runs = GetRunsCached();
+                        foreach (var r in runs)
+                        {
+                            if (r == null) continue;
+
+                            if (search != null && !r.name.ToLowerInvariant().Contains(search))
+                                continue;
+
+                            using (new EditorGUILayout.HorizontalScope())
+                            {
+                                if (GUILayout.Button(r.name, GUILayout.ExpandWidth(true)))
+                                {
+                                    lockedRun = r;
+                                    Selection.activeGameObject = r.gameObject;
+                                    EditorGUIUtility.PingObject(r.gameObject);
+                                    SceneView.lastActiveSceneView?.FrameSelected();
+                                    SavePrefs();
+                                    Repaint();
+                                    SceneView.RepaintAll();
+                                }
+                            }
+                        }
+
+                        EditorGUILayout.EndScrollView();
+                    }
+                }
+
                 var run = SelectedRun;
                 if (run == null)
                 {
-                    EditorGUILayout.HelpBox("Select a GameObject with a SkiRunLine component (or create one below).", MessageType.Info);
+                    EditorGUILayout.HelpBox("Select a GameObject with a SkiRunLine component, or create one below.", MessageType.Info);
 
                     if (GUILayout.Button("Create New Run"))
                         CreateNewRun();
@@ -65,26 +239,44 @@ namespace SkiGame.RunsEditor
                 }
 
                 EditorGUILayout.ObjectField("Run Object", run.gameObject, typeof(GameObject), true);
+            }
+        }
 
-                EditorGUILayout.Space(6);
+        private void DrawPaintBlock()
+        {
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Paint Mode", EditorStyles.boldLabel);
 
-                paintMode = EditorGUILayout.ToggleLeft("Paint Points (click terrain)", paintMode);
+                paintMode = EditorGUILayout.ToggleLeft("Enable Paint Mode (click terrain in Scene view)", paintMode);
                 snapToTerrainOnAdd = EditorGUILayout.ToggleLeft("Snap point to terrain on add", snapToTerrainOnAdd);
+                requireShiftToPaint = EditorGUILayout.ToggleLeft("Require Shift to Paint (recommended)", requireShiftToPaint);
 
-                autoBakeOnEdit = EditorGUILayout.ToggleLeft("Auto Bake (update difficulty color on edit)", autoBakeOnEdit);
+                EditorGUILayout.HelpBox(
+                    requireShiftToPaint
+                        ? "Scene: Shift + LMB to add a point. (Prevents accidental edits while navigating/Selecting.)"
+                        : "Scene: LMB to add a point.",
+                    MessageType.None);
+
+                EditorGUILayout.Space(4);
+
+                autoBakeOnEdit = EditorGUILayout.ToggleLeft("Auto Bake (update difficulty colour)", autoBakeOnEdit);
                 autoRebuildFlagsOnEdit = EditorGUILayout.ToggleLeft("Auto Rebuild Flags (slow)", autoRebuildFlagsOnEdit);
 
-                EditorGUILayout.Space(6);
-                EditorGUILayout.LabelField("Defaults (for new runs)", EditorStyles.boldLabel);
+                var run = SelectedRun;
+                if (paintMode && run == null)
+                    EditorGUILayout.HelpBox("Select or create a run to paint points.", MessageType.None);
+            }
+        }
 
-                defaultFlagPrefab = (GameObject)EditorGUILayout.ObjectField("Flag Prefab", defaultFlagPrefab, typeof(GameObject), false);
-                defaultDifficultyProfile = (RunDifficultyProfileSO)EditorGUILayout.ObjectField("Difficulty Profile", defaultDifficultyProfile, typeof(RunDifficultyProfileSO), false);
-                defaultExplicitTerrain = (Terrain)EditorGUILayout.ObjectField("Explicit Terrain (optional)", defaultExplicitTerrain, typeof(Terrain), true);
+        private void DrawRunToolsBlock()
+        {
+            var run = SelectedRun;
+            if (run == null) return;
 
-                defaultRunWidthMeters = EditorGUILayout.Slider("Run Width (m)", defaultRunWidthMeters, 2f, 200f);
-                defaultFlagSpacingMeters = EditorGUILayout.Slider("Flag Spacing (m)", defaultFlagSpacingMeters, 1f, 50f);
-
-                EditorGUILayout.Space(6);
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Run Tools", EditorStyles.boldLabel);
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -92,8 +284,8 @@ namespace SkiGame.RunsEditor
                     {
                         Undo.RecordObject(run, "Undo Run Point");
                         run.RemoveLastPoint();
-                        EditorUtility.SetDirty(run);
-                        SceneView.RepaintAll();
+                        MarkAndRepaint(run);
+
                     }
 
                     if (GUILayout.Button("Clear Points"))
@@ -102,8 +294,8 @@ namespace SkiGame.RunsEditor
                         {
                             Undo.RecordObject(run, "Clear Run Points");
                             run.ClearPoints();
-                            EditorUtility.SetDirty(run);
-                            SceneView.RepaintAll();
+                            MarkAndRepaint(run);
+
                         }
                     }
                 }
@@ -116,31 +308,138 @@ namespace SkiGame.RunsEditor
                     {
                         Undo.RecordObject(run, "Bake Run Metrics");
                         run.BakeMetrics();
-                        EditorUtility.SetDirty(run);
-                        SceneView.RepaintAll();
+                        MarkAndRepaint(run);
                     }
 
                     if (GUILayout.Button("Rebuild Flags"))
                     {
                         Undo.RecordObject(run, "Rebuild Run Flags");
                         run.RebuildFlags();
-                        EditorUtility.SetDirty(run);
-                        SceneView.RepaintAll();
+                        run.ApplyColorToGeneratedFlags();
+                        MarkAndRepaint(run);
                     }
                 }
 
                 EditorGUILayout.Space(6);
-                EditorGUILayout.HelpBox("Tip: Use the SkiRunLine inspector to assign the Difficulty Profile and Flag Prefab.", MessageType.None);
+
+                if (GUILayout.Button("Rebuild Flags (All Runs)"))
+                {
+                    RebuildFlagsAllRuns();
+                }
             }
+        }
 
-            EditorGUILayout.Space(6);
+        private void DrawDefaultsBlock()
+        {
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Defaults (for new runs)", EditorStyles.boldLabel);
 
+                defaultFlagPrefab = (GameObject)EditorGUILayout.ObjectField("Flag Prefab", defaultFlagPrefab, typeof(GameObject), false);
+                defaultDifficultyProfile = (RunDifficultyProfileSO)EditorGUILayout.ObjectField("Difficulty Profile", defaultDifficultyProfile, typeof(RunDifficultyProfileSO), false);
+
+                defaultRunWidthMeters = EditorGUILayout.Slider("Run Width (m)", defaultRunWidthMeters, 2f, 200f);
+                defaultFlagSpacingMeters = EditorGUILayout.Slider("Flag Spacing (m)", defaultFlagSpacingMeters, 1f, 50f);
+            }
+        }
+
+        private void DrawQuickCreateBlock()
+        {
             using (new EditorGUILayout.VerticalScope("box"))
             {
                 EditorGUILayout.LabelField("Quick Create", EditorStyles.boldLabel);
+
                 if (GUILayout.Button("Create New Run (and select it)"))
                     CreateNewRun();
             }
+        }
+
+        private void OnSceneGUI(SceneView sv)
+        {
+            if (!paintMode) return;
+
+            var run = SelectedRun;
+            if (run == null) return;
+
+            Handles.BeginGUI();
+            GUILayout.BeginArea(new Rect(10, 10, 260, 60), EditorStyles.helpBox);
+            GUILayout.Label("Ski Run Painter", EditorStyles.boldLabel);
+            GUILayout.Label(requireShiftToPaint ? "Shift + LMB: Add Point" : "LMB: Add Point");
+            GUILayout.EndArea();
+            Handles.EndGUI();
+
+            var e = Event.current;
+            if (e == null) return;
+
+            // We only want to capture input when paint mode conditions are met.
+            bool wantsPaintInput = !e.alt && (!requireShiftToPaint || e.shift);
+
+            // Claim scene view input during Layout so clicks don’t select objects instead of painting.
+            if (wantsPaintInput && e.type == EventType.Layout)
+            {
+                HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
+            }
+
+            // Only react on left click.
+            if (e.type != EventType.MouseDown || e.button != 0) return;
+            if (!wantsPaintInput) return;
+
+            // Raycast into scene.
+            Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
+            if (!Physics.Raycast(ray, out RaycastHit hit, 50000f)) return;
+
+            // Prefer terrain hits; you can relax this if you want mesh painting later.
+            if (!(hit.collider is TerrainCollider)) return;
+
+            Vector3 p = hit.point;
+            if (snapToTerrainOnAdd)
+                p = SnapToTerrain(p);
+
+            Undo.RecordObject(run, "Add Run Point");
+            run.AddPointWorld(p);
+
+            if (autoBakeOnEdit)
+                run.BakeMetrics();
+
+            if (autoRebuildFlagsOnEdit)
+                QueuePostEditWork(run);
+
+            MarkAndRepaint(run);
+
+            e.Use();
+
+        }
+
+        private static Terrain FindTerrainAt(Vector3 worldPos)
+        {
+            var terrains = Terrain.activeTerrains;
+            if (terrains != null)
+            {
+                for (int i = 0; i < terrains.Length; i++)
+                {
+                    Terrain t = terrains[i];
+                    if (t == null || t.terrainData == null) continue;
+
+                    Vector3 p = t.transform.position;
+                    Vector3 size = t.terrainData.size;
+
+                    if (worldPos.x >= p.x && worldPos.x <= p.x + size.x &&
+                        worldPos.z >= p.z && worldPos.z <= p.z + size.z)
+                        return t;
+                }
+            }
+
+            return Terrain.activeTerrain;
+        }
+
+        private static Vector3 SnapToTerrain(Vector3 worldPos)
+        {
+            Terrain t = FindTerrainAt(worldPos);
+            if (t == null) return worldPos;
+
+            float h = t.SampleHeight(worldPos) + t.transform.position.y;
+            worldPos.y = h;
+            return worldPos;
         }
 
         private void CreateNewRun()
@@ -156,14 +455,9 @@ namespace SkiGame.RunsEditor
             {
                 Ray ray = new Ray(cam.transform.position, cam.transform.forward);
                 if (Physics.Raycast(ray, out RaycastHit hit, 50000f) && hit.collider is TerrainCollider)
-                {
                     spawnPos = hit.point;
-                }
                 else
-                {
-                    // Fallback: place some distance in front of camera
                     spawnPos = cam.transform.position + cam.transform.forward * 20f;
-                }
             }
 
             var go = new GameObject("SkiRun_New");
@@ -173,8 +467,7 @@ namespace SkiGame.RunsEditor
 
             var run = go.AddComponent<SkiRunLine>();
 
-            // Apply defaults (if you have setters, use them; otherwise SerializedObject).
-            // Using SerializedObject avoids making runtime setters just for editor convenience.
+            // Apply defaults via SerializedObject to avoid runtime-only setters.
             var so = new SerializedObject(run);
 
             var flagProp = so.FindProperty("flagPrefab");
@@ -194,87 +487,113 @@ namespace SkiGame.RunsEditor
 
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            so.UpdateIfRequiredOrScript();
-            EditorUtility.SetDirty(run);
-
             Selection.activeGameObject = go;
-            EditorGUIUtility.PingObject(go);
-
-            SceneView.lastActiveSceneView?.FrameSelected();
+            MarkAndRepaint(run);
         }
 
-        private void OnSceneGUI(SceneView sceneView)
+        private void RebuildFlagsAllRuns()
         {
-            if (!paintMode) return;
+            var runs = FindObjectsOfType<SkiRunLine>(true);
+            if (runs == null || runs.Length == 0) return;
 
-            var run = SelectedRun;
+            // Ensure flags react to connections immediately.
+            for (int i = 0; i < runs.Length; i++)
+            {
+                var r = runs[i];
+                if (r == null) continue;
+
+                r.RebuildFlags();
+                r.ApplyColorToGeneratedFlags();
+                EditorUtility.SetDirty(r);
+            }
+
+            SceneView.RepaintAll();
+        }
+
+        private static void MarkAndRepaint(Object obj)
+        {
+            EditorUtility.SetDirty(obj);
+            SceneView.RepaintAll();
+        }
+
+        private void QueuePostEditWork(SkiRunLine run)
+        {
+            pendingPostEditRun = run;
+            lastEditTime = EditorApplication.timeSinceStartup;
+        }
+
+        private void OnEditorUpdate()
+        {
+            if (pendingPostEditRun == null) return;
+            if (EditorApplication.timeSinceStartup - lastEditTime < PostEditDelaySeconds) return;
+
+            var run = pendingPostEditRun;
+            pendingPostEditRun = null;
+
             if (run == null) return;
 
-            Event e = Event.current;
-            if (e == null) return;
-
-            // Avoid selecting other objects while painting.
-            HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
-
-            // Left-click to add point (ignore if alt is held for orbit).
-            if (e.type == EventType.MouseDown && e.button == 0 && !e.alt)
+            if (autoRebuildFlagsOnEdit)
             {
-                Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
-
-                if (Physics.Raycast(ray, out RaycastHit hit, 50000f))
-                {
-                    // Restrict to Terrain to avoid accidental clicks on props/rocks/lift towers.
-                    if (!(hit.collider is TerrainCollider))
-                        return;
-
-                    Vector3 p = hit.point;
-
-                    if (snapToTerrainOnAdd)
-                    {
-                        // Snap to the terrain we actually hit (multi-terrain safe).
-                        if (hit.collider is TerrainCollider tc)
-                        {
-                            Terrain t = tc.GetComponent<Terrain>();
-                            if (t != null)
-                            {
-                                float h = t.SampleHeight(p) + t.transform.position.y;
-                                p.y = h;
-                            }
-                        }
-
-                    }
-
-                    Undo.RecordObject(run, "Add Run Point");
-                    run.AddPointWorld(p);
-                    EditorUtility.SetDirty(run);
-
-                    // Respect toggles (prevents sluggishness on long runs).
-                    if (autoBakeOnEdit)
-                        run.BakeMetrics();
-
-                    if (autoRebuildFlagsOnEdit)
-                        run.RebuildFlags();
-
-                    SceneView.RepaintAll();
-                    e.Use();
-                }
+                Undo.RecordObject(run, "Rebuild Run Flags");
+                run.RebuildFlags();
+                run.ApplyColorToGeneratedFlags();
+                EditorUtility.SetDirty(run);
             }
 
-            // Visual hints
-            Handles.BeginGUI();
-            GUILayout.BeginArea(new Rect(10, 10, 360, 70), "Ski Run Painter", GUI.skin.window);
-            GUILayout.Label("Paint Mode Active");
-            GUILayout.Label("Left Click: add point on terrain");
-            GUILayout.Label("Esc: exit paint mode");
-            GUILayout.EndArea();
-            Handles.EndGUI();
+            SceneView.RepaintAll();
+        }
 
-            if (e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape)
+
+        // ---------- Persistence ----------
+        private void LoadPrefs()
+        {
+            paintMode = EditorPrefs.GetBool(PrefKeyPrefix + "paintMode", paintMode);
+            snapToTerrainOnAdd = EditorPrefs.GetBool(PrefKeyPrefix + "snapToTerrainOnAdd", snapToTerrainOnAdd);
+            autoBakeOnEdit = EditorPrefs.GetBool(PrefKeyPrefix + "autoBakeOnEdit", autoBakeOnEdit);
+            autoRebuildFlagsOnEdit = EditorPrefs.GetBool(PrefKeyPrefix + "autoRebuildFlagsOnEdit", autoRebuildFlagsOnEdit);
+
+            defaultRunWidthMeters = EditorPrefs.GetFloat(PrefKeyPrefix + "defaultRunWidthMeters", defaultRunWidthMeters);
+            defaultFlagSpacingMeters = EditorPrefs.GetFloat(PrefKeyPrefix + "defaultFlagSpacingMeters", defaultFlagSpacingMeters);
+
+            defaultFlagPrefab = LoadAssetByGuid<GameObject>(PrefKeyPrefix + "defaultFlagPrefabGuid", defaultFlagPrefab);
+            defaultDifficultyProfile = LoadAssetByGuid<RunDifficultyProfileSO>(PrefKeyPrefix + "defaultDifficultyProfileGuid", defaultDifficultyProfile);
+        }
+
+        private void SavePrefs()
+        {
+            EditorPrefs.SetBool(PrefKeyPrefix + "paintMode", paintMode);
+            EditorPrefs.SetBool(PrefKeyPrefix + "snapToTerrainOnAdd", snapToTerrainOnAdd);
+            EditorPrefs.SetBool(PrefKeyPrefix + "autoBakeOnEdit", autoBakeOnEdit);
+            EditorPrefs.SetBool(PrefKeyPrefix + "autoRebuildFlagsOnEdit", autoRebuildFlagsOnEdit);
+
+            EditorPrefs.SetFloat(PrefKeyPrefix + "defaultRunWidthMeters", defaultRunWidthMeters);
+            EditorPrefs.SetFloat(PrefKeyPrefix + "defaultFlagSpacingMeters", defaultFlagSpacingMeters);
+
+            SaveAssetGuid(PrefKeyPrefix + "defaultFlagPrefabGuid", defaultFlagPrefab);
+            SaveAssetGuid(PrefKeyPrefix + "defaultDifficultyProfileGuid", defaultDifficultyProfile);
+        }
+
+        private static void SaveAssetGuid(string key, Object obj)
+        {
+            string guid = "";
+            if (obj != null)
             {
-                paintMode = false;
-                Repaint();
-                e.Use();
+                var path = AssetDatabase.GetAssetPath(obj);
+                guid = string.IsNullOrEmpty(path) ? "" : AssetDatabase.AssetPathToGUID(path);
             }
+            EditorPrefs.SetString(key, guid);
+        }
+
+        private static T LoadAssetByGuid<T>(string key, T fallback) where T : Object
+        {
+            string guid = EditorPrefs.GetString(key, "");
+            if (string.IsNullOrEmpty(guid)) return fallback;
+
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (string.IsNullOrEmpty(path)) return fallback;
+
+            var asset = AssetDatabase.LoadAssetAtPath<T>(path);
+            return asset != null ? asset : fallback;
         }
     }
 }

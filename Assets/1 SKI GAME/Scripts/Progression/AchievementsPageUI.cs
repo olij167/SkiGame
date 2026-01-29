@@ -367,7 +367,9 @@ namespace SkiGame.Progression
                 float pct = unlocked ? 1f : Mathf.Clamp01(cur / tgt);
 
                 _detailTitle.text = string.IsNullOrEmpty(def.title) ? "(untitled)" : def.title;
-                _detailSub.text = $"{MetricLabel(def.metric)} • Target {FormatMetric(def.metric, def.target)}";
+                // Support non-metric achievements (e.g. group requirements) while keeping the row metric label.
+                string req = def.GetRequirementText();
+                _detailSub.text = $"{MetricLabel(def.metric)} \x95 {req}";
                 _detailBody.text = string.IsNullOrEmpty(def.description) ? "" : def.description;
 
                 _detailBarFill.style.width = Length.Percent(pct * 100f);
@@ -497,10 +499,35 @@ namespace SkiGame.Progression
                 ProgressionMetric.LifetimeVerticalDescentMeters => "Lifetime Vertical",
                 ProgressionMetric.SessionStacks => "Session Stacks",
                 ProgressionMetric.LifetimeStacks => "Lifetime Stacks",
-                ProgressionMetric.SessionRunsCompleted => "Session Runs",
-                ProgressionMetric.LifetimeRunsCompleted => "Lifetime Runs",
+
+                ProgressionMetric.SessionRunsVisited=> "Session Runs Visited",
+                ProgressionMetric.LifetimeRunsVisited => "Lifetime Runs Visited",                 
+                ProgressionMetric.SessionRunsCompleted => "Session Completed Runs",
+                ProgressionMetric.LifetimeRunsCompleted => "Lifetime Completed Runs", 
+                ProgressionMetric.SessionRunsCompletedClean => "Session Clean Runs",
+                ProgressionMetric.LifetimeRunsCompletedClean => "Lifetime Clean Runs",
+
                 ProgressionMetric.SessionLiftsUsed => "Session Lifts",
                 ProgressionMetric.LifetimeLiftsUsed => "Lifetime Lifts",
+                // POI + Grind
+                ProgressionMetric.SessionPlacesVisited => "Session Places",
+                ProgressionMetric.LifetimePlacesVisited => "Lifetime Places",
+                ProgressionMetric.SessionGrindTimeSeconds => "Session Grind Time",
+                ProgressionMetric.LifetimeGrindTimeSeconds => "Lifetime Grind Time",
+                ProgressionMetric.SessionGrindDistanceMeters => "Session Grind Dist",
+                ProgressionMetric.LifetimeGrindDistanceMeters => "Lifetime Grind Dist",
+
+                // Daily task matrix / extended metrics
+                ProgressionMetric.SessionVerticalAscentMeters => "Session Ascent",
+                ProgressionMetric.SessionAverageSpeedMps => "Session Avg Speed",
+
+                ProgressionMetric.LifetimeTotalDistanceMeters => "Lifetime Distance",
+                ProgressionMetric.LifetimeTotalVerticalAscentMeters => "Lifetime Ascent",
+                ProgressionMetric.LifetimeTotalVerticalDescentMeters => "Lifetime Descent",
+                ProgressionMetric.LifetimeAverageSpeedMps => "Lifetime Avg Speed",
+                ProgressionMetric.SessionTopRunSpeedMps => "Session Top Run Speed",
+                ProgressionMetric.LifetimeTopRunSpeedMps => "Lifetime Top Run Speed",
+
                 _ => m.ToString()
             };
         }
@@ -515,14 +542,24 @@ namespace SkiGame.Progression
                 case ProgressionMetric.LifetimeAirDistanceMeters:
                 case ProgressionMetric.SessionVerticalDescentMeters:
                 case ProgressionMetric.LifetimeVerticalDescentMeters:
+                case ProgressionMetric.SessionVerticalAscentMeters:
+                case ProgressionMetric.LifetimeTotalDistanceMeters:
+                case ProgressionMetric.LifetimeTotalVerticalAscentMeters:
+                case ProgressionMetric.LifetimeTotalVerticalDescentMeters:
                     return (value >= 1000f) ? $"{value / 1000f:0.0}km" : $"{value:0}m";
 
                 case ProgressionMetric.SessionTopSpeedMps:
                 case ProgressionMetric.LifetimeTopSpeedMps:
+                case ProgressionMetric.SessionAverageSpeedMps:
+                case ProgressionMetric.LifetimeAverageSpeedMps:
+                case ProgressionMetric.SessionTopRunSpeedMps:
+                case ProgressionMetric.LifetimeTopRunSpeedMps:
                     return $"{value:0.0}m/s";
 
                 case ProgressionMetric.SessionAirTimeSeconds:
                 case ProgressionMetric.LifetimeAirTimeSeconds:
+                case ProgressionMetric.SessionGrindTimeSeconds:
+                case ProgressionMetric.LifetimeGrindTimeSeconds:
                     return $"{value:0.0}s";
 
                 case ProgressionMetric.SessionStacks:
@@ -531,6 +568,12 @@ namespace SkiGame.Progression
                 case ProgressionMetric.LifetimeRunsCompleted:
                 case ProgressionMetric.SessionLiftsUsed:
                 case ProgressionMetric.LifetimeLiftsUsed:
+                case ProgressionMetric.SessionPlacesVisited:
+                case ProgressionMetric.LifetimePlacesVisited:
+                case ProgressionMetric.SessionRunsVisited:
+                case ProgressionMetric.LifetimeRunsVisited:
+                case ProgressionMetric.SessionRunsCompletedClean:
+                case ProgressionMetric.LifetimeRunsCompletedClean:
                     return $"{Mathf.FloorToInt(value):0}";
 
                 default:

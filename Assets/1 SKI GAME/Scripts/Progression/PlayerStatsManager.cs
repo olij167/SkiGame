@@ -71,6 +71,7 @@ namespace SkiGame.Progression
             Profile.ResetSession();
         }
 
+        [ContextMenu("Reset All Stats")]
         public void ResetAll()
         {
             EnsureProfile();

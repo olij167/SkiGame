@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TimeWeather;
 using UnityEngine;
 
 namespace SkiGame.Progression
@@ -12,8 +13,14 @@ namespace SkiGame.Progression
         [Header("Definitions")]
         [SerializeField] private ProgressionCatalogSO catalog;
 
-        [Header("Session Tasks")]
+        [Header("Session Tasks (Legacy)")]
         [SerializeField, Min(0)] private int sessionTaskCount = 2;
+
+        [Header("Daily Task Matrix (New)")]
+        [SerializeField, Min(0)] private int dailyLadderCount = 6;
+
+        [Tooltip("Optional external day key")]
+        [SerializeField] private int externalDayKey = -1;
 
         [Tooltip("How often to evaluate tasks/achievements. Keeps it cheap and deterministic.")]
         [SerializeField, Range(0.05f, 2f)] private float evaluateIntervalSeconds = 0.25f;
@@ -21,10 +28,14 @@ namespace SkiGame.Progression
         public event Action<TaskDefinitionSO> OnTaskCompleted;
         public event Action<AchievementDefinitionSO> OnAchievementUnlocked;
 
+        // Optional: daily tier completion event (for SFX/UI).
+        public event Action<ProgressionMetric, int /*tierIndex*/> OnDailyTierCompleted;
+
         private float _nextEvalTime;
 
         private readonly Dictionary<string, TaskDefinitionSO> _taskById = new();
         private readonly Dictionary<string, AchievementDefinitionSO> _achById = new();
+        private readonly Dictionary<string, DailyTaskLadderDefinitionSO> _dailyById = new();
 
         private void Awake()
         {
@@ -42,12 +53,14 @@ namespace SkiGame.Progression
 
         private void Start()
         {
-            // Ensure tasks exist for this runtime session.
             var mgr = PlayerStatsManager.Instance;
             if (mgr != null && mgr.Profile != null)
             {
                 EnsureSessionTasks(mgr.Profile);
+                EnsureDailyTasks(mgr.Profile, mgr);
             }
+
+            _nextEvalTime = Time.unscaledTime + evaluateIntervalSeconds;
         }
 
         private void Update()
@@ -59,12 +72,13 @@ namespace SkiGame.Progression
             var profile = mgr != null ? mgr.Profile : null;
             if (profile == null || catalog == null) return;
 
-            // Keep the session task list healthy (fills missing slots, trims extras, removes invalid defs).
-            // This is cheap because sessionTaskCount is small.
-            EnsureSessionTasks(profile);
+            profile.Sanitize();
 
+            EnsureSessionTasks(profile);
+            EnsureDailyTasks(profile, mgr);
 
             EvaluateTasks(profile, mgr);
+            EvaluateDailyTasks(profile, mgr);
             EvaluateAchievements(profile, mgr);
         }
 
@@ -72,6 +86,7 @@ namespace SkiGame.Progression
         {
             _taskById.Clear();
             _achById.Clear();
+            _dailyById.Clear();
 
             if (catalog == null) return;
 
@@ -94,14 +109,77 @@ namespace SkiGame.Progression
                     _achById[a.id] = a;
                 }
             }
+
+            if (catalog.dailyTaskLadders != null)
+            {
+                for (int i = 0; i < catalog.dailyTaskLadders.Count; i++)
+                {
+                    var d = catalog.dailyTaskLadders[i];
+                    if (d == null) continue;
+                    var id = d.SafeId;
+                    if (string.IsNullOrEmpty(id)) continue;
+                    _dailyById[id] = d;
+                }
+            }
         }
+
+        // -------------------- Day Key --------------------
+
+        [SerializeField] private TimeController timeController;
+
+        public void SetExternalDayKey(int dayKey)
+        {
+            externalDayKey = dayKey;
+        }
+
+        private int GetCurrentDayKey()
+        {
+
+            // 2) Caller-provided day key (optional)
+            if (externalDayKey >= 0)
+                return externalDayKey;
+
+            // 3) Preferred: in-game calendar day key (midnight driven by TimeController)
+            if (timeController == null)
+            {
+#if UNITY_2023_1_OR_NEWER
+                timeController = FindFirstObjectByType<TimeController>();
+#else
+        timeController = FindObjectOfType<TimeController>();
+#endif
+            }
+
+            if (timeController != null)
+                return ComputeInGameDayKey(timeController);
+
+            // 4) Fallback (should be rare): UTC key if no TimeController exists
+            return ComputeFallbackDayKey();
+        }
+
+        private static int ComputeInGameDayKey(TimeController tc)
+        {
+            // Stable integer key: yyyy*1000 + (dayCount+1)
+            // dayCount is "total days passed in current year" (starts at 0).
+            int year = tc.currentYear;
+            int dayOfYear = tc.dayCount + 1;
+            return (year * 1000) + dayOfYear;
+        }
+
+        private static int ComputeFallbackDayKey()
+        {
+            // Stable integer day key: yyyy*1000 + dayOfYear
+            var now = DateTime.UtcNow;
+            return (now.Year * 1000) + now.DayOfYear;
+        }
+
+        // -------------------- Session Tasks (Legacy) --------------------
 
         private void EnsureSessionTasks(PlayerStatsProfile profile)
         {
             if (profile == null) return;
             profile.Sanitize();
 
-            profile.activeSessionTasks ??= new System.Collections.Generic.List<PlayerStatsProfile.ActiveTaskState>();
+            profile.activeSessionTasks ??= new List<PlayerStatsProfile.ActiveTaskState>();
 
             // Remove tasks that no longer exist in the catalog
             for (int i = profile.activeSessionTasks.Count - 1; i >= 0; i--)
@@ -129,7 +207,6 @@ namespace SkiGame.Progression
                     claimed = false,
                     completedUtc = default,
 
-                    // task progress starts at 0 (because baseline == current at activation)
                     lastProgress = 0f,
                     target = Mathf.Max(0.0001f, def.target),
 
@@ -138,10 +215,9 @@ namespace SkiGame.Progression
 
                     lastRewardGranted = 0
                 });
-
             }
 
-            // Ensure cached targets are populated (in case tasks were created before we cached target)
+            // Ensure cached targets are populated
             for (int i = 0; i < profile.activeSessionTasks.Count; i++)
             {
                 var s = profile.activeSessionTasks[i];
@@ -153,7 +229,8 @@ namespace SkiGame.Progression
                         s.target = Mathf.Max(0.0001f, def.target);
                 }
             }
-            // Ensure baselines are captured (handles older saves created before baseline fields existed).
+
+            // Ensure baselines are captured
             for (int i = 0; i < profile.activeSessionTasks.Count; i++)
             {
                 var s = profile.activeSessionTasks[i];
@@ -166,10 +243,9 @@ namespace SkiGame.Progression
                 {
                     s.baselineValue = def.ReadCurrent(profile);
                     s.baselineCaptured = true;
-                    s.lastProgress = 0f; // treat progress prior to activation as 0
+                    s.lastProgress = 0f;
                 }
             }
-
         }
 
         private void EvaluateTasks(PlayerStatsProfile profile, PlayerStatsManager mgr)
@@ -189,16 +265,14 @@ namespace SkiGame.Progression
 
                 float absolute = def.ReadCurrent(profile);
 
-                // Safety: if somehow not captured yet, capture now.
                 if (!state.baselineCaptured)
                 {
                     state.baselineValue = absolute;
                     state.baselineCaptured = true;
                 }
 
-                // Progress is how much MORE the player has done since this task became active.
                 float progress = absolute - state.baselineValue;
-                if (progress < 0f) progress = 0f; // handles metric resets gracefully
+                if (progress < 0f) progress = 0f;
 
                 state.lastProgress = progress;
                 state.target = Mathf.Max(0.0001f, def.target);
@@ -211,17 +285,19 @@ namespace SkiGame.Progression
 
                     OnTaskCompleted?.Invoke(def);
                 }
-
             }
 
-            // Persist completion promptly so completed tasks survive a crash/quit even before "Turn In".
             if (anyCompleted && mgr != null)
                 mgr.Save();
         }
 
+        // -------------------- Achievements --------------------
+
         private void EvaluateAchievements(PlayerStatsProfile profile, PlayerStatsManager mgr)
         {
-            if (catalog.achievements == null) return;
+            if (catalog == null || catalog.achievements == null) return;
+
+            bool anyUnlocked = false;
 
             for (int i = 0; i < catalog.achievements.Count; i++)
             {
@@ -231,18 +307,21 @@ namespace SkiGame.Progression
                 if (profile.HasAchievement(def.id))
                     continue;
 
-                float current = def.ReadCurrent(profile);
-                if (current + 0.0001f >= def.target)
+                float cur = def.ReadCurrent(profile);
+                float tgt = Mathf.Max(0.0001f, def.target);
+
+                if (cur + 0.0001f >= tgt)
                 {
                     if (profile.TryAddAchievement(def.id))
                     {
+                        anyUnlocked = true;
                         OnAchievementUnlocked?.Invoke(def);
-
-                        // Persist achievement unlock promptly.
-                        if (mgr != null) mgr.Save();
                     }
                 }
             }
+
+            if (anyUnlocked && mgr != null)
+                mgr.Save();
         }
 
         public int GetAchievementsForMetric(ProgressionMetric metric, List<AchievementDefinitionSO> buffer)
@@ -263,7 +342,623 @@ namespace SkiGame.Progression
             return count;
         }
 
-        // ---------- UI helpers (formatted for your current Watch/Phone labels) ----------
+        // -------------------- Daily Task Matrix (New) --------------------
+
+        private void EnsureDailyTasks(PlayerStatsProfile profile, PlayerStatsManager mgr)
+        {
+            if (profile == null) return;
+            profile.Sanitize();
+
+            if (catalog == null || catalog.dailyTaskLadders == null)
+                return;
+
+            int dayKey = GetCurrentDayKey();
+
+            // If day changed (or never initialised), regenerate.
+            bool needsRegen = profile.dailyTasks == null
+                              || profile.dailyTasks.dayKey != dayKey
+                              || profile.dailyTasks.rows == null
+                              || profile.dailyTasks.rows.Count == 0;
+
+            if (needsRegen)
+            {
+                if (profile.dailyTasks == null)
+                    profile.dailyTasks = new PlayerStatsProfile.DailyTaskMatrixState();
+
+                profile.dailyTasks.dayKey = dayKey;
+                profile.dailyTasks.rows = new List<PlayerStatsProfile.DailyTaskRowState>();
+
+                var selected = PickDailyLadders(profile, dayKey, dailyLadderCount);
+
+                for (int i = 0; i < selected.Count; i++)
+                {
+                    var def = selected[i];
+                    if (def == null) continue;
+
+                    float current = ReadMetricValue(profile, def.metric);
+
+                    var row = new PlayerStatsProfile.DailyTaskRowState
+                    {
+                        ladderId = def.SafeId,
+                        metric = def.metric,
+                        evaluationMode = def.evaluationMode,
+
+                        baselineValue = current,
+                        baselineCaptured = true,
+
+                        bestValueSinceStart = current,
+                        rowBonusClaimed = false,
+
+                        tiers = new List<PlayerStatsProfile.DailyTaskTierState>()
+                    };
+
+                    int tierCount = def.tierTargets != null ? def.tierTargets.Count : 0;
+                    for (int t = 0; t < tierCount; t++)
+                    {
+                        float target = Mathf.Max(0.0001f, def.tierTargets[t]);
+                        row.tiers.Add(new PlayerStatsProfile.DailyTaskTierState
+                        {
+                            target = target,
+                            lastProgress = 0f,
+                            completed = false,
+                            claimed = false,
+                            completedUtc = default,
+                            lastRewardGranted = 0
+                        });
+                    }
+
+                    profile.dailyTasks.rows.Add(row);
+                    profile.RememberRecentDailyLadder(def.SafeId, max: 12);
+                }
+
+                mgr?.Save();
+            }
+            else
+            {
+                // Sanity pass: remove rows whose ladders no longer exist
+                for (int i = profile.dailyTasks.rows.Count - 1; i >= 0; i--)
+                {
+                    var row = profile.dailyTasks.rows[i];
+                    if (row == null || string.IsNullOrEmpty(row.ladderId) || !_dailyById.ContainsKey(row.ladderId))
+                        profile.dailyTasks.rows.RemoveAt(i);
+                }
+
+                // Ensure baselines exist (older saves / partial data)
+                for (int i = 0; i < profile.dailyTasks.rows.Count; i++)
+                {
+                    var row = profile.dailyTasks.rows[i];
+                    if (row == null) continue;
+
+                    if (!row.baselineCaptured)
+                    {
+                        float current = ReadMetricValue(profile, row.metric);
+                        row.baselineValue = current;
+                        row.bestValueSinceStart = current;
+                        row.baselineCaptured = true;
+
+                        if (row.tiers != null)
+                        {
+                            for (int t = 0; t < row.tiers.Count; t++)
+                                row.tiers[t].lastProgress = 0f;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void EvaluateDailyTasks(PlayerStatsProfile profile, PlayerStatsManager mgr)
+        {
+            if (profile.dailyTasks == null || profile.dailyTasks.rows == null || profile.dailyTasks.rows.Count == 0)
+                return;
+
+            bool anyCompleted = false;
+
+            for (int r = 0; r < profile.dailyTasks.rows.Count; r++)
+            {
+                var row = profile.dailyTasks.rows[r];
+                if (row == null) continue;
+
+                // Get ladder definition
+                if (string.IsNullOrEmpty(row.ladderId) || !_dailyById.TryGetValue(row.ladderId, out var ladder) || ladder == null)
+                    continue;
+
+                float absolute = ReadMetricValue(profile, row.metric);
+
+                if (!row.baselineCaptured)
+                {
+                    row.baselineValue = absolute;
+                    row.bestValueSinceStart = absolute;
+                    row.baselineCaptured = true;
+                }
+
+                float progressForDay;
+
+                switch (row.evaluationMode)
+                {
+                    case DailyTaskLadderDefinitionSO.EvaluationMode.MaxSinceDayStart:
+                        if (absolute > row.bestValueSinceStart)
+                            row.bestValueSinceStart = absolute;
+                        progressForDay = row.bestValueSinceStart;
+                        break;
+
+                    case DailyTaskLadderDefinitionSO.EvaluationMode.DeltaFromBaseline:
+                    default:
+                        progressForDay = absolute - row.baselineValue;
+                        if (progressForDay < 0f) progressForDay = 0f;
+                        break;
+                }
+
+                // Update tiers
+                if (row.tiers == null) continue;
+
+                for (int t = 0; t < row.tiers.Count; t++)
+                {
+                    var tier = row.tiers[t];
+                    if (tier == null) continue;
+
+                    tier.lastProgress = progressForDay;
+
+                    if (!tier.completed && progressForDay + 0.0001f >= tier.target)
+                    {
+                        tier.completed = true;
+                        tier.completedUtc = DateTimeUtc.Now();
+                        anyCompleted = true;
+
+                        OnDailyTierCompleted?.Invoke(row.metric, t);
+                    }
+                }
+            }
+
+            if (anyCompleted && mgr != null)
+                mgr.Save();
+        }
+
+        private List<DailyTaskLadderDefinitionSO> PickDailyLadders(PlayerStatsProfile profile, int dayKey, int desiredCount)
+        {
+            var result = new List<DailyTaskLadderDefinitionSO>(desiredCount);
+
+            if (catalog == null || catalog.dailyTaskLadders == null || catalog.dailyTaskLadders.Count == 0)
+                return result;
+
+            // Filter valid ladders
+            var pool = new List<DailyTaskLadderDefinitionSO>(catalog.dailyTaskLadders.Count);
+            for (int i = 0; i < catalog.dailyTaskLadders.Count; i++)
+            {
+                var d = catalog.dailyTaskLadders[i];
+                if (d == null) continue;
+                if (d.tierTargets == null || d.tierTargets.Count == 0) continue;
+                pool.Add(d);
+            }
+
+            if (pool.Count == 0) return result;
+
+            // Deterministic shuffle using dayKey
+            var rng = new System.Random(dayKey);
+
+            // Prefer not-recent ladders if possible
+            bool IsRecent(string id)
+            {
+                if (profile.recentDailyLadderIds == null) return false;
+                return profile.recentDailyLadderIds.Contains(id);
+            }
+
+            var nonRecent = new List<DailyTaskLadderDefinitionSO>(pool.Count);
+            var recent = new List<DailyTaskLadderDefinitionSO>(pool.Count);
+
+            for (int i = 0; i < pool.Count; i++)
+            {
+                var d = pool[i];
+                if (d == null) continue;
+                if (IsRecent(d.SafeId)) recent.Add(d);
+                else nonRecent.Add(d);
+            }
+
+            void PickFrom(List<DailyTaskLadderDefinitionSO> src)
+            {
+                // Fisher-Yates partial shuffle
+                for (int i = src.Count - 1; i > 0; i--)
+                {
+                    int j = rng.Next(0, i + 1);
+                    (src[i], src[j]) = (src[j], src[i]);
+                }
+
+                for (int i = 0; i < src.Count && result.Count < desiredCount; i++)
+                    result.Add(src[i]);
+            }
+
+            PickFrom(nonRecent);
+            if (result.Count < desiredCount)
+                PickFrom(recent);
+
+            return result;
+        }
+
+        // Metric value reader for daily tasks (uses numeric stats only).
+        // If you want daily unique POIs etc., add daily-specific accumulators later.
+        private float ReadMetricValue(PlayerStatsProfile profile, ProgressionMetric metric)
+        {
+            if (profile == null) return 0f;
+
+            // Reuse the Task/Achievement definitions for metric reading if you prefer,
+            // but keep this local and explicit to avoid asset dependency here.
+            switch (metric)
+            {
+                // Session
+                case ProgressionMetric.SessionDistanceMeters: return profile.session.distanceMeters;
+                case ProgressionMetric.SessionVerticalAscentMeters: return profile.session.verticalAscentMeters;
+                case ProgressionMetric.SessionVerticalDescentMeters: return profile.session.verticalDescentMeters;
+
+                case ProgressionMetric.SessionTopSpeedMps: return profile.session.topSpeedMps;
+                case ProgressionMetric.SessionAverageSpeedMps: return profile.session.AverageSpeedMps;
+
+                case ProgressionMetric.SessionAirTimeSeconds: return profile.session.airTimeSeconds;
+                case ProgressionMetric.SessionAirDistanceMeters: return profile.session.airDistanceMeters;
+
+                case ProgressionMetric.SessionGrindTimeSeconds: return profile.session.grindTimeSeconds;
+                case ProgressionMetric.SessionGrindDistanceMeters: return profile.session.grindDistanceMeters;
+
+                case ProgressionMetric.SessionStacks: return profile.session.stacks;
+                case ProgressionMetric.SessionRunsCompleted: return profile.session.runsCompleted;
+                case ProgressionMetric.SessionLiftsUsed: return profile.session.liftsUsed;
+
+                case ProgressionMetric.SessionPlacesVisited: return profile.sessionVisitedLandmarkIds != null ? profile.sessionVisitedLandmarkIds.Count : 0;
+
+                // Lifetime
+                case ProgressionMetric.LifetimeTotalDistanceMeters: return profile.lifetime.totalDistanceMeters;
+                case ProgressionMetric.LifetimeTotalVerticalAscentMeters: return profile.lifetime.totalVerticalAscentMeters;
+                case ProgressionMetric.LifetimeTotalVerticalDescentMeters: return profile.lifetime.totalVerticalDescentMeters;
+
+                case ProgressionMetric.LifetimeTopSpeedMps: return profile.lifetime.topSpeedMps;
+                case ProgressionMetric.LifetimeAverageSpeedMps: return profile.lifetime.AverageSpeedMps;
+
+                case ProgressionMetric.LifetimeAirTimeSeconds: return profile.lifetime.totalAirTimeSeconds;
+                case ProgressionMetric.LifetimeAirDistanceMeters: return profile.lifetime.totalAirDistanceMeters;
+
+                case ProgressionMetric.LifetimeGrindTimeSeconds: return profile.lifetime.totalGrindTimeSeconds;
+                case ProgressionMetric.LifetimeGrindDistanceMeters: return profile.lifetime.totalGrindDistanceMeters;
+
+                case ProgressionMetric.LifetimeStacks: return profile.lifetime.totalStacks;
+                case ProgressionMetric.LifetimeRunsCompleted: return profile.lifetime.totalRunsCompleted;
+                case ProgressionMetric.LifetimeLiftsUsed: return profile.lifetime.totalLiftsUsed;
+
+                case ProgressionMetric.LifetimePlacesVisited: return profile.visitedLandmarkIds != null ? profile.visitedLandmarkIds.Count : 0;
+                // --- Back-compat aliases (old enum names) ---
+                case ProgressionMetric.LifetimeDistanceMeters: return profile.lifetime.totalDistanceMeters;
+                //case ProgressionMetric.LifetimeVerticalAscentMeters: return profile.lifetime.totalVerticalAscentMeters;
+                case ProgressionMetric.LifetimeVerticalDescentMeters: return profile.lifetime.totalVerticalDescentMeters;
+
+                // --- Run Progress (Daily ladders) ---
+                case ProgressionMetric.SessionRunsVisited: return profile.sessionVisitedRunIds != null ? profile.sessionVisitedRunIds.Count : 0;
+                case ProgressionMetric.SessionRunsCompletedClean: return profile.session.runsCompletedClean;
+                case ProgressionMetric.SessionTopRunSpeedMps: return profile.session.topRunSpeedMps;
+
+                case ProgressionMetric.LifetimeRunsVisited: return profile.visitedRunIds != null ? profile.visitedRunIds.Count : 0;
+                case ProgressionMetric.LifetimeRunsCompletedClean: return profile.lifetime.totalRunsCompletedClean;
+                case ProgressionMetric.LifetimeTopRunSpeedMps: return profile.lifetime.topRunSpeedMps;
+            }
+
+            return 0f;
+        }
+
+        // -------------------- Daily Claiming API --------------------
+
+        public bool TryGetDailyLadderDefinition(string ladderId, out DailyTaskLadderDefinitionSO ladder)
+        {
+            ladder = null;
+            if (string.IsNullOrEmpty(ladderId)) return false;
+            return _dailyById != null && _dailyById.TryGetValue(ladderId, out ladder) && ladder != null;
+        }
+
+        public bool TryClaimDailyTier(string ladderId, int tierIndex, out int rewardGranted, out bool rowBonusGranted, out int rowBonusAmount)
+        {
+            rewardGranted = 0;
+            rowBonusGranted = false;
+            rowBonusAmount = 0;
+
+            var mgr = PlayerStatsManager.Instance;
+            if (mgr == null) return false;
+
+            var profile = mgr.Profile;
+            if (profile == null) return false;
+
+            profile.Sanitize();
+            if (profile.dailyTasks == null || profile.dailyTasks.rows == null) return false;
+            if (string.IsNullOrEmpty(ladderId)) return false;
+
+            // Find row
+            PlayerStatsProfile.DailyTaskRowState row = null;
+            for (int r = 0; r < profile.dailyTasks.rows.Count; r++)
+            {
+                var rr = profile.dailyTasks.rows[r];
+                if (rr != null && rr.ladderId == ladderId)
+                {
+                    row = rr;
+                    break;
+                }
+            }
+            if (row == null) return false;
+            if (!_dailyById.TryGetValue(ladderId, out var ladder) || ladder == null) return false;
+            if (row.tiers == null) return false;
+            if (tierIndex < 0 || tierIndex >= row.tiers.Count) return false;
+
+            var tier = row.tiers[tierIndex];
+            if (tier == null) return false;
+            if (!tier.completed) return false;
+            if (tier.claimed) return false;
+
+            // Reward
+            if (!ladder.TryGetTierReward(tierIndex, out rewardGranted))
+                rewardGranted = ComputeDerivedReward(row.metric, tier.target, explicitReward: 0);
+
+            profile.currency += rewardGranted;
+
+            tier.claimed = true;
+            tier.lastRewardGranted = rewardGranted;
+
+            // Row bonus if all tiers are completed+claimed
+            if (!row.rowBonusClaimed && IsRowFullyClaimed(row))
+            {
+                int bonus = ladder.rowBonusReward > 0 ? ladder.rowBonusReward : ComputeDerivedRowBonus(row.metric, row.tiers.Count);
+                if (bonus > 0)
+                {
+                    profile.currency += bonus;
+                    row.rowBonusClaimed = true;
+                    rowBonusGranted = true;
+                    rowBonusAmount = bonus;
+                }
+            }
+
+            mgr.Save();
+            return true;
+        }
+
+        public int ClaimAllDailyCompleted(out int rowBonusesGranted)
+        {
+            rowBonusesGranted = 0;
+
+            var mgr = PlayerStatsManager.Instance;
+            if (mgr == null) return 0;
+
+            var profile = mgr.Profile;
+            if (profile == null) return 0;
+
+            profile.Sanitize();
+            if (profile.dailyTasks == null || profile.dailyTasks.rows == null) return 0;
+
+            int total = 0;
+
+            for (int r = 0; r < profile.dailyTasks.rows.Count; r++)
+            {
+                var row = profile.dailyTasks.rows[r];
+                if (row == null || row.tiers == null) continue;
+
+                for (int t = 0; t < row.tiers.Count; t++)
+                {
+                    var tier = row.tiers[t];
+                    if (tier == null) continue;
+                    if (!tier.completed || tier.claimed) continue;
+
+                    if (TryClaimDailyTier(row.ladderId, t, out int rw, out bool rowBonus, out int bonusAmt))
+                    {
+                        total += rw;
+                        if (rowBonus)
+                        {
+                            rowBonusesGranted++;
+                            total += bonusAmt;
+                        }
+                    }
+                }
+            }
+
+            return total;
+        }
+
+        /// <summary>
+        /// Total currency currently claimable from completed-but-unclaimed daily tiers, plus any
+        /// row bonus rewards where all tiers are completed and the bonus is unclaimed.
+        /// </summary>
+        public int GetDailyClaimableCurrency(out int rowBonusesClaimable)
+        {
+            rowBonusesClaimable = 0;
+
+            var mgr = PlayerStatsManager.Instance;
+            if (mgr == null) return 0;
+
+            var profile = mgr.Profile;
+            if (profile == null) return 0;
+
+            profile.Sanitize();
+            if (profile.dailyTasks == null || profile.dailyTasks.rows == null) return 0;
+
+            int total = 0;
+
+            for (int r = 0; r < profile.dailyTasks.rows.Count; r++)
+            {
+                var row = profile.dailyTasks.rows[r];
+                if (row == null || row.tiers == null) continue;
+
+                _dailyById.TryGetValue(row.ladderId, out var ladder);
+
+                if (ladder != null)
+                {
+                    // Row bonus claimable?
+                    bool allCompleted = row.tiers.Count > 0;
+                    for (int i = 0; i < row.tiers.Count; i++)
+                    {
+                        var tier = row.tiers[i];
+                        if (tier == null || !tier.completed) { allCompleted = false; break; }
+                    }
+
+                    if (allCompleted && !row.rowBonusClaimed && ladder.rowBonusReward > 0)
+                    {
+                        rowBonusesClaimable++;
+                        total += ladder.rowBonusReward;
+                    }
+
+                    // Tier rewards claimable?
+                    for (int t = 0; t < row.tiers.Count; t++)
+                    {
+                        var tier = row.tiers[t];
+                        if (tier == null) continue;
+                        if (!tier.completed || tier.claimed) continue;
+
+                        if (ladder.TryGetTierReward(t, out int reward))
+                            total += reward;
+                    }
+                }
+            }
+
+            return total;
+        }
+
+        public readonly struct DailyTierDisplay
+        {
+            public readonly string ladderId;
+            public readonly ProgressionMetric metric;
+            public readonly int rowIndex;
+            public readonly int tierIndex;
+            public readonly float target;
+            public readonly float progress;
+            public readonly float pct01;
+            public readonly bool completed;
+            public readonly bool claimed;
+            public readonly int reward;
+
+            public DailyTierDisplay(
+                string ladderId,
+                ProgressionMetric metric,
+                int rowIndex,
+                int tierIndex,
+                float target,
+                float progress,
+                bool completed,
+                bool claimed,
+                int reward)
+            {
+                this.ladderId = ladderId;
+                this.metric = metric;
+                this.rowIndex = rowIndex;
+                this.tierIndex = tierIndex;
+                this.target = target;
+                this.progress = progress;
+                this.completed = completed;
+                this.claimed = claimed;
+                this.reward = reward;
+                this.pct01 = target > 0f ? Mathf.Clamp01(progress / target) : 0f;
+            }
+        }
+
+        /// <summary>
+        /// Builds flattened daily tier displays in row order.
+        /// </summary>
+        public void GetDailyTierDisplays(List<DailyTierDisplay> buffer)
+        {
+            buffer.Clear();
+
+            var mgr = PlayerStatsManager.Instance;
+            if (mgr == null) return;
+
+            var profile = mgr.Profile;
+            if (profile == null) return;
+
+            profile.Sanitize();
+            if (profile.dailyTasks == null || profile.dailyTasks.rows == null) return;
+
+            for (int r = 0; r < profile.dailyTasks.rows.Count; r++)
+            {
+                var row = profile.dailyTasks.rows[r];
+                if (row == null || row.tiers == null) continue;
+
+                _dailyById.TryGetValue(row.ladderId, out var ladder);
+
+                for (int t = 0; t < row.tiers.Count; t++)
+                {
+                    var tier = row.tiers[t];
+                    if (tier == null) continue;
+
+                    int reward = 0;
+                    if (ladder != null && ladder.TryGetTierReward(t, out int rw))
+                        reward = rw;
+
+                    buffer.Add(new DailyTierDisplay(
+                        row.ladderId,
+                        row.metric,
+                        r,
+                        t,
+                        tier.target,
+                        tier.lastProgress,
+                        tier.completed,
+                        tier.claimed,
+                        reward));
+                }
+            }
+        }
+
+        private static bool IsRowFullyClaimed(PlayerStatsProfile.DailyTaskRowState row)
+        {
+            if (row == null || row.tiers == null || row.tiers.Count == 0) return false;
+
+            for (int i = 0; i < row.tiers.Count; i++)
+            {
+                var t = row.tiers[i];
+                if (t == null) return false;
+                if (!t.completed) return false;
+                if (!t.claimed) return false;
+            }
+
+            return true;
+        }
+
+        private int ComputeDerivedReward(ProgressionMetric metric, float target, int explicitReward)
+        {
+            if (explicitReward > 0) return explicitReward;
+
+            float t = Mathf.Max(1f, target);
+            int baseReward = 10;
+
+            int scaled = baseReward + Mathf.Clamp(Mathf.RoundToInt(t / 100f) * 5, 0, 40);
+
+            switch (metric)
+            {
+                case ProgressionMetric.SessionTopSpeedMps:
+                case ProgressionMetric.LifetimeTopSpeedMps:
+                    scaled += 10;
+                    break;
+                case ProgressionMetric.SessionAirTimeSeconds:
+                case ProgressionMetric.LifetimeAirTimeSeconds:
+                    scaled += 5;
+                    break;
+                case ProgressionMetric.SessionStacks:
+                case ProgressionMetric.LifetimeStacks:
+                    scaled -= 5;
+                    break;
+            }
+
+            return Mathf.Max(1, scaled);
+        }
+
+        private int ComputeDerivedRowBonus(ProgressionMetric metric, int tierCount)
+        {
+            // Conservative default row bonus: small premium for clearing the entire ladder.
+            int baseBonus = 25 + Mathf.Clamp(tierCount * 5, 0, 30);
+
+            switch (metric)
+            {
+                case ProgressionMetric.SessionTopSpeedMps:
+                case ProgressionMetric.LifetimeTopSpeedMps:
+                    baseBonus += 10;
+                    break;
+                case ProgressionMetric.SessionStacks:
+                case ProgressionMetric.LifetimeStacks:
+                    baseBonus -= 10;
+                    break;
+            }
+
+            return Mathf.Max(0, baseBonus);
+        }
+
+        // -------------------- Existing UI Helpers (Session tasks / achievements) --------------------
+
         public readonly struct TaskDisplay
         {
             public readonly string id;
@@ -293,10 +988,6 @@ namespace SkiGame.Progression
             }
         }
 
-        /// <summary>
-        /// Copies current session tasks into a UI-friendly list (title, current, target, pct, completed).
-        /// Does not allocate if caller reuses the provided buffer.
-        /// </summary>
         public int GetSessionTaskDisplays(PlayerStatsProfile profile, List<TaskDisplay> buffer)
         {
             buffer.Clear();
@@ -313,27 +1004,22 @@ namespace SkiGame.Progression
                     continue;
 
                 string name = string.IsNullOrEmpty(def.shortTitle) ? def.title : def.shortTitle;
-                // Display progress since activation (do not mutate baseline here).
+
                 float absolute = def.ReadCurrent(profile);
                 float cur = st.baselineCaptured ? Mathf.Max(0f, absolute - st.baselineValue) : 0f;
                 float tgt = (st.target > 0.0001f) ? st.target : Mathf.Max(0.0001f, def.target);
 
                 int rw = ComputeTaskReward(def);
                 buffer.Add(new TaskDisplay(def.id, name, st.completed, st.claimed, cur, tgt, rw));
-
             }
 
-            // Order:
-            // 1) completed & not claimed (actionable)
-            // 2) in progress
-            // 3) claimed (done)
             buffer.Sort((a, b) =>
             {
                 int Rank(TaskDisplay d)
                 {
                     if (d.completed && !d.claimed) return 0;
                     if (!d.completed) return 1;
-                    return 2; // claimed
+                    return 2;
                 }
 
                 int ra = Rank(a);
@@ -341,7 +1027,6 @@ namespace SkiGame.Progression
                 int cmp = ra.CompareTo(rb);
                 if (cmp != 0) return cmp;
 
-                // Within same rank, higher progress first.
                 return b.pct01.CompareTo(a.pct01);
             });
 
@@ -382,7 +1067,6 @@ namespace SkiGame.Progression
             }
 
             return $"{name}: {cur:0}/{tgt:0} ({pct:0}%)";
-
         }
 
         public void GetTopAchievementLines(PlayerStatsProfile profile, out string line1, out string line2)
@@ -393,7 +1077,6 @@ namespace SkiGame.Progression
             if (profile == null || catalog == null || catalog.achievements == null || catalog.achievements.Count == 0)
                 return;
 
-            // Pick “closest” locked achievements by percent progress.
             AchievementDefinitionSO bestA = null, bestB = null;
             float bestPctA = -1f, bestPctB = -1f;
 
@@ -446,8 +1129,6 @@ namespace SkiGame.Progression
             if (catalog == null || catalog.tasks == null || catalog.tasks.Count == 0)
                 return null;
 
-            // Build a small exclusion set: currently active + recent
-            // (Lists are fine here; sessionTaskCount is tiny.)
             bool IsActive(string id)
             {
                 for (int i = 0; i < profile.activeSessionTasks.Count; i++)
@@ -464,7 +1145,6 @@ namespace SkiGame.Progression
                 return profile.recentTaskIds.Contains(id);
             }
 
-            // Collect which metrics are already represented in active tasks, so we can diversify.
             bool MetricAlreadyUsed(ProgressionMetric m)
             {
                 for (int i = 0; i < profile.activeSessionTasks.Count; i++)
@@ -477,8 +1157,7 @@ namespace SkiGame.Progression
                 return false;
             }
 
-            // Pass 1: not active, not recent, and metric not already used
-            var candidates = new System.Collections.Generic.List<TaskDefinitionSO>(catalog.tasks.Count);
+            var candidates = new List<TaskDefinitionSO>(catalog.tasks.Count);
             for (int i = 0; i < catalog.tasks.Count; i++)
             {
                 var t = catalog.tasks[i];
@@ -489,7 +1168,6 @@ namespace SkiGame.Progression
                 candidates.Add(t);
             }
 
-            // Pass 2: not active, not recent (allow metric duplicates)
             if (candidates.Count == 0)
             {
                 for (int i = 0; i < catalog.tasks.Count; i++)
@@ -502,7 +1180,6 @@ namespace SkiGame.Progression
                 }
             }
 
-            // Pass 3: not active (allow repeats if the catalog is small)
             if (candidates.Count == 0)
             {
                 for (int i = 0; i < catalog.tasks.Count; i++)
@@ -516,7 +1193,6 @@ namespace SkiGame.Progression
 
             if (candidates.Count == 0) return null;
 
-            // Random pick
             int idx = UnityEngine.Random.Range(0, candidates.Count);
             return candidates[idx];
         }
@@ -524,19 +1200,13 @@ namespace SkiGame.Progression
         private int ComputeTaskReward(TaskDefinitionSO def)
         {
             if (def == null) return 0;
-
-            // Prefer explicit tuning
             if (def.reward > 0) return def.reward;
 
-            // Otherwise derive a simple reward based on target magnitude & metric type.
-            // Keep it conservative and predictable.
             float t = Mathf.Max(1f, def.target);
             int baseReward = 10;
 
-            // Slight scaling
             int scaled = baseReward + Mathf.Clamp(Mathf.RoundToInt(t / 100f) * 5, 0, 40);
 
-            // Small bonus for “harder to do” metrics
             switch (def.metric)
             {
                 case ProgressionMetric.SessionTopSpeedMps:
@@ -549,7 +1219,6 @@ namespace SkiGame.Progression
                     break;
                 case ProgressionMetric.SessionStacks:
                 case ProgressionMetric.LifetimeStacks:
-                    // “Stacks” tasks are generally undesirable, reward less
                     scaled -= 5;
                     break;
             }
@@ -592,17 +1261,13 @@ namespace SkiGame.Progression
 
             rewardGranted = ComputeTaskReward(def);
 
-            // Apply reward
             profile.currency += rewardGranted;
 
-            // Mark claimed
             state.claimed = true;
             state.lastRewardGranted = rewardGranted;
 
-            // Remember to avoid repetition
             profile.RememberRecentTask(taskId, max: 10);
 
-            // Replace task immediately (cycling)
             var newDef = PickNewTaskDefinition(profile);
             if (newDef != null)
             {
@@ -623,7 +1288,6 @@ namespace SkiGame.Progression
 
                     lastRewardGranted = 0
                 };
-
             }
 
             mgr.Save();
@@ -653,11 +1317,6 @@ namespace SkiGame.Progression
             return total;
         }
 
-        /// <summary>
-        /// Copies all achievement definitions from the catalog into the provided buffer.
-        /// Intended for UI (avoids exposing the serialized list directly).
-        /// Caller should reuse the buffer to avoid allocations.
-        /// </summary>
         public int GetAllAchievements(List<AchievementDefinitionSO> buffer)
         {
             if (buffer != null) buffer.Clear();
@@ -672,6 +1331,25 @@ namespace SkiGame.Progression
                 buffer?.Add(a);
             }
             return count;
+        }
+
+        // Returns today's daily task rows from the current player profile.
+        // This is a lightweight UI helper so PhoneHUDController doesn't need to know storage details.
+        public IReadOnlyList<PlayerStatsProfile.DailyTaskRowState> GetTodayDailyRows()
+        {
+            var mgr = PlayerStatsManager.Instance;
+            var profile = mgr != null ? mgr.Profile : null;
+
+            if (profile == null)
+                return Array.Empty<PlayerStatsProfile.DailyTaskRowState>();
+
+            profile.Sanitize();
+
+            var daily = profile.dailyTasks;
+            if (daily == null || daily.rows == null || daily.rows.Count == 0)
+                return Array.Empty<PlayerStatsProfile.DailyTaskRowState>();
+
+            return daily.rows;
         }
 
     }

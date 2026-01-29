@@ -170,7 +170,7 @@ Material:
     - _CovTriBlendContrast: 12
     - _CovTriBlendContrastOverride: 0
     - _Coverage: 1
-    - _CoverageAmount: 0.75
+    - _CoverageAmount: 0.6
     - _CoverageAmountOverride: 0
     - _CoverageAreaBias: 0.05
     - _CoverageAreaBiasOverride: 0
@@ -229,7 +229,7 @@ Material:
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EmissionEnabled: 0
-    - _EmissionMasking: 0.98
+    - _EmissionMasking: 0.8
     - _EmissionMaskingOverride: 0
     - _EnhanceRemap0Override: 0
     - _EnhanceRemap1Override: 0
@@ -310,7 +310,7 @@ Material:
     - _TessEdgeLOverride: 0
     - _TessFactorSnow: 0.5
     - _TessFactorSnowOverride: 0
-    - _TessMaxDisp: 0.35
+    - _TessMaxDisp: 0.5
     - _TessMaxDispOverride: 0
     - _TessSnowdriftRangeOverride: 0
     - _Tessellation: 1
@@ -362,7 +362,7 @@ Material:
     - _Cov0Smoothness: {r: 0, g: 1, b: 0, a: 0}
     - _Cov1Smoothness: {r: 0, g: 1, b: 0, a: 0}
     - _Cov2Smoothness: {r: 0, g: 1, b: 0, a: 0}
-    - _CoverageColor: {r: 1, g: 1, b: 1, a: 1}
+    - _CoverageColor: {r: 0.7668802, g: 0.8867924, b: 0.88048124, a: 1}
     - _CoverageColor1: {r: 1, g: 1, b: 1, a: 1}
     - _CoverageColor2: {r: 1, g: 1, b: 1, a: 1}
     - _DetailTexRemap: {r: 0.05, g: 0.5, b: 0, a: 0}
@@ -370,7 +370,7 @@ Material:
     - _EnhanceRemap0: {r: 0, g: 1, b: 0, a: 0}
     - _EnhanceRemap1: {r: 0, g: 1, b: 0, a: 0}
     - _EnhanceRemap2: {r: 0, g: 1, b: 0, a: 0}
-    - _HeightMap0Contrast: {r: 0, g: 1.0000001, b: 0, a: 0}
+    - _HeightMap0Contrast: {r: 0, g: 1, b: 0, a: 0}
     - _HeightMap1Contrast: {r: 0, g: 1, b: 0, a: 0}
     - _HeightMap2Contrast: {r: 0, g: 1, b: 0, a: 0}
     - _HueVariation: {r: 1, g: 0.5, b: 0, a: 0.1}

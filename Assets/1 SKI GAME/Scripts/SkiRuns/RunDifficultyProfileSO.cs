@@ -11,7 +11,7 @@ namespace SkiGame.Runs
         Black
     }
 
-    [CreateAssetMenu(menuName = "Ski Game/Runs/Run Difficulty Profile", fileName = "RunDifficultyProfile")]
+    [CreateAssetMenu(menuName = "SkiGame/Runs/Run Difficulty Profile", fileName = "RunDifficultyProfile")]
     public sealed class RunDifficultyProfileSO : ScriptableObject
     {
         [Serializable]
@@ -102,4 +102,5 @@ namespace SkiGame.Runs
             return Color.white;
         }
     }
+
 }

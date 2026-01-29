@@ -1109,6 +1109,150 @@
     display: flex;
 }
 
+/* -------------------- STATS DASHBOARD (SLEEK) -------------------- */
+
+.stats-page {
+    /* Keep it feeling like a dashboard: tight + consistent */
+    padding-bottom: 6px;
+}
+
+.stats-headerbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.stats-title {
+    margin-bottom: 0px;
+}
+
+.stats-tabs {
+    width: 160px;
+    margin-top: 2px;
+}
+
+/* Dashboard container */
+.stats-dashboard {
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Section */
+.stats-section {
+    background-color: rgba(255,255,255,0.05);
+    border-radius: 14px;
+    padding: 10px;
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.08);
+    border-right-color: rgba(255,255,255,0.08);
+    border-top-color: rgba(255,255,255,0.08);
+    border-bottom-color: rgba(255,255,255,0.08);
+}
+
+.stats-section-title {
+    font-size: 11px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-bottom: 8px;
+}
+
+.stats-cards {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Card */
+.stat-card {
+    width: 48%;
+    border-radius: 14px;
+    padding: 10px;
+
+    background-color: rgba(255,255,255,0.10);
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.10);
+    border-right-color: rgba(255,255,255,0.10);
+    border-top-color: rgba(255,255,255,0.10);
+    border-bottom-color: rgba(255,255,255,0.10);
+}
+
+.stat-card:hover {
+    background-color: rgba(255,255,255,0.13);
+}
+
+/* Card text */
+.stat-card-label {
+    font-size: 10px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.75);
+    margin-bottom: 3px;
+}
+
+.stat-card-value {
+    font-size: 15px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,1.0);
+}
+
+/* -------------------- STATS (COMPACT LIST) -------------------- */
+
+.stats-dashboard {
+    flex-direction: column;
+    gap: 0px;              /* dense */
+}
+
+/* One dense row per stat */
+.stat-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255,255,255,0.06);
+}
+
+/* Zebra for quick scanning */
+.stat-row.is-even {
+    background-color: rgba(255,255,255,0.04);
+}
+
+/* Text */
+.stat-row-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.78);
+    unity-font-style: normal;
+}
+
+.stat-row-value {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.98);
+    -unity-text-align: middle-right;
+}
+
+/* Optional: slightly stronger first rows if you want “top KPIs” without extra UI */
+.stat-row.is-kpi .stat-row-label {
+    color: rgba(255,255,255,0.86);
+}
+
+.stat-row.is-kpi .stat-row-value {
+    font-size: 13px;
+}
+
 /* Metric grid */
 .metric-grid {
     flex-direction: row;
@@ -1121,28 +1265,31 @@
     width: 48%;
     border-radius: 14px;
     padding: 8px;
-    background-color: rgba(255,255,255,0.06);
+
+    /* Brighter card */
+    background-color: rgba(255,255,255,0.12);
+
     border-left-width: 1px;
     border-right-width: 1px;
     border-top-width: 1px;
     border-bottom-width: 1px;
-    border-left-color: rgba(255,255,255,0.06);
-    border-right-color: rgba(255,255,255,0.06);
-    border-top-color: rgba(255,255,255,0.06);
-    border-bottom-color: rgba(255,255,255,0.06);
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
 }
 
 .metric-key {
     font-size: 10px;
     unity-font-style: bold;
-    color: rgba(255,255,255,0.62);
+    color: rgba(255,255,255,0.92);
     margin-bottom: 2px;
 }
 
 .metric-val {
     font-size: 14px;
     unity-font-style: bold;
-    color: rgba(255,255,255,0.92);
+    color: rgba(255,255,255,1.0);
 }
 
 /* Secondary metric grid (smaller tiles under the primary row) */
@@ -1152,7 +1299,7 @@
 
 .metric-card-secondary {
     padding: 6px;
-    background-color: rgba(255,255,255,0.045);
+    background-color: rgba(255,255,255,0.10);
 }
 
 .metric-val-secondary {
@@ -1167,7 +1314,7 @@
 
 .stats-details {
     font-size: 11px;
-    color: rgba(255,255,255,0.68);
+    color: rgba(255,255,255,0.90);
 }
 
 /* Home grid / tiles */
@@ -1384,16 +1531,6 @@
 .tasks-currency {
     unity-font-style: bold;
     font-size: 13px;
-    color: rgba(255,255,255,0.95);
-}
-
-.tasks-claimall {
-    font-size: 12px;
-    padding-left: 10px;
-    padding-right: 10px;
-    height: 24px;
-    border-radius: 10px;
-    background-color: rgba(255,255,255,0.12);
     color: rgba(255,255,255,0.95);
 }
 
@@ -1672,3 +1809,817 @@
     min-width: 58px;
 }
 
+/* =====================
+   Stats (row list + expandable achievements)
+   ===================== */
+
+.stats-achievements-btn {
+    margin-top: 6px;
+    margin-bottom: 10px;
+    height: 26px;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-size: 12px;
+
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.08);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.92);
+}
+
+.stats-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 9px;
+    padding-bottom: 9px;
+
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.10);
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+}
+
+.stats-row-left {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.stats-row-label {
+    font-size: 12px;
+    color: rgba(255,255,255,0.94);
+
+    unity-text-outline-width: 1px;
+    unity-text-outline-color: rgba(0,0,0,0.55);
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex-grow: 1;
+}
+
+.stats-row-right {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.stats-row-value {
+    font-size: 13px;
+    color: rgba(255,255,255,0.98);
+    unity-font-style: bold;
+
+    unity-text-outline-width: 1px;
+    unity-text-outline-color: rgba(0,0,0,0.55);
+}
+
+.stats-row-chevron {
+    width: 14px;
+    height: 14px;
+    opacity: 0.65;
+}
+
+.stats-ach-expand {
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+
+    border-radius: 12px;
+    background-color: rgba(0,0,0,0.18);
+}
+
+.stats-ach-badges {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Category accent variations (subtle) */
+.stats-row.cat-speed  .stats-row-accent { background-color: rgba(0.30, 0.75, 1.00, 0.60); }
+.stats-row.cat-distance .stats-row-accent { background-color: rgba(0.35, 1.00, 0.55, 0.60); }
+.stats-row.cat-air    .stats-row-accent { background-color: rgba(0.85, 0.55, 1.00, 0.60); }
+.stats-row.cat-grind  .stats-row-accent { background-color: rgba(1.00, 0.75, 0.30, 0.60); }
+.stats-row.cat-runs   .stats-row-accent { background-color: rgba(0.95, 0.95, 0.95, 0.35); }
+.stats-row.cat-stability .stats-row-accent { background-color: rgba(1.00, 0.35, 0.35, 0.55); }
+
+/* -------------------- Stats (grouped rows + chips) -------------------- */
+
+.stats-cat-row {
+    margin-top: 6px;
+    padding: 6px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.03);
+}
+
+.stats-cat-chips {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.stat-chip {
+    flex-grow: 1;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background-color: rgba(0,0,0,0.25);
+}
+
+.stat-chip-top {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.stat-chip-label {
+    font-size: 11px;
+    opacity: 0.85;
+}
+
+.stat-chip-value {
+    margin-top: 2px;
+    font-size: 14px;
+    unity-font-style: bold;
+}
+
+.stat-chip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background-color: rgba(255,255,255,0.75);
+}
+
+/* subtle row tints */
+.cat-speed   { background-color: rgba(120,180,255,0.06); }
+.cat-distance{ background-color: rgba(120,255,180,0.06); }
+.cat-air     { background-color: rgba(255,220,120,0.06); }
+.cat-grind   { background-color: rgba(255,140,220,0.06); }
+.cat-explore { background-color: rgba(200,200,255,0.06); }
+.cat-tasks   { background-color: rgba(255,255,255,0.04); }
+
+/* -------------------- Achievements panel under stats -------------------- */
+
+.stats-ach-panel {
+    margin-top: 6px;
+    padding: 8px;
+    border-radius: 12px;
+    background-color: rgba(0,0,0,0.22);
+    gap: 8px;
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.10);
+    border-right-color: rgba(255,255,255,0.10);
+    border-top-color: rgba(255,255,255,0.10);
+    border-bottom-color: rgba(255,255,255,0.10);
+}
+
+.stats-ach-row {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+.stats-ach-item {
+    width: 132px;
+    min-height: 152px;
+
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 8px;
+    padding-right: 8px;
+
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.08);
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+
+    flex-direction: column;
+    gap: 6px;
+}
+
+.stats-ach-item.is-locked { opacity: 0.60; }
+.stats-ach-item.is-unlocked { opacity: 1.0; }
+
+.stats-ach-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 2px;
+
+    background-color: rgba(255,255,255,0.12);
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.14);
+    border-right-color: rgba(255,255,255,0.14);
+    border-top-color: rgba(255,255,255,0.14);
+    border-bottom-color: rgba(255,255,255,0.14);
+}
+
+.stats-ach-info {
+    padding: 6px;
+    border-radius: 10px;
+    background-color: rgba(0,0,0,0.22);
+    align-self: stretch;
+}
+
+.stats-ach-title {
+    font-size: 11px;
+    color: rgba(255,255,255,0.95);
+    unity-font-style: bold;
+    unity-text-align: middle-center;
+
+    unity-text-outline-width: 1px;
+    unity-text-outline-color: rgba(0,0,0,0.55);
+
+    white-space: normal;   /* allow wrapping */
+    overflow: visible;     /* avoid clipping */
+    text-overflow: clip;
+}
+
+.stats-ach-req {
+    font-size: 10px;
+    color: rgba(255,255,255,0.82);
+    unity-text-align: middle-center;
+
+    unity-text-outline-width: 1px;
+    unity-text-outline-color: rgba(0,0,0,0.55);
+
+    white-space: normal;   /* allow wrapping */
+    overflow: visible;     /* avoid clipping */
+    text-overflow: clip;
+}
+
+.stats-ach-meta {
+    margin-top: 2px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.78);
+    unity-text-align: middle-center;
+
+    unity-text-outline-width: 1px;
+    unity-text-outline-color: rgba(0,0,0,0.55);
+
+    white-space: nowrap;   /* keep meta concise */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+    /* =========================
+   Stats (chip rows + expand)
+   ========================= */
+
+.stats-topbar {
+    margin-top: 6px;
+    margin-bottom: 6px;
+    flex-direction: row;
+    justify-content: flex-end;
+}
+
+.btn-mini {
+    height: 24px;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-size: 11px;
+    unity-font-style: bold;
+    opacity: 0.95;
+}
+
+.stats-list {
+    margin-top: 8px;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-cat-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.04);
+}
+
+.stat-chip {
+    min-width: 86px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background-color: rgba(0,0,0,0.25);
+}
+
+.stat-chip:hover {
+    background-color: rgba(0,0,0,0.32);
+}
+
+.stat-chip-btn {
+    flex-direction: column;
+}
+
+.stat-chip-k {
+    font-size: 10px;
+    opacity: 0.75;
+}
+
+.stat-chip-v {
+    margin-top: 2px;
+    font-size: 12px;
+    unity-font-style: bold;
+}
+
+.stat-ach-dot {
+    position: absolute;
+    top: 6px;
+    right: 7px;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background-color: rgba(255,255,255,0.35);
+}
+
+.stat-expand {
+    margin-top: 6px;
+    padding: 8px;
+    border-radius: 12px;
+    background-color: rgba(0,0,0,0.22);
+}
+
+.stat-ach-rows {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-ach-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.stat-ach-item {
+    width: 64px;
+    align-items: center;
+}
+
+.stat-ach-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    background-color: rgba(255,255,255,0.10);
+}
+
+.stat-ach-badge.is-complete {
+    background-color: rgba(255,255,255,0.60);
+}
+
+.stat-ach-title {
+    margin-top: 4px;
+    font-size: 9px;
+    opacity: 0.85;
+    unity-text-align: middle-center;
+}
+
+.stat-ach-sub {
+    margin-top: 2px;
+    font-size: 8px;
+    opacity: 0.65;
+    unity-text-align: middle-center;
+}
+
+/* ---------- Tasks (matrix) ---------- */
+
+.flex-spacer {
+    flex-grow: 1;
+}
+
+.tasks-info-top {
+    flex-direction: row;
+    align-items: center;
+}
+
+.tasks-info-text {
+    font-size: 11px;
+    color: rgba(255,255,255,0.85);
+    white-space: normal;
+}
+
+/* =========================
+   TASKS PAGE (FIT ON SCREEN)
+   ========================= */
+
+.tasks-page {
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+/* Compact info panel at top */
+.tasks-info-panel {
+    position: relative;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.10);
+    background-color: rgba(255,255,255,0.05);
+}
+
+.tasks-info-title {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: rgb(255,255,255);
+    margin-bottom: 1px;
+}
+
+.tasks-info-body {
+    font-size: 10px;
+    color: rgba(255,255,255,0.85);
+
+    /* Keep compact and prevent info panel from expanding vertically */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 102px; /* leave room for claim-all */
+}
+
+/* Claim all pinned top-right (slightly smaller) */
+.tasks-claimall {
+    position: absolute;
+    right: 8px;
+    top: 6px;
+
+    flex-direction: row;
+    align-items: center;
+}
+
+.tasks-claimall-btn {
+    height: 22px;
+    padding-left: 9px;
+    padding-right: 9px;
+    border-radius: 10px;
+    -unity-font-style: bold;
+    font-size: 10px;
+}
+
+.tasks-claimall-value {
+    margin-left: 6px;
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: rgb(255,255,255);
+}
+
+/* Matrix container */
+.tasks-matrix {
+    flex-direction: column;
+}
+
+/* Metric row becomes a vertical stack: label ABOVE the tier cells */
+.tasks-metric-row {
+    flex-direction: column;
+    align-items: stretch;
+
+    margin-bottom: 4px; /* reduced vertical spacing */
+}
+
+/* Label above row */
+.tasks-metric-label {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+
+    margin-left: 2px;
+    margin-bottom: 3px;
+}
+
+/* Tier cells row now spans full width */
+.tasks-tier-row {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Smaller, denser cells */
+.task-cell {
+    flex-grow: 1;
+    height: 34px;
+
+    margin-left: 4px; /* keep, but compact */
+    border-radius: 10px;
+
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgba(255,255,255,0.10);
+
+    justify-content: center;
+    align-items: center;
+}
+
+/* Remove left margin on the first cell so we don't waste width */
+.tasks-tier-row > .task-cell:first-child {
+    margin-left: 0px;
+}
+
+.task-cell-label {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: rgba(255,255,255,0.95);
+}
+
+/* Optional state polish (controller also sets backgroundColor directly) */
+
+/* Completed: thicker + more confident border, dim text slightly */
+.task-cell.is-complete {
+    border-width: 2px;
+    border-color: rgba(120,255,160,0.70);
+}
+
+.task-cell.is-complete .task-cell-label {
+    color: rgba(255,255,255,0.72);
+}
+
+/* Ready to claim: blinking yellow outline */
+.task-cell.is-ready {
+    border-width: 2px;
+    border-color: rgba(255, 230, 80, 0.95);
+    animation-name: taskReadyPulse;
+    animation-duration: 0.9s;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+}
+
+@keyframes taskReadyPulse {
+    0%   { border-color: rgba(255, 230, 80, 0.15); }
+    50%  { border-color: rgba(255, 230, 80, 0.95); }
+    100% { border-color: rgba(255, 230, 80, 0.15); }
+}
+
+/* Claimed: keep green fill (handled in code) but show a faded yellow border */
+.task-cell.is-claimed {
+    border-width: 2px;
+    border-color: rgba(255, 230, 80, 0.35);
+    opacity: 1;
+}
+
+.task-cell.is-claimed .task-cell-label {
+    color: rgba(255,255,255,0.72);
+}
+
+/* Selected should still be obvious, but not override ready pulse too aggressively */
+.task-cell.is-selected {
+    border-width: 2px;
+    border-color: rgba(255,255,255,0.90);
+}
+
+/* If selected + ready, let pulse win (more important feedback) */
+.task-cell.is-selected.is-ready {
+    border-width: 2px;
+}
+
+/* Brief pulse when a reward is successfully claimed */
+@keyframes taskClaimFlash {
+    0%   { border-color: rgba(255, 240, 120, 0.95); border-width: 3px; }
+    55%  { border-color: rgba(255, 240, 120, 0.55); border-width: 3px; }
+    100% { border-color: rgba(255, 230, 80, 0.35);  border-width: 2px; }
+}
+
+.task-cell.is-claim-flash {
+    animation-name: taskClaimFlash;
+    animation-duration: 0.35s;
+    animation-iteration-count: 1;
+    animation-timing-function: ease-out;
+}
+
+/* When hovering Claim All, punch up claimable cells */
+.claimall-hover .task-cell.is-ready {
+    outline-width: 2px;
+    outline-style: solid;
+    outline-color: rgba(255, 230, 90, 0.95);
+    outline-offset: 1px;
+}
+
+.watch-tasks-list {
+    flex-direction: column;
+    row-gap: 2px;
+}
+
+.tile-tasks-list {
+    flex-direction: column;
+    row-gap: 2px;
+    margin-top: 4px;
+}
+
+    /* ----------------------------- */
+/* Map Page */
+/* ----------------------------- */
+
+#Page_Map {
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Hide ScrollView vertical scroller for the map page */
+#Page_Map .unity-scroll-view__vertical-scroller {
+    display: none;
+}
+/* Map Page: force no vertical scrolling and allow inner regions to flex */
+#Page_Map .unity-scroll-view__content-viewport {
+    overflow: hidden;
+}
+
+#Page_Map .unity-scroll-view__content-container {
+    flex-direction: column;
+    flex-grow: 1;
+    min-height: 0;
+    padding-bottom: 0px;
+}
+
+.map-page {
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 8px;
+    padding-bottom: 10px;
+}
+
+.map-toolbar {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.map-title {
+    font-size: 16px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+}
+
+.map-toolbar-spacer {
+    flex-grow: 1;
+}
+
+.map-toolbtn {
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.08);
+}
+
+.map-toolbtn:hover {
+    background-color: rgba(255,255,255,0.12);
+}
+
+.map-toolbtn-text {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.90);
+}
+
+.map-missing {
+    font-size: 12px;
+    color: rgba(255,255,255,0.70);
+    margin-bottom: 8px;
+    display: none; /* shown only when MapData is missing */
+}
+
+.map-viewport {
+    flex-grow: 1;
+    min-height: 0;
+    border-radius: 14px;
+    background-color: rgba(0,0,0,0.18);
+    overflow: hidden;
+}
+
+.map-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.map-background {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.map-polylines {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.map-markers {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.map-marker {
+    position: absolute;
+    flex-direction: column;
+    align-items: center;
+}
+
+.map-marker-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 8px;
+    background-color: rgba(255,255,255,0.95);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(0,0,0,0.35);
+    border-right-color: rgba(0,0,0,0.35);
+    border-top-color: rgba(0,0,0,0.35);
+    border-bottom-color: rgba(0,0,0,0.35);
+}
+
+.map-marker-label {
+    margin-top: 3px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.92);
+    background-color: rgba(0,0,0,0.35);
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    border-radius: 8px;
+    max-width: 160px;
+    white-space: nowrap;
+}
+
+    /* Watch Map page: no padding, clean clip for injected minimap */
+#WatchPage_Map {
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+}
+
+/* Phone home Map tile: clip injected minimap */
+#Tile_Map {
+    overflow: hidden;
+}
+
+    #MapInfoPanel Label {
+    color: white;
+}
+
+#MapInfoPanel Button {
+    color: white;
+}
+
+    .map-polyline-label {
+    color: white;
+    -unity-font-style: bold;
+    background-color: rgba(0, 0, 0, 0.35);
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+}

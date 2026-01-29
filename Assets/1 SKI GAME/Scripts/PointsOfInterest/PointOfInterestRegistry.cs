@@ -68,6 +68,23 @@ namespace SkiGame.POI
         [NonSerialized] private readonly List<POIInfo> _cache = new();
         public IReadOnlyList<POIInfo> Current => _cache;
 
+        [Header("Editor Refresh (Performance)")]
+        [SerializeField] private bool autoRefreshInEditor = true;
+
+        [SerializeField, Range(0.25f, 10f)]
+        private float editorAutoRefreshIntervalSeconds = 2.0f;
+
+        [SerializeField] private bool bakeRunMetricsInEditor = false;
+
+        [SerializeField, Range(0.5f, 30f)]
+        private float runMetricsBakeCooldownSeconds = 5.0f;
+
+#if UNITY_EDITOR
+        private double _nextEditorRefreshTime;
+        private readonly System.Collections.Generic.Dictionary<int, double> _lastRunBakeTime = new();
+#endif
+
+
         [Serializable]
         private class CustomPOIEntry
         {
@@ -231,7 +248,7 @@ namespace SkiGame.POI
         // Discovery implementations (no adapters)
         // -----------------------
 
-        private static void AppendSkiRuns(List<POIInfo> dst)
+        private void AppendSkiRuns(List<POIInfo> dst)
         {
 #if UNITY_2023_1_OR_NEWER
             var runs = UnityEngine.Object.FindObjectsByType<SkiRunLine>(FindObjectsSortMode.None);
@@ -245,9 +262,17 @@ namespace SkiGame.POI
                 if (r == null) continue;
 
 #if UNITY_EDITOR
-                // In the editor, ensure RunColor reflects the current difficulty profile/terrain sampling.
-                // This keeps POI colors correct even if flags haven't been rebuilt recently.
-                try { r.BakeMetrics(); } catch { /* keep POI system resilient */ }
+                if (bakeRunMetricsInEditor && !Application.isPlaying)
+                {
+                    int key = r.GetInstanceID();
+                    double now = UnityEditor.EditorApplication.timeSinceStartup;
+
+                    if (!_lastRunBakeTime.TryGetValue(key, out double last) || (now - last) >= runMetricsBakeCooldownSeconds)
+                    {
+                        _lastRunBakeTime[key] = now;
+                        try { r.BakeMetrics(); } catch { /* keep POI system resilient */ }
+                    }
+                }
 #endif
 
                 Vector3 pos = r.transform.position;
@@ -416,12 +441,13 @@ namespace SkiGame.POI
 
 #if UNITY_EDITOR
             // Keep cache reasonably fresh in the editor for correct gizmos without manual refresh spam.
-            if (!Application.isPlaying)
+
+            if (!Application.isPlaying && autoRefreshInEditor)
             {
                 double now = UnityEditor.EditorApplication.timeSinceStartup;
-                if (now - _lastEditorRefreshTime > 0.5d)
+                if (now >= _nextEditorRefreshTime)
                 {
-                    _lastEditorRefreshTime = now;
+                    _nextEditorRefreshTime = now + editorAutoRefreshIntervalSeconds;
                     Refresh();
                 }
             }
@@ -435,8 +461,15 @@ namespace SkiGame.POI
             if (!drawGizmos) return;
 
 #if UNITY_EDITOR
-            if (!Application.isPlaying)
-                Refresh();
+            if (!Application.isPlaying && autoRefreshInEditor)
+            {
+                double now = UnityEditor.EditorApplication.timeSinceStartup;
+                if (now >= _nextEditorRefreshTime)
+                {
+                    _nextEditorRefreshTime = now + editorAutoRefreshIntervalSeconds;
+                    Refresh();
+                }
+            }
 #endif
 
             DrawPOIGizmos(selected: true);

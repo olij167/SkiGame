@@ -94,6 +94,15 @@ public class WindController : MonoBehaviour
     [Tooltip("Also search inactive objects when auto-attaching adapters.")]
     public bool alsoAffectInactiveObjects = false;
 
+    [Header("Auto Attach (Performance)")]
+    [Tooltip("If true, AutoAttachAdapters will only run during play mode (prevents editor/domain reload hitches).")]
+    public bool autoAttachOnlyInPlayMode = true;
+
+    [Tooltip("Optional delay before auto-attaching (seconds). Helps smooth Play Mode entry spikes).")]
+    public float autoAttachDelaySeconds = 0.15f;
+
+    private static bool s_autoAttachCompletedThisPlay;
+
     float timeOffset;
 
     // Cached effective values (so SampleWind stays cheap and consistent across many samplers per frame)
@@ -140,11 +149,6 @@ public class WindController : MonoBehaviour
         effectiveBaseSpeed = Mathf.Max(0f, manualBaseSpeed);
         effectiveGustAmplitude = Mathf.Clamp01(manualGustAmplitude);
         effectiveTurbulenceStrength = Mathf.Max(0f, manualTurbulenceStrength);
-
-        if (autoAttachAdaptersOnStart)
-        {
-            AutoAttachAdapters();
-        }
     }
 
     void Start()
@@ -155,11 +159,36 @@ public class WindController : MonoBehaviour
 
         if (timeController == null && TimeController.instance != null)
             timeController = TimeController.instance;
+
+        if (!autoAttachAdaptersOnStart)
+            return;
+
+        // If we only want auto-attach in play mode, schedule it there (debounced + delayed).
+        if (autoAttachOnlyInPlayMode)
+        {
+            if (Application.isPlaying)
+                StartCoroutine(CoAutoAttachAdaptersOnce());
+            return;
+        }
+
+#if UNITY_EDITOR
+        // Allow editor-only attachment when not playing (manual workflow).
+        if (!Application.isPlaying)
+            AutoAttachAdapters();
+        else
+#endif
+            StartCoroutine(CoAutoAttachAdaptersOnce());
     }
 
     void Update()
     {
         UpdateEffectiveWindInputs();
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        s_autoAttachCompletedThisPlay = false;
     }
 
     void UpdateEffectiveWindInputs()
@@ -242,34 +271,70 @@ public class WindController : MonoBehaviour
     void AutoAttachAdapters()
     {
         // Attach Cloth adapter
-        var cloths = FindObjectsOfType<Cloth>(alsoAffectInactiveObjects);
-        foreach (var cloth in cloths)
+#if UNITY_2023_1_OR_NEWER
+        var cloths = UnityEngine.Object.FindObjectsByType<Cloth>(
+            alsoAffectInactiveObjects ? FindObjectsInactive.Include : FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None
+        );
+#else
+    var cloths = FindObjectsOfType<Cloth>(alsoAffectInactiveObjects);
+#endif
+        for (int i = 0; i < cloths.Length; i++)
         {
+            var cloth = cloths[i];
+            if (!cloth) continue;
             if (!cloth.TryGetComponent<ClothWindAdapter>(out _))
-            {
                 cloth.gameObject.AddComponent<ClothWindAdapter>();
-            }
         }
 
         // Attach Particle adapter
-        var particleSystems = FindObjectsOfType<ParticleSystem>(alsoAffectInactiveObjects);
-        foreach (var ps in particleSystems)
+#if UNITY_2023_1_OR_NEWER
+        var pss = UnityEngine.Object.FindObjectsByType<ParticleSystem>(
+            alsoAffectInactiveObjects ? FindObjectsInactive.Include : FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None
+        );
+#else
+    var pss = FindObjectsOfType<ParticleSystem>(alsoAffectInactiveObjects);
+#endif
+        for (int i = 0; i < pss.Length; i++)
         {
+            var ps = pss[i];
+            if (!ps) continue;
             if (!ps.TryGetComponent<ParticleWindAdapter>(out _))
-            {
                 ps.gameObject.AddComponent<ParticleWindAdapter>();
-            }
         }
 
-        // Attach WindZone adapter (to drive trees / foliage that already listen to WindZone)
-        var windZones = FindObjectsOfType<WindZone>(alsoAffectInactiveObjects);
-        foreach (var wz in windZones)
+        // Attach WindZone adapter
+#if UNITY_2023_1_OR_NEWER
+        var wzs = UnityEngine.Object.FindObjectsByType<WindZone>(
+            alsoAffectInactiveObjects ? FindObjectsInactive.Include : FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None
+        );
+#else
+    var wzs = FindObjectsOfType<WindZone>(alsoAffectInactiveObjects);
+#endif
+        for (int i = 0; i < wzs.Length; i++)
         {
+            var wz = wzs[i];
+            if (!wz) continue;
             if (!wz.TryGetComponent<WindZoneAdapter>(out _))
-            {
                 wz.gameObject.AddComponent<WindZoneAdapter>();
-            }
         }
+    }
+
+    private System.Collections.IEnumerator CoAutoAttachAdaptersOnce()
+    {
+        // One-frame delay so other Awake/OnEnable work completes first.
+        yield return null;
+
+        if (autoAttachDelaySeconds > 0f)
+            yield return new WaitForSeconds(autoAttachDelaySeconds);
+
+        // Only run once per play session.
+        if (s_autoAttachCompletedThisPlay) yield break;
+
+        AutoAttachAdapters();
+        s_autoAttachCompletedThisPlay = true;
     }
 
     /// <summary>
@@ -310,6 +375,15 @@ public class WindController : MonoBehaviour
             gust = gustNoise
         };
     }
+
+#if UNITY_EDITOR
+    [ContextMenu("Auto Attach Wind Adapters (Editor)")]
+    private void AutoAttachAdapters_EditorMenu()
+    {
+        if (Application.isPlaying) return;
+        AutoAttachAdapters();
+    }
+#endif
 
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()

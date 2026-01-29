@@ -118,6 +118,13 @@ public class FencePath : MonoBehaviour
     [NonSerialized] private GameObject _cachedPrefabForLength;
     [NonSerialized] private ForwardAxis _cachedAxis;
 
+#if UNITY_EDITOR
+    [NonSerialized] private Vector3[] _cachedGizmoSampled;
+    [NonSerialized] private bool _cachedGizmoClosed;
+    [NonSerialized] private int _cachedGizmoKey;
+    [NonSerialized] private bool _cachedGizmoValid;
+#endif
+
     public IReadOnlyList<Vector3> LocalPoints => localPoints;
     public int PointCount => localPoints == null ? 0 : localPoints.Count;
 
@@ -1120,6 +1127,46 @@ public class FencePath : MonoBehaviour
 
     }
 
+#if UNITY_EDITOR
+    private int ComputeGizmoKey()
+    {
+        unchecked
+        {
+            int h = 17;
+            h = h * 31 + (localPoints != null ? localPoints.Count : 0);
+            h = h * 31 + (int)pathMode;
+            h = h * 31 + (closedLoop ? 1 : 0);
+            h = h * 31 + Mathf.RoundToInt(samplesPerMeter * 1000f);
+            h = h * 31 + minSamplesPerSpan;
+
+            // Transform affects TransformPoint()
+            h = h * 31 + transform.position.GetHashCode();
+            h = h * 31 + transform.rotation.GetHashCode();
+            h = h * 31 + transform.lossyScale.GetHashCode();
+
+            // A couple of points is usually enough to detect edits without hashing everything.
+            if (localPoints != null && localPoints.Count > 0)
+            {
+                h = h * 31 + localPoints[0].GetHashCode();
+                h = h * 31 + localPoints[localPoints.Count - 1].GetHashCode();
+            }
+
+            return h;
+        }
+    }
+
+    private bool EnsureGizmoSampled()
+    {
+        int key = ComputeGizmoKey();
+        if (_cachedGizmoValid && key == _cachedGizmoKey && _cachedGizmoSampled != null && _cachedGizmoSampled.Length >= 2)
+            return true;
+
+        _cachedGizmoKey = key;
+        _cachedGizmoValid = BuildSampledWorldPath(out _cachedGizmoSampled, out _cachedGizmoClosed);
+        return _cachedGizmoValid;
+    }
+#endif
+
     private void OnDrawGizmos()
     {
         if (!drawGizmos) return;
@@ -1140,8 +1187,12 @@ public class FencePath : MonoBehaviour
             Gizmos.DrawLine(transform.TransformPoint(localPoints[n - 1]), transform.TransformPoint(localPoints[0]));
 
         // Draw sampled path if smooth
-        if (pathMode == PathMode.SmoothCatmullRom && BuildSampledWorldPath(out var sampled, out bool closed))
+#if UNITY_EDITOR
+        if (pathMode == PathMode.SmoothCatmullRom && EnsureGizmoSampled())
         {
+            var sampled = _cachedGizmoSampled;
+            bool closed = _cachedGizmoClosed;
+
             Gizmos.color = new Color(0.3f, 0.9f, 1f, 0.5f);
             int m = sampled.Length;
             int segCount = closed ? m : (m - 1);
@@ -1151,5 +1202,7 @@ public class FencePath : MonoBehaviour
                 Gizmos.DrawLine(sampled[i], sampled[j]);
             }
         }
+#endif
+
     }
 }

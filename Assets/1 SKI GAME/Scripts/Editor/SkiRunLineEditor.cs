@@ -1,9 +1,11 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using SkiGame.Runs;
 using UnityEngine.Rendering;
+using static UnityEditor.Undo;
 
 namespace SkiGame.RunsEditor
 {
@@ -12,15 +14,41 @@ namespace SkiGame.RunsEditor
     {
         // --- Scene display toggles ---
         private bool showPointGizmos = true;          // clickable point markers (selection)
-        private bool showWidthVisuals = true;         // width ticks (non-interactive) for anchors
+        private bool showWidthVisuals = false;         // width ticks (non-interactive) for anchors
         private bool showBoundaryPreview = true;      // left/right corridor lines
+        private bool showIntersectionOverlay = true;  // gate/entry overlay for intersections
         private bool showPairPreview = true;          // crossbars at spawn samples
-        private bool showSpacingHandle = true;        // drag handle near start
+        private bool showSpacingHandle = false;        // drag handle near start
+
+        // Scene hotkey overlay + interaction modes
+        private bool showHotkeyOverlay = true;
+        private bool gateEditMode = false; // toggled with 'G'
+
+        // Fence editing (editor-only)
+        private bool foldFences = true;
+        private bool fenceHoleEditMode = false;
+
+        private SkiRunLine.FenceSide fenceAddSide = SkiRunLine.FenceSide.Left;
+        private float fenceAddHoleLengthMeters = 8f;
+
+        // Fence hole selection (for delete/highlight)
+        private int _selectedFenceHoleIndex = -1;
+
+        // Scene-only vertical lift so handles/gizmos don't sit exactly on the terrain surface.
+        // Editor-only (does not affect runtime data).
+        private float sceneVisualYOffset = 0.45f;
+
+        // Inspector state (editor-only)
+        private int inspectorTab = 0; // 0=Run, 1=Scene, 2=Utilities, 3=Advanced
+        private bool foldRunSettings = true;
+
+        private bool foldAdvanced = false;
 
         // --- Edit interaction toggles ---
         private bool enableShiftClickInsert = true;
         private bool enableAltClickDelete = true;
         private bool editNeighborPoints = false;      // show move handle for selected +/- 1
+        private bool autoSnapToTerrainWhenEditing = true;
 
         // --- Selection behaviour ---
         private int selectedPointIndex = -1;
@@ -29,16 +57,229 @@ namespace SkiGame.RunsEditor
         // --- Preview density / performance ---
         private int previewMaxPairs = 500;
 
+        // --- Preview rebuild control (performance) ---
+        private bool previewIncludeOverlapAvoidance = false; // OFF by default: fast preview while editing
+        private bool _previewDirty = true;
+        private double _lastPreviewBuildTime = -1;
+        private const double PreviewRebuildMinInterval = 0.12; // seconds (throttle SceneView rebuilds)
+
+        private int _lastPointsHash = int.MinValue;
+
+        // ------------------------------------------------------------
+        // Authoring Mode (single, cohesive tool state)
+        // ------------------------------------------------------------
+        private enum AuthoringMode { Path = 0, Flags = 1, Fences = 2 }
+        private AuthoringMode _authoringMode = AuthoringMode.Path;
+
+        // Fence preview buffers (reused per span/hole)
+        private readonly List<Vector3> _tmpFencePreview = new List<Vector3>(512);
+        // Reuse an array for Handles.DrawAAPolyLine to avoid GC from List.ToArray().
+        private Vector3[] _tmpFencePreviewArray;
+
+        private void DrawAAPolyLineCached(float width, List<Vector3> pts)
+        {
+            if (pts == null || pts.Count < 2) return;
+
+            if (_tmpFencePreviewArray == null || _tmpFencePreviewArray.Length != pts.Count)
+                _tmpFencePreviewArray = new Vector3[pts.Count];
+
+            for (int i = 0; i < pts.Count; i++)
+                _tmpFencePreviewArray[i] = pts[i];
+
+            Handles.DrawAAPolyLine(width, _tmpFencePreviewArray);
+        }
+
+        void OnEnable()
+        {
+            Undo.undoRedoPerformed += OnUndoRedo;
+            Undo.postprocessModifications += OnPostprocessModifications; // NEW
+            _previewDirty = true;
+            LoadEditorPrefs();
+
+            SceneView.RepaintAll();
+        }
+
+        void OnDisable()
+        {
+            Undo.undoRedoPerformed -= OnUndoRedo;
+            Undo.postprocessModifications -= OnPostprocessModifications; // NEW
+            SaveEditorPrefs();
+        }
+
+        private void OnUndoRedo()
+        {
+            _previewDirty = true;
+            SceneView.RepaintAll();
+            Repaint();
+        }
+
+        private UndoPropertyModification[] OnPostprocessModifications(UndoPropertyModification[] modifications)
+        {
+            if (modifications == null || modifications.Length == 0)
+                return modifications;
+
+            for (int i = 0; i < modifications.Length; i++)
+            {
+                var target = modifications[i].currentValue.target;
+                if (target == null) continue;
+
+                // Direct edits to any SkiRunLine should invalidate intersection previews.
+                if (target is SkiRunLine)
+                {
+                    _previewDirty = true;
+                    SceneView.RepaintAll();
+                    break;
+                }
+
+                // Some edits come through as Component / GameObject; catch those too.
+                if (target is Component c && c.GetComponent<SkiRunLine>() != null)
+                {
+                    _previewDirty = true;
+                    SceneView.RepaintAll();
+                    break;
+                }
+
+                if (target is GameObject go && go.GetComponent<SkiRunLine>() != null)
+                {
+                    _previewDirty = true;
+                    SceneView.RepaintAll();
+                    break;
+                }
+            }
+
+            return modifications;
+        }
+
         // Cached preview buffers
         private readonly List<Vector3> _prevCenters = new();
         private readonly List<Vector3> _prevLeft = new();
         private readonly List<Vector3> _prevRight = new();
 
+        private readonly List<float> _prevDistances = new List<float>(512);
+        private readonly List<float> _ovDistances = new List<float>(512);
+
+        // Gate editing state
+        private enum GateSide { Center, Left, Right }
+        private bool _gateConsumedThisEvent = false;
+
+        [SerializeField] private bool _showGateHandles = true;
+        [SerializeField] private bool _gateEditAffectsNeighbors = false;
+        [SerializeField] private int _gateNeighborPairs = 1;
+        [SerializeField] private float _gateNeighborRadiusMeters = 25f;
+        [SerializeField] private float _gateAddSlackMeters = 2.0f;
+
+        [SerializeField] private bool _showIntersectedRunCorridor = true;
+        [SerializeField] private float _intersectedRunPreviewRadiusMeters = 50f;
+
+        private enum FlagPreviewSet { Primary, Overlay }
+        private FlagPreviewSet _selectedSet = FlagPreviewSet.Primary;
+        private int _selectedPairIndex = -1; // index in the relevant preview list
+        private int _selectedSide = 0;       // 0 = left, 1 = right
+
+        // --- Overlap segment selection (editor-only) ---
+        // Selected overlap refers to the OTHER run whose corridor overlaps this run, and the index range
+        // (in the currently-used overlay preview arrays) where the overlap occurs.
+        private SkiRunLine _selectedOverlapOtherRun = null;
+        private int _selectedOverlapStartIndex = -1; // inclusive sample index
+        private int _selectedOverlapEndIndex = -1;   // inclusive sample index
+                                                     // Optional selection metadata (editor-only).
+
+        private bool HasSelectedOverlap =>
+            _selectedOverlapOtherRun != null &&
+            _selectedOverlapStartIndex >= 0 &&
+            _selectedOverlapEndIndex >= _selectedOverlapStartIndex;
+
+        private struct OverlapSeg
+        {
+            public SkiRunLine other;
+            public int start; // inclusive sample index
+            public int end;   // inclusive sample index
+            public int mid;   // representative sample index
+            public int hiddenCount;
+            public int visibleCount;
+        }
+
+        // Reused scratch list to avoid allocations in SceneGUI.
+        private readonly List<OverlapSeg> _tmpOverlapSegs = new List<OverlapSeg>(32);
+        // Reused scratch list for ribbon polyline rendering.
+        private readonly List<Vector3> _tmpRibbonPts = new List<Vector3>(256);
+
+        // --- Scene label overlap avoidance (editor-only) ---
+        // We draw some overlap/intersection diagnostics using GUI labels rather than Handles.Label so we can
+        // resolve overlaps in *screen space* (Handles.Label has no built-in layout/packing).
+        private readonly List<Rect> _sceneLabelRects = new List<Rect>(96);
+
+
+        private void DrawWorldLabelPacked(Vector3 worldPos, string text, GUIStyle style, float yWorldOffset = 0f, float yStepPixels = 2f)
+        {
+            if (string.IsNullOrEmpty(text) || style == null) return;
+            // Only draw GUI labels during repaint; avoids unnecessary work and keeps layout stable.
+            if (Event.current == null || Event.current.type != EventType.Repaint) return;
+
+            Vector3 wp = worldPos + Vector3.up * yWorldOffset;
+            Vector2 gui = HandleUtility.WorldToGUIPoint(wp);
+            Vector2 size = style.CalcSize(new GUIContent(text));
+
+            // Centered above the anchor point by default.
+            Rect r = new Rect(gui.x - size.x * 0.5f, gui.y - size.y, size.x, size.y);
+
+            // Try nudging upward in screen-space until we find a free slot.
+            // (We keep it simple; worst-case we accept overlap after a small number of attempts.)
+            const int kMaxAttempts = 16;
+            for (int attempt = 0; attempt < kMaxAttempts; attempt++)
+            {
+                bool overlaps = false;
+                for (int i = 0; i < _sceneLabelRects.Count; i++)
+                {
+                    if (_sceneLabelRects[i].Overlaps(r))
+                    {
+                        overlaps = true;
+                        break;
+                    }
+                }
+
+                if (!overlaps)
+                    break;
+
+                r.y -= (size.y + yStepPixels);
+            }
+
+            Handles.BeginGUI();
+            GUI.Label(r, text, style);
+            Handles.EndGUI();
+
+            _sceneLabelRects.Add(r);
+        }
+
+        // Secondary preview buffers for intersection overlay (computed with overlap avoidance).
+        private readonly List<Vector3> _ovCenters = new();
+        private readonly List<Vector3> _ovLeft = new();
+        private readonly List<Vector3> _ovRight = new();
+        private readonly List<byte> _ovSpawnMask = new();
+        private readonly List<SkiRunLine> _ovIntersectedRuns = new();
+        private bool _overlayUsesPrimaryPreview;
+        private readonly List<Vector3> _ovIntersectedClosest = new();
+        private readonly List<Vector3> _ovIntersectedEdgeNormal = new();
+
+        // Per-pair side validity mask:
+        // bit0 = left valid, bit1 = right valid. (mask == 3 => both valid)
+        private readonly List<byte> _prevSpawnMask = new();
+
+        // Optional: which run was “intercepted” for each preview sample (same count as pairs).
+        private readonly List<SkiRunLine> _intersectedRuns = new();
+
+        // Optional: additional intersection debug info (same count as pairs).
+        // Populated only for OUTSIDE->INSIDE (ENTRY) corner-gates.
+        private readonly List<Vector3> _intersectedClosest = new();
+        private readonly List<Vector3> _intersectedEdgeNormal = new();
+
+        // Temp buffers used to draw intersected run corridors without per-frame allocations.
+        private readonly HashSet<SkiRunLine> _tmpRunSet = new();
+        private readonly Vector3[] _seg2 = new Vector3[2];
+
         // --- Authoring utilities ---
         private float resampleSpacingMeters = 12f;
         private float widthAnchorSpacingMeters = 30f;
-        private float autoWidthMaxHalfWidthMeters = 60f;
-        private bool autoWidthUseMinSide = true;
 
         // Width visualisation density
         private bool widthVisualsOnlyAnchors = true;
@@ -50,63 +291,232 @@ namespace SkiGame.RunsEditor
         private float fadeFarMeters = 250f;           // near-invisible at/after this distance
         private float fadeMinAlpha = 0.08f;           // alpha at fadeFarMeters
 
+        // --- Inspector workflow cohesion ---
+        [SerializeField] private int _workflowMode = 0; // 0=Points, 1=Gates, 2=Fences
+        [SerializeField] private bool _foldFenceHolesList = false;
+
+        private void SetWorkflowMode(int mode)
+        {
+            mode = Mathf.Clamp(mode, 0, 2);
+            _workflowMode = mode;
+
+            // Keep these mutually exclusive so the scene experience matches the inspector.
+            gateEditMode = (_workflowMode == 1);
+            fenceHoleEditMode = (_workflowMode == 2);
+
+            // In practice you almost always want point gizmos visible in all modes.
+            showPointGizmos = true;
+
+            if (gateEditMode)
+                _showGateHandles = true;
+
+            SceneView.RepaintAll();
+        }
+
+        private string GetWorkflowModeLabel()
+        {
+            if (gateEditMode) return "Gates";
+            if (fenceHoleEditMode) return "Fences";
+            return "Points";
+        }
+
         public override void OnInspectorGUI()
         {
-            DrawDefaultInspector();
+            var run = (SkiRunLine)target;
+            if (run == null) return;
 
-            EditorGUILayout.Space(8);
+            serializedObject.Update();
+
+            DrawRunOverviewCard(run);
+            EditorGUILayout.Space(6);
+            DrawWorkflowSection(run);
+
+            EditorGUILayout.Space(6);
+
+            // Only two tabs: Run + Advanced
+            inspectorTab = Mathf.Clamp(inspectorTab, 0, 1);
+            inspectorTab = GUILayout.Toolbar(inspectorTab, new[] { "Run", "Advanced" });
+            EditorGUILayout.Space(6);
+
+            switch (inspectorTab)
+            {
+                case 0:
+                    DrawRunTab(run);
+                    break;
+                case 1:
+                    DrawAdvancedTab();
+                    break;
+            }
+
+            serializedObject.ApplyModifiedProperties();
+
+            if (GUI.changed)
+                _previewDirty = true;
+        }
+
+        private void DrawRunOverviewCard(SkiRunLine run)
+        {
             using (new EditorGUILayout.VerticalScope("box"))
             {
-                EditorGUILayout.LabelField("Scene View", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Run Overview", EditorStyles.boldLabel);
 
-                showPointGizmos = EditorGUILayout.ToggleLeft("Show Point Gizmos (click to select)", showPointGizmos);
-                showWidthVisuals = EditorGUILayout.ToggleLeft("Show Width Visuals (anchors)", showWidthVisuals);
-                showBoundaryPreview = EditorGUILayout.ToggleLeft("Show Boundary Preview", showBoundaryPreview);
-                showPairPreview = EditorGUILayout.ToggleLeft("Show Pair Preview", showPairPreview);
-                showSpacingHandle = EditorGUILayout.ToggleLeft("Show Pair Spacing Handle", showSpacingHandle);
+                var pts = run.PointsWorld;
+                int pointCount = pts != null ? pts.Count : 0;
+                float len = (pts != null && pts.Count > 1) ? ComputePolylineLength(pts) : 0f;
+
+                EditorGUILayout.LabelField("Points", pointCount.ToString());
+                EditorGUILayout.LabelField("Approx Length (m)", len.ToString("0.0"));
+                EditorGUILayout.LabelField("Run Width (m)", run.RunWidthMeters.ToString("0.0"));
+
+                var spacingProp = serializedObject.FindProperty("flagSpacingMeters");
+                if (spacingProp != null)
+                    EditorGUILayout.LabelField("Flag Spacing (m)", spacingProp.floatValue.ToString("0.0"));
 
                 EditorGUILayout.Space(4);
-                enableShiftClickInsert = EditorGUILayout.ToggleLeft("Shift-Click Insert Point (on segment)", enableShiftClickInsert);
-                enableAltClickDelete = EditorGUILayout.ToggleLeft("Alt-Click Delete Point", enableAltClickDelete);
-                editNeighborPoints = EditorGUILayout.ToggleLeft("Edit Neighbors (selected +/- 1)", editNeighborPoints);
 
-                pointPickSizeScale = EditorGUILayout.Slider("Point Gizmo Size", pointPickSizeScale, 0.03f, 0.18f);
-
-                EditorGUILayout.Space(4);
-                EditorGUILayout.LabelField("Point Gizmo Clarity", EditorStyles.boldLabel);
-
-                depthTestPointGizmos = EditorGUILayout.ToggleLeft("Occlude Point Gizmos (depth test)", depthTestPointGizmos);
-                fadePointsByDistance = EditorGUILayout.ToggleLeft("Fade Points By Camera Distance", fadePointsByDistance);
-
-                using (new EditorGUI.DisabledScope(!fadePointsByDistance))
-                {
-                    fadeNearMeters = EditorGUILayout.Slider("Fade Near (m)", fadeNearMeters, 5f, 200f);
-                    fadeFarMeters = EditorGUILayout.Slider("Fade Far (m)", fadeFarMeters, 25f, 2000f);
-                    fadeMinAlpha = EditorGUILayout.Slider("Min Alpha", fadeMinAlpha, 0.01f, 0.35f);
-                }
-
-                previewMaxPairs = EditorGUILayout.IntSlider(new GUIContent("Preview Max Pairs"), previewMaxPairs, 50, 5000);
-
-                widthVisualsOnlyAnchors = EditorGUILayout.ToggleLeft("Width Visuals: Anchors Only", widthVisualsOnlyAnchors);
-
-                EditorGUILayout.Space(6);
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    GUI.enabled = selectedPointIndex >= 0;
-                    if (GUILayout.Button("Focus Selected"))
-                        FocusSelectedPoint();
-                    GUI.enabled = true;
+                    if (GUILayout.Button("Open Painter"))
+                        SkiRunPainterWindow.OpenAndSelect(run);
 
-                    if (GUILayout.Button("Clear Selection (Esc)"))
+                    if (GUILayout.Button("Frame"))
                     {
-                        selectedPointIndex = -1;
-                        SceneView.RepaintAll();
+                        Selection.activeGameObject = run.gameObject;
+                        EditorGUIUtility.PingObject(run.gameObject);
+                        SceneView.lastActiveSceneView?.FrameSelected();
+                    }
+                }
+            }
+        }
+
+        // Workflow foldouts (editor-only; fine as non-serialized)
+        private bool _foldWorkflowSceneToggles = true;
+        private bool _foldWorkflowSceneSliders = false;
+        private bool _foldWorkflowUtilities = false;
+
+        private void DrawWorkflowSection(SkiRunLine run)
+        {
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Workflow", EditorStyles.boldLabel);
+
+                // Mode switch (single source of truth)
+                int newMode = GUILayout.Toolbar(_workflowMode, new[] { "Points", "Gates", "Fences" }, GUILayout.Height(22));
+                if (newMode != _workflowMode)
+                    SetWorkflowMode(newMode);
+
+                SetAuthoringMode((AuthoringMode)newMode, (SkiRunLine)target);
+
+                EditorGUILayout.Space(6);
+
+                // ----------------------------
+                // Scene toggles (button toolbar)
+                // ----------------------------
+                _foldWorkflowSceneToggles = EditorGUILayout.Foldout(_foldWorkflowSceneToggles, "Scene Toggles", true);
+                if (_foldWorkflowSceneToggles)
+                {
+                    using (new EditorGUILayout.VerticalScope("box"))
+                    {
+                        // Row 1
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            showPointGizmos = GUILayout.Toggle(showPointGizmos, "Points", "Button");
+                            showWidthVisuals = GUILayout.Toggle(showWidthVisuals, "Widths", "Button");
+                            showBoundaryPreview = GUILayout.Toggle(showBoundaryPreview, "Corridor", "Button");
+                            showPairPreview = GUILayout.Toggle(showPairPreview, "Pairs", "Button");
+                        }
+
+                        // Row 2
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            showSpacingHandle = GUILayout.Toggle(showSpacingHandle, "Spacing", "Button");
+                            showIntersectionOverlay = GUILayout.Toggle(showIntersectionOverlay, "Intersections", "Button");
+                            showHotkeyOverlay = GUILayout.Toggle(showHotkeyOverlay, "Hotkeys", "Button");
+                        }
+
+                        // Row 3 (declutter / visibility toggles)
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            depthTestPointGizmos = GUILayout.Toggle(depthTestPointGizmos, "Depth Test", "Button");
+                            fadePointsByDistance = GUILayout.Toggle(fadePointsByDistance, "Fade", "Button");
+                            widthVisualsOnlyAnchors = GUILayout.Toggle(widthVisualsOnlyAnchors, "Width Anchors Only", "Button");
+                        }
                     }
                 }
 
-                var run = (SkiRunLine)target;
+                EditorGUILayout.Space(4);
+
+                // ----------------------------
+                // Scene sliders (sliders only)
+                // ----------------------------
+                _foldWorkflowSceneSliders = EditorGUILayout.Foldout(_foldWorkflowSceneSliders, "Scene Sliders", true);
+                if (_foldWorkflowSceneSliders)
+                {
+                    using (new EditorGUILayout.VerticalScope("box"))
+                    {
+                        sceneVisualYOffset = EditorGUILayout.Slider(
+                            new GUIContent("Scene Visual Y Offset", "Editor-only: lifts handles/gizmos above terrain for readability."),
+                            sceneVisualYOffset, 0f, 2f);
+
+                        // Preview size (only matters when previews are enabled)
+                        bool anyPreview = showBoundaryPreview || showPairPreview || showIntersectionOverlay;
+                        using (new EditorGUI.DisabledScope(!anyPreview))
+                        {
+                            previewMaxPairs = EditorGUILayout.IntSlider(
+                                new GUIContent("Preview Max Pairs", "Limits how many sampled pairs are drawn in the scene for performance."),
+                                previewMaxPairs, 20, 5000);
+                        }
+
+                        // Point fade controls
+                        using (new EditorGUI.DisabledScope(!fadePointsByDistance))
+                        {
+                            fadeNearMeters = EditorGUILayout.Slider(new GUIContent("Fade Near (m)"), fadeNearMeters, 1f, 200f);
+                            fadeFarMeters = EditorGUILayout.Slider(new GUIContent("Fade Far (m)"), fadeFarMeters, 10f, 1000f);
+                            fadeMinAlpha = EditorGUILayout.Slider(new GUIContent("Fade Min Alpha"), fadeMinAlpha, 0.01f, 0.5f);
+                        }
+
+                        // Authoring utility sliders (kept here so “sliders live together”)
+                        resampleSpacingMeters = EditorGUILayout.Slider(new GUIContent("Resample Spacing (m)"), resampleSpacingMeters, 1f, 50f);
+                        widthAnchorSpacingMeters = EditorGUILayout.Slider(new GUIContent("Width Anchor Spacing (m)"), widthAnchorSpacingMeters, 5f, 150f);
+                    }
+                }
+
+                EditorGUILayout.Space(4);
+
+                // ----------------------------
+                // Utilities (actions / buttons)
+                // ----------------------------
+                _foldWorkflowUtilities = EditorGUILayout.Foldout(_foldWorkflowUtilities, "Utilities", true);
+                if (_foldWorkflowUtilities)
+                {
+                    using (new EditorGUILayout.VerticalScope("box"))
+                    {
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            if (GUILayout.Button("Resample Points"))
+                            {
+                                Undo.RecordObject(run, "Resample Run Points");
+                                run.ResamplePointsWorld(resampleSpacingMeters);
+                                EditorUtility.SetDirty(run);
+                                SceneView.RepaintAll();
+                            }
+
+                            if (GUILayout.Button("Clear Width Overrides"))
+                            {
+                                Undo.RecordObject(run, "Clear Width Overrides");
+                                run.ClearWidthOverrides();
+                                EditorUtility.SetDirty(run);
+                                SceneView.RepaintAll();
+                            }
+                        }
+                    }
+                }
 
                 EditorGUILayout.Space(6);
+
+                // ----------------------------
+                // Primary build actions
+                // ----------------------------
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     if (GUILayout.Button("Bake Metrics"))
@@ -121,79 +531,347 @@ namespace SkiGame.RunsEditor
                     {
                         Undo.RecordObject(run, "Rebuild Run Flags");
                         run.RebuildFlags();
+                        run.ApplyColorToGeneratedFlags();
+                        EditorUtility.SetDirty(run);
+                        SceneView.RepaintAll();
+                    }
+
+                    if (GUILayout.Button("Rebuild Fences"))
+                    {
+                        Undo.RecordObject(run, "Rebuild Fences");
+                        run.RebuildFences();
                         EditorUtility.SetDirty(run);
                         SceneView.RepaintAll();
                     }
                 }
-            }
 
-            EditorGUILayout.Space(8);
+                EditorGUILayout.HelpBox($"Active edit mode: {GetWorkflowModeLabel()}", MessageType.None);
+            }
+        }
+
+        private void DrawRunTab(SkiRunLine run)
+        {
             using (new EditorGUILayout.VerticalScope("box"))
             {
-                EditorGUILayout.LabelField("Authoring Utilities", EditorStyles.boldLabel);
+                // Always-available basics (these are not “mode specific”; they define the run itself)
+                EditorGUILayout.LabelField("Run Settings", EditorStyles.boldLabel);
 
-                resampleSpacingMeters = EditorGUILayout.Slider("Control Point Spacing (m)", resampleSpacingMeters, 5f, 50f);
-                widthAnchorSpacingMeters = EditorGUILayout.Slider("Width Anchor Spacing (m)", widthAnchorSpacingMeters, 10f, 200f);
-                autoWidthMaxHalfWidthMeters = EditorGUILayout.Slider("Auto Width Max Half (m)", autoWidthMaxHalfWidthMeters, 5f, 200f);
-                autoWidthUseMinSide = EditorGUILayout.ToggleLeft("Auto Width Uses Min Side (safer)", autoWidthUseMinSide);
+                DrawPropertySection("Identity",
+                    "runName",
+                    "difficultyProfile",
+                    "overrideDifficulty",
+                    "classifyPerSegment"
+                );
 
-                var run = (SkiRunLine)target;
+                // Only show override value when override is enabled
+                SerializedProperty pOverrideDifficulty = serializedObject.FindProperty("overrideDifficulty");
+                if (pOverrideDifficulty != null && pOverrideDifficulty.boolValue)
+                {
+                    EditorGUI.indentLevel++;
+                    SerializedProperty pOverrideDifficultyValue = serializedObject.FindProperty("overrideDifficultyValue");
+                    if (pOverrideDifficultyValue != null)
+                        EditorGUILayout.PropertyField(pOverrideDifficultyValue);
+                    EditorGUI.indentLevel--;
+                }
+
+                DrawPropertySection("Geometry",
+                    "runWidthMeters",
+                    "widthOverrideMeters"
+                );
+
+                EditorGUILayout.Space(8);
+
+                // Now: ONLY show the active mode section
+                switch (_workflowMode)
+                {
+                    case 0:
+                        DrawPointsModeSection();
+                        break;
+                    case 1:
+                        DrawGatesModeSection();
+                        break;
+                    case 2:
+                        DrawFencesModeSection(run);
+                        break;
+                }
+            }
+        }
+
+        private void DrawPointsModeSection()
+        {
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Point Editing", EditorStyles.boldLabel);
+
+                enableShiftClickInsert = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Shift+Click: Insert point", "Inserts a new point on the closest segment to the cursor."),
+                    enableShiftClickInsert);
+
+                enableAltClickDelete = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Alt+Click: Delete selected point", "Deletes the currently selected point."),
+                    enableAltClickDelete);
+
+                editNeighborPoints = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Edit neighbor points", "Shows small neighbor handles to smooth edits."),
+                    editNeighborPoints);
+
+                autoSnapToTerrainWhenEditing = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Auto-snap moved points to terrain", "When moving points, snap them down to terrain height."),
+                    autoSnapToTerrainWhenEditing);
+
+                EditorGUILayout.HelpBox(
+                    "Points mode:\n" +
+                    "• Click point to select, drag to move.\n" +
+                    "• Shift+Click inserts (optional).\n" +
+                    "• Alt+Click deletes selected (optional).",
+                    MessageType.Info);
+            }
+        }
+
+        private void DrawGatesModeSection()
+        {
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Flags & Gates", EditorStyles.boldLabel);
+
+                // Flag placement fields
+                SerializedProperty pFlagPrefab = serializedObject.FindProperty("flagPrefab");
+                if (pFlagPrefab != null) EditorGUILayout.PropertyField(pFlagPrefab);
+
+                SerializedProperty pFlagSpacing = serializedObject.FindProperty("flagSpacingMeters");
+                if (pFlagSpacing != null) EditorGUILayout.PropertyField(pFlagSpacing);
+
+                SerializedProperty pAvoid = serializedObject.FindProperty("avoidOtherRunsWhenPlacingFlags");
+                if (pAvoid != null)
+                {
+                    EditorGUILayout.PropertyField(pAvoid, new GUIContent(
+                        "Avoid Other Runs (auto placement)",
+                        "When enabled, auto-placed flags will try to avoid running through other run corridors. Manual flags are always respected."));
+                }
+
+                if (pAvoid != null && pAvoid.boolValue)
+                {
+                    EditorGUI.indentLevel++;
+
+                    TryDrawProp("avoidRunClearanceMeters");
+                    TryDrawProp("avoidRunVerticalToleranceMeters");
+                    TryDrawProp("avoidRunMaxExtraSearchMeters");
+                    TryDrawProp("avoidRunUseBroadphaseBounds");
+
+                    EditorGUI.indentLevel--;
+                }
 
                 EditorGUILayout.Space(6);
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    if (GUILayout.Button("Generate Control Points (Resample)"))
-                    {
-                        Undo.RecordObject(run, "Resample Run Points");
-                        run.ResamplePointsWorld(resampleSpacingMeters);
-                        EditorUtility.SetDirty(run);
-                        SceneView.RepaintAll();
-                    }
 
-                    if (GUILayout.Button("Auto Detect Width (Anchors)"))
+                // Gate edit controls (mode-specific; no need to hunt in “scene”)
+                using (new EditorGUILayout.VerticalScope("box"))
+                {
+                    EditorGUILayout.LabelField("Gate Editing", EditorStyles.boldLabel);
+
+                    _showGateHandles = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Enable Gate Handles", "Shows editable gate-width handles in the scene."),
+                        _showGateHandles);
+
+                    _gateEditAffectsNeighbors = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Width edits affect neighbors", "Applies your width edit to nearby pairs too."),
+                        _gateEditAffectsNeighbors);
+
+                    if (_gateEditAffectsNeighbors)
                     {
-                        Undo.RecordObject(run, "Auto Detect Run Width");
-                        run.AutoDetectWidthOverrides(widthAnchorSpacingMeters, autoWidthMaxHalfWidthMeters, autoWidthUseMinSide);
-                        EditorUtility.SetDirty(run);
-                        SceneView.RepaintAll();
+                        _gateNeighborRadiusMeters = EditorGUILayout.Slider(
+                            new GUIContent("Neighbor Radius (m)", "Applies width change to nearby pairs within this distance window."),
+                            _gateNeighborRadiusMeters, 1f, 150f);
                     }
                 }
 
-                if (GUILayout.Button("Clear Width Overrides"))
-                {
-                    Undo.RecordObject(run, "Clear Width Overrides");
-                    var so = new SerializedObject(run);
-                    var widthsProp = so.FindProperty("widthOverrideMeters");
-                    if (widthsProp != null)
-                    {
-                        for (int i = 0; i < widthsProp.arraySize; i++)
-                            widthsProp.GetArrayElementAtIndex(i).floatValue = -1f;
+                EditorGUILayout.HelpBox(
+                    "Gates mode:\n" +
+                    "• Click a gate pair to select.\n" +
+                    "• Drag width handles (if enabled).\n" +
+                    "• Optional neighbor edits spread changes across nearby pairs.",
+                    MessageType.Info);
+            }
+        }
 
-                        so.ApplyModifiedProperties();
-                        EditorUtility.SetDirty(run);
+        private void DrawFencesModeSection(SkiRunLine run)
+        {
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Fences", EditorStyles.boldLabel);
+
+                var holesProp = serializedObject.FindProperty("fenceExcludeHoles");
+
+                // Side toggles (each side == full-length span)
+                var leftEdgeProp = serializedObject.FindProperty("fenceUseLeftEdge");
+                var rightEdgeProp = serializedObject.FindProperty("fenceUseRightEdge");
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.LabelField("Fence Sides", GUILayout.Width(90));
+                    if (leftEdgeProp != null) leftEdgeProp.boolValue = GUILayout.Toggle(leftEdgeProp.boolValue, "Left Edge", "Button");
+                    if (rightEdgeProp != null) rightEdgeProp.boolValue = GUILayout.Toggle(rightEdgeProp.boolValue, "Right Edge", "Button");
+                }
+
+                EditorGUILayout.Space(4);
+
+                // Core settings
+                TryDrawProp("fenceSegmentPrefab");
+                TryDrawProp("fenceCornerPostPrefab");
+                TryDrawProp("fencePointSpacingMeters");
+
+                EditorGUILayout.Space(2);
+
+                // Sampling/smoothing
+                TryDrawProp("fenceUseSmoothSampling");
+                TryDrawProp("fenceSmoothSamplesPerMeter");
+                TryDrawProp("fenceSmoothMinSamplesPerSpan");
+
+                EditorGUILayout.Space(2);
+
+                // Cohesion with flags
+                TryDrawProp("fenceAutoExcludeAroundGates");
+                TryDrawProp("fenceGateExclusionRadiusMeters");
+                TryDrawProp("fenceExclusionPaddingMeters");
+                TryDrawProp("fenceConformTerrainMask");
+
+                EditorGUILayout.Space(2);
+
+                // Post smoothing (polyline)
+                TryDrawProp("fenceBoundarySmoothPasses");
+                TryDrawProp("fenceBoundarySmoothStrength");
+
+                EditorGUILayout.Space(6);
+
+                // Hole authoring settings (mode-specific)
+                fenceAddSide = (SkiRunLine.FenceSide)EditorGUILayout.EnumPopup("Hole Side", fenceAddSide);
+                fenceAddHoleLengthMeters = EditorGUILayout.Slider("New Hole Length (m)", fenceAddHoleLengthMeters, 1f, 80f);
+
+                EditorGUILayout.HelpBox(
+                    "Fences mode:\n" +
+                    "• Each enabled corridor edge generates a fence.\n" +
+                    "• Shift+Click adds a HOLE (gap) on the chosen side.\n" +
+                    "• Click a hole to select; drag endpoints to resize.\n" +
+                    "• Delete/Backspace removes selected hole.\n" +
+                    "• Optional gate exclusions carve around gates automatically.",
+                    MessageType.Info);
+
+                _foldFenceHolesList = EditorGUILayout.Foldout(_foldFenceHolesList, "Holes List (debug/management)", true);
+                if (_foldFenceHolesList && holesProp != null)
+                    EditorGUILayout.PropertyField(holesProp, true);
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Clear Holes"))
+                    {
+                        Undo.RecordObject(target, "Clear Fence Holes");
+                        if (holesProp != null)
+                        {
+                            holesProp.ClearArray();
+                            serializedObject.ApplyModifiedProperties();
+                        }
+                        EditorUtility.SetDirty(target);
+                        SceneView.RepaintAll();
+                    }
+
+                    if (GUILayout.Button("Clear Generated"))
+                    {
+                        Undo.RecordObject(target, "Clear Generated Fences");
+                        run.ClearGeneratedFences();
+                        EditorUtility.SetDirty(target);
                         SceneView.RepaintAll();
                     }
                 }
             }
         }
 
+        private void DrawAdvancedTab()
+        {
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Advanced", EditorStyles.boldLabel);
+                foldAdvanced = EditorGUILayout.Foldout(foldAdvanced, "Raw Inspector (all fields)", true);
+                if (foldAdvanced)
+                {
+                    EditorGUILayout.Space(4);
+                    DrawDefaultInspector();
+                }
+            }
+        }
+
+        private void DrawPropertySection(string title, params string[] propertyNames)
+        {
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+
+            EditorGUI.indentLevel++;
+            for (int i = 0; i < propertyNames.Length; i++)
+                TryDrawProp(propertyNames[i]);
+            EditorGUI.indentLevel--;
+        }
+
+        private bool TryDrawProp(string propertyName)
+        {
+            var p = serializedObject.FindProperty(propertyName);
+            if (p == null) return false;
+            EditorGUILayout.PropertyField(p, true);
+            return true;
+        }
+
+        private static float ComputePolylineLength(IReadOnlyList<Vector3> pts)
+        {
+            if (pts == null || pts.Count < 2) return 0f;
+
+            float sum = 0f;
+            for (int i = 1; i < pts.Count; i++)
+                sum += Vector3.Distance(pts[i - 1], pts[i]);
+
+            return sum;
+        }
+
         private void OnSceneGUI()
         {
             var run = (SkiRunLine)target;
 
-            // Esc clears selection
             Event e = Event.current;
+
+            // Hotkeys + overlay (runs even if we early-return later)
+            HandleSceneHotkeys(run);
+
+            if (showHotkeyOverlay)
+                DrawHotkeyOverlay(run);
+
+            // Escape clears BOTH point + gate selections
             if (e != null && e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape)
             {
                 selectedPointIndex = -1;
+                _selectedPairIndex = -1;
+                _selectedSide = 0;
+                _selectedSet = FlagPreviewSet.Primary;
+                _selectedOverlapOtherRun = null;
+                _selectedOverlapStartIndex = -1;
+                _selectedOverlapEndIndex = -1;
+                _selectedFenceHoleIndex = -1;
+
                 e.Use();
                 SceneView.RepaintAll();
                 return;
             }
 
-            SerializedObject so = new SerializedObject(run);
+            _gateConsumedThisEvent = false;
+
+            // Other-run preview caches are rebuilt at most once per SceneGUI pass.
+            // Clear the per-pass set so the cache can refresh as you edit.
+            _otherRunPreviewBuiltThisPass.Clear();
+
+            // IMPORTANT: reuse the Editor's serializedObject; allocating a new SerializedObject
+            // every OnSceneGUI call becomes expensive on large scenes.
+            serializedObject.UpdateIfRequiredOrScript();
+            SerializedObject so = serializedObject;
             SerializedProperty pointsProp = so.FindProperty("pointsWorld");
             SerializedProperty widthsProp = so.FindProperty("widthOverrideMeters");
+
+            // Prevent label-overlap bookkeeping from growing unbounded over time.
+            _sceneLabelRects.Clear();
 
             if (pointsProp == null || widthsProp == null) return;
             if (pointsProp.arraySize < 1) return;
@@ -210,18 +888,41 @@ namespace SkiGame.RunsEditor
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
 
-            // Shift insert / Alt delete
-            HandleInsertDelete(run, so, pointsProp, widthsProp);
+            // Mark preview dirty if points changed via Undo/Redo or external tools (PainterWindow, etc.)
+            int hash = ComputePointsHash(pointsProp);
+            if (hash != _lastPointsHash)
+            {
+                _lastPointsHash = hash;
+                _previewDirty = true;
+            }
+
+            // Point editing is disabled while Gate Edit Mode is active (prevents Shift/Alt conflicts)
+            if (_authoringMode == AuthoringMode.Path && !gateEditMode && !_gateConsumedThisEvent)
+                HandleInsertDelete(run, so, pointsProp, widthsProp);
 
             // Draw previews first (so point gizmos sit on top)
+            // PERF: only rebuild preview when something changed, and throttle rebuild frequency.
             if (showBoundaryPreview || showPairPreview)
-                BuildPreview(run, so, pointsProp, widthsProp);
+            {
+                double now = EditorApplication.timeSinceStartup;
+                if (_previewDirty && (now - _lastPreviewBuildTime) >= PreviewRebuildMinInterval)
+                {
+                    BuildPreview(run, so, pointsProp, widthsProp, previewIncludeOverlapAvoidance);
+                    _previewDirty = false;
+                    _lastPreviewBuildTime = now;
+                }
+            }
 
             if (showBoundaryPreview)
                 DrawBoundaryPreview(run);
 
             if (showPairPreview)
+            {
                 DrawPairPreview(run);
+
+                if (_authoringMode == AuthoringMode.Flags && gateEditMode)
+                    HandleGateEditing(run);
+            }
 
             if (showSpacingHandle)
                 DrawSpacingHandle(run, so, pointsProp);
@@ -234,23 +935,21 @@ namespace SkiGame.RunsEditor
             if (showWidthVisuals)
                 DrawWidthVisuals(run, so, pointsProp, widthsProp);
 
-            // Contextual movement/width handles: selected only (optionally neighbors)
-            DrawContextualEditHandles(run, so, pointsProp, widthsProp);
-        }
+            // Contextual point editing is disabled in Gate Edit Mode (keeps the workflow clean and predictable)
+            if (_authoringMode == AuthoringMode.Path && !gateEditMode)
+                DrawContextualEditHandles(run, so, pointsProp, widthsProp);
 
-        private void FocusSelectedPoint()
-        {
-            var run = (SkiRunLine)target;
-            var so = new SerializedObject(run);
-            var pointsProp = so.FindProperty("pointsWorld");
-            if (pointsProp == null) return;
-            if (selectedPointIndex < 0 || selectedPointIndex >= pointsProp.arraySize) return;
+            // Gate context menu only makes sense in Gate Edit Mode
+            if (gateEditMode)
+                HandleFlagOverrideContextMenu(run);
 
-            Vector3 p = pointsProp.GetArrayElementAtIndex(selectedPointIndex).vector3Value;
-            Terrain t = ResolveTerrainAt(p);
-            Vector3 ps = SnapToTerrain(t, p);
+            // Fence spans / holes (only active in their modes; does not interfere with gates unless you Shift+Click)
+            if (_authoringMode == AuthoringMode.Fences)
+            {
+                DrawFenceBoundaryPreviewForFenceMode(run);
+                HandleFenceHoleSceneEditing(run);
+            }
 
-            SceneView.lastActiveSceneView?.LookAt(ps, SceneView.lastActiveSceneView.rotation, 20f);
         }
 
         private void DrawPointGizmosAndSelection(SkiRunLine run, SerializedObject so, SerializedProperty pointsProp, SerializedProperty widthsProp)
@@ -259,7 +958,10 @@ namespace SkiGame.RunsEditor
             if (e == null) return;
 
             // Avoid stealing clicks from insert/delete modes
-            bool blockSelect = (enableShiftClickInsert && e.shift) || (enableAltClickDelete && e.alt);
+            bool blockSelect =
+                gateEditMode ||
+                (enableShiftClickInsert && e.shift) ||
+                (enableAltClickDelete && e.alt);
 
             // SceneView camera for distance fade
             Camera cam = SceneView.currentDrawingSceneView != null ? SceneView.currentDrawingSceneView.camera : null;
@@ -273,10 +975,15 @@ namespace SkiGame.RunsEditor
             {
                 Vector3 p = pointsProp.GetArrayElementAtIndex(i).vector3Value;
 
-                Terrain t = ResolveTerrainAt(p);
-                Vector3 ps = SnapToTerrain(t, p);
+                // PERF: pointsWorld is already authored/snapped; don't resample terrain per point just to draw gizmos.
+                Vector3 ps = p;
+                ps.y += sceneVisualYOffset;
 
                 float baseSize = HandleUtility.GetHandleSize(ps) * pointPickSizeScale;
+
+                bool isEndpoint = (i == 0 || i == pointsProp.arraySize - 1);
+                float sizeMul = isEndpoint ? 1.35f : 1.0f;
+                float buttonSize = baseSize * sizeMul;
 
                 float overrideW = widthsProp.GetArrayElementAtIndex(i).floatValue;
                 bool hasOverride = overrideW > 0.01f;
@@ -306,18 +1013,14 @@ namespace SkiGame.RunsEditor
                 Handles.color = c;
 
                 // Button makes it clickable without showing full transform controls
-                if (!blockSelect && Handles.Button(ps, Quaternion.identity, baseSize, baseSize * 1.2f, Handles.DotHandleCap))
+                if (!blockSelect && Handles.Button(ps, Quaternion.identity, buttonSize, buttonSize * 1.2f, Handles.DotHandleCap))
                 {
+
                     selectedPointIndex = i;
                     SceneView.RepaintAll();
+
                 }
 
-                // Small label for selected
-                if (isSelected)
-                {
-                    Handles.color = new Color(1f, 1f, 1f, 0.95f);
-                    Handles.Label(ps + Vector3.up * HandleUtility.GetHandleSize(ps) * 0.05f, $"Point {i}");
-                }
             }
 
             Handles.zTest = prevZ;
@@ -335,7 +1038,7 @@ namespace SkiGame.RunsEditor
                 Vector3 p = pointsProp.GetArrayElementAtIndex(i).vector3Value;
 
                 Terrain tPoint = ResolveTerrainAt(p);
-                Vector3 pSnapped = SnapToTerrain(tPoint, p);
+                Vector3 pSnapped = SnapToTerrain(tPoint, p) + Vector3.up * sceneVisualYOffset;
 
                 // Tangent estimate from neighbors
                 Vector3 tangent = EstimateTangent(pointsProp, i);
@@ -400,7 +1103,7 @@ namespace SkiGame.RunsEditor
             Vector3 p = pointsProp.GetArrayElementAtIndex(i).vector3Value;
 
             Terrain tPoint = ResolveTerrainAt(p);
-            Vector3 pSnapped = SnapToTerrain(tPoint, p);
+            Vector3 pSnapped = SnapToTerrain(tPoint, p) + Vector3.up * sceneVisualYOffset;
 
             // Use a simpler handle for neighbors to reduce clutter
             float size = HandleUtility.GetHandleSize(pSnapped) * (isNeighbor ? 0.12f : 0.18f);
@@ -422,9 +1125,17 @@ namespace SkiGame.RunsEditor
             if (EditorGUI.EndChangeCheck())
             {
                 Undo.RecordObject(run, "Move Run Point");
-                pointsProp.GetArrayElementAtIndex(i).vector3Value = newPos;
+
+                // Keep authored points stable: store terrain-snapped position (no artificial +Y offset).
+                Terrain tNew = ResolveTerrainAt(newPos, preferred: tPoint);
+                Vector3 stored = SnapToTerrain(tNew, newPos);
+                pointsProp.GetArrayElementAtIndex(i).vector3Value = stored;
+
                 so.ApplyModifiedProperties();
+
                 EditorUtility.SetDirty(run);
+                _previewDirty = true;
+
                 SceneView.RepaintAll();
             }
         }
@@ -436,7 +1147,7 @@ namespace SkiGame.RunsEditor
 
             Vector3 p = pointsProp.GetArrayElementAtIndex(i).vector3Value;
             Terrain tPoint = ResolveTerrainAt(p);
-            Vector3 pSnapped = SnapToTerrain(tPoint, p);
+            Vector3 pSnapped = SnapToTerrain(tPoint, p) + Vector3.up * sceneVisualYOffset;
 
             float globalWidth = Mathf.Max(2f, runWidthProp.floatValue);
 
@@ -476,6 +1187,8 @@ namespace SkiGame.RunsEditor
                     widthsProp.GetArrayElementAtIndex(i).floatValue = newW;
 
                 so.ApplyModifiedProperties();
+                _previewDirty = true;
+
                 EditorUtility.SetDirty(run);
                 SceneView.RepaintAll();
             }
@@ -541,6 +1254,8 @@ namespace SkiGame.RunsEditor
                         selectedPointIndex = insertIndex;
 
                         so.ApplyModifiedProperties();
+                        _previewDirty = true;
+
                         EditorUtility.SetDirty(run);
                         SceneView.RepaintAll();
 
@@ -573,6 +1288,26 @@ namespace SkiGame.RunsEditor
 
                     e.Use();
                 }
+            }
+        }
+
+        private static int ComputePointsHash(SerializedProperty pointsProp)
+        {
+            unchecked
+            {
+                int h = 17;
+                int n = pointsProp != null ? pointsProp.arraySize : 0;
+                h = h * 31 + n;
+                if (pointsProp != null && n > 0)
+                {
+                    int step = Mathf.Max(1, n / 8);
+                    for (int i = 0; i < n; i += step)
+                    {
+                        Vector3 p = pointsProp.GetArrayElementAtIndex(i).vector3Value;
+                        h = h * 31 + p.GetHashCode();
+                    }
+                }
+                return h;
             }
         }
 
@@ -661,346 +1396,1136 @@ namespace SkiGame.RunsEditor
             return Mathf.Abs(dist - nearest) <= (spacingMeters * 0.25f);
         }
 
-        private void BuildPreview(SkiRunLine run, SerializedObject so, SerializedProperty pointsProp, SerializedProperty widthsProp)
+        private void BuildPreview(SkiRunLine run, SerializedObject so, SerializedProperty pointsProp, SerializedProperty widthsProp, bool includeOverlapAvoidance)
         {
             _prevCenters.Clear();
             _prevLeft.Clear();
             _prevRight.Clear();
+            _prevSpawnMask.Clear();
+            _intersectedRuns.Clear();
+            _intersectedClosest.Clear();
+            _intersectedEdgeNormal.Clear();
 
-            if (pointsProp.arraySize < 2) return;
+            if (run == null) return;
+            if (pointsProp == null || pointsProp.arraySize < 2) return;
 
-            SerializedProperty spacingProp = so.FindProperty("flagSpacingMeters");
-            SerializedProperty startOffsetProp = so.FindProperty("flagStartOffsetMeters");
-            SerializedProperty endInsetProp = so.FindProperty("flagEndInsetMeters");
-            SerializedProperty heightOffsetProp = so.FindProperty("flagHeightOffset");
-            SerializedProperty runWidthProp = so.FindProperty("runWidthMeters");
-            SerializedProperty snapSidesProp = so.FindProperty("snapSidesToTerrainIndividually");
+            _prevDistances.Clear();
 
-            SerializedProperty terrainAwareProp = so.FindProperty("terrainAwareBoundaries");
-            SerializedProperty searchStepProp = so.FindProperty("boundarySearchStepMeters");
-            SerializedProperty maxSlopeProp = so.FindProperty("boundaryMaxSlopeDeg");
-            SerializedProperty maxHeightDeltaProp = so.FindProperty("boundaryMaxHeightDelta");
-            SerializedProperty preferFurthestProp = so.FindProperty("boundaryPreferFurthestValid");
+            // PERF: overlap avoidance is optional in preview. When enabled, this can be expensive.
+            run.GetFlagPairsPreview(
+                _prevCenters, _prevLeft, _prevRight,
+                _prevSpawnMask,
+                _intersectedRuns,
+                _intersectedClosest,
+                _intersectedEdgeNormal,
+                _prevDistances,
+                previewMaxPairs,
+                includeOverlapAvoidance);
 
-            if (spacingProp == null || startOffsetProp == null || endInsetProp == null || heightOffsetProp == null ||
-                runWidthProp == null || snapSidesProp == null ||
-                terrainAwareProp == null || searchStepProp == null || maxSlopeProp == null || maxHeightDeltaProp == null || preferFurthestProp == null)
-                return;
+            // Intersection overlay is always computed with overlap avoidance, but we keep the primary preview as-is.
+            _overlayUsesPrimaryPreview = includeOverlapAvoidance || !showIntersectionOverlay;
 
-            float spacing = Mathf.Max(0.25f, spacingProp.floatValue);
-            float startOffset = Mathf.Max(0f, startOffsetProp.floatValue);
-            float endInset = Mathf.Max(0f, endInsetProp.floatValue);
-            float yOffset = Mathf.Max(0f, heightOffsetProp.floatValue);
-            float globalWidth = Mathf.Max(2f, runWidthProp.floatValue);
-            bool snapSides = snapSidesProp.boolValue;
-
-            bool terrainAware = terrainAwareProp.boolValue;
-            float searchStep = Mathf.Max(0.1f, searchStepProp.floatValue);
-            float maxSlope = Mathf.Clamp(maxSlopeProp.floatValue, 0f, 89f);
-            float maxHeightDelta = Mathf.Max(0f, maxHeightDeltaProp.floatValue);
-            bool preferFurthest = preferFurthestProp.boolValue;
-
-            float runLen = ComputePolylineLength(pointsProp);
-            if (runLen <= 0.001f) return;
-
-            float spawnStart = startOffset;
-            float spawnEnd = Mathf.Max(0f, runLen - endInset);
-            if (spawnStart >= spawnEnd) return;
-
-            float total = 0f;
-            float nextSpawn = spawnStart;
-            int pairs = 0;
-
-            for (int seg = 0; seg < pointsProp.arraySize - 1; seg++)
+            // PERF: the overlay preview is intentionally lower-density to keep long runs responsive.
+            // It is only used for intersection ribbons/diagnostics (not the core boundary preview).
+            if (showIntersectionOverlay && !includeOverlapAvoidance)
             {
-                Vector3 a = pointsProp.GetArrayElementAtIndex(seg).vector3Value;
-                Vector3 b = pointsProp.GetArrayElementAtIndex(seg + 1).vector3Value;
+                _ovCenters.Clear();
+                _ovLeft.Clear();
+                _ovRight.Clear();
+                _ovSpawnMask.Clear();
+                _ovIntersectedRuns.Clear();
+                _ovDistances.Clear();
+                _ovIntersectedClosest.Clear();
+                _ovIntersectedEdgeNormal.Clear();
 
-                float segLen = Vector3.Distance(a, b);
-                if (segLen < 0.001f) continue;
+                int overlayMaxPairs = Mathf.Min(previewMaxPairs, 200);
 
-                Vector3 tangent = (b - a) / segLen;
-                float segStartDist = total;
-                float segEndDist = total + segLen;
+                run.GetFlagPairsPreview(
+                    _ovCenters, _ovLeft, _ovRight,
+                    _ovSpawnMask,
+                    _ovIntersectedRuns,
+                    outOtherClosestOnRun: _ovIntersectedClosest,
+                    outOtherEdgeNormalWorld: _ovIntersectedEdgeNormal,
+                    outDistancesMeters: _ovDistances,
+                    maxPairs: overlayMaxPairs,
+                    includeOverlapAvoidance: true);
 
-                if (nextSpawn > segEndDist)
-                {
-                    total += segLen;
-                    continue;
-                }
-
-                if (nextSpawn < segStartDist)
-                    nextSpawn = segStartDist;
-
-                while (nextSpawn <= segEndDist && nextSpawn <= spawnEnd)
-                {
-                    if (pairs++ >= previewMaxPairs) return;
-
-                    float t = nextSpawn - segStartDist;
-                    float segT = (segLen < 0.0001f) ? 0f : Mathf.Clamp01(t / segLen);
-
-                    Vector3 center = a + tangent * t;
-                    Terrain tCenter = ResolveTerrainAt(center);
-                    if (tCenter == null)
-                    {
-                        nextSpawn += spacing;
-                        continue;
-                    }
-
-                    Vector3 centerGround = SnapToTerrain(tCenter, center);
-                    Vector3 up = SampleNormal(tCenter, centerGround);
-
-                    Vector3 smoothTangent = GetSmoothedTangent(pointsProp, seg, a, b, tangent);
-                    Vector3 lateral = Vector3.Cross(up, smoothTangent);
-                    if (lateral.sqrMagnitude < 0.0001f)
-                        lateral = Vector3.Cross(Vector3.up, smoothTangent);
-                    lateral.Normalize();
-
-                    float widthMeters = Mathf.Max(2f, GetWidthMetersAtSample(pointsProp, widthsProp, seg, segT, globalWidth));
-                    float halfW = Mathf.Max(0.5f, widthMeters * 0.5f);
-
-                    Vector3 left = FindBoundaryPointPreview(
-                        tCenter,
-                        centerGround,
-                        lateral,
-                        halfW,
-                        true,
-                        terrainAware,
-                        searchStep,
-                        maxSlope,
-                        maxHeightDelta,
-                        preferFurthest,
-                        snapSides,
-                        yOffset);
-
-                    Vector3 right = FindBoundaryPointPreview(
-                        tCenter,
-                        centerGround,
-                        lateral,
-                        halfW,
-                        false,
-                        terrainAware,
-                        searchStep,
-                        maxSlope,
-                        maxHeightDelta,
-                        preferFurthest,
-                        snapSides,
-                        yOffset);
-
-                    if (snapSides)
-                    {
-                        left = SnapToTerrain(ResolveTerrainAt(left) ?? tCenter, left);
-                        right = SnapToTerrain(ResolveTerrainAt(right) ?? tCenter, right);
-                        left.y += yOffset;
-                        right.y += yOffset;
-                    }
-                    else
-                    {
-                        float y = centerGround.y + yOffset;
-                        left.y = y;
-                        right.y = y;
-                    }
-
-                    _prevCenters.Add(centerGround + Vector3.up * yOffset);
-                    _prevLeft.Add(left);
-                    _prevRight.Add(right);
-
-                    nextSpawn += spacing;
-                }
-
-                total += segLen;
+                _overlayUsesPrimaryPreview = false;
             }
         }
 
         private void DrawBoundaryPreview(SkiRunLine run)
         {
-            if (_prevLeft.Count < 2) return;
+            if (run == null) return;
+            if (_prevLeft.Count < 2 || _prevRight.Count < 2) return;
 
             Color c = run.RunColor;
-            Color lc = new Color(c.r, c.g, c.b, 0.55f);
+            Color baseEdge = new Color(c.r, c.g, c.b, 0.55f);
+            Color overlapEdge = new Color(1f, 0.75f, 0.1f, 1f);
 
-            Handles.color = lc;
-            Handles.DrawAAPolyLine(3f, _prevLeft.ToArray());
-            Handles.DrawAAPolyLine(3f, _prevRight.ToArray());
+            // Simplified intersection workflow:
+            // Build the candidate set from nearby runs (NOT from the overlap-avoidance preview), so
+            // intersection highlighting remains available even when previewIncludeOverlapAvoidance is off.
+            if (showIntersectionOverlay)
+                RebuildOtherRunSet(run, _tmpRunSet);
+            else
+                _tmpRunSet.Clear();
+
+            bool highlightOverlaps = showIntersectionOverlay && _tmpRunSet.Count > 0;
+            float thickness = highlightOverlaps ? 4f : 3f;
+            float dottedSpacing = 4f;
+
+            // 1) Selected run edges: dotted-highlight segments that lie inside another run corridor
+            DrawEdgeSegments(run, _prevLeft, _prevSpawnMask, sideBit: 0b01,
+                normalColor: baseEdge, overlapColor: overlapEdge,
+                thickness: thickness, dottedSpacing: dottedSpacing,
+                highlightOverlapSegments: highlightOverlaps, overlapRuns: _tmpRunSet);
+
+            DrawEdgeSegments(run, _prevRight, _prevSpawnMask, sideBit: 0b10,
+                normalColor: baseEdge, overlapColor: overlapEdge,
+                thickness: thickness, dottedSpacing: dottedSpacing,
+                highlightOverlapSegments: highlightOverlaps, overlapRuns: _tmpRunSet);
+
+            // 2) Other run edges: draw the other corridor edges (dotted) where they pass through THIS corridor
+            if (highlightOverlaps)
+                DrawOtherRunOverlapEdgesWithinSelected(run, _tmpRunSet, dottedSpacing);
+        }
+
+        // ==========================================================================
+        // Intersection Overlay (Scene View)
+        // Goals:
+        // 1) Use the same reliable FreeMove-based handles as the main gate editor.
+        // 2) Visualise intersection classification (inside / crosses edge).
+        // 3) Draw a "mirror" overlay on the other run so intersections are visible from both sides.
+        // ==========================================================================
+
+        private sealed class OtherRunPreviewCache
+        {
+            public readonly List<Vector3> centers = new();
+            public readonly List<Vector3> left = new();
+            public readonly List<Vector3> right = new();
+            public readonly List<byte> mask = new();
+            public readonly List<SkiRunLine> hitRuns = new();
+            public readonly List<float> distances = new();
+        }
+
+        private readonly Dictionary<SkiRunLine, OtherRunPreviewCache> _otherRunPreviewCache = new();
+        private readonly HashSet<SkiRunLine> _otherRunPreviewBuiltThisPass = new();
+
+
+        private void DrawEdgeSegments(
+            SkiRunLine self,
+            List<Vector3> pts,
+            List<byte> mask,
+            byte sideBit,
+            Color normalColor,
+            Color overlapColor,
+            float thickness,
+            float dottedSpacing,
+            bool highlightOverlapSegments,
+            HashSet<SkiRunLine> overlapRuns)
+        {
+            if (pts == null || mask == null) return;
+
+            int n = Mathf.Min(pts.Count, mask.Count);
+            if (n < 2) return;
+
+            for (int i = 0; i < n - 1; i++)
+            {
+                bool v0 = (mask[i] & sideBit) != 0;
+                bool v1 = (mask[i + 1] & sideBit) != 0;
+                if (!v0 || !v1) continue;
+
+                Vector3 p0 = pts[i];
+                Vector3 p1 = pts[i + 1];
+
+                bool overlapsOther = false;
+                if (highlightOverlapSegments && overlapRuns != null && overlapRuns.Count > 0)
+                {
+                    Vector3 mid = (p0 + p1) * 0.5f;
+                    foreach (var other in overlapRuns)
+                    {
+                        if (other == null || other == self) continue;
+                        if (IsInsideRunCorridorXZ(mid, other, 0f))
+                        {
+                            overlapsOther = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (overlapsOther)
+                {
+                    Handles.color = overlapColor;
+                    Handles.DrawDottedLine(p0, p1, dottedSpacing);
+                }
+                else
+                {
+                    Handles.color = normalColor;
+                    _seg2[0] = p0;
+                    _seg2[1] = p1;
+                    Handles.DrawAAPolyLine(thickness, _seg2);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Draw dotted segments of OTHER run corridor edges where those edges fall inside the SELECTED run corridor.
+        /// This gives designers a simple, direct visual cue for where to manually move flags.
+        /// </summary>
+        private void DrawOtherRunOverlapEdgesWithinSelected(SkiRunLine selected, HashSet<SkiRunLine> others, float dottedSpacing)
+        {
+            if (selected == null || others == null || others.Count == 0) return;
+
+            foreach (var other in others)
+            {
+                if (other == null || other == selected) continue;
+
+                var pts = other.PointsWorld;
+                if (pts == null || pts.Count < 2) continue;
+
+                float halfW = Mathf.Max(0.25f, other.RunWidthMeters * 0.5f);
+
+                // Use the other run's color so it's obvious which corridor edge is being shown.
+                Color oc = other.RunColor;
+                Color c = new Color(oc.r, oc.g, oc.b, 1f);
+                Handles.color = c;
+
+                // Draw per-segment to avoid allocations.
+                for (int i = 0; i < pts.Count - 1; i++)
+                {
+                    Vector3 p0 = pts[i];
+                    Vector3 p1 = pts[i + 1];
+
+                    Vector3 dir = p1 - p0;
+                    dir.y = 0f;
+                    float d2 = dir.sqrMagnitude;
+                    if (d2 < 0.0001f) continue;
+                    dir /= Mathf.Sqrt(d2);
+
+                    // XZ perpendicular.
+                    Vector3 n = new Vector3(-dir.z, 0f, dir.x);
+
+                    // Approximate corridor edges (constant width). This is editor-only diagnostics.
+                    Vector3 l0 = p0 + n * halfW;
+                    Vector3 l1 = p1 + n * halfW;
+                    Vector3 r0 = p0 - n * halfW;
+                    Vector3 r1 = p1 - n * halfW;
+
+                    // If the *midpoint* of an edge segment is inside the selected corridor, draw it.
+                    if (IsInsideRunCorridorXZ((l0 + l1) * 0.5f, selected, 0f))
+                    {
+                        Vector3 a = SnapToTerrainPreserveOffset(l0, sceneVisualYOffset);
+                        Vector3 b = SnapToTerrainPreserveOffset(l1, sceneVisualYOffset);
+                        Handles.DrawDottedLine(a, b, dottedSpacing);
+                    }
+
+                    if (IsInsideRunCorridorXZ((r0 + r1) * 0.5f, selected, 0f))
+                    {
+                        Vector3 a = SnapToTerrainPreserveOffset(r0, sceneVisualYOffset);
+                        Vector3 b = SnapToTerrainPreserveOffset(r1, sceneVisualYOffset);
+                        Handles.DrawDottedLine(a, b, dottedSpacing);
+                    }
+                }
+            }
+        }
+
+        private static float SqrDistancePointSegmentXZ(Vector3 p, Vector3 a, Vector3 b, out float t01)
+        {
+            Vector2 P = new Vector2(p.x, p.z);
+            Vector2 A = new Vector2(a.x, a.z);
+            Vector2 B = new Vector2(b.x, b.z);
+            Vector2 AB = B - A;
+
+            float len2 = AB.sqrMagnitude;
+            if (len2 < 0.000001f)
+            {
+                t01 = 0f;
+                return (P - A).sqrMagnitude;
+            }
+
+            float t = Vector2.Dot(P - A, AB) / len2;
+            t01 = Mathf.Clamp01(t);
+            Vector2 C = A + AB * t01;
+            return (P - C).sqrMagnitude;
+        }
+
+        private static bool IsInsideRunCorridorXZ(Vector3 p, SkiRunLine run, float extraClearanceMeters = 0f)
+        {
+            var pts = run.PointsWorld;
+            if (pts == null || pts.Count < 2) return false;
+
+            float halfW = (run.RunWidthMeters * 0.5f) + Mathf.Max(0f, extraClearanceMeters);
+            float halfW2 = halfW * halfW;
+
+            // Closest XZ distance to polyline
+            float best = float.PositiveInfinity;
+            for (int i = 0; i < pts.Count - 1; i++)
+            {
+                float t01;
+                float d2 = SqrDistancePointSegmentXZ(p, pts[i], pts[i + 1], out t01);
+                if (d2 < best) best = d2;
+            }
+
+            return best <= halfW2;
+        }
+
+        // Simplified intersection workflow support:
+        // We do NOT auto-move flags. We only highlight when a flag (or gate) sits inside another run's corridor.
+        // For performance, we rebuild the candidate set once per SceneGUI pass (or when preview rebuilds).
+        private void RebuildOtherRunSet(SkiRunLine self, HashSet<SkiRunLine> outRuns)
+        {
+            outRuns.Clear();
+            if (self == null) return;
+
+#if UNITY_2023_1_OR_NEWER
+            var runs = FindObjectsByType<SkiRunLine>(FindObjectsSortMode.None);
+#else
+    var runs = FindObjectsOfType<SkiRunLine>(true);
+#endif
+            if (runs == null) return;
+
+            // Broad-phase bounds in XZ around the selected run.
+            var pts = self.PointsWorld;
+            if (pts == null || pts.Count == 0)
+                return;
+
+            float minX = float.PositiveInfinity, minZ = float.PositiveInfinity;
+            float maxX = float.NegativeInfinity, maxZ = float.NegativeInfinity;
+            for (int i = 0; i < pts.Count; i++)
+            {
+                Vector3 p = pts[i];
+                if (p.x < minX) minX = p.x;
+                if (p.z < minZ) minZ = p.z;
+                if (p.x > maxX) maxX = p.x;
+                if (p.z > maxZ) maxZ = p.z;
+            }
+
+            // Expand by corridor width + a small margin.
+            float expand = Mathf.Max(15f, self.RunWidthMeters + 25f);
+            minX -= expand; minZ -= expand;
+            maxX += expand; maxZ += expand;
+
+            for (int i = 0; i < runs.Length; i++)
+            {
+                var r = runs[i];
+                if (r == null || r == self) continue;
+
+                var rPts = r.PointsWorld;
+                if (rPts == null || rPts.Count < 2) continue;
+
+                // Quick reject via XZ AABB overlap of the other run.
+                float rMinX = float.PositiveInfinity, rMinZ = float.PositiveInfinity;
+                float rMaxX = float.NegativeInfinity, rMaxZ = float.NegativeInfinity;
+                for (int k = 0; k < rPts.Count; k++)
+                {
+                    Vector3 p = rPts[k];
+                    if (p.x < rMinX) rMinX = p.x;
+                    if (p.z < rMinZ) rMinZ = p.z;
+                    if (p.x > rMaxX) rMaxX = p.x;
+                    if (p.z > rMaxZ) rMaxZ = p.z;
+                }
+
+                float rExpand = Mathf.Max(10f, r.RunWidthMeters + 20f);
+                rMinX -= rExpand; rMinZ -= rExpand;
+                rMaxX += rExpand; rMaxZ += rExpand;
+
+                bool overlapXZ = !(rMaxX < minX || rMinX > maxX || rMaxZ < minZ || rMinZ > maxZ);
+                if (!overlapXZ) continue;
+
+                outRuns.Add(r);
+            }
+        }
+
+        private static bool TryFindContainingRunXZ(Vector3 p, SkiRunLine self, HashSet<SkiRunLine> otherRuns, out SkiRunLine containing)
+        {
+            containing = null;
+            if (otherRuns == null || otherRuns.Count == 0) return false;
+
+            foreach (var other in otherRuns)
+            {
+                if (other == null || other == self) continue;
+                if (IsInsideRunCorridorXZ(p, other, extraClearanceMeters: 0f))
+                {
+                    containing = other;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void DrawPairPreview(SkiRunLine run)
         {
             if (_prevLeft.Count == 0) return;
 
-            Color c = run.RunColor;
-            Handles.color = new Color(1f, 1f, 1f, 0.8f);
+            // Ensure we have a candidate set for simplified intersection highlighting even when
+            // boundary preview is disabled.
+            if (showIntersectionOverlay)
+                RebuildOtherRunSet(run, _tmpRunSet);
+            else
+                _tmpRunSet.Clear();
 
-            for (int i = 0; i < _prevLeft.Count; i++)
+            // Simplified intersection workflow:
+            // - Always draw the primary preview.
+            // - Intersections are communicated via tint on flags/gates and dotted overlap lines on corridor edges.
+            DrawPairPreviewSet(
+                run,
+                set: FlagPreviewSet.Primary,
+                centers: _prevCenters,
+                left: _prevLeft,
+                right: _prevRight,
+                mask: _prevSpawnMask,
+                hitRuns: _intersectedRuns,
+                otherClosest: _intersectedClosest,
+                otherEdgeNormal: _intersectedEdgeNormal,
+                distancesMeters: _prevDistances,
+                isGhost: false,
+                drawIntersectionDiagnostics: false);
+        }
+
+        private void DrawPairPreviewSet(
+            SkiRunLine run,
+            FlagPreviewSet set,
+            List<Vector3> centers,
+            List<Vector3> left,
+            List<Vector3> right,
+            List<byte> mask,
+            List<SkiRunLine> hitRuns,
+            List<Vector3> otherClosest,
+            List<Vector3> otherEdgeNormal,
+            List<float> distancesMeters,
+            bool isGhost,
+            bool drawIntersectionDiagnostics)
+        {
+            if (centers == null || left == null || right == null) return;
+            if (left.Count == 0) return;
+
+            // If an overlap is selected, we decimate per-sample intersection diagnostics to keep the view responsive.
+            // NOTE: selected overlap indices are built from the “authoritative” overlap ribbon, which uses GetOverlayPreviewLists().
+            // We therefore only draw these diagnostics when drawIntersectionDiagnostics is true (i.e., using that same authoritative set).
+            int selS = HasSelectedOverlap ? _selectedOverlapStartIndex : -1;
+            int selE = HasSelectedOverlap ? _selectedOverlapEndIndex : -1;
+
+            selS = (selS >= 0) ? Mathf.Clamp(selS, 0, centers.Count - 1) : selS;
+            selE = (selE >= 0) ? Mathf.Clamp(selE, 0, centers.Count - 1) : selE;
+
+            int selSpan = (HasSelectedOverlap && selE >= selS) ? Mathf.Max(1, selE - selS) : 0;
+            int selStep = (selSpan > 0) ? Mathf.Max(1, selSpan / 16) : int.MaxValue;
+
+            // Baseline vs final visual language:
+            // - Ghost: lighter alpha + dotted look where possible
+            // - Solid: higher alpha
+            float baseAlpha = isGhost ? 0.18f : 0.85f;
+            float sphereAlpha = isGhost ? 0.12f : 0.85f;
+
+            // Intersection pairs: distinct tint so users can identify interaction regions at-a-glance.
+            float intersectionAlpha = isGhost ? 0.60f : 0.90f;
+
+            // Candidate set for overlap tests.
+            // Prefer the set built during boundary preview; if not available, fall back to unique runs in hitRuns.
+            if (showIntersectionOverlay && (_tmpRunSet == null || _tmpRunSet.Count == 0) && hitRuns != null)
             {
-                Vector3 l = _prevLeft[i];
-                Vector3 r = _prevRight[i];
-
-                Handles.DrawLine(l, r);
-
-                float s = HandleUtility.GetHandleSize(_prevCenters[i]) * 0.03f;
-                Handles.SphereHandleCap(0, l, Quaternion.identity, s, EventType.Repaint);
-                Handles.SphereHandleCap(0, r, Quaternion.identity, s, EventType.Repaint);
-
-                if (i % 15 == 0)
+                _tmpRunSet.Clear();
+                for (int i = 0; i < hitRuns.Count; i++)
                 {
-                    Handles.color = new Color(c.r, c.g, c.b, 0.95f);
-                    Handles.Label(_prevCenters[i] + Vector3.up * HandleUtility.GetHandleSize(_prevCenters[i]) * 0.03f, $"Pair {i}");
-                    Handles.color = new Color(1f, 1f, 1f, 0.8f);
+                    var r = hitRuns[i];
+                    if (r != null && r != run) _tmpRunSet.Add(r);
                 }
             }
+
+            for (int i = 0; i < left.Count; i++)
+            {
+                Vector3 l = left[i];
+                Vector3 r = right[i];
+
+                byte m = 3;
+                if (mask != null && mask.Count == left.Count)
+                    m = mask[i];
+
+                bool leftValid = (m & 1) != 0;
+                bool rightValid = (m & 2) != 0;
+                bool spawnPair = leftValid || rightValid;
+                bool fullGate = leftValid && rightValid;
+
+                if (!spawnPair)
+                    continue;
+
+                var hitRun = (hitRuns != null && hitRuns.Count == left.Count) ? hitRuns[i] : null;
+
+                // Simplified: classify intersections purely by corridor overlap (no auto-moving).
+                SkiRunLine leftIn = null;
+                SkiRunLine rightIn = null;
+
+                bool leftInsideOther = showIntersectionOverlay && leftValid &&
+                                      TryFindContainingRunXZ(l, run, _tmpRunSet, out leftIn);
+
+                bool rightInsideOther = showIntersectionOverlay && rightValid &&
+                                       TryFindContainingRunXZ(r, run, _tmpRunSet, out rightIn);
+
+                bool anyInsideOther = leftInsideOther || rightInsideOther;
+
+                // Base colour language:
+                // - normal preview: white
+                // - inside another corridor: warm/orange tint
+                Color normalC = new Color(1f, 1f, 1f, baseAlpha);
+                Color overlapBase = new Color(1f, 0.65f, 0.15f, intersectionAlpha);
+
+                Color overlapL = overlapBase;
+                if (leftInsideOther && leftIn != null)
+                {
+                    Color bc = leftIn.RunColor; bc.a = intersectionAlpha;
+                    overlapL = Color.Lerp(overlapBase, bc, 0.35f);
+                }
+
+                Color overlapR = overlapBase;
+                if (rightInsideOther && rightIn != null)
+                {
+                    Color bc = rightIn.RunColor; bc.a = intersectionAlpha;
+                    overlapR = Color.Lerp(overlapBase, bc, 0.35f);
+                }
+
+                // Gate line tint: if both sides are inside the SAME other run, bias toward that run.
+                Color gateC = anyInsideOther ? overlapBase : normalC;
+                if (leftInsideOther && rightInsideOther && leftIn != null && leftIn == rightIn)
+                    gateC = overlapL;
+
+                Color skippedC = new Color(1f, 0.25f, 1f, Mathf.Max(0.25f, baseAlpha));
+
+                Vector3 c0 = centers[i];
+
+                // Draw either a full gate (both sides) or a half-gate (one side)
+                if (fullGate)
+                {
+                    Handles.color = gateC;
+                    if (isGhost) Handles.DrawDottedLine(l, r, 4f);
+                    else Handles.DrawLine(l, r);
+                }
+                else
+                {
+                    if (leftValid)
+                    {
+                        Handles.color = leftInsideOther ? overlapL : normalC;
+                        if (isGhost) Handles.DrawDottedLine(c0, l, 4f);
+                        else Handles.DrawLine(c0, l);
+                    }
+                    else
+                    {
+                        Handles.color = skippedC;
+                        DrawSkipMarker(l, HandleUtility.GetHandleSize(l) * 0.025f);
+                    }
+
+                    if (rightValid)
+                    {
+                        Handles.color = rightInsideOther ? overlapR : normalC;
+                        if (isGhost) Handles.DrawDottedLine(c0, r, 4f);
+                        else Handles.DrawLine(c0, r);
+                    }
+                    else
+                    {
+                        Handles.color = skippedC;
+                        DrawSkipMarker(r, HandleUtility.GetHandleSize(r) * 0.025f);
+                    }
+                }
+
+                float s = HandleUtility.GetHandleSize(c0) * 0.03f;
+
+                if (leftValid)
+                {
+                    Color sc = leftInsideOther ? overlapL : normalC;
+                    Handles.color = new Color(sc.r, sc.g, sc.b, sphereAlpha);
+                }
+
+                if (rightValid)
+                {
+                    Color sc = rightInsideOther ? overlapR : normalC;
+                    Handles.color = new Color(sc.r, sc.g, sc.b, sphereAlpha);
+                }
+
+                // Intersection diagnostics (closest point / edge normal) only for the authoritative preview set.
+                if (drawIntersectionDiagnostics && HasSelectedOverlap &&
+                    hitRun != null && hitRun == _selectedOverlapOtherRun &&
+                    i >= selS && i <= selE && (i - selS) % selStep == 0 &&
+                    otherClosest != null && otherEdgeNormal != null &&
+                    i < otherClosest.Count && i < otherEdgeNormal.Count)
+                {
+                    Vector3 closest = otherClosest[i];
+                    Vector3 edgeN = otherEdgeNormal[i];
+
+                    if (closest.sqrMagnitude > 0.0001f)
+                    {
+                        Handles.color = new Color(0.15f, 1f, 1f, 1f);
+                        Handles.DrawDottedLine(c0, closest, 3f);
+
+                        float hs = HandleUtility.GetHandleSize(closest);
+                        Handles.SphereHandleCap(0, closest, Quaternion.identity, hs * 0.05f, EventType.Repaint);
+
+                        if (edgeN.sqrMagnitude > 0.0001f)
+                        {
+                            Vector3 nDir = edgeN.normalized;
+                            _seg2[0] = closest;
+                            _seg2[1] = closest + nDir * (hs * 0.6f);
+                            Handles.DrawAAPolyLine(2f, _seg2);
+                        }
+
+                        var s3 = new GUIStyle(EditorStyles.miniLabel) { richText = false };
+                        DrawWorldLabelPacked(closest, hitRun.name, s3, yWorldOffset: hs * 0.08f);
+                    }
+                }
+
+                // Editable handles only in Gate Edit Mode.
+                // IMPORTANT: allow handles on BOTH preview sets so intersection (overlay) pairs can be selected and moved.
+                if (gateEditMode && distancesMeters != null && i < distancesMeters.Count)
+                {
+                    float dMeters = distancesMeters[i];
+
+                    TryDrawEditableFlagHandle(run, set, i, isLeft: true, currentWorld: l, mask: m, distanceMeters: dMeters);
+                    TryDrawEditableFlagHandle(run, set, i, isLeft: false, currentWorld: r, mask: m, distanceMeters: dMeters);
+                }
+
+            }
+        }
+
+        private bool TryGetSelectedDistance(out float dMeters)
+        {
+            dMeters = 0f;
+            var list = (_selectedSet == FlagPreviewSet.Primary) ? _prevDistances : _ovDistances;
+            if (list == null) return false;
+            if (_selectedPairIndex < 0 || _selectedPairIndex >= list.Count) return false;
+            dMeters = list[_selectedPairIndex];
+            return true;
+        }
+
+        private void TryDrawEditableFlagHandle(
+            SkiRunLine run,
+            FlagPreviewSet set,
+            int pairIndex,
+            bool isLeft,
+            Vector3 currentWorld,
+            byte mask,
+            float distanceMeters)
+        {
+            bool valid = isLeft ? ((mask & 0b01) != 0) : ((mask & 0b10) != 0);
+            if (!valid) return;
+
+            int side = isLeft ? 0 : 1;
+
+            Vector3 drawPos = currentWorld + Vector3.up * sceneVisualYOffset;
+            float s = HandleUtility.GetHandleSize(drawPos) * 0.09f;
+
+            if (Handles.Button(drawPos, Quaternion.identity, s, s, Handles.SphereHandleCap))
+            {
+                _selectedSet = set;
+                _selectedPairIndex = pairIndex;
+                _selectedSide = side;
+                GUI.changed = true;
+            }
+
+            if (_selectedSet != set || _selectedPairIndex != pairIndex || _selectedSide != side)
+                return;
+
+            EditorGUI.BeginChangeCheck();
+            Vector3 newDraw = Handles.PositionHandle(drawPos, Quaternion.identity);
+            if (!EditorGUI.EndChangeCheck()) return;
+
+            Undo.RecordObject(run, "Move Flag Pair Preview");
+
+            Vector3 newWorld = newDraw - Vector3.up * sceneVisualYOffset;
+
+            // Preserve the existing “above terrain” offset by measuring it at the current position.
+            Terrain tCur = ResolveTerrainAt(currentWorld);
+            float curBaseY = SnapToTerrain(tCur, currentWorld).y;
+            float offsetY = currentWorld.y - curBaseY;
+
+            Terrain tNew = ResolveTerrainAt(newWorld);
+            Vector3 snapped = SnapToTerrain(tNew, newWorld);
+            snapped.y += offsetY;
+
+            // Moving a gate side in-scene is an authoring action: write GateOverrides and lock by default
+            // so rebuild respects the manual position.
+            run.SetGateOverridePosition(distanceMeters, isLeft, snapped, lockPosition: true);
+
+            _previewDirty = true;
+            EditorUtility.SetDirty(run);
+            SceneView.RepaintAll();
+        }
+
+        private void HandleFlagOverrideContextMenu(SkiRunLine run)
+        {
+            var e = Event.current;
+            if (e == null || e.type != EventType.ContextClick) return;
+            if (_selectedPairIndex < 0) return;
+            if (!TryGetSelectedDistance(out float dMeters)) return;
+
+            var menu = new GenericMenu();
+
+            menu.AddItem(new GUIContent("Gate/Toggle Pair Enabled"), false, () =>
+            {
+                Undo.RecordObject(run, "Toggle Gate Pair Enabled");
+                bool leftEnabled = run.IsGateSideEnabled(dMeters, isLeft: true);
+                bool rightEnabled = run.IsGateSideEnabled(dMeters, isLeft: false);
+                run.SetGateOverrideEnabled(dMeters, leftEnabled: !leftEnabled, rightEnabled: !rightEnabled);
+                _previewDirty = true;
+                EditorUtility.SetDirty(run);
+                SceneView.RepaintAll();
+            });
+
+            menu.AddItem(new GUIContent("Gate/Toggle Left Enabled"), false, () =>
+            {
+                Undo.RecordObject(run, "Toggle Gate Left Enabled");
+                bool cur = run.IsGateSideEnabled(dMeters, isLeft: true);
+                run.SetGateOverrideEnabled(dMeters, leftEnabled: !cur, rightEnabled: null);
+                _previewDirty = true;
+                EditorUtility.SetDirty(run);
+                SceneView.RepaintAll();
+            });
+
+            menu.AddItem(new GUIContent("Gate/Toggle Right Enabled"), false, () =>
+            {
+                Undo.RecordObject(run, "Toggle Gate Right Enabled");
+                bool cur = run.IsGateSideEnabled(dMeters, isLeft: false);
+                run.SetGateOverrideEnabled(dMeters, leftEnabled: null, rightEnabled: !cur);
+                _previewDirty = true;
+                EditorUtility.SetDirty(run);
+                SceneView.RepaintAll();
+            });
+
+            menu.AddSeparator("Gate/");
+
+            menu.AddItem(new GUIContent("Gate/Clear Authored Positions (Both Sides)"), false, () =>
+            {
+                Undo.RecordObject(run, "Clear Gate Positions");
+                run.ClearGateOverridePositions(dMeters);
+                _previewDirty = true;
+                EditorUtility.SetDirty(run);
+                SceneView.RepaintAll();
+            });
+
+            menu.AddItem(new GUIContent("Gate/Lock Positions (Both Sides)"), false, () =>
+            {
+                Undo.RecordObject(run, "Lock Gate Positions");
+                run.SetGateOverrideLocked(dMeters, lockLeft: true, lockRight: true);
+                _previewDirty = true;
+                EditorUtility.SetDirty(run);
+                SceneView.RepaintAll();
+            });
+
+            menu.AddItem(new GUIContent("Gate/Unlock Positions (Both Sides)"), false, () =>
+            {
+                Undo.RecordObject(run, "Unlock Gate Positions");
+                run.SetGateOverrideLocked(dMeters, lockLeft: false, lockRight: false);
+                _previewDirty = true;
+                EditorUtility.SetDirty(run);
+                SceneView.RepaintAll();
+            });
+
+            menu.AddSeparator("Gate/");
+
+            menu.AddItem(new GUIContent("Gate/Remove Gate Override Entry"), false, () =>
+            {
+                Undo.RecordObject(run, "Remove Gate Override");
+                run.RemoveGate(dMeters);
+                _previewDirty = true;
+                EditorUtility.SetDirty(run);
+                SceneView.RepaintAll();
+            });
+
+            menu.ShowAsContext();
+            e.Use();
+        }
+
+        private static void DrawSkipMarker(Vector3 p, float size)
+        {
+            Vector3 a = p + Vector3.right * size;
+            Vector3 b = p - Vector3.right * size;
+            Vector3 c = p + Vector3.forward * size;
+            Vector3 d = p - Vector3.forward * size;
+            Handles.DrawLine(a, b);
+            Handles.DrawLine(c, d);
         }
 
         private void DrawSpacingHandle(SkiRunLine run, SerializedObject so, SerializedProperty pointsProp)
         {
+            if (!showSpacingHandle) return;
+            if (pointsProp == null || pointsProp.arraySize < 2) return;
+
             SerializedProperty spacingProp = so.FindProperty("flagSpacingMeters");
             if (spacingProp == null) return;
 
-            if (pointsProp.arraySize == 0) return;
-
             Vector3 p0 = pointsProp.GetArrayElementAtIndex(0).vector3Value;
-            Terrain t0 = ResolveTerrainAt(p0);
-            Vector3 p0s = SnapToTerrain(t0, p0);
+            Vector3 p1 = pointsProp.GetArrayElementAtIndex(1).vector3Value;
 
-            Vector3 dir = SceneView.currentDrawingSceneView != null
-                ? SceneView.currentDrawingSceneView.camera.transform.right
-                : Vector3.right;
+            // Axis perpendicular to the run direction (more intuitive than camera-right).
+            Vector3 runDir = (p1 - p0);
+            if (runDir.sqrMagnitude < 0.0001f) runDir = Vector3.forward;
 
-            float handleSize = HandleUtility.GetHandleSize(p0s) * 0.7f;
+            Vector3 axis = Vector3.Cross(Vector3.up, runDir).normalized;
+            if (axis.sqrMagnitude < 0.0001f)
+                axis = SceneView.currentDrawingSceneView != null
+                    ? SceneView.currentDrawingSceneView.camera.transform.right
+                    : Vector3.right;
 
-            float spacing = spacingProp.floatValue;
-            Vector3 handlePos = p0s + dir * (handleSize * 0.6f);
+            float hs = HandleUtility.GetHandleSize(p0);
+            Vector3 handlePos = p0 + axis * (hs * 0.85f);
 
-            Handles.color = Color.white;
-            Handles.Label(handlePos + Vector3.up * handleSize * 0.05f, $"Pair Spacing: {spacing:0.0}m");
+            Handles.color = new Color(1f, 0.9f, 0.2f, 0.95f); // distinct from selection yellow
 
             EditorGUI.BeginChangeCheck();
-            float newSpacing = Handles.ScaleSlider(spacing, handlePos, dir, Quaternion.identity, handleSize, 0.1f);
+            float spacing = spacingProp.floatValue;
+
+            float newSpacing = Handles.ScaleValueHandle(
+                spacing,
+                handlePos,
+                Quaternion.LookRotation(axis),
+                hs * 0.18f,
+                Handles.CubeHandleCap,
+                0.25f);
+
             if (EditorGUI.EndChangeCheck())
             {
-                newSpacing = Mathf.Clamp(newSpacing, 1f, 50f);
-                Undo.RecordObject(run, "Adjust Pair Spacing");
+                newSpacing = Mathf.Clamp(newSpacing, 1f, 200f);
+                Undo.RecordObject(run, "Adjust Flag Spacing");
                 spacingProp.floatValue = newSpacing;
                 so.ApplyModifiedProperties();
                 EditorUtility.SetDirty(run);
+
+                _previewDirty = true;
+                SceneView.RepaintAll();
+            }
+
+            Handles.Label(handlePos + Vector3.up * (hs * 0.08f), $"Spacing: {spacingProp.floatValue:0.0}m");
+        }
+
+        // ============================================================================
+        // Gate Editing (Scene View) — edit preview gates (left/right) + insert/remove
+        // ============================================================================
+
+        private void HandleGateEditing(SkiRunLine run)
+        {
+            if (run == null) return;
+            if (!_showGateHandles) return;
+            if (!gateEditMode) return;
+
+            Event e = Event.current;
+            if (e == null) return;
+
+            _gateConsumedThisEvent = false;
+
+            // Shift-click: add a gate at the clicked corridor location (nearest preview pair)
+            if (enableShiftClickInsert && e.type == EventType.MouseDown && e.shift && e.button == 0)
+            {
+                if (TryPickNearestPreviewPair(run, out FlagPreviewSet set, out int pairIndex, out int side))
+                {
+                    if (TryGetPairDistanceMeters(set, pairIndex, out float pickedDMeters))
+                    {
+                        Undo.RecordObject(run, "Add Gate");
+
+                        // Insert an un-locked gate override at this distance.
+                        run.AddInsertedGate(pickedDMeters);
+
+                        EditorUtility.SetDirty(run);
+                        _previewDirty = true;
+                        SceneView.RepaintAll();
+
+                        e.Use();
+                        _gateConsumedThisEvent = true;
+                        return;
+                    }
+                }
+            }
+
+            // Alt-click: remove gate at the clicked location (if inserted), otherwise disable/toggle side
+            if (enableAltClickDelete && e.type == EventType.MouseDown && e.alt && e.button == 0)
+            {
+                if (TryPickNearestPreviewPair(run, out FlagPreviewSet set, out int pairIndex, out int side))
+                {
+                    if (TryGetPairDistanceMeters(set, pairIndex, out float pickedDMeters))
+                    {
+                        Undo.RecordObject(run, "Remove/Disable Gate");
+
+                        // If it was an inserted gate: remove the whole gate override.
+                        // Otherwise: toggle enabled state for clicked side (or full pair if center).
+                        if (run.IsInsertedGate(pickedDMeters))
+                        {
+                            run.RemoveGate(pickedDMeters);
+                        }
+                        else
+                        {
+                            if (side < 0)
+                            {
+                                // center click: toggle full pair
+                                bool leftEnabled = run.IsGateSideEnabled(pickedDMeters, isLeft: true);
+                                bool rightEnabled = run.IsGateSideEnabled(pickedDMeters, isLeft: false);
+                                run.SetGateOverrideEnabled(pickedDMeters, leftEnabled: !leftEnabled, rightEnabled: !rightEnabled);
+                            }
+                            else
+                            {
+                                bool isLeft = (side == 0);
+                                bool cur = run.IsGateSideEnabled(pickedDMeters, isLeft: isLeft);
+
+                                // NOTE: your API appears to accept nullable bools for per-side toggles
+                                // (as your snippet uses null). Keep that contract consistent.
+                                if (isLeft) run.SetGateOverrideEnabled(pickedDMeters, leftEnabled: !cur, rightEnabled: null);
+                                else run.SetGateOverrideEnabled(pickedDMeters, leftEnabled: null, rightEnabled: !cur);
+                            }
+                        }
+
+                        EditorUtility.SetDirty(run);
+                        _previewDirty = true;
+                        SceneView.RepaintAll();
+
+                        e.Use();
+                        _gateConsumedThisEvent = true;
+                        return;
+                    }
+                }
+            }
+
+            // If the event was consumed by insert/delete, do not also drag.
+            if (_gateConsumedThisEvent)
+                return;
+
+            // Draw editable handles ONLY for the currently selected pair (much cleaner + avoids handle conflicts).
+            if (!showPairPreview) return;
+
+            if (!TryGetSelectedDistance(out float selectedDMeters))
+                return;
+
+            var leftList = (_selectedSet == FlagPreviewSet.Primary) ? _prevLeft : _ovLeft;
+            var rightList = (_selectedSet == FlagPreviewSet.Primary) ? _prevRight : _ovRight;
+            var centerList = (_selectedSet == FlagPreviewSet.Primary) ? _prevCenters : _ovCenters;
+            var maskList = (_selectedSet == FlagPreviewSet.Primary) ? _prevSpawnMask : _ovSpawnMask;
+
+            if (leftList == null || rightList == null || centerList == null) return;
+            if (_selectedPairIndex < 0 || _selectedPairIndex >= leftList.Count) return;
+
+            byte mask = 3;
+            if (maskList != null && maskList.Count == leftList.Count)
+                mask = maskList[_selectedPairIndex];
+
+            if ((mask & 0b11) == 0)
+                return;
+
+            Vector3 l = leftList[_selectedPairIndex];
+            Vector3 r = rightList[_selectedPairIndex];
+            Vector3 c0 = centerList[_selectedPairIndex];
+
+            if ((mask & 0b01) != 0) DrawEditableGateSide(run, selectedDMeters, c0, l, isLeft: true);
+            if ((mask & 0b10) != 0) DrawEditableGateSide(run, selectedDMeters, c0, r, isLeft: false);
+
+            // Only show width editing when both sides are enabled (otherwise width is ambiguous).
+            if ((mask & 0b11) == 0b11)
+                DrawEditableGateWidth(run, selectedDMeters, c0, l, r, affectNeighbors: _gateEditAffectsNeighbors);
+        }
+
+        private void DrawEditableGateSide(SkiRunLine run, float dMeters, Vector3 center, Vector3 currentWorld, bool isLeft)
+        {
+            float s = HandleUtility.GetHandleSize(currentWorld) * 0.14f;
+
+            Handles.color = isLeft
+                ? new Color(0.35f, 0.9f, 1f, 0.95f)      // cyan
+                : new Color(1f, 0.35f, 0.7f, 0.95f);     // magenta/pink
+
+            // Stable-ish per-handle control ID reduces collisions at intersections/overlaps.
+            int hint = (run.GetInstanceID() * 397)
+                       ^ dMeters.GetHashCode()
+                       ^ (isLeft ? 0x1EAF : 0x5B2D);
+            int id = GUIUtility.GetControlID(hint, FocusType.Passive);
+
+            EditorGUI.BeginChangeCheck();
+            var fmh_2147_71_639050483114859531 = Quaternion.identity; Vector3 newPos = Handles.FreeMoveHandle(id, currentWorld, s, Vector3.zero, Handles.SphereHandleCap);
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(run, "Move Gate Flag");
+
+                if (autoSnapToTerrainWhenEditing)
+                {
+                    Terrain t = ResolveTerrainAt(newPos);
+                    if (t != null) newPos = SnapToTerrain(t, newPos);
+                }
+
+                // Default unlocked (matches your current intent).
+                run.SetGateOverridePosition(dMeters, isLeft, newPos, lockPosition: false);
+
+                EditorUtility.SetDirty(run);
+                _previewDirty = true;
                 SceneView.RepaintAll();
             }
         }
 
-        // --- Preview helpers (remain unchanged from your existing toolchain) ---
-
-        private float ComputePolylineLength(SerializedProperty pointsProp)
+        private void DrawEditableGateWidth(SkiRunLine run, float dMeters, Vector3 c0, Vector3 l, Vector3 r, bool affectNeighbors)
         {
-            float len = 0f;
-            for (int i = 0; i < pointsProp.arraySize - 1; i++)
+            Vector3 mid = (l + r) * 0.5f;
+            Vector3 dirR = (r - mid);
+            Vector3 dirL = (l - mid);
+
+            if (dirR.sqrMagnitude < 0.0001f || dirL.sqrMagnitude < 0.0001f)
+                return;
+
+            Vector3 axis = dirR.normalized;
+
+            float hs = HandleUtility.GetHandleSize(mid);
+            float handleSize = hs * 0.10f;
+
+            // Place width handle slightly to the right side
+            Vector3 handlePos = mid + axis * (hs * 0.25f);
+
+            Handles.color = new Color(1f, 1f, 1f, 0.9f);
+
+            EditorGUI.BeginChangeCheck();
+            float curHalfWidth = dirR.magnitude;
+            float newHalfWidth = Handles.ScaleValueHandle(curHalfWidth, handlePos,
+                Quaternion.LookRotation(axis), handleSize, Handles.CubeHandleCap, 0.05f);
+            if (EditorGUI.EndChangeCheck())
             {
-                Vector3 a = pointsProp.GetArrayElementAtIndex(i).vector3Value;
-                Vector3 b = pointsProp.GetArrayElementAtIndex(i + 1).vector3Value;
-                len += Vector3.Distance(a, b);
-            }
-            return len;
-        }
+                newHalfWidth = Mathf.Max(0.25f, newHalfWidth);
+                float scale = newHalfWidth / Mathf.Max(0.0001f, curHalfWidth);
 
-        private Vector3 GetSmoothedTangent(SerializedProperty pointsProp, int seg, Vector3 a, Vector3 b, Vector3 fallback)
-        {
-            Vector3 t = fallback;
+                // Apply symmetric scale from the midpoint.
+                Vector3 newR = mid + dirR * scale;
+                Vector3 newL = mid + dirL * scale;
 
-            if (seg > 0 && seg < pointsProp.arraySize - 2)
-            {
-                Vector3 prev = pointsProp.GetArrayElementAtIndex(seg - 1).vector3Value;
-                Vector3 next = pointsProp.GetArrayElementAtIndex(seg + 2).vector3Value;
-
-                Vector3 ta = (a - prev);
-                Vector3 tb = (next - b);
-
-                if (ta.sqrMagnitude > 0.00001f) ta.Normalize();
-                if (tb.sqrMagnitude > 0.00001f) tb.Normalize();
-
-                Vector3 blended = (ta + fallback + tb);
-                if (blended.sqrMagnitude > 0.00001f)
-                    t = blended.normalized;
-            }
-
-            return t;
-        }
-
-        private float GetWidthMetersAtSample(SerializedProperty pointsProp, SerializedProperty widthsProp, int seg, float segT, float globalWidth)
-        {
-            int i0 = Mathf.Clamp(seg, 0, widthsProp.arraySize - 1);
-            int i1 = Mathf.Clamp(seg + 1, 0, widthsProp.arraySize - 1);
-
-            float w0 = widthsProp.GetArrayElementAtIndex(i0).floatValue;
-            float w1 = widthsProp.GetArrayElementAtIndex(i1).floatValue;
-
-            float a = (w0 > 0.01f) ? w0 : globalWidth;
-            float b = (w1 > 0.01f) ? w1 : globalWidth;
-
-            return Mathf.Lerp(a, b, segT);
-        }
-
-        private Vector3 FindBoundaryPointPreview(
-            Terrain terrainAtCenter,
-            Vector3 centerGround,
-            Vector3 lateral,
-            float halfW,
-            bool isLeft,
-            bool terrainAware,
-            float searchStep,
-            float maxSlopeDeg,
-            float maxHeightDelta,
-            bool preferFurthest,
-            bool snapSides,
-            float yOffset)
-        {
-            // Defer to SkiRunLine�s boundary behaviour if you already have it implemented there.
-            // This editor preview uses a simplified scan fallback if needed.
-
-            Vector3 dir = isLeft ? -lateral : lateral;
-
-            if (!terrainAware)
-                return centerGround + dir * halfW;
-
-            Vector3 best = centerGround + dir * halfW;
-            float bestD = 0f;
-
-            float maxD = Mathf.Max(1f, halfW);
-
-            for (float d = searchStep; d <= maxD; d += searchStep)
-            {
-                Vector3 p = centerGround + dir * d;
-                Terrain t = ResolveTerrainAt(p) ?? terrainAtCenter;
-                if (t == null) continue;
-
-                Vector3 pG = SnapToTerrain(t, p);
-                float dh = Mathf.Abs(pG.y - centerGround.y);
-                if (dh > maxHeightDelta) continue;
-
-                Vector3 n = SampleNormal(t, pG);
-                float slope = Vector3.Angle(n, Vector3.up);
-                if (slope > maxSlopeDeg) continue;
-
-                if (preferFurthest)
+                if (autoSnapToTerrainWhenEditing)
                 {
-                    best = pG;
-                    bestD = d;
+                    Terrain tMid = ResolveTerrainAt(mid);
+                    Terrain tL = ResolveTerrainAt(newL, preferred: tMid);
+                    Terrain tR = ResolveTerrainAt(newR, preferred: tMid);
+
+                    if (tL != null) newL = SnapToTerrain(tL, newL);
+                    if (tR != null) newR = SnapToTerrain(tR, newR);
+                }
+
+                Undo.RecordObject(run, "Adjust Gate Width");
+
+                if (!affectNeighbors)
+                {
+                    run.SetGateOverridePosition(dMeters, isLeft: true, newL, lockPosition: false);
+                    run.SetGateOverridePosition(dMeters, isLeft: false, newR, lockPosition: false);
                 }
                 else
                 {
-                    // Take first valid
-                    best = pG;
-                    bestD = d;
-                    break;
+                    // Affect nearby pairs by distance window or count (your inspector controls already exist)
+                    ApplyWidthToNeighbors(run, dMeters, newL, newR);
+                }
+
+                EditorUtility.SetDirty(run);
+                _previewDirty = true;
+                SceneView.RepaintAll();
+            }
+        }
+
+        private void ApplyWidthToNeighbors(SkiRunLine run, float centerDMeters, Vector3 newL, Vector3 newR)
+        {
+            // Uses your existing inspector fields:
+            // _gateNeighborPairs, _gateNeighborRadiusMeters
+
+            // Primary: by distance radius (more intuitive).
+            for (int i = 0; i < _prevCenters.Count; i++)
+            {
+                if (!TryGetPairDistanceMeters(FlagPreviewSet.Primary, i, out float d)) continue;
+                if (Mathf.Abs(d - centerDMeters) > _gateNeighborRadiusMeters) continue;
+
+                // Preserve each neighbor’s midpoint, apply delta width relative to its current midpoint
+                Vector3 l = _prevLeft[i];
+                Vector3 r = _prevRight[i];
+                Vector3 mid = (l + r) * 0.5f;
+
+                Vector3 srcMid = (newL + newR) * 0.5f;
+                Vector3 srcL = newL - srcMid;
+                Vector3 srcR = newR - srcMid;
+
+                Vector3 dstL = mid + srcL;
+                Vector3 dstR = mid + srcR;
+
+                run.SetGateOverridePosition(d, isLeft: true, dstL, lockPosition: false);
+                run.SetGateOverridePosition(d, isLeft: false, dstR, lockPosition: false);
+            }
+        }
+
+        private bool TryPickNearestPreviewPair(SkiRunLine run, out FlagPreviewSet set, out int pairIndex, out int side)
+        {
+            set = FlagPreviewSet.Primary;
+            pairIndex = -1;
+            side = -1;
+
+            Event e = Event.current;
+            if (e == null) return false;
+
+            float best = float.PositiveInfinity;
+            FlagPreviewSet bestSet = FlagPreviewSet.Primary;
+            int bestSide = -1; // -1 center, 0 left, 1 right
+            int bestIdx = -1;
+
+            // Helper local (keeps this method allocation-free)
+            void Consider(FlagPreviewSet s, int i, Vector3 c0, Vector3 l, Vector3 r)
+            {
+                float dc = HandleUtility.DistanceToCircle(c0, HandleUtility.GetHandleSize(c0) * 0.12f);
+                if (dc < best) { best = dc; bestIdx = i; bestSide = -1; bestSet = s; }
+
+                float dl = HandleUtility.DistanceToCircle(l, HandleUtility.GetHandleSize(l) * 0.12f);
+                if (dl < best) { best = dl; bestIdx = i; bestSide = 0; bestSet = s; }
+
+                float dr = HandleUtility.DistanceToCircle(r, HandleUtility.GetHandleSize(r) * 0.12f);
+                if (dr < best) { best = dr; bestIdx = i; bestSide = 1; bestSet = s; }
+            }
+
+            // Primary set: skip intersection pairs when overlay is enabled (so we pick the authoritative overlay version)
+            for (int i = 0; i < _prevCenters.Count; i++)
+            {
+                if (showIntersectionOverlay && !_overlayUsesPrimaryPreview && _intersectedRuns != null && i < _intersectedRuns.Count)
+                {
+                    var hit = _intersectedRuns[i];
+                    if (hit != null && hit != run)
+                        continue; // intersection pairs should be picked from overlay set
+                }
+
+                Consider(FlagPreviewSet.Primary, i, _prevCenters[i], _prevLeft[i], _prevRight[i]);
+            }
+
+            // Overlay set: consider only intersection pairs (it duplicates primary for non-intersections)
+            if (showIntersectionOverlay && !_overlayUsesPrimaryPreview && _ovCenters != null && _ovCenters.Count > 0)
+            {
+                for (int i = 0; i < _ovCenters.Count; i++)
+                {
+                    if (_ovIntersectedRuns == null || i >= _ovIntersectedRuns.Count) break;
+
+                    var hit = _ovIntersectedRuns[i];
+                    if (hit == null || hit == run) continue;
+
+                    Consider(FlagPreviewSet.Overlay, i, _ovCenters[i], _ovLeft[i], _ovRight[i]);
                 }
             }
 
-            if (!snapSides)
-            {
-                best.y = centerGround.y;
-            }
+            // Reject if too far to be intentional
+            if (bestIdx < 0 || best > 22f)
+                return false;
 
-            // yOffset applied later by caller
-            return best;
+            set = bestSet;
+            pairIndex = bestIdx;
+            side = bestSide;
+            return true;
         }
+
+        private bool TryGetPairDistanceMeters(FlagPreviewSet set, int idx, out float dMeters)
+        {
+            dMeters = 0f;
+
+            // Your editor excerpt shows these lists exist in your updated tool:
+            // _prevDistances and _ovDistances
+            if (set == FlagPreviewSet.Primary)
+            {
+                if (_prevDistances == null || idx < 0 || idx >= _prevDistances.Count) return false;
+                dMeters = _prevDistances[idx];
+                return true;
+            }
+            else
+            {
+                if (_ovDistances == null || idx < 0 || idx >= _ovDistances.Count) return false;
+                dMeters = _ovDistances[idx];
+                return true;
+            }
+        }
+
 
         private static Terrain ResolveTerrainAt(Vector3 worldPos, Terrain preferred = null)
         {
@@ -1045,6 +2570,19 @@ namespace SkiGame.RunsEditor
             return worldPos;
         }
 
+        private float SampleTerrainY(Vector3 worldPos)
+        {
+            Terrain t = ResolveTerrainAt(worldPos);
+            if (t == null) return worldPos.y;
+            return t.SampleHeight(worldPos) + t.transform.position.y;
+        }
+
+        private Vector3 SnapToTerrainPreserveOffset(Vector3 worldPos, float yOffset)
+        {
+            worldPos.y = SampleTerrainY(worldPos) + yOffset;
+            return worldPos;
+        }
+
         private static Vector3 SampleNormal(Terrain t, Vector3 worldPos)
         {
             if (t == null || t.terrainData == null) return Vector3.up;
@@ -1057,6 +2595,527 @@ namespace SkiGame.RunsEditor
             Vector3 n = t.terrainData.GetInterpolatedNormal(u, v);
             return n.sqrMagnitude > 0.0001f ? n.normalized : Vector3.up;
         }
+
+        private const string PrefKey = "SkiRunLineEditor.";
+
+        private void SetAuthoringMode(AuthoringMode mode, SkiRunLine run)
+        {
+            if (_authoringMode == mode) return;
+
+            _authoringMode = mode;
+
+            // Mutually-exclusive interaction modes (prevents Shift/Alt conflicts)
+            if (_authoringMode != AuthoringMode.Flags)
+                gateEditMode = false;
+
+            if (_authoringMode != AuthoringMode.Fences)
+            {
+                // Spans are legacy; keep hard-disabled when not explicitly needed.
+                fenceHoleEditMode = false;
+                _selectedFenceHoleIndex = -1;
+            }
+
+            // Defaults when entering modes
+            if (_authoringMode == AuthoringMode.Flags)
+            {
+                gateEditMode = true;
+                // Helpful previews while flag authoring
+                showBoundaryPreview = true;
+                showPairPreview = true;
+            }
+
+            if (_authoringMode == AuthoringMode.Fences)
+            {
+                // New simplified fence authoring: holes are the main editing affordance.
+                fenceHoleEditMode = true;
+
+                // Fence authoring benefits from corridor visibility.
+                showBoundaryPreview = true;
+                showPairPreview = false; // less noise
+            }
+
+            // Clear selections (reduces handle collisions at overlaps/intersections)
+            selectedPointIndex = -1;
+            _selectedPairIndex = -1;
+            _selectedSide = 0;
+            _selectedSet = FlagPreviewSet.Primary;
+
+            _selectedOverlapOtherRun = null;
+            _selectedOverlapStartIndex = -1;
+            _selectedOverlapEndIndex = -1;
+
+            _gateConsumedThisEvent = false;
+
+            SaveEditorPrefs();
+            SceneView.RepaintAll();
+            Repaint();
+        }
+
+        private void HandleSceneHotkeys(SkiRunLine run)
+        {
+            Event e = Event.current;
+            if (e == null || e.type != EventType.KeyDown) return;
+
+            bool ctrl = e.control || e.command;
+            bool shift = e.shift;
+
+            bool consumed = false;
+            bool previewAffects = false;
+
+            if (!ctrl && !shift)
+            {
+                switch (e.keyCode)
+                {
+                    // Cohesive authoring modes
+                    case KeyCode.Alpha1:
+                        SetAuthoringMode(AuthoringMode.Path, run);
+                        consumed = true;
+                        break;
+
+                    case KeyCode.Alpha2:
+                        SetAuthoringMode(AuthoringMode.Flags, run);
+                        consumed = true;
+                        break;
+
+                    case KeyCode.Alpha3:
+                        SetAuthoringMode(AuthoringMode.Fences, run);
+                        consumed = true;
+                        break;
+
+                    // Gate editing: if you press G outside Flags, it takes you into Flags mode
+                    case KeyCode.G:
+                        if (_authoringMode != AuthoringMode.Flags)
+                        {
+                            SetAuthoringMode(AuthoringMode.Flags, run);
+                        }
+                        else
+                        {
+                            gateEditMode = !gateEditMode;
+                            consumed = true;
+                        }
+                        consumed = true;
+                        break;
+
+                    case KeyCode.H:
+                        showHotkeyOverlay = !showHotkeyOverlay;
+                        consumed = true;
+                        break;
+
+                    case KeyCode.P:
+                        showPairPreview = !showPairPreview;
+                        previewAffects = true;
+                        consumed = true;
+                        break;
+
+                    case KeyCode.B:
+                        showBoundaryPreview = !showBoundaryPreview;
+                        previewAffects = true;
+                        consumed = true;
+                        break;
+
+                    case KeyCode.I:
+                        showIntersectionOverlay = !showIntersectionOverlay;
+                        previewAffects = true;
+                        consumed = true;
+                        break;
+
+                    case KeyCode.O:
+                        previewIncludeOverlapAvoidance = !previewIncludeOverlapAvoidance;
+                        previewAffects = true;
+                        consumed = true;
+                        break;
+                }
+            }
+
+            // “Heavy” operations: require Ctrl+Shift to avoid accidents
+            if (ctrl && shift)
+            {
+                if (e.keyCode == KeyCode.R)
+                {
+                    Undo.RecordObject(run, "Rebuild Run Flags");
+                    run.RebuildFlags();
+                    run.ApplyColorToGeneratedFlags();
+                    EditorUtility.SetDirty(run);
+                    previewAffects = true;
+                    consumed = true;
+                }
+                else if (e.keyCode == KeyCode.M)
+                {
+                    Undo.RecordObject(run, "Bake Run Metrics");
+                    run.BakeMetrics();
+                    EditorUtility.SetDirty(run);
+                    consumed = true;
+                }
+            }
+
+            // Fence holes: Delete/Backspace removes selected hole
+            if (_authoringMode == AuthoringMode.Fences && fenceHoleEditMode &&
+                (e.keyCode == KeyCode.Delete || e.keyCode == KeyCode.Backspace))
+            {
+                var holesProp = serializedObject.FindProperty("fenceExcludeHoles");
+                if (holesProp != null && _selectedFenceHoleIndex >= 0 && _selectedFenceHoleIndex < holesProp.arraySize)
+                {
+                    Undo.RecordObject(run, "Delete Fence Hole");
+                    holesProp.DeleteArrayElementAtIndex(_selectedFenceHoleIndex);
+                    serializedObject.ApplyModifiedProperties();
+
+                    _selectedFenceHoleIndex = -1;
+
+                    EditorUtility.SetDirty(run);
+                    _previewDirty = true;
+                    SceneView.RepaintAll();
+                    Repaint();
+
+                    e.Use();
+                    return;
+                }
+            }
+
+            if (previewAffects)
+                _previewDirty = true;
+
+            if (consumed)
+            {
+                SaveEditorPrefs();
+                e.Use();
+                SceneView.RepaintAll();
+                Repaint();
+            }
+        }
+
+        private void DrawFenceBoundaryPreviewForFenceMode(SkiRunLine run)
+        {
+            if (run == null) return;
+            if (!showBoundaryPreview) return;
+            if (Event.current == null || Event.current.type != EventType.Repaint) return;
+
+            float runLen = run.GetTotalLengthMeters();
+
+            var spacingProp = serializedObject.FindProperty("fencePointSpacingMeters");
+            float spacing = (spacingProp != null) ? Mathf.Max(0.5f, spacingProp.floatValue) : 2f;
+
+            bool useLeft = serializedObject.FindProperty("fenceUseLeftEdge")?.boolValue ?? true;
+            bool useRight = serializedObject.FindProperty("fenceUseRightEdge")?.boolValue ?? true;
+
+            // Left edge preview (match gate-left colour)
+            if (useLeft)
+            {
+                _tmpFencePreview.Clear();
+                run.GetFenceBoundaryPreviewPolyline(true, 0f, runLen, spacing, _tmpFencePreview);
+                Handles.color = new Color(0.35f, 0.9f, 1f, 0.85f);
+                DrawAAPolyLineCached(3.0f, _tmpFencePreview);
+            }
+
+            // Right edge preview (match gate-right colour)
+            if (useRight)
+            {
+                _tmpFencePreview.Clear();
+                run.GetFenceBoundaryPreviewPolyline(false, 0f, runLen, spacing, _tmpFencePreview);
+                Handles.color = new Color(1f, 0.35f, 0.7f, 0.85f);
+                DrawAAPolyLineCached(3.0f, _tmpFencePreview);
+            }
+        }
+
+        private void HandleFenceHoleSceneEditing(SkiRunLine run)
+        {
+            if (run == null) return;
+
+            Event e = Event.current;
+            if (e == null) return;
+
+            // Only meaningful in fence authoring mode.
+            if (_authoringMode != AuthoringMode.Fences)
+                return;
+
+            float runLen = run.GetTotalLengthMeters();
+
+            SerializedProperty fencePointSpacingMetersProp = serializedObject.FindProperty("fencePointSpacingMeters");
+            float fencePointSpacingMeters =
+                (fencePointSpacingMetersProp != null) ? fencePointSpacingMetersProp.floatValue : 2f;
+
+            var holesProp = serializedObject.FindProperty("fenceExcludeHoles");
+            if (holesProp == null) return;
+
+            // --- Prevent Shift multi-select from stealing our Shift+Click add-hole gesture ---
+            // Unity uses Shift as additive selection; we want Shift+Click to be "tool action" in fence hole mode.
+            if (fenceHoleEditMode && e.shift && e.type == EventType.Layout)
+            {
+                HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
+            }
+
+            // --- Draw + interact with existing holes ---
+            for (int i = 0; i < holesProp.arraySize; i++)
+            {
+                var hp = holesProp.GetArrayElementAtIndex(i);
+                bool enabled = hp.FindPropertyRelative("enabled").boolValue;
+                if (!enabled) continue;
+
+                var side = (SkiRunLine.FenceSide)hp.FindPropertyRelative("side").enumValueIndex;
+                float a = hp.FindPropertyRelative("startMeters").floatValue;
+                float b = hp.FindPropertyRelative("endMeters").floatValue;
+
+                float start = Mathf.Clamp(Mathf.Min(a, b), 0f, runLen);
+                float end = Mathf.Clamp(Mathf.Max(a, b), 0f, runLen);
+
+                // Get endpoints on the chosen corridor side
+                if (!run.TryGetFenceBoundaryPointAtDistance(side == SkiRunLine.FenceSide.Left, start, out Vector3 pStart)) continue;
+                if (!run.TryGetFenceBoundaryPointAtDistance(side == SkiRunLine.FenceSide.Left, end, out Vector3 pEnd)) continue;
+
+                // Lift slightly for readability
+                pStart += Vector3.up * sceneVisualYOffset;
+                pEnd += Vector3.up * sceneVisualYOffset;
+
+                bool isSelected = (_selectedFenceHoleIndex == i);
+
+                // Preview polyline along the boundary between start and end (Repaint only)
+                if (Event.current.type == EventType.Repaint)
+                {
+                    _tmpFencePreview.Clear();
+
+                    run.GetFenceBoundaryPreviewPolyline(
+                        isLeft: side == SkiRunLine.FenceSide.Left,
+                        startMeters: start,
+                        endMeters: end,
+                        spacingMeters: Mathf.Max(0.5f, fencePointSpacingMeters),
+                        outWorldPoints: _tmpFencePreview
+                    );
+
+                    if (_tmpFencePreview.Count >= 2)
+                    {
+                        // Apply y offset to preview points without allocating new lists
+                        for (int k = 0; k < _tmpFencePreview.Count; k++)
+                            _tmpFencePreview[k] += Vector3.up * sceneVisualYOffset;
+
+                        Handles.color = isSelected
+                            ? new Color(1.0f, 0.25f, 0.25f, 1.0f)
+                            : new Color(1.0f, 0.25f, 0.25f, 0.75f);
+
+                        DrawAAPolyLineCached(isSelected ? 5.0f : 3.5f, _tmpFencePreview);
+                    }
+                }
+
+                // Clickable "select" button at midpoint (works even when not in edit mode)
+                Vector3 mid = Vector3.Lerp(pStart, pEnd, 0.5f);
+                float pick = HandleUtility.GetHandleSize(mid) * 0.10f;
+
+                Handles.color = isSelected ? new Color(1f, 0.35f, 0.35f, 1f) : new Color(1f, 0.35f, 0.35f, 0.65f);
+                if (Handles.Button(mid, Quaternion.identity, pick, pick * 1.2f, Handles.SphereHandleCap))
+                {
+                    _selectedFenceHoleIndex = i;
+                    GUI.changed = true;
+                    SceneView.RepaintAll();
+                }
+
+                // Small endpoint markers (also selectable)
+                float endPick = HandleUtility.GetHandleSize(pStart) * 0.08f;
+                if (Handles.Button(pStart, Quaternion.identity, endPick, endPick * 1.2f, Handles.CubeHandleCap))
+                {
+                    _selectedFenceHoleIndex = i;
+                    GUI.changed = true;
+                    SceneView.RepaintAll();
+                }
+                if (Handles.Button(pEnd, Quaternion.identity, endPick, endPick * 1.2f, Handles.CubeHandleCap))
+                {
+                    _selectedFenceHoleIndex = i;
+                    GUI.changed = true;
+                    SceneView.RepaintAll();
+                }
+
+                // Label (lightweight, only repaint)
+                if (Event.current.type == EventType.Repaint)
+                {
+                    Handles.color = Color.white;
+                    Handles.Label(mid + Vector3.up * (HandleUtility.GetHandleSize(mid) * 0.15f),
+                        $"Hole {i} ({side})  {Mathf.Abs(end - start):0.0}m");
+                }
+
+                // Draggable handles ONLY for selected hole (keeps view clean)
+                if (!fenceHoleEditMode || !isSelected)
+                    continue;
+
+                float hs = HandleUtility.GetHandleSize(pStart) * 0.11f;
+
+                EditorGUI.BeginChangeCheck();
+                Vector3 newStart = Handles.FreeMoveHandle(pStart, hs, Vector3.zero, Handles.CubeHandleCap);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    // Remove y-offset before projecting back onto run distance
+                    newStart -= Vector3.up * sceneVisualYOffset;
+
+                    if (run.TryGetClosestPointOnCenterlineXZ(newStart, out float d, out _, out _, out _))
+                    {
+                        Undo.RecordObject(run, "Move Fence Hole Start");
+                        hp.FindPropertyRelative("startMeters").floatValue = Mathf.Clamp(d, 0f, runLen);
+                        serializedObject.ApplyModifiedProperties();
+                        EditorUtility.SetDirty(run);
+                        SceneView.RepaintAll();
+                    }
+                }
+
+                EditorGUI.BeginChangeCheck();
+                Vector3 newEnd = Handles.FreeMoveHandle(pEnd, hs, Vector3.zero, Handles.CubeHandleCap);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    newEnd -= Vector3.up * sceneVisualYOffset;
+
+                    if (run.TryGetClosestPointOnCenterlineXZ(newEnd, out float d, out _, out _, out _))
+                    {
+                        Undo.RecordObject(run, "Move Fence Hole End");
+                        hp.FindPropertyRelative("endMeters").floatValue = Mathf.Clamp(d, 0f, runLen);
+                        serializedObject.ApplyModifiedProperties();
+                        EditorUtility.SetDirty(run);
+                        SceneView.RepaintAll();
+                    }
+                }
+            }
+
+            // --- Add new hole: Shift+Click ---
+            if (!fenceHoleEditMode) return;
+
+            if (e.type == EventType.MouseDown && e.shift && e.button == 0)
+            {
+                // Because Shift is also additive selection, be aggressive about consuming the event.
+                HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
+
+                Ray r = HandleUtility.GUIPointToWorldRay(e.mousePosition);
+                if (Physics.Raycast(r, out RaycastHit hit, 20000f))
+                {
+                    if (run.TryGetClosestPointOnCenterlineXZ(hit.point, out float d, out _, out _, out _))
+                    {
+                        float start = Mathf.Clamp(d, 0f, runLen);
+                        float end = Mathf.Clamp(d + fenceAddHoleLengthMeters, 0f, runLen);
+
+                        Undo.RecordObject(run, "Add Fence Hole");
+
+                        int idx = holesProp.arraySize;
+                        holesProp.InsertArrayElementAtIndex(idx);
+
+                        var hp = holesProp.GetArrayElementAtIndex(idx);
+                        hp.FindPropertyRelative("enabled").boolValue = true;
+                        hp.FindPropertyRelative("side").enumValueIndex = (int)fenceAddSide;
+                        hp.FindPropertyRelative("startMeters").floatValue = start;
+                        hp.FindPropertyRelative("endMeters").floatValue = end;
+
+                        serializedObject.ApplyModifiedProperties();
+                        EditorUtility.SetDirty(run);
+
+                        _selectedFenceHoleIndex = idx;
+
+                        SceneView.RepaintAll();
+                        e.Use();
+                    }
+                }
+            }
+        }
+
+        private void DrawHotkeyOverlay(SkiRunLine run)
+        {
+            Handles.BeginGUI();
+
+            const float w = 320f;
+            const float pad = 10f;
+            Rect r = new Rect(pad, pad, w, 500f);
+
+            GUILayout.BeginArea(r, EditorStyles.helpBox);
+            GUILayout.Label("Ski Run Gizmos", EditorStyles.boldLabel);
+
+            GUILayout.Label($"Mode: {_authoringMode}" + (_authoringMode == AuthoringMode.Flags && gateEditMode ? " (Gate Edit)" : ""));
+            GUILayout.Space(4);
+
+            GUILayout.Label("Authoring Modes:");
+            GUILayout.Label("  1   Path");
+            GUILayout.Label("  2   Flags");
+            GUILayout.Label("  3   Fences");
+            GUILayout.Space(4);
+
+            GUILayout.Label("Hotkeys:");
+            GUILayout.Label("  G   Toggle Gate Edit (Flags mode)");
+            GUILayout.Label("  H   Toggle this overlay");
+            GUILayout.Label("  P   Toggle Pair Preview");
+            GUILayout.Label("  B   Toggle Boundary Preview");
+            GUILayout.Label("  I   Toggle Intersection Overlay");
+            GUILayout.Label("  O   Toggle Overlap Avoidance (preview)");
+            GUILayout.Label("  Esc Clear selection");
+
+            GUILayout.Space(4);
+            GUILayout.Label("Heavy ops:");
+            GUILayout.Label("  Ctrl+Shift+R  Rebuild Flags");
+            GUILayout.Label("  Ctrl+Shift+M  Bake Metrics");
+
+            if (gateEditMode)
+            {
+                GUILayout.Space(4);
+                GUILayout.Label("Gate Mode:");
+                GUILayout.Label("  Shift+Click  Insert gate at nearest pair");
+                GUILayout.Label("  Alt+Click    Remove inserted / toggle enabled");
+                GUILayout.Label("  Right-click  Gate context menu (selected)");
+            }
+
+            if (_authoringMode == AuthoringMode.Fences && fenceHoleEditMode)
+            {
+                GUILayout.Space(4);
+                GUILayout.Label("Fence Mode:");
+                GUILayout.Label("  Shift+Click  Add hole (gap) on chosen side");
+                GUILayout.Label("  Click       Select hole");
+                GUILayout.Label("  Drag        Move selected hole endpoints");
+                GUILayout.Label("  Delete      Remove selected hole");
+            }
+
+            GUILayout.EndArea();
+            Handles.EndGUI();
+        }
+
+        private void LoadEditorPrefs()
+        {
+            showBoundaryPreview = EditorPrefs.GetBool(PrefKey + "showBoundaryPreview", showBoundaryPreview);
+            showPairPreview = EditorPrefs.GetBool(PrefKey + "showPairPreview", showPairPreview);
+            showIntersectionOverlay = EditorPrefs.GetBool(PrefKey + "showIntersectionOverlay", showIntersectionOverlay);
+            previewIncludeOverlapAvoidance = EditorPrefs.GetBool(PrefKey + "previewIncludeOverlapAvoidance", previewIncludeOverlapAvoidance);
+
+            showPointGizmos = EditorPrefs.GetBool(PrefKey + "showPointGizmos", showPointGizmos);
+            //showAnchorPointMarkers = EditorPrefs.GetBool(PrefKey + "showAnchorPointMarkers", showAnchorPointMarkers);
+            showWidthVisuals = EditorPrefs.GetBool(PrefKey + "showWidthHandles", showWidthVisuals);
+            showSpacingHandle = EditorPrefs.GetBool(PrefKey + "showSpacingHandle", showSpacingHandle);
+
+            autoSnapToTerrainWhenEditing = EditorPrefs.GetBool(PrefKey + "autoSnapToTerrainWhenEditing", autoSnapToTerrainWhenEditing);
+
+            previewMaxPairs = EditorPrefs.GetInt(PrefKey + "previewMaxPairs", previewMaxPairs);
+            sceneVisualYOffset = EditorPrefs.GetFloat(PrefKey + "sceneVisualYOffset", sceneVisualYOffset);
+
+            showHotkeyOverlay = EditorPrefs.GetBool(PrefKey + "showHotkeyOverlay", showHotkeyOverlay);
+            gateEditMode = EditorPrefs.GetBool(PrefKey + "gateEditMode", gateEditMode);
+
+            _authoringMode = (AuthoringMode)EditorPrefs.GetInt(PrefKey + "authoringMode", (int)_authoringMode);
+            fenceHoleEditMode = EditorPrefs.GetBool(PrefKey + "fenceHoleEditMode", fenceHoleEditMode);
+
+
+        }
+
+        private void SaveEditorPrefs()
+        {
+            EditorPrefs.SetBool(PrefKey + "showBoundaryPreview", showBoundaryPreview);
+            EditorPrefs.SetBool(PrefKey + "showPairPreview", showPairPreview);
+            EditorPrefs.SetBool(PrefKey + "showIntersectionOverlay", showIntersectionOverlay);
+            EditorPrefs.SetBool(PrefKey + "previewIncludeOverlapAvoidance", previewIncludeOverlapAvoidance);
+
+            EditorPrefs.SetBool(PrefKey + "showPointGizmos", showPointGizmos);
+            //EditorPrefs.SetBool(PrefKey + "showAnchorPointMarkers", showAnchorPointMarkers);
+            EditorPrefs.SetBool(PrefKey + "showWidthHandles", showWidthVisuals);
+            EditorPrefs.SetBool(PrefKey + "showSpacingHandle", showSpacingHandle);
+
+            EditorPrefs.SetBool(PrefKey + "autoSnapToTerrainWhenEditing", autoSnapToTerrainWhenEditing);
+
+            EditorPrefs.SetInt(PrefKey + "previewMaxPairs", previewMaxPairs);
+            EditorPrefs.SetFloat(PrefKey + "sceneVisualYOffset", sceneVisualYOffset);
+
+            EditorPrefs.SetBool(PrefKey + "showHotkeyOverlay", showHotkeyOverlay);
+            EditorPrefs.SetBool(PrefKey + "gateEditMode", gateEditMode);
+
+            EditorPrefs.SetInt(PrefKey + "authoringMode", (int)_authoringMode);
+            EditorPrefs.SetBool(PrefKey + "fenceHoleEditMode", fenceHoleEditMode);
+
+        }
+
     }
 }
 #endif

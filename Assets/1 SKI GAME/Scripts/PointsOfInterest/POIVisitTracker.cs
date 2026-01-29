@@ -56,13 +56,17 @@ namespace SkiGame.Progression
             bool changed = false;
 
             if (recordSessionVisits)
+            {
                 changed |= profile.TryAddVisitedLandmarkThisSession(nearest.id);
+                profile.IncrementLandmarkVisitCount(nearest.id, session: true);
+            }
 
             if (recordLifetimeVisits)
+            {
                 changed |= profile.TryAddVisitedLandmark(nearest.id);
+                profile.IncrementLandmarkVisitCount(nearest.id, session: false);
+            }
 
-            // Optional: if you want instant persistence on visit, uncomment:
-            // if (changed) mgr.Save();
         }
     }
 }

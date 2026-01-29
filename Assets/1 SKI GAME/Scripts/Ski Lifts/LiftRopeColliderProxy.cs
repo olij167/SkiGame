@@ -54,6 +54,93 @@ public class LiftRopeColliderProxy : MonoBehaviour
 
     private readonly List<CapsuleCollider> _pool = new List<CapsuleCollider>(256);
 
+    // --- Perf / stability caches (prevents rebuild spam + prevents duplicate child creation on domain reload) ---
+    private bool _poolSynced;
+    private Vector3 _lastBottomPos;
+    private Vector3 _lastTopPos;
+    private float _lastMaxSegmentLength;
+    private float _lastRopeRadius;
+    private bool _lastIsTrigger;
+    private PhysicsMaterial _lastPhysMat;
+    private bool _lastOverrideLayer;
+    private int _lastLayer;
+
+#if UNITY_EDITOR
+    private bool _pendingEditorRebuild;
+    private double _nextEditorRebuildTime;
+    [SerializeField] private float editorRebuildIntervalSeconds = 0.25f;
+#endif
+
+    private void SyncPoolFromChildren()
+    {
+        _pool.Clear();
+
+        if (colliderRoot == null)
+        {
+            _poolSynced = true;
+            return;
+        }
+
+        // Reuse any existing CapsuleColliders under the root (including inactive children).
+        for (int i = 0; i < colliderRoot.childCount; i++)
+        {
+            Transform child = colliderRoot.GetChild(i);
+            if (child == null) continue;
+
+            CapsuleCollider col = child.GetComponent<CapsuleCollider>();
+            if (col != null)
+                _pool.Add(col);
+        }
+
+        _poolSynced = true;
+    }
+
+    private bool HasConfigOrStationsChanged()
+    {
+        if (line == null) return true;
+
+        // If LiftLine doesn't expose stations, we can only rely on config changes.
+        // (If it does, this becomes a very strong “dirty” check.)
+        Transform bottom = line.bottomStation;
+        Transform top = line.topStation;
+
+        if (bottom != null && top != null)
+        {
+            if ((_lastBottomPos - bottom.position).sqrMagnitude > 0.000001f) return true;
+            if ((_lastTopPos - top.position).sqrMagnitude > 0.000001f) return true;
+        }
+
+        if (Mathf.Abs(_lastMaxSegmentLength - maxSegmentLength) > 0.0001f) return true;
+        if (Mathf.Abs(_lastRopeRadius - ropeRadius) > 0.000001f) return true;
+
+        if (_lastIsTrigger != isTrigger) return true;
+        if (_lastPhysMat != physicsMaterial) return true;
+
+        if (_lastOverrideLayer != overrideLayer) return true;
+        if (_lastLayer != layer) return true;
+
+        return false;
+    }
+
+    private void CommitDirtySnapshot()
+    {
+        if (line != null)
+        {
+            Transform bottom = line.bottomStation;
+            Transform top = line.topStation;
+
+            if (bottom != null) _lastBottomPos = bottom.position;
+            if (top != null) _lastTopPos = top.position;
+        }
+
+        _lastMaxSegmentLength = maxSegmentLength;
+        _lastRopeRadius = ropeRadius;
+        _lastIsTrigger = isTrigger;
+        _lastPhysMat = physicsMaterial;
+        _lastOverrideLayer = overrideLayer;
+        _lastLayer = layer;
+    }
+
     private void Reset()
     {
         line = GetComponent<LiftLine>();
@@ -61,40 +148,88 @@ public class LiftRopeColliderProxy : MonoBehaviour
 
     private void OnEnable()
     {
-        EnsureRefs();
+        SyncPoolFromChildren();
 
-        if (CanModifyHierarchyNow())
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+        {
+            if (rebuildInEditMode)
+            {
+                _pendingEditorRebuild = true;
+                _nextEditorRebuildTime = UnityEditor.EditorApplication.timeSinceStartup; // earliest allowed
+            }
+            return;
+        }
+#endif
+
+        if (rebuildInPlayMode)
             Rebuild();
     }
 
     private void OnValidate()
     {
-        EnsureRefs();
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+        {
+            if (rebuildInEditMode)
+            {
+                _pendingEditorRebuild = true;
+                _nextEditorRebuildTime = UnityEditor.EditorApplication.timeSinceStartup;
+            }
+            return;
+        }
+#endif
 
-        // Avoid modifying prefab assets in Project view; only rebuild when it's safe.
-        if (CanModifyHierarchyNow())
+        if (rebuildInPlayMode)
             Rebuild();
     }
 
     private void Update()
     {
+#if UNITY_EDITOR
+        if (!Application.isPlaying && rebuildInEditMode)
+        {
+            if (_pendingEditorRebuild)
+            {
+                double now = UnityEditor.EditorApplication.timeSinceStartup;
+                if (now >= _nextEditorRebuildTime)
+                {
+                    _pendingEditorRebuild = false;
+                    _nextEditorRebuildTime = now + editorRebuildIntervalSeconds;
+                    Rebuild();
+                }
+            }
+        }
+#endif
+
         if (!EnsureRefs())
             return;
 
         if (!CanModifyHierarchyNow())
             return;
 
+        // Ensure pool is synced at least once even if something reassigns colliderRoot.
+        if (!_poolSynced)
+            SyncPoolFromChildren();
+
         if (!Application.isPlaying)
         {
-            if (rebuildInEditMode)
+            if (!rebuildInEditMode)
+                return;
+
+            // Only rebuild when something actually changed.
+            if (HasConfigOrStationsChanged())
                 Rebuild();
         }
         else
         {
-            if (rebuildInPlayMode)
+            if (!rebuildInPlayMode)
+                return;
+
+            // Runtime rebuild only if you intentionally enabled it AND something changed.
+            if (HasConfigOrStationsChanged())
                 Rebuild();
         }
-
     }
 
     private bool CanModifyHierarchyNow()
@@ -189,10 +324,17 @@ public class LiftRopeColliderProxy : MonoBehaviour
             if (_pool[i] != null && _pool[i].gameObject.activeSelf)
                 _pool[i].gameObject.SetActive(false);
         }
+
+        CommitDirtySnapshot();
+
     }
 
     private void EnsurePoolSize(int needed)
     {
+        // If we domain-reloaded, _pool is empty even though child objects still exist.
+        if (!_poolSynced)
+            SyncPoolFromChildren();
+
         while (_pool.Count < needed)
         {
             GameObject go = new GameObject($"RopeCol_{_pool.Count:D3}");

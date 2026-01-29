@@ -122,7 +122,9 @@ GameObject:
   - component: {fileID: 5258421012848607081}
   - component: {fileID: 4725023539901478948}
   - component: {fileID: 1622370699729917184}
+  - component: {fileID: 701401722028746940}
   - component: {fileID: 1701893553419854692}
+  - component: {fileID: 888924446302278959}
   m_Layer: 0
   m_Name: FlagPole
   m_TagString: Untagged
@@ -203,6 +205,33 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!54 &701401722028746940
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6405244052730255518}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!136 &1701893553419854692
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -226,6 +255,32 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
+--- !u!114 &888924446302278959
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6405244052730255518}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88f316d1ff294ae41a770a442d94caf3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Runs.SkiFlagReactive
+  rb: {fileID: 701401722028746940}
+  col: {fileID: 1701893553419854692}
+  softHitSpeed: 5
+  toppleHitSpeed: 10
+  uprootHitSpeed: 25
+  impulseScale: 0.9
+  upwardBoost: 0.35
+  hingeLimitDeg: 95
+  hingeSpring: 40
+  hingeDamping: 8
+  softBendMaxDeg: 18
+  softBendReturnSpeed: 10
+  hitCooldownSeconds: 0.08
+  replantAfterSeconds: -1
 --- !u!1 &8149688384037525022
 GameObject:
   m_ObjectHideFlags: 0
@@ -289,7 +344,7 @@ MeshCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 5
-  m_Convex: 0
+  m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!137 &3439672148446940260

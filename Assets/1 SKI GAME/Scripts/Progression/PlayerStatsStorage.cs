@@ -60,7 +60,7 @@ namespace SkiGame.Progression
                 profile.Sanitize();
                 profile.lastSavedUtc = DateTimeUtc.Now();
 
-                string json = JsonUtility.ToJson(profile, prettyPrint: true);
+                string json = JsonUtility.ToJson(profile, prettyPrint: false);
 
                 var dir = Path.GetDirectoryName(path);
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))

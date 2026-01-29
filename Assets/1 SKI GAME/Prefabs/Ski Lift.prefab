@@ -1523,6 +1523,7 @@ MonoBehaviour:
   ropeMaterial: {fileID: 2100000, guid: 0d326ed029c1e0a48ae38199371ac2a2, type: 2}
   textureTiling: 1
   textureScrollSpeed: 0.3
+  editorRebuildIntervalSeconds: 0.2
 --- !u!114 &7344470629442853688
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1546,6 +1547,7 @@ MonoBehaviour:
   rebuildInEditMode: 1
   rebuildInPlayMode: 0
   drawGizmos: 1
+  editorRebuildIntervalSeconds: 0.25
 --- !u!1 &366185450513954974
 GameObject:
   m_ObjectHideFlags: 0

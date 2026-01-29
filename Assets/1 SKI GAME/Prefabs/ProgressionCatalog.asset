@@ -56,3 +56,21 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 63e0249a2bfa29647bf9d57640685983, type: 2}
   - {fileID: 11400000, guid: f21c96e88a9d14c409a1b56ccd802530, type: 2}
   - {fileID: 11400000, guid: 57453d6c2f4ad17449d02157aa1d8742, type: 2}
+  - {fileID: 11400000, guid: 0dc3da93016af4045af20123c2b72f5e, type: 2}
+  - {fileID: 11400000, guid: 7c59cf1e880433e48b17aae975d45584, type: 2}
+  - {fileID: 11400000, guid: 96131138881bcba4c86ce06aa698cde2, type: 2}
+  - {fileID: 11400000, guid: 2bf7658383b23fe4a815ef2f495e215e, type: 2}
+  - {fileID: 11400000, guid: c85bf622bb0ca604dab73cf34b9c034f, type: 2}
+  - {fileID: 11400000, guid: 19371af58ae763e458407de1bf5a5e3c, type: 2}
+  dailyTaskLadders:
+  - {fileID: 11400000, guid: 553b9cfcf5e8fdd4cbc81695c74b76e3, type: 2}
+  - {fileID: 11400000, guid: 9322a15158e5f6b4fa93003ec13e8cfc, type: 2}
+  - {fileID: 11400000, guid: 99f37ed7de1081d45bb5b2456bb34dda, type: 2}
+  - {fileID: 11400000, guid: 63e32d4209dfcd8409be5e8b07acaf3d, type: 2}
+  - {fileID: 11400000, guid: ecb6d6a3b26dc5b4a832743c13c59e8d, type: 2}
+  - {fileID: 11400000, guid: 453b54f65df70f04cbff28ff060428e1, type: 2}
+  - {fileID: 11400000, guid: c4248b6fee3b14941ab53ca741c9a12e, type: 2}
+  - {fileID: 11400000, guid: 03b4c0450cc78f94cb292591b942bc65, type: 2}
+  - {fileID: 11400000, guid: 658cc3b55f02d1b4bb90eb65404ab2f9, type: 2}
+  - {fileID: 11400000, guid: 9f85ce3110b7b0a48870281dc39b9751, type: 2}
+  - {fileID: 11400000, guid: bad9b0278e3bad445be64eff6a5bbd80, type: 2}

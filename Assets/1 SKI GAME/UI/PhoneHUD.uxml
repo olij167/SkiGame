@@ -41,6 +41,10 @@
                         </ui:VisualElement>
                     </ui:ScrollView>
 
+                    <ui:ScrollView name="WatchPage_Map" class="watch-page watch-page-map">
+    <!-- Minimap is injected at runtime -->
+</ui:ScrollView>
+
                     <ui:ScrollView name="WatchPage_Session" class="watch-page">
                         <!-- <ui:Label text="Session" class="watch-section" /> -->
                         <ui:Label name="Lbl_WatchSessTopSpeed" text="Top: 0.0 m/s" class="watch-kv" />
@@ -55,12 +59,10 @@
                         <ui:Label name="Lbl_WatchLifeVert" text="Vert: +0 / -0" class="watch-kv" />
                         <ui:Label name="Lbl_WatchLifeStacks" text="Stacks: 0" class="watch-kv" />
                     </ui:ScrollView>
-                    <ui:ScrollView name="WatchPage_Tasks" class="watch-page">
-                        <!-- <ui:Label text="Tasks" class="watch-section" /> -->
-                        <ui:Label name="Lbl_WatchTask1" text="(placeholder)" class="watch-kv" />
-                        <ui:Label name="Lbl_WatchTask2" text="(placeholder)" class="watch-kv" />
-                        <ui:Label name="Lbl_WatchTask3" text="(placeholder)" class="watch-kv" />
-                    </ui:ScrollView>
+                   <ui:ScrollView name="WatchPage_Tasks" class="watch-page">
+    <ui:VisualElement name="WatchTasksList" class="watch-tasks-list" />
+</ui:ScrollView>
+
                     <ui:ScrollView name="WatchPage_Achievements" class="watch-page">
                         <!-- <ui:Label text="Achievements" class="watch-section" /> -->
                         <ui:Label name="Lbl_WatchAch1" text="(placeholder)" class="watch-kv" />
@@ -149,11 +151,9 @@
     <ui:VisualElement class="tile-progress">
         <ui:VisualElement name="TileTasksProgressFill" class="tile-progress-fill" />
     </ui:VisualElement>
-
-    <ui:Label name="Lbl_TileTask1" text="Task 1" class="tile-sub tile-taskline" />
-    <ui:Label name="Lbl_TileTask2" text="Task 2" class="tile-sub tile-taskline" />
-    <ui:Label name="Lbl_TileTask3" text="Task 3" class="tile-sub tile-taskline" />
+    <ui:VisualElement name="TileTasksList" class="tile-tasks-list" />
 </ui:VisualElement>
+
 
                             </ui:VisualElement>
                             <ui:VisualElement class="home-row row-medium">
@@ -199,115 +199,54 @@
                             </ui:VisualElement>
                         </ui:VisualElement>
                     </ui:ScrollView>
-<ui:ScrollView name="Page_Stats" class="phone-page">
-    <ui:Label text="Stats" class="page-h1" />
+<ui:ScrollView name="Page_Stats" class="phone-page stats-page">
+    <!-- Header row: title + compact segmented tabs -->
+    <ui:VisualElement class="stats-headerbar">
+        <ui:Label text="Stats" class="page-h1 stats-title" />
 
-    <!-- Segmented tabs -->
-    <ui:VisualElement class="seg-tabs">
-        <ui:VisualElement name="Btn_StatsTabSession" class="seg-tab is-on">
-            <ui:Label text="Session" class="seg-tab-text" />
-        </ui:VisualElement>
-        <ui:VisualElement name="Btn_StatsTabLifetime" class="seg-tab">
-            <ui:Label text="Lifetime" class="seg-tab-text" />
+        <ui:VisualElement class="seg-tabs stats-tabs">
+            <ui:VisualElement name="Btn_StatsTabSession" class="seg-tab is-on">
+                <ui:Label text="Session" class="seg-tab-text" />
+            </ui:VisualElement>
+            <ui:VisualElement name="Btn_StatsTabLifetime" class="seg-tab">
+                <ui:Label text="Lifetime" class="seg-tab-text" />
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
 
     <!-- SESSION PANEL -->
     <ui:VisualElement name="Panel_StatsSession" class="stats-panel is-active">
-        <ui:VisualElement class="metric-grid">
-            <ui:VisualElement class="metric-card">
-                <ui:Label text="Top speed" class="metric-key" />
-                <ui:Label name="Lbl_StatsS_TopSpeed" text="--" class="metric-val" />
-            </ui:VisualElement>
-            <ui:VisualElement class="metric-card">
-                <ui:Label text="Distance" class="metric-key" />
-                <ui:Label name="Lbl_StatsS_Distance" text="--" class="metric-val" />
-            </ui:VisualElement>
-            <ui:VisualElement class="metric-card">
-                <ui:Label text="Vertical" class="metric-key" />
-                <ui:Label name="Lbl_StatsS_Vert" text="--" class="metric-val" />
-            </ui:VisualElement>
-            <ui:VisualElement class="metric-card">
-                <ui:Label text="Stacks" class="metric-key" />
-                <ui:Label name="Lbl_StatsS_Stacks" text="--" class="metric-val" />
-            </ui:VisualElement>
-
-    <ui:VisualElement class="metric-card metric-card-secondary">
-        <ui:Label text="Air time" class="metric-key" />
-        <ui:Label name="Lbl_StatsS_AirTime" text="--" class="metric-val" />
-    </ui:VisualElement>
-
-    <ui:VisualElement class="metric-card">
-        <ui:Label text="Air dist" class="metric-key" />
-        <ui:Label name="Lbl_StatsS_AirDist" text="--" class="metric-val" />
-    </ui:VisualElement>
-
-    <ui:VisualElement class="metric-card">
-        <ui:Label text="Runs" class="metric-key" />
-        <ui:Label name="Lbl_StatsS_Runs" text="--" class="metric-val" />
-    </ui:VisualElement>
-
-    <ui:VisualElement class="metric-card">
-        <ui:Label text="Lifts" class="metric-key" />
-        <ui:Label name="Lbl_StatsS_Lifts" text="--" class="metric-val" />
-    </ui:VisualElement>
-</ui:VisualElement>
-
+        <ui:VisualElement name="StatsDash_Session" class="stats-dashboard" />
     </ui:VisualElement>
 
     <!-- LIFETIME PANEL -->
     <ui:VisualElement name="Panel_StatsLifetime" class="stats-panel">
-        <ui:VisualElement class="metric-grid">
-            <ui:VisualElement class="metric-card">
-                <ui:Label text="Top speed" class="metric-key" />
-                <ui:Label name="Lbl_StatsL_TopSpeed" text="--" class="metric-val" />
-            </ui:VisualElement>
-            <ui:VisualElement class="metric-card">
-                <ui:Label text="Total dist" class="metric-key" />
-                <ui:Label name="Lbl_StatsL_Distance" text="--" class="metric-val" />
-            </ui:VisualElement>
-            <ui:VisualElement class="metric-card">
-                <ui:Label text="Total vert" class="metric-key" />
-                <ui:Label name="Lbl_StatsL_Vert" text="--" class="metric-val" />
-            </ui:VisualElement>
-            <ui:VisualElement class="metric-card">
-                <ui:Label text="Total stacks" class="metric-key" />
-                <ui:Label name="Lbl_StatsL_Stacks" text="--" class="metric-val" />
-            </ui:VisualElement>
-
-    <ui:VisualElement class="metric-card">
-        <ui:Label text="Avg speed" class="metric-key" />
-        <ui:Label name="Lbl_StatsL_AvgSpeed" text="--" class="metric-val" />
-    </ui:VisualElement>
-
-    <ui:VisualElement class="metric-card">
-        <ui:Label text="Air time" class="metric-key" />
-        <ui:Label name="Lbl_StatsL_AirTime" text="--" class="metric-val" />
-    </ui:VisualElement>
-
-    <ui:VisualElement class="metric-card">
-        <ui:Label text="Air dist" class="metric-key" />
-        <ui:Label name="Lbl_StatsL_AirDist" text="--" class="metric-val" />
-    </ui:VisualElement>
-
-    <ui:VisualElement class="metric-card">
-        <ui:Label text="Runs" class="metric-key" />
-        <ui:Label name="Lbl_StatsL_Runs" text="--" class="metric-val" />
-    </ui:VisualElement>
-
-    <ui:VisualElement class="metric-card">
-        <ui:Label text="Lifts" class="metric-key" />
-        <ui:Label name="Lbl_StatsL_Lifts" text="--" class="metric-val" />
-    </ui:VisualElement>
-</ui:VisualElement>
-
+        <ui:VisualElement name="StatsDash_Lifetime" class="stats-dashboard" />
     </ui:VisualElement>
 </ui:ScrollView>
 
-                    <ui:ScrollView name="Page_Tasks" class="phone-page">
-                        <ui:Label text="Tasks" class="page-h1" />
-<ui:VisualElement name="TasksList" class="task-list" />
-                    </ui:ScrollView>
+<ui:ScrollView name="Page_Tasks" class="phone-page tasks-page"
+               vertical-scroller-visibility="Hidden"
+               horizontal-scroller-visibility="Hidden">
+
+    <!-- Compact info/claim panel (fixed height, no scrolling) -->
+    <ui:VisualElement name="TasksInfoPanel" class="tasks-info-panel">
+        <ui:Label name="Lbl_TasksInfoTitle" text="Daily Tasks" class="tasks-info-title" />
+        <ui:Label name="Lbl_TasksInfoBody" text="--" class="tasks-info-body" />
+
+        <!-- Top-right claim all -->
+        <ui:VisualElement class="tasks-claimall">
+            <ui:Button name="Btn_TasksClaimAll" text="Claim All" class="tasks-claimall-btn" />
+            <ui:Label name="Lbl_TasksClaimAllValue" text="0" class="tasks-claimall-value" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- Matrix container (rows + cells created in PhoneHUDController.RefreshTasksMatrix) -->
+    <ui:VisualElement name="TasksMatrix" class="tasks-matrix" />
+</ui:ScrollView>
+
+
+
                    <ui:ScrollView name="Page_Achievements" class="phone-page">
     <ui:Label text="Achievements" class="page-h1" />
 
@@ -372,11 +311,31 @@
 </ui:VisualElement>
 </ui:ScrollView>
 
+<ui:ScrollView name="Page_Map" class="phone-page map-page">
+    <ui:VisualElement class="map-toolbar">
+        <ui:Label text="Trail Map" class="map-title" />
+        <ui:VisualElement class="map-toolbar-spacer" />
 
-                    <ui:ScrollView name="Page_Map" class="phone-page">
-                        <ui:Label text="Map" class="page-h1" />
-                        <ui:Label text="(placeholder) Runs, lifts, and POIs will populate this later." class="page-body" />
-                    </ui:ScrollView>
+        <!-- <ui:VisualElement name="Btn_MapReset" class="map-toolbtn">
+            <ui:Label text="Reset" class="map-toolbtn-text" />
+        </ui:VisualElement> -->
+    </ui:VisualElement>
+
+    <ui:Label
+        name="Lbl_MapMissing"
+        text="No MapData assigned. Bake one via SkiGame/Map/Bake Map Data."
+        class="map-missing"
+    />
+
+    <ui:VisualElement name="MapViewport" class="map-viewport">
+        <ui:VisualElement name="MapContent" class="map-content">
+            <ui:VisualElement name="MapBackground" class="map-background" />
+            <ui:VisualElement name="MapPolylines" class="map-polylines" />
+            <ui:VisualElement name="MapMarkers" class="map-markers" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:ScrollView>
+
                     <ui:ScrollView name="Page_Save" class="phone-page">
                         <ui:Label text="Save &amp; Load" class="page-h1" />
                         <ui:Label text="(placeholder) Your stats save automatically; manual saves can come later." class="page-body" />

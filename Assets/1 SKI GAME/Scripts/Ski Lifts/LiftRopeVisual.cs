@@ -36,6 +36,16 @@ public class LiftRopeVisual : MonoBehaviour
     [Tooltip("Scroll speed of the rope texture along the band (for motion illusion).")]
     public float textureScrollSpeed = 0.3f;
 
+    [Header("Editor Rebuild (Performance)")]
+    [SerializeField, Range(0.02f, 1f)]
+    private float editorRebuildIntervalSeconds = 0.2f;
+
+#if UNITY_EDITOR
+    private double _nextEditorRebuildTime;
+    private int _lastEditorHash;
+    private bool _editorForceRebuild;
+#endif
+
     private float _texOffset;
 
     private void Reset()
@@ -47,19 +57,32 @@ public class LiftRopeVisual : MonoBehaviour
 
     private void OnEnable()
     {
-        if (!EnsureSetup())
+        EnsureSetup();
+
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+        {
+            // Defer rebuild to the debounced editor Update path instead of doing it immediately
+            _editorForceRebuild = true;
             return;
+        }
+#endif
 
         RebuildRopeFromLiftLine();
     }
 
     private void OnValidate()
     {
-        if (!isActiveAndEnabled)
-            return;
+        EnsureSetup();
 
-        if (!EnsureSetup())
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+        {
+            // Do NOT rebuild immediately in edit mode
+            _editorForceRebuild = true;
             return;
+        }
+#endif
 
         RebuildRopeFromLiftLine();
     }
@@ -69,25 +92,46 @@ public class LiftRopeVisual : MonoBehaviour
         if (!EnsureSetup())
             return;
 
+#if UNITY_EDITOR
         if (!Application.isPlaying)
         {
-            // In edit mode, keep the rope matching the gizmo path as you move stations
-            RebuildRopeFromLiftLine();
+            double now = UnityEditor.EditorApplication.timeSinceStartup;
+            if (!_editorForceRebuild && now < _nextEditorRebuildTime)
+                return;
+
+            int hash = ComputeEditorHash();
+            if (_editorForceRebuild || hash != _lastEditorHash)
+            {
+                _lastEditorHash = hash;
+                _editorForceRebuild = false;
+                _nextEditorRebuildTime = now + editorRebuildIntervalSeconds;
+
+                RebuildRopeFromLiftLine();
+            }
             return;
         }
+#endif
 
         // In play mode, we assume the analytic band is mostly static.
         // If you animate stations at runtime, you can safely call RebuildRopeFromLiftLine()
         // here each frame as well, it's cheap enough.
         // RebuildRopeFromLiftLine();
 
-        // Texture scrolling
-        if (lineRenderer.sharedMaterial != null && Mathf.Abs(textureScrollSpeed) > 0.0001f)
+        // Texture scrolling (do NOT mutate sharedMaterial at runtime)
+        if (Application.isPlaying && lineRenderer != null && Mathf.Abs(textureScrollSpeed) > 0.0001f)
         {
-            _texOffset += textureScrollSpeed * Time.deltaTime;
-            Vector2 offset = new Vector2(_texOffset, 0f);
-            lineRenderer.sharedMaterial.SetTextureOffset("_MainTex", offset);
+            // Force an instance so we don't dirty/modify the shared asset.
+            if (lineRenderer.material == null && lineRenderer.sharedMaterial != null)
+                lineRenderer.material = new Material(lineRenderer.sharedMaterial);
+
+            if (lineRenderer.material != null)
+            {
+                _texOffset += textureScrollSpeed * Time.deltaTime;
+                lineRenderer.material.SetTextureScale("_MainTex", new Vector2(textureTiling, 1f));
+                lineRenderer.material.SetTextureOffset("_MainTex", new Vector2(_texOffset, 0f));
+            }
         }
+
     }
 
     /// <summary>
@@ -203,7 +247,58 @@ public class LiftRopeVisual : MonoBehaviour
         {
             float tiling = totalLength * textureTiling;
             Vector2 scale = new Vector2(tiling, 1f);
-            lineRenderer.sharedMaterial.SetTextureScale("_MainTex", scale);
+            if (Application.isPlaying)
+            {
+                // Use instance material in play mode if you need runtime tiling/scrolling
+                var mat = lineRenderer.material; // creates instance
+                mat.SetTextureScale("_MainTex", new Vector2(tiling, 1f));
+            }
         }
     }
+
+    private int ComputeEditorHash()
+    {
+        unchecked
+        {
+            int h = 17;
+
+            h = h * 31 + (line ? line.GetInstanceID() : 0);
+            h = h * 31 + (lineRenderer ? lineRenderer.GetInstanceID() : 0);
+
+            // RopeVisual parameters that affect output
+            h = h * 31 + loop.GetHashCode();
+            h = h * 31 + Mathf.RoundToInt(maxSegmentLength * 1000f);
+            h = h * 31 + Mathf.RoundToInt(ropeWidth * 1000f);
+            h = h * 31 + Mathf.RoundToInt(textureTiling * 1000f);
+            h = h * 31 + (ropeMaterial ? ropeMaterial.GetInstanceID() : 0);
+
+            if (line != null)
+            {
+                // Station positions affect the analytic loop
+                var a = line.bottomStation ? line.bottomStation.position : Vector3.zero;
+                var b = line.topStation ? line.topStation.position : Vector3.zero;
+                h = h * 31 + a.GetHashCode();
+                h = h * 31 + b.GetHashCode();
+
+                // LiftLine fields that affect analytic loop geometry
+                h = h * 31 + Mathf.RoundToInt(line.horizontalSeparation * 1000f);
+                h = h * 31 + Mathf.RoundToInt(line.verticalOffset * 1000f);
+                h = h * 31 + Mathf.RoundToInt(line.ropeClearance * 1000f);
+                h = h * 31 + Mathf.RoundToInt(line.sideMaxSegmentLength * 1000f);
+                h = h * 31 + Mathf.RoundToInt(line.sideSagFraction * 1000f);
+                h = h * 31 + line.arcSamplesPerStation;
+
+                // Terrain clearance affects generated points (raycasts)
+                h = h * 31 + (line.terrainClearanceEnabled ? 1 : 0);
+                h = h * 31 + (line.terrainClearanceInEditMode ? 1 : 0);
+                h = h * 31 + line.terrainLayers.value;
+                h = h * 31 + Mathf.RoundToInt(line.terrainClearanceHeight * 1000f);
+                h = h * 31 + Mathf.RoundToInt(line.terrainRaycastStartHeight * 1000f);
+                h = h * 31 + Mathf.RoundToInt(line.terrainRaycastMaxDistance * 1000f);
+            }
+
+            return h;
+        }
+    }
+
 }
