@@ -96,14 +96,6 @@ public class SorenessMeter : MonoBehaviour
         new Keyframe(1f, 1f)
     );
 
-    [Header("Visuals - Post Processing")]
-    [Tooltip("Optional: URP Volume to drive post-processing based on soreness.")]
-    [SerializeField] private UnityEngine.Object postProcessVolumeObject;
-
-
-    [Tooltip("Smoothing speed for post-processing intensity changes.")]
-    [SerializeField] private float postFxLerpSpeed = 6f;
-
     private float _recoveryBlockedUntil;
 
     // Head droop cached baseline.
@@ -245,7 +237,7 @@ public class SorenessMeter : MonoBehaviour
 
         // Separate smoothing rates for head vs post FX feels better; we keep one smoothed value
         // but bias towards the faster of the two.
-        float speed = Mathf.Max(0.01f, Mathf.Max(headDroopLerpSpeed, postFxLerpSpeed));
+        float speed = Mathf.Max(0.01f, Mathf.Max(headDroopLerpSpeed, postFXWeightLerpSpeed));
         float k = 1f - Mathf.Exp(-speed * dt);
         _visualSorenessSmoothed = Mathf.Lerp(_visualSorenessSmoothed, target, k);
 

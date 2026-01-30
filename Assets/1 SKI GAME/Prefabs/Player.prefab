@@ -170,8 +170,8 @@ MonoBehaviour:
     m_RotationOrder: 4
   postFXMaxWeight: 1
   postFXWeightLerpSpeed: 4
-  impactSorenessMin: 0.05
-  impactSorenessMax: 0.35
+  impactSorenessMin: 0.01
+  impactSorenessMax: 0.25
   impactSeverityCurve:
     serializedVersion: 2
     m_Curve:
@@ -224,8 +224,6 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  postProcessVolumeObject: {fileID: 0}
-  postFxLerpSpeed: 6
 --- !u!114 &7126888283588053628
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -860,7 +858,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 891564543262492690}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: da88dc9343739ec41b771ccab33b030f, type: 3}
   m_Name: 
@@ -868,18 +866,38 @@ MonoBehaviour:
   skinRenderers:
   - {fileID: 8840519732765454305}
   - {fileID: 6831674719187238288}
-  skinPatterns: []
+  skinPatterns:
+  - {fileID: 2800000, guid: 5e2d4bd257111184fac38551fe737f22, type: 3}
+  - {fileID: 2800000, guid: 2e3ff3919f6749446b2aed1782b493ce, type: 3}
+  - {fileID: 2800000, guid: 0a5a24e49e8b5814ebe400a0f609cf27, type: 3}
+  - {fileID: 2800000, guid: 266fdb673ee304446a348171d871e1c5, type: 3}
+  - {fileID: 2800000, guid: b1c4826a9c46eef40a5ecdf4fda06c0f, type: 3}
+  - {fileID: 2800000, guid: 5c8f179e332547d4f8b75a7f84edb510, type: 3}
+  - {fileID: 2800000, guid: e560f3ce64204ea42b2e54147a44a115, type: 3}
+  - {fileID: 2800000, guid: e1f4bc00167c7604eb9c09d119ade645, type: 3}
+  - {fileID: 2800000, guid: 8082b586364e1004bb6374a5c9110eb3, type: 3}
+  - {fileID: 2800000, guid: 27ac4d418f8c1f741b076e8d203aa642, type: 3}
+  - {fileID: 2800000, guid: 4229181c105e0794a90ed8031ed963a3, type: 3}
+  - {fileID: 2800000, guid: 939781b433a8cfb43a425a4ccd962df7, type: 3}
+  - {fileID: 2800000, guid: 734013d605d55424599c8451053b00cc, type: 3}
+  - {fileID: 2800000, guid: 3dc850ab82cbc9547b13c66d1f0fcc50, type: 3}
+  - {fileID: 2800000, guid: eba09c7fb206e1b47b85a4ffce19e895, type: 3}
+  - {fileID: 2800000, guid: 5c72a4623f4c14a408e5a1fbac028750, type: 3}
+  - {fileID: 2800000, guid: ee0ae448e8c5d5d448cec42ba716ed21, type: 3}
+  - {fileID: 2800000, guid: 609fbda0985973b48aa7d0448b24e8ac, type: 3}
+  - {fileID: 2800000, guid: 7118ba5396a068440bdd06e9b3cc0cd6, type: 3}
+  - {fileID: 2800000, guid: 26b6cbb95d0d71c4cb728778641aec2b, type: 3}
   selectedTextureIndex: 0
-  skinColor: {r: 0, g: 0, b: 0, a: 0}
+  skinColor: {r: 0.24719334, g: 0.8622561, b: 0.06865782, a: 1}
   skinTexturePropertyName: _BaseMap
   skinColorPropertyName: _BaseColor
   leftEyeProjector: {fileID: 861789254420401920}
   rightEyeProjector: {fileID: 5536731743410433122}
   eyeDecalBaseMaterial: {fileID: 2100000, guid: 1909739c3d2e22d4cb54ff47d79b400f, type: 2}
   eyeBaseMapPropertyName: Base_Map
-  eyeBaseColorPropertyName: Base_Colour
-  selectedEyeOption: 12
-  eyeColour: {r: 0.08151186, g: 0.14689738, b: 0.30423114, a: 1}
+  eyeBaseColorPropertyName: Base_Color
+  selectedEyeOption: 4
+  eyeColour: {r: 0.4594884, g: 0.32014468, b: 0.31680503, a: 1}
   eyeOptions:
   - {fileID: 21300000, guid: ace8d0f8ea4254c4a9d762f9d354c261, type: 3}
   - {fileID: 21300000, guid: 48d22b6c15f71c0429f30b88ac2472a1, type: 3}
@@ -1413,7 +1431,7 @@ Transform:
   m_GameObject: {fileID: 2407854148478183114}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
-  m_LocalPosition: {x: -0, y: 0, z: 0.5}
+  m_LocalPosition: {x: -0, y: -0, z: 0.5}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 1
   m_Children: []
