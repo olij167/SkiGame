@@ -17,6 +17,12 @@ public class LiftLine : MonoBehaviour
     [Tooltip("Top/second station transform. Should have a SphereCollider on the same GameObject.")]
     public Transform topStation;
 
+    [Header("Ski Pass")]
+    [Tooltip("Minimum Ski Pass level required to use this lift (0 = default/basic).")]
+    [Min(0)]
+    [SerializeField] private int requiredPassLevel = 0;
+    public int RequiredPassLevel => requiredPassLevel;
+
     [Header("Curve & Sag")]
     [Tooltip("Horizontal distance between the uphill and downhill sides of the loop.")]
     public float horizontalSeparation = 4f;
@@ -39,8 +45,29 @@ public class LiftLine : MonoBehaviour
     public int arcSamplesPerStation = 3;
 
     [Header("Motion")]
-    [Tooltip("Speed of the lift along the band in metres per second.")]
+    [Tooltip("Speed of the lift along the band in metres per second (outside stations).")]
     public float bandSpeed = 5f;
+
+    [Header("Station Slowdown")]
+    [Tooltip("If enabled, carriers slow down near either station and return to full speed after leaving.")]
+    public bool stationSlowdownEnabled = true;
+
+    [Tooltip("Extra distance beyond the station SphereCollider radius where slowdown begins (metres).")]
+    [Min(0f)]
+    public float stationSlowdownDistance = 8f;
+
+    [Tooltip("Speed multiplier at the station (0.25 = 25% of bandSpeed).")]
+    [Range(0.05f, 1f)]
+    public float stationMinSpeedMultiplier = 0.25f;
+
+    [Tooltip("If true, distance-to-station ignores vertical difference (XZ only). Helps if stations are at different heights.")]
+    public bool stationSlowdownIgnoreY = true;
+
+    [Tooltip("Curve mapping normalized distance from station surface (0) to edge of slow zone (1). Value is slowdown strength (1=full slowdown, 0=no slowdown).")]
+    public AnimationCurve stationSlowdownCurve = new AnimationCurve(
+        new Keyframe(0f, 1f),
+        new Keyframe(1f, 0f)
+    );
 
     [Header("Terrain Clearance")]
     [Tooltip("Enable adjusting the cable so it maintains a minimum clearance to terrain between stations.")]
@@ -220,7 +247,12 @@ public class LiftLine : MonoBehaviour
             if (c == null || c.anchor == null)
                 continue;
 
-            c.distanceAlong = Mathf.Repeat(c.distanceAlong + bandSpeed * dt, _bandLength);
+            float speedMult = GetStationSpeedMultiplierAtDistance(c.distanceAlong);
+            float step = bandSpeed * speedMult * dt;
+
+            c.distanceAlong = Mathf.Repeat(c.distanceAlong + step, _bandLength);
+
+            c.carrier.distanceAlong = c.distanceAlong;
 
             Vector3 pos = GetBandPosition(c.distanceAlong);
             Vector3 fwd = GetBandTangent(c.distanceAlong);
@@ -229,6 +261,46 @@ public class LiftLine : MonoBehaviour
             c.anchor.rotation = Quaternion.LookRotation(fwd, Vector3.up);
         }
     }
+
+    private float GetStationSpeedMultiplierAtDistance(float distanceAlong)
+    {
+        if (!stationSlowdownEnabled || stationSlowdownDistance <= 0f)
+            return 1f;
+
+        if (!ValidateStations())
+            return 1f;
+
+        Vector3 pos = GetBandPosition(distanceAlong);
+
+        float halfSep = horizontalSeparation * 0.5f;
+
+        float Proximity01(Vector3 stationPos, SphereCollider col)
+        {
+            // IMPORTANT: rope orbits at radius + ropeClearance + halfSep (not just collider radius)
+            float orbitRadius = GetWorldRadius(col) + ropeClearance + halfSep;
+
+            float inner = orbitRadius;
+            float outer = orbitRadius + stationSlowdownDistance;
+
+            // Use XZ distance by default (matches how your loop is built around stations)
+            Vector2 a = new Vector2(pos.x, pos.z);
+            Vector2 b = new Vector2(stationPos.x, stationPos.z);
+            float d = Vector2.Distance(a, b);
+
+            if (d >= outer) return 0f;
+            if (d <= inner) return 1f;
+
+            float t = Mathf.InverseLerp(inner, outer, d); // 0 at inner -> 1 at outer
+            return Mathf.Clamp01(stationSlowdownCurve.Evaluate(t));
+        }
+
+        float pBottom = Proximity01(bottomStation.position, _bottomCollider);
+        float pTop = Proximity01(topStation.position, _topCollider);
+
+        float proximity = Mathf.Max(pBottom, pTop);
+        return Mathf.Lerp(1f, stationMinSpeedMultiplier, proximity);
+    }
+
 
     #region Public API for visuals
 
@@ -592,6 +664,20 @@ public class LiftLine : MonoBehaviour
     }
 
     #endregion
+
+    private string GetRequiredPassDisplayName()
+    {
+        var mgr = SkiPassManager.Instance;
+        var cfg = mgr != null ? mgr.Config : null;
+
+        if (cfg != null)
+        {
+            var p = cfg.Get(requiredPassLevel);
+            if (p != null) return $"{p.displayName} (L{requiredPassLevel})";
+        }
+
+        return $"Pass Level {requiredPassLevel}";
+    }
 
     private void OnDrawGizmosSelected()
     {

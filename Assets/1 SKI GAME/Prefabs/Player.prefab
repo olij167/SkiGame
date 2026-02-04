@@ -224,6 +224,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  recoveryEnabled: 1
 --- !u!114 &7126888283588053628
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -634,6 +635,7 @@ MonoBehaviour:
   skiGroundClearance: 0.05
   skiGroundRayHeight: 2
   skiGroundRayDistance: 5
+  controlsEnabled: 1
 --- !u!114 &7792611890400881625
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -96,6 +96,10 @@ public class SorenessMeter : MonoBehaviour
         new Keyframe(1f, 1f)
     );
 
+    [Header("Runtime Overrides")]
+    [Tooltip("If false, soreness will not recover over time (FixedUpdate regen is suppressed).")]
+    [SerializeField] private bool recoveryEnabled = true;
+
     private float _recoveryBlockedUntil;
 
     // Head droop cached baseline.
@@ -112,6 +116,15 @@ public class SorenessMeter : MonoBehaviour
     {
         get => isResting;
         set => isResting = value;
+    }
+
+    /// <summary>
+    /// Enables/disables recovery ticking in FixedUpdate. Useful for zones like the ski resort.
+    /// </summary>
+    public bool RecoveryEnabled
+    {
+        get => recoveryEnabled;
+        set => recoveryEnabled = value;
     }
 
     public float PerformanceMult
@@ -218,6 +231,9 @@ public class SorenessMeter : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (!recoveryEnabled)
+            return;
+
         if (Time.time >= _recoveryBlockedUntil)
         {
             float rate = isResting ? restRecoveryPerSecond : recoveryPerSecond;

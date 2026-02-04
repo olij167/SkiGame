@@ -30,6 +30,9 @@
     border-right-color: rgba(255,255,255,0.12);
     border-top-color: rgba(255,255,255,0.12);
     border-bottom-color: rgba(255,255,255,0.12);
+    position: relative;
+    overflow: hidden;                     /* CRITICAL: clip overlay to rounded corners */
+    -unity-overflow-clip-box: padding-box;/* optional: clip to inner rounded shape */
 }
 
 .watch-header {
@@ -2514,6 +2517,20 @@
     color: rgba(255,255,255,0.90);
 }
 
+.map-toolbtn-icon {
+    width: 34px;
+    height: 28px;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
 .map-missing {
     font-size: 12px;
     color: rgba(255,255,255,0.70);
@@ -2527,6 +2544,7 @@
     border-radius: 14px;
     background-color: rgba(0,0,0,0.18);
     overflow: hidden;
+        z-index: 0;
 }
 
 .map-content {
@@ -2572,6 +2590,10 @@
     border-right-color: rgba(0,0,0,0.35);
     border-top-color: rgba(0,0,0,0.35);
     border-bottom-color: rgba(0,0,0,0.35);
+    display: flex;
+align-items: center;
+justify-content: center;
+position: relative;
 }
 
 .map-marker-label {
@@ -2579,13 +2601,173 @@
     font-size: 10px;
     color: rgba(255,255,255,0.92);
     background-color: rgba(0,0,0,0.35);
-    padding-left: 6px;
-    padding-right: 6px;
+     padding-left: 4px;
+    padding-right: 4px;
     padding-top: 2px;
     padding-bottom: 2px;
-    border-radius: 8px;
+    border-radius: 4px;
     max-width: 160px;
     white-space: nowrap;
+}
+
+.map-marker-lift-station {
+    /* no-op hook (useful if you want station markers tinted later) */
+}
+
+.map-marker-station-glyph {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -55%;
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.95);
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0,0,0,0.55);
+    pointer-events: none;
+}
+.map-legend {
+    left: 10px;
+    top: 10px;
+
+    flex-direction: column;
+    gap: 6px;
+
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+
+    border-radius: 12px;
+    background-color: rgba(0,0,0,0.85);
+}
+
+.map-legend-item {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+}
+
+.map-legend-item:hover {
+    background-color: rgba(255,255,255,0.10);
+}
+
+.map-legend-item.is-off {
+    opacity: 0.45;
+}
+
+.map-legend-text {
+    font-size: 11px;
+    color: rgba(255,255,255,0.88);
+    unity-font-style: bold;
+}
+
+.legend-swatch {
+    width: 16px;
+    height: 10px;
+    border-radius: 10px;
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+
+    border-left-color: rgba(0,0,0,0.35);
+    border-right-color: rgba(0,0,0,0.35);
+    border-top-color: rgba(0,0,0,0.35);
+    border-bottom-color: rgba(0,0,0,0.35);
+}
+
+.legend-swatch-line {
+    height: 4px;
+    border-radius: 6px;
+}
+
+.legend-swatch-run   { background-color: rgba(90,200,255,0.90); }
+.legend-swatch-lift  { background-color: rgba(255,214,10,0.90); }
+.legend-swatch-poi   { background-color: rgba(255,255,255,0.90); }
+
+
+.map-layerbar {
+    flex-direction: row;
+    gap: 8px;
+        z-index: 50;
+    margin-top: 4px;
+
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+
+    border-radius: 14px;
+    background-color: rgba(0,0,0,0.2);
+}
+
+.map-layerbtn {
+    flex-grow: 1;
+    flex-shrink: 1;
+    height: 14px;
+
+    flex-direction: row;
+     /* ensure the row content is vertically centered */
+    align-items: center;
+    justify-content: center;
+
+    /* remove any vertical padding that can bias centering */
+    padding-top: 0px;
+    padding-bottom: 0px;
+    gap: 7px;
+
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.2);
+}
+
+.map-layerbtn:hover {
+    background-color: rgba(255,255,255,0.10);
+}
+
+.map-layerbtn.is-on {
+    background-color: rgba(255,255,255,0.14);
+}
+
+.map-layerdot {
+    width: 8px;
+    height: 8px;
+    border-radius: 8px;
+
+    background-color: rgba(255,255,255,0.22);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(0,0,0,0.35);
+    border-right-color: rgba(0,0,0,0.35);
+    border-top-color: rgba(0,0,0,0.35);
+    border-bottom-color: rgba(0,0,0,0.35);
+}
+
+.map-layerbtn.is-on .map-layerdot {
+    background-color: rgba(255,255,255,0.90);
+}
+
+.map-layertext {
+    font-size: 10px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.84);
+
+    height: 100%;
+    margin-top: -1px;
+    unity-text-align: middle-center;
+
+    margin-bottom: 5px;
 }
 
     /* Watch Map page: no padding, clean clip for injected minimap */
@@ -2606,20 +2788,1927 @@
     color: white;
 }
 
+    /* =========================
+   Map Info Panel - Buttons
+   ========================= */
+
+/* Base style for any Button inside the MapInfoPanel */
 #MapInfoPanel Button {
-    color: white;
+    height: 26px;
+
+    padding-left: 10px;
+    padding-right: 10px;
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+
+    border-left-color: rgba(255,255,255,0.14);
+    border-right-color: rgba(255,255,255,0.14);
+    border-top-color: rgba(255,255,255,0.14);
+    border-bottom-color: rgba(255,255,255,0.14);
+
+    border-radius: 12px;
+
+    background-color: rgba(255,255,255,0.08);
+
+    /* UI Toolkit text alignment */
+    unity-text-align: middle-center;
+
+    color: rgba(255,255,255,0.90);
+    -unity-font-style: bold;
+    font-size: 11px;
 }
 
-    .map-polyline-label {
-    color: white;
+#MapInfoPanel Button:hover {
+    background-color: rgba(255,255,255,0.12);
+    border-left-color: rgba(255,255,255,0.20);
+    border-right-color: rgba(255,255,255,0.20);
+    border-top-color: rgba(255,255,255,0.20);
+    border-bottom-color: rgba(255,255,255,0.20);
+}
+
+#MapInfoPanel Button:active {
+    background-color: rgba(255,255,255,0.16);
+}
+
+/* Optional: smaller, icon-like close button (only if you add the class in code below) */
+#MapInfoPanel .map-info-close {
+    width: 26px;
+    min-width: 26px;
+
+    padding-left: 0px;
+    padding-right: 0px;
+
+    background-color: rgba(255,255,255,0.05);
+}
+#MapInfoPanel .map-info-close:hover {
+    background-color: rgba(255,255,255,0.10);
+}
+
+    #MapBottomDock {
+    /* purely visual; layout is handled in code */
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+}
+
+/* --- Home layout v2 --- */
+.row-notif { height: 38px; }
+.row-run { height: 92px; }
+.row-map { height: 210px; }
+.row-statsbar { height: 52px; }
+.row-work { height: 132px; }
+.row-bottom4 { height: 60px; }
+
+/* Notification bar tile */
+.tile-notif {
+    padding: 4px;
+    background-color: rgba(255,255,255,0.04);
+}
+
+.notif-body {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.notif-left, .notif-right {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.notif-time {
+    font-size: 13px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+}
+
+.notif-day {
+    font-size: 11px;
+    color: rgba(255,255,255,0.75);
+}
+
+.notif-cond {
+    font-size: 11px;
+    color: rgba(255,255,255,0.78);
+}
+
+.notif-temp {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.90);
+}
+
+.is-hidden {
+    display: none;
+}
+
+/* Run tracker */
+.tile-run { }
+.run-subrow {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+.run-line1 { margin-bottom: 4px; }
+
+/* Map tile: let the embedded minimap own the space */
+.tile-map-large {
+    padding: 0px;
+    position: relative;
+}
+.tile-title-overlay {
+    position: absolute;
+    left: 10px;
+    top: 8px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    border-radius: 10px;
+    background-color: rgba(0,0,0,0.35);
+    color: rgba(255,255,255,0.90);
+    font-size: 11px;
+}
+
+/* Stats bar */
+.tile-statsbar {
+    padding: 8px;
+}
+.statsbar-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+.statsbar-kv {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.90);
+}
+
+/* Tasks + Achievements sizing */
+.tile-taskswide {
+    flex-grow: 1;
+}
+.tile-ach-compact {
+    flex-grow: 0;
+    width: 132px;
+}
+.ach-compact-main {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-top: 6px;
+    margin-bottom: 2px;
+}
+.ach-compact-sub {
+    font-size: 10px;
+    color: rgba(255,255,255,0.72);
+}
+
+    /* --- Home layout compact pass --- */
+.v2-home { padding-top: 4px; padding-bottom: 4px; }
+
+.row-notif { height: 34px; }
+.row-run { height: 72px; }
+.row-map { height: 190px; }
+.row-statsbar { height: 40px; }
+.row-work { height: 112px; }
+.row-bottom4 { height: 54px; }
+
+.tight-head { margin-bottom: 4px; }
+.tight-text { margin-top: 0px; margin-bottom: 0px; }
+.tight-row { gap: 6px; }
+.tight-list { gap: 2px; }
+
+.home-grid .tile { padding: 4px; }
+.home-grid .tile-title { font-size: 11px; }
+.home-grid .tile-badge { font-size: 10px; padding-top: 1px; padding-bottom: 1px; }
+.home-grid .tile-sub { font-size: 10px; }
+.home-grid .tile-value { font-size: 12px; margin-top: 2px; margin-bottom: 2px; }
+
+/* Notification bar tile */
+.tile-notif { padding: 2px; background-color: rgba(255,255,255,0.035); }
+.notif-body { flex-direction: row; justify-content: space-between; align-items: Top; }
+.notif-left, .notif-right { flex-direction: row; align-items: baseline; gap: 6px; }
+
+.notif-time { font-size: 12px; unity-font-style: bold; color: rgba(255,255,255,0.92); }
+.notif-day { font-size: 12px; color: rgba(255,255,255,0.75); }
+.notif-cond { font-size: 12px; color: rgba(255,255,255,0.78); }
+.notif-temp { font-size: 12px; unity-font-style: bold; color: rgba(255,255,255,0.90); }
+
+.is-hidden { display: none; }
+
+/* Map tile */
+.tile-map-large { padding: 0px; position: relative; overflow: hidden; }
+.tile-title-overlay {
+    position: absolute;
+    left: 8px;
+    top: 6px;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    border-radius: 10px;
+    background-color: rgba(0,0,0,0.35);
+    color: rgba(255,255,255,0.90);
+    font-size: 10px;
+}
+
+/* Stats bar */
+.tile-statsbar { padding: 2px; }
+.statsbar-row { flex-direction: row; justify-content: space-between; align-items: center; }
+.statsbar-kv { font-size: 11px; unity-font-style: bold; color: rgba(255,255,255,0.90); }
+
+/* Tasks list: dense lines */
+.tile-tasks-list { flex-direction: column; flex-grow: 1; overflow: hidden; }
+.tile-taskline { font-size: 10px; margin-top: 1px; margin-bottom: 1px; }
+
+/* Achievements: smaller, claim-only */
+.tile-ach-compact { width: 96px; padding: 6px; }
+.ach-compact-main {
+    font-size: 8px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-top: 6px;
+}
+
+/* -----------------------------
+   Home v2 density improvements
+------------------------------ */
+
+/* Row height tweak (run tile gets much shorter now) */
+.row-run { height: 44px; }
+
+/* RUN TILE: single-row layout */
+.run-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+.run-left {
+    flex-direction: column;
+    justify-content: center;
+    min-width: 56px;
+}
+
+.run-main {
+    flex-grow: 1;
+    font-size: 12px;
+    unity-font-style: bold;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    color: rgba(255,255,255,0.92);
+}
+
+.run-right {
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    min-width: 92px;
+}
+
+.run-mini {
+    font-size: 10px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    color: rgba(255,255,255,0.78);
+}
+
+/* TASKS TILE: stacked bars, no gaps */
+.tile-tasks-bars {
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 0px;           /* no spacing between bars */
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+
+/* Each bar row */
+.taskbar {
+    height: 18px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    padding-left: 0px;
+    padding-right: 0px;
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 0px;
+    border-bottom-width: 0px;
+
+    border-left-color: rgba(255,255,255,0.10);
+    border-right-color: rgba(255,255,255,0.10);
+
+    background-color: rgba(255,255,255,0.06);
+    overflow: hidden;
+}
+
+/* optional: a subtle separator line between bars */
+/* .taskbar + .taskbar {
+    border-top-width: 1px;
+    border-top-color: rgba(0,0,0,0.25);
+} */
+
+/* Fill */
+.taskbar-fill {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    bottom: 0px;
+    width: 0%;
+    background-color: rgba(255,210,60,0.60);
+}
+
+/* Centered overlay text */
+.taskbar-label {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    top: 0px;
+    bottom: 0px;
+
+    font-size: 10px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.90);
+    -unity-text-align: middle-center;
+}
+
+/* Claimable state: yellow border around entire bar */
+.taskbar.is-claimable {
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgba(255,220,70,0.95);
+    border-right-color: rgba(255,220,70,0.95);
+    border-top-color: rgba(255,220,70,0.95);
+    border-bottom-color: rgba(255,220,70,0.95);
+}
+
+/* ACHIEVEMENTS TILE: ratio centered + bigger */
+.tile-ach-compact .ach-compact-main {
+    width: 100%;
+    margin-top: 10px;
+    margin-bottom: 0px;
+    font-size: 12px;
+    -unity-text-align: middle-center;
+}
+
+    /* Tighten RUN tile padding to reduce vertical height */
+.tile-run {
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+
+/* Run row: tighter spacing */
+.run-row {
+    gap: 6px;
+    align-items: center;
+}
+
+/* Remove top/bottom padding bloat on notif + stats tiles */
+.tile-notif {
+    padding-top: 1px;
+    padding-bottom: 1px;
+}
+
+.tile-statsbar {
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+.map-marker-label,
+.map-polyline-label {
+    position: absolute;
+
+    /* runtime font size is set in code (zoom-compensated) */
     -unity-font-style: bold;
-    background-color: rgba(0, 0, 0, 0.35);
+    color: rgba(255,255,255,0.92);
+
     padding-left: 6px;
     padding-right: 6px;
     padding-top: 2px;
     padding-bottom: 2px;
-    border-top-left-radius: 6px;
-    border-top-right-radius: 6px;
-    border-bottom-left-radius: 6px;
-    border-bottom-right-radius: 6px;
+
+    background-color: rgba(0,0,0,0.38);
+    border-radius: 6px;
+
+    /* accent stripe: width/color set from code */
+    border-left-width: 3px;
+    border-left-color: rgba(255,255,255,0.90);
+
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0,0,0,0.80);
+
+    max-width: 180px;
+    white-space: nowrap;
+}
+
+/* ---------------- Runs Page ---------------- */
+
+.runs-panel {
+    margin-top: 6px;
+}
+
+.runs-cal-toolbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-top: 6px;
+    margin-bottom: 8px;
+    gap: 10px;
+}
+
+.runs-cal-title {
+    unity-font-style: bold;
+    font-size: 14px;
+    color: rgba(255,255,255,0.92);
+}
+
+.runs-cal-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.runs-cal-day {
+    width: 38px;
+    height: 32px;
+    border-radius: 8px;
+    background-color: rgba(255,255,255,0.07);
+    justify-content: center;
+    align-items: center;
+}
+
+.runs-cal-day.has-runs {
+    background-color: rgba(0, 180, 255, 0.14);
+}
+
+.runs-cal-day.is-selected {
+    background-color: rgba(255,255,255,0.18);
+}
+
+.runs-cal-day-label {
+    color: rgba(255,255,255,0.92);
+    font-size: 12px;
+}
+
+.runs-daylist,
+.runs-runlist {
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 18px;
+}
+
+.runs-card {
+    background-color: rgba(0,0,0,0.55);
+    border-radius: 12px;
+    padding: 10px;
+    gap: 6px;
+}
+
+.runs-card-title {
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    font-size: 14px;
+}
+
+.runs-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.runs-row-left {
+    color: rgba(255,255,255,0.88);
+    font-size: 12px;
+    flex-grow: 1;
+}
+
+.runs-row-right {
+    color: rgba(255,255,255,0.78);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+    /* ---------------- Runs Page ---------------- */
+
+.runs-panel {
+    margin-top: 6px;
+}
+
+.runs-cal-toolbar {
+    flex-direction: row;
+    align-items: left;
+    justify-content: top;
+    margin-top: 6px;
+    margin-bottom: 8px;
+    gap: 10px;
+}
+
+.runs-cal-title {
+    unity-font-style: bold;
+    font-size: 14px;
+    color: rgba(255,255,255,0.92);
+}
+
+.runs-cal-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.runs-cal-day {
+    width: 38px;
+    height: 32px;
+    border-radius: 8px;
+    background-color: rgba(255,255,255,0.07);
+    justify-content: center;
+    align-items: center;
+}
+
+.runs-cal-day.has-runs {
+    background-color: rgba(0, 180, 255, 0.14);
+}
+
+.runs-cal-day.is-selected {
+    background-color: rgba(255,255,255,0.18);
+}
+
+.runs-cal-day-label {
+    color: rgba(255,255,255,0.92);
+    font-size: 12px;
+}
+
+.runs-daypanel {
+    margin-top: 4px;
+}
+
+.runs-day-toolbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+    margin-bottom: 8px;
+    gap: 10px;
+}
+
+.runs-day-title {
+    unity-font-style: bold;
+    font-size: 14px;
+    color: rgba(255,255,255,0.92);
+}
+
+/* lists */
+.runs-daylist,
+.runs-runlist {
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 18px;
+}
+
+/* card + rows */
+.runs-card {
+    background-color: rgba(0,0,0,0.55);
+    border-radius: 12px;
+    padding: 10px;
+    gap: 6px;
+}
+
+.runs-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.runs-row-left {
+    color: rgba(255,255,255,0.88);
+    font-size: 12px;
+    flex-grow: 1;
+}
+
+.runs-row-right {
+    color: rgba(255,255,255,0.78);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+/* expandable run headers */
+.runs-runheader {
+    background-color: rgba(0,0,0,0.55);
+    border-radius: 12px;
+    padding: 10px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.runs-runheader-left {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+.runs-chevron {
+    color: rgba(255,255,255,0.85);
+    font-size: 14px;
+    unity-font-style: bold;
+    width: 18px;
+}
+
+.runs-runname {
+    color: rgba(255,255,255,0.92);
+    font-size: 14px;
+    unity-font-style: bold;
+}
+
+.runs-runcount {
+    color: rgba(255,255,255,0.75);
+    font-size: 12px;
+}
+
+.runs-runbody {
+    margin-left: 10px;
+    margin-right: 2px;
+    padding-top: 6px;
+    padding-bottom: 2px;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.runs-divider {
+    height: 1px;
+    background-color: rgba(255,255,255,0.10);
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+    /* Weekday header row */
+.runs-cal-weekdays {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+.runs-cal-weekday {
+    width: 38px;
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255,255,255,0.70);
+}
+
+/* Day badge (completion count) */
+.runs-cal-badge {
+    position: absolute;
+    right: 5px;
+    top: 4px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.92);
+    background-color: rgba(0, 180, 255, 0.25);
+    border-radius: 8px;
+    padding-left: 6px;
+    padding-right: 6px;
+    height: 16px;
+    unity-text-align: middle-center;
+}
+
+    /* -----------------------------
+   Runs Page
+------------------------------ */
+
+.runs-page .page-h1 { margin-bottom: 8px; }
+
+.runs-tabs {
+    flex-direction: row;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.runs-tab {
+    flex-grow: 1;
+    border-radius: 10px;
+    padding: 8px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+    justify-content: center;
+    align-items: center;
+}
+
+.runs-tab.is-selected {
+    background-color: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.18);
+}
+
+.runs-tab-text {
+    unity-font-style: bold;
+    font-size: 12px;
+    color: rgba(255,255,255,0.92);
+}
+
+.runs-panel { margin-top: 2px; }
+.is-hidden { display: none; }
+
+/* Weeks list */
+.runs-weeklist { flex-direction: column; gap: 10px; }
+
+.runs-week {
+    border-radius: 12px;
+    padding: 8px;
+    background-color: rgba(0,0,0,0.22);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+}
+
+.runs-week-header {
+    unity-font-style: bold;
+    font-size: 12px;
+    color: rgba(255,255,255,0.92);
+    background-color: rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 8px;
+    margin-bottom: 8px;
+}
+
+.runs-week-days {
+    flex-direction: row;
+    gap: 6px;
+    justify-content: space-between;
+}
+
+.runs-day {
+    flex-grow: 1;
+    min-width: 0px;
+    height: 44px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+    unity-text-align: middle-center;
+    font-size: 11px;
+    color: rgba(255,255,255,0.88);
+    padding: 4px;
+}
+
+.runs-day.has-runs {
+    background-color: rgba(120, 200, 255, 0.10);
+    border-color: rgba(120, 200, 255, 0.25);
+}
+
+.runs-dayhdr {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.runs-daytitle {
+    flex-grow: 1;
+    unity-font-style: bold;
+    font-size: 12px;
+    color: rgba(255,255,255,0.92);
+    unity-text-align: middle-center;
+}
+
+.runs-navbtn {
+    width: 34px;
+    height: 28px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.10);
+    unity-text-align: middle-center;
+}
+
+.runs-smallbtn {
+    height: 28px;
+    border-radius: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.10);
+    unity-text-align: middle-center;
+    font-size: 11px;
+    color: rgba(255,255,255,0.90);
+}
+
+/* Day detail list */
+.runs-daylist { flex-direction: column; gap: 8px; }
+.runs-empty { color: rgba(255,255,255,0.65); font-size: 11px; margin-top: 6px; }
+
+/* Runs list */
+.runs-runlist { flex-direction: column; gap: 10px; }
+
+.runs-run {
+    border-radius: 12px;
+    padding: 8px;
+    background-color: rgba(0,0,0,0.22);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+}
+
+.runs-runhdr {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.runs-runhdr-left { flex-direction: column; flex-grow: 1; }
+.runs-runname { unity-font-style: bold; font-size: 12px; color: rgba(255,255,255,0.92); }
+.runs-runcount { font-size: 11px; color: rgba(255,255,255,0.70); margin-top: 2px; }
+
+.runs-runhdr-right { flex-direction: row; gap: 6px; align-items: center; }
+
+.runs-expandbtn {
+    width: 34px;
+    height: 28px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.10);
+    unity-text-align: middle-center;
+}
+
+.runs-summary {
+    flex-direction: row;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.runs-statchip {
+    flex-grow: 1;
+    border-radius: 10px;
+    padding: 6px;
+    background-color: rgba(255,255,255,0.05);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.06);
+    font-size: 11px;
+    color: rgba(255,255,255,0.88);
+    unity-text-align: middle-center;
+}
+
+.runs-history { flex-direction: column; gap: 8px; margin-top: 10px; }
+
+.runs-attempt {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.04);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.06);
+}
+
+.runs-attempt-left { flex-direction: column; }
+.runs-attempt-run { unity-font-style: bold; font-size: 11px; color: rgba(255,255,255,0.92); }
+.runs-attempt-when { font-size: 11px; color: rgba(255,255,255,0.72); margin-top: 2px; }
+
+.runs-attempt-right { flex-direction: row; gap: 8px; align-items: center; }
+
+.runs-mini { flex-direction: column; align-items: flex-end; }
+.runs-mini-k { font-size: 10px; color: rgba(255,255,255,0.60); }
+.runs-mini-v { font-size: 11px; color: rgba(255,255,255,0.90); unity-font-style: bold; }
+
+/* -------------------------
+   Runs Page – Weeks + Runs
+------------------------- */
+
+.runs-week-card {
+    margin-top: 8px;
+    padding: 10px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+}
+
+.runs-week-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.runs-week-title {
+    font-size: 14px;
+    color: rgba(255,255,255,0.92);
+    unity-font-style: bold;
+}
+
+.runs-week-badge {
+    min-width: 26px;
+    height: 22px;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-radius: 999px;
+    text-align: center;
+    unity-text-align: middle-center;
+    background-color: rgba(255,255,255,0.10);
+    color: rgba(255,255,255,0.90);
+    font-size: 12px;
+}
+
+.runs-week-days {
+    margin-top: 10px;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.runs-day-tile {
+    width: 44px;
+    height: 54px;
+    border-radius: 10px;
+    background-color: rgba(0,0,0,0.20);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+    align-items: center;
+    justify-content: center;
+}
+
+.runs-day-tile.has-runs {
+    background-color: rgba(255,255,255,0.10);
+    border-color: rgba(255,255,255,0.16);
+}
+
+.runs-day-dow {
+    font-size: 10px;
+    color: rgba(255,255,255,0.70);
+}
+
+.runs-day-dom {
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.95);
+}
+
+.runs-run-card {
+    margin-top: 8px;
+    padding: 10px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+}
+
+.runs-run-header {
+    flex-direction: row;
+    align-items: center;
+}
+
+.runs-run-name {
+    /* Leave room for the per-run progress bar in the header row. */
+    flex-grow: 0;
+    flex-shrink: 1;
+    min-width: 0;
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+}
+
+.runs-run-progress {
+    flex-grow: 1;
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    margin-left: 10px;
+    margin-right: 10px;
+    overflow: hidden;
+}
+
+.runs-run-progress-fill {
+    height: 100%;
+    width: 0%;
+    background-color: rgba(255,255,255,0.75);
+}
+
+.runs-run-count {
+    margin-left: 8px;
+    margin-right: 10px;
+    color: rgba(255,255,255,0.70);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.runs-run-mapbtn {
+    padding-left: 10px;
+    padding-right: 10px;
+    height: 24px;
+    border-radius: 8px;
+    background-color: rgba(255,255,255,0.10);
+    align-items: center;
+    justify-content: center;
+}
+
+.runs-run-summary {
+    margin-top: 6px;
+    color: rgba(255,255,255,0.70);
+    font-size: 12px;
+}
+
+.runs-run-detail {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top-width: 1px;
+    border-top-color: rgba(255,255,255,0.08);
+}
+
+.runs-attempt-row {
+    margin-top: 6px;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.runs-attempt-title {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.90);
+
+    /* prevent long run names from overflowing */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.runs-attempt-meta {
+    font-size: 12px;
+    color: rgba(255,255,255,0.70);
+
+    /* allow wrapping / hard line breaks; never exceed container */
+    white-space: normal;
+    overflow: hidden;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.runs-empty {
+    margin-top: 8px;
+    color: rgba(255,255,255,0.60);
+    font-size: 12px;
+}
+
+    /* Runs weeks container (RunsCalendarGrid) */
+.runs-cal-grid {
+    flex-direction: column;   /* was: row */
+    flex-wrap: nowrap;        /* was: wrap */
+    gap: 6px;
+    margin-bottom: 10px;
+    align-items: stretch;
+}
+
+.runs-run-mapbtn > Label {
+    color: rgba(255,255,255,0.95);
+    unity-text-align: middle-center;
+}
+
+
+.runs-active {
+    margin: 10px 12px 8px 12px;
+    padding: 12px;
+    border-radius: 14px;
+    background-color: rgba(0,0,0,0.25);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+}
+
+.runs-active-title {
+    color: rgba(255,255,255,0.95);
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.runs-active-meta {
+    color: rgba(255,255,255,0.75);
+    font-size: 11px;
+}
+
+.runs-active-bar {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.runs-active-fill {
+    height: 100%;
+    width: 0%;
+    background-color: rgba(255,255,255,0.80);
+}
+
+.map-label {
+    position: absolute;
+    -unity-font-style: bold;
+    font-size: 12px;
+    color: white;
+    background-color: rgba(0,0,0,0.55);
+    padding: 2px 6px;
+    border-radius: 8px;
+    white-space: nowrap;
+    pointer-events: none; /* critical: don't block hover */
+}
+
+.map-label.is-hidden {
+    display: none;
+}
+
+.map-label--run {
+    /* optional: subtle distinction for run labels */
+    background-color: rgba(0,0,0,0.65);
+}
+
+.runs-week-header { min-width: 0; }
+.runs-week-days { min-width: 0; }
+
+.runs-day-tile {
+    min-width: 0;
+}
+
+.runs-attempt-row {
+    min-width: 0;
+}
+
+.runs-attempt-title {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.runs-attempt-meta {
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow: hidden;
+}
+
+    .map-marker-label.is-hovered,
+.map-polyline-label.is-hovered {
+    opacity: 1;
+    unity-font-style: bold;
+}
+
+.runs-day-tile.is-future {
+    opacity: 0.35;
+    background-color: rgba(0,0,0,0.10);
+    border-color: rgba(255,255,255,0.05);
+}
+
+/* Generic disabled visual used by SetEnabledAndVisual() */
+.is-disabled {
+    opacity: 0.35;
+}
+
+    /* ---------- Watch: Run Tracker page ---------- */
+
+.watch-run-card {
+    padding: 10px;
+    border-radius: 14px;
+    background-color: rgba(255,255,255,0.05);
+    border-left-width: 3px;
+    border-left-color: rgba(255,255,255,0.12);
+    gap: 8px;
+}
+
+.watch-run-head {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.watch-run-name {
+    flex-grow: 1;
+    color: rgba(255,255,255,0.95);
+    unity-font-style: bold;
+    font-size: 13px;
+    min-width: 0;
+}
+
+.watch-run-pct {
+    color: rgba(255,255,255,0.80);
+    font-size: 12px;
+    unity-text-align: middle-right;
+}
+
+.watch-run-bar {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    overflow: hidden;
+    position: relative;
+}
+
+.watch-run-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    background-color: rgba(255,255,255,0.80);
+}
+
+.watch-run-kv {
+    color: rgba(255,255,255,0.75);
+    font-size: 12px;
+}
+
+/* Updated Run Tracker tile layout (run-tile) */
+.tile-run .run-tile {
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tile-run .run-top {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.tile-run .run-pct {
+    flex-shrink: 0;
+    color: rgba(255,255,255,0.75);
+    unity-text-align: middle-right;
+}
+
+.tile-run .run-meta {
+    color: rgba(255,255,255,0.75);
+}
+
+.tile-run .run-bar {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    overflow: hidden;
+    position: relative;
+}
+
+.tile-run .run-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    background-color: rgba(255,255,255,0.80);
+}
+
+.runs-active-bar {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    margin-top: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.runs-active-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    background-color: rgba(255,255,255,0.80);
+}
+
+.runs-attempt-progress {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    margin-top: 6px;
+    overflow: hidden;
+    position: relative;
+}
+
+.runs-attempt-progress-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    background-color: rgba(255,255,255,0.80);
+}
+
+/* Final override: run row must be tall enough for bar + 2 lines */
+.row-run {
+    height: 72px;
+}
+
+    /* ---------- Runs page: attempt cards ---------- */
+
+.runs-attempt-card {
+    padding: 10px 12px;
+    border-radius: 14px;
+    background-color: rgba(255,255,255,0.05);
+    border-left-width: 3px;
+    border-left-color: rgba(255,255,255,0.10);
+}
+
+.runs-attempt-head {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.runs-attempt-spacer {
+    flex-grow: 1;
+}
+
+.runs-attempt-badge {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.85);
+    background-color: rgba(255,255,255,0.08);
+}
+
+.runs-attempt-badge.is-complete {
+    background-color: rgba(255,255,255,0.18);
+    color: rgba(255,255,255,0.95);
+}
+
+.runs-attempt-metrics {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.runs-attempt-chip {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.78);
+    background-color: rgba(0,0,0,0.18);
+}
+
+/* Segment fill (start->end) inside the attempt progress bar */
+.runs-attempt-progress-seg {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(255,255,255,0.80);
+    border-radius: 6px;
+}
+
+/* ---- Runs: compact attempt entry (no chips) ---- */
+
+.runs-attempt-item {
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.04);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.06);
+}
+
+.runs-attempt-runname {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.runs-attempt-head {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.runs-attempt-time {
+    font-size: 11px;
+    color: rgba(255,255,255,0.72);
+}
+
+.runs-attempt-status {
+    font-size: 11px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.90);
+}
+
+.runs-attempt-bar {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    overflow: hidden;
+    position: relative;
+}
+
+.runs-attempt-seg {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 0%;
+    background-color: rgba(255,255,255,0.80);
+}
+
+.runs-attempt-marker {
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 2px;
+    border-radius: 1px;
+    background-color: rgba(255,255,255,0.85);
+}
+
+.runs-attempt-marker.is-end {
+    background-color: rgba(255,255,255,0.55);
+}
+
+.runs-attempt-metrics {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.runs-attempt-metric {
+    font-size: 11px;
+    color: rgba(255,255,255,0.88);
+    white-space: nowrap;
+}
+
+.runs-attempt-metric.is-muted {
+    color: rgba(255,255,255,0.70);
+}
+
+/* Day detail back button */
+.runs-day-backbtn {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+/* ---------- Watch: Tasks page wrapper ---------- */
+.watch-tasks-card {
+    padding: 10px;
+    border-radius: 14px;
+    background-color: rgba(255,255,255,0.05);
+    border-left-width: 3px;
+    border-left-color: rgba(255,255,255,0.12);
+    gap: 8px;
+}
+
+    .runs-attempt-card {
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.04);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.06);
+}
+
+.runs-attempt-head {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.runs-attempt-head-left {
+    flex-direction: column;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.runs-attempt-runname {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.runs-attempt-when {
+    font-size: 11px;
+    color: rgba(255,255,255,0.72);
+}
+
+.runs-attempt-head-right {
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.runs-attempt-status {
+    font-size: 10px;
+    color: rgba(255,255,255,0.60);
+}
+
+.runs-attempt-dur {
+    margin-top: 2px;
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+}
+
+/* Uses your existing .runs-attempt-progress styling */
+.runs-attempt-progress-seg {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.80);
+}
+
+.runs-attempt-range {
+    margin-top: -2px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.55);
+}
+
+.runs-attempt-stats {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.runs-attempt-kv {
+    font-size: 11px;
+    color: rgba(255,255,255,0.75);
+}
+
+/* Day page: run groups feel like collapsible headers */
+.runs-day-run-card {
+    margin-top: 8px;
+}
+
+.runs-day-run-header {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.runs-run-count.is-complete {
+    color: rgba(255,255,255,0.92);
+    unity-font-style: bold;
+}
+
+    /* =========================
+   Map Bottom Dock + Info Panel (Clean Sheet)
+   ========================= */
+
+#MapBottomDock {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+
+    padding: 10px;
+    gap: 10px;
+
+    background-color: rgba(0,0,0,0.55);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+
+    border-left-color: rgba(255,255,255,0.10);
+    border-right-color: rgba(255,255,255,0.10);
+    border-top-color: rgba(255,255,255,0.10);
+    border-bottom-color: rgba(255,255,255,0.10);
+
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+}
+
+#MapInfoPanel {
+    flex-direction: column;
+    gap: 8px;
+
+    /* Keep it from swallowing the map */
+    max-height: 190px;
+
+    padding: 10px;
+
+    background-color: rgba(255,255,255,0.05);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+
+    border-left-color: rgba(255,255,255,0.10);
+    border-right-color: rgba(255,255,255,0.10);
+    border-top-color: rgba(255,255,255,0.10);
+    border-bottom-color: rgba(255,255,255,0.10);
+
+    border-radius: 14px;
+
+    overflow: hidden; /* Important: contain internal content */
+}
+
+#MapInfoPanel .map-info-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+#MapInfoPanel .map-info-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: rgba(255,255,255,0.95);
+}
+
+#MapInfoPanel .map-info-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.70);
+}
+
+/* If your info body is long, put it in a dedicated scroll container (recommended) */
+#MapInfoPanel .map-info-scroll {
+    flex-grow: 1;
+    overflow-y: scroll;
+    padding-right: 4px;
+}
+
+    .tile-row--split {
+    flex-direction: row;
+    align-items: stretch;
+}
+
+/* -----------------------------
+   Home: 2-column work row layout
+------------------------------ */
+
+.row-work2col {
+    height: 152px;              /* = old row-statsbar (40) + old row-work (112) */
+    flex-direction: row;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.work-col {
+    flex-direction: column;
+    height: 100%;
+    gap: 8px;
+}
+
+.work-col-wide {
+    flex-grow: 1;
+}
+
+.work-col-narrow {
+    flex-grow: 0;
+    width: 96px;                /* matches .tile-ach-compact (in your compact section) */
+}
+
+/* LEFT column sizing */
+.tile-statsmini {
+    flex-grow: 0;
+    height: 34px;               /* "just tall enough" for 1 line */
+    padding: 6px;
+    justify-content: center;
+}
+
+.statsbar-kv-single {
+    font-size: 11px;
+    unity-font-style: bold;
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+/* Ensure tasks fills remaining height in the left column */
+.work-col-wide .tile-taskswide {
+    flex-grow: 1;
+}
+
+/* RIGHT column: both tiles split evenly */
+.work-col-narrow .tile {
+    flex-grow: 1;
+}
+
+/* Ski Pass tile minor tweaks */
+.tile-skipass .tile-sub {
+    margin-top: 6px;
+    margin-bottom: 0px;
+}
+
+/* Ski Pass page lift list rows */
+.skipass-liftlist {
+    flex-direction: column;
+    gap: 6px;
+}
+
+.skipass-liftrow.is-locked {
+    color: rgba(255,255,255,0.55);
+}
+
+/* =========================
+   Ski Pass page
+========================= */
+
+.skipass-page { }
+
+/* Force Ski Pass page text to white */
+.skipass-page,
+.skipass-page Label,
+.skipass-page Button {
+    color: rgba(255,255,255,1);
+}
+
+/* UI Toolkit button text sometimes lives on nested label */
+.skipass-page Button > Label {
+    color: rgba(255,255,255,1);
+}
+
+.skipass-card {
+    background-color: rgba(0,0,0,0.20);
+    border-radius: 14px;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.10);
+    border-right-color: rgba(255,255,255,0.10);
+    border-top-color: rgba(255,255,255,0.10);
+    border-bottom-color: rgba(255,255,255,0.10);
+}
+
+.skipass-current-row {
+    flex-direction: row;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.skipass-current-left {
+    flex-grow: 1;
+}
+
+.skipass-current-right {
+    width: 44%;
+    flex-shrink: 0;
+}
+
+.skipass-current-name {
+    unity-font-style: bold;
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.skipass-meta {
+    opacity: 0.85;
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+.skipass-bar {
+    height: 8px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.12);
+    margin-top: 8px;
+    overflow: hidden;
+}
+
+.skipass-fill {
+    height: 100%;
+    width: 100%;
+    background-color: rgba(255,255,255,0.75);
+}
+
+.skipass-liftlist {
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.skipass-liftrow.is-locked {
+    color: rgba(255,255,255,0.55);
+    opacity: 1;
+}
+
+
+.skipass-cardgrid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.skipass-passcard {
+    width: 92px;
+    padding: 8px;
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.06);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+}
+
+.skipass-passcard.is-selected {
+    background-color: rgba(255,255,255,0.12);
+    border-left-color: rgba(255,255,255,0.35);
+    border-right-color: rgba(255,255,255,0.35);
+    border-top-color: rgba(255,255,255,0.35);
+    border-bottom-color: rgba(255,255,255,0.35);
+}
+
+.skipass-passcard-title {
+    unity-font-style: bold;
+    font-size: 12px;
+}
+
+.skipass-passcard-sub {
+    font-size: 10px;
+    opacity: 0.85;
+    margin-top: 4px;
+}
+
+.skipass-duration-row {
+    flex-direction: row;
+    gap: 8px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.skipass-duration-btn {
+    flex-grow: 1;
+    height: 28px;
+}
+.skipass-duration-btn.is-on {
+    background-color: rgba(255,255,255,0.16);
+}
+
+/* Home tile (compact) */
+.tile-skipass-compact { }
+
+.watch-passflash {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+
+    border-radius: 18px;  /* match .watch-frame radius */
+    z-index: 999;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    opacity: 0;
+}
+
+.watch-passflash.is-on {
+    opacity: 1;
+}
+
+.watch-passflash.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.watch-passflash.allow {
+    background-color: rgba(0, 200, 90, 1);
+    opacity: 1;
+}
+
+.watch-passflash.deny {
+    background-color: rgba(220, 60, 60, 1);
+    opacity: 1;
+}
+
+.watch-passflash-icon {
+    font-size: 30px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,1);
+    margin-bottom: 6px;
+}
+
+.watch-passflash-text {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,1);
+    unity-text-align: middle-center;
+    max-width: 90%;
+    white-space: normal;
 }

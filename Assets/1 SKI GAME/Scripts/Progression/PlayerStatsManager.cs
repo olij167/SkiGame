@@ -1,6 +1,11 @@
 using System;
 using UnityEngine;
 
+#if UNITY_EDITOR
+using UnityEditor;
+using UnityEditor.SceneManagement;
+#endif
+
 namespace SkiGame.Progression
 {
     public sealed class PlayerStatsManager : MonoBehaviour
@@ -89,5 +94,57 @@ namespace SkiGame.Progression
             if (saveOnApplicationQuit)
                 Save();
         }
+
+        [ContextMenu("Clear All Run History (Hard Delete)")]
+        private void Context_ClearRunRecords()
+        {
+            if (Profile == null)
+            {
+                Debug.LogWarning("[PlayerStatsManager] No Profile to clear.");
+                return;
+            }
+
+            int removedRecords = Profile.ClearAllRunHistory(
+                clearVisits: true,
+                clearCounts: true,
+                clearSessionRefs: true,
+                recalcLifetimeRunAggregates: true);
+
+            Debug.Log($"[PlayerStatsManager] Cleared run history. Removed {removedRecords} run record(s).");
+
+            Save();
+
+#if UNITY_EDITOR
+            EditorUtility.SetDirty(this);
+            EditorSceneManager.MarkSceneDirty(gameObject.scene);
+            AssetDatabase.SaveAssets();
+#endif
+        }
+
+        [ContextMenu("Prune segments under 25% coverage")]
+        private void Context_PruneRunSegmentsUnder25()
+        {
+            if (Profile == null)
+            {
+                Debug.LogWarning("[PlayerStatsManager] No Profile to prune.");
+                return;
+            }
+
+            int beforeTiny = Profile.CountRunAttemptsWhere(t => t != null && t.timeSeconds < 5.0f);
+            int removed = Profile.PruneRunSegmentsBelowCoverage(0.25f, removeEmptyRecords: true, removeNoCoverageSegments: true);
+            int afterTiny = Profile.CountRunAttemptsWhere(t => t != null && t.timeSeconds < 5.0f);
+
+            Profile.RecalculateLifetimeRunAggregatesFromRunRecords();
+            Save();
+
+            Debug.Log($"[PlayerStatsManager] Pruned {removed} attempt(s). <5s attempts: {beforeTiny} -> {afterTiny}");
+
+#if UNITY_EDITOR
+            EditorUtility.SetDirty(this);          // mark component dirty
+            EditorSceneManager.MarkSceneDirty(gameObject.scene); // ensures scene saves (if profile is scene-serialized)
+            AssetDatabase.SaveAssets();            // harmless; saves assets if any
+#endif
+        }
+
     }
 }

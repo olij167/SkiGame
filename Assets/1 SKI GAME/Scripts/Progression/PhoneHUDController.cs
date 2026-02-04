@@ -9,6 +9,8 @@ using static SkiGame.Progression.ProgressionDirector;
 using SkiGame.Map;
 using SkiGame.Map.UI;
 using SkiGame.Runs;
+using SkiGame.POI;
+using TimeWeather;
 
 namespace SkiGame.Progression
 {
@@ -38,8 +40,12 @@ namespace SkiGame.Progression
         [Header("Map")]
         [SerializeField] private MapData mapData;
         [SerializeField] private Camera mapReferenceCamera;
+        [SerializeField] private MapUIStyleSettings mapStyle;
 
         private PhoneMapPageUI _mapPageUI;
+
+        private VisualElement _mapInfoActionsRow;
+        private Button _mapInfoViewRunBtn;
 
         // Embedded minimaps
         private PhoneMapPageUI _watchMiniMapUI;
@@ -59,15 +65,14 @@ namespace SkiGame.Progression
         private Label _mapAttemptDetails;
 
         private VisualElement _mapInfoRunNavRow;
-        private Button _mapInfoRunPrevBtn;
-        private Button _mapInfoRunNextBtn;
-        private Label _mapInfoRunAttemptDetails;
 
         private string _mapInfoActiveRunId;
         private int _mapInfoActiveAttemptIndex = -1;
 
         private RunRecordEntry _activeRunRecord;
         private int _activeAttemptIndex = -1;
+
+        private VisualElement _mapBottomDock;
 
         enum MapEntityType { Run, Lift, POI, Unknown }
 
@@ -95,32 +100,21 @@ namespace SkiGame.Progression
         private Label _wSpeed;                 // big gauge text (already exists)
         private Label _wHomeTime;              // top-left minimal time on Home page
         private Label _wHomeWeather;           // top-right condition + temp on Home page
-        private VisualElement _wAirBox;        // container used to tint/grey air-time
-        private Label _wAirTime;               // air-time value
-        private Label _wAirHint;               // "LAST AIR" / "IN-AIR"
+        private VisualElement _wRunBox;        // container used to tint/grey air-time
+        private Label _wRunTime;               // air-time value
+        private Label _wRunName;               // "LAST AIR" / "IN-AIR"
+        private VisualElement _wRunTrackerCard;
 
-        private Label _wSessTopSpeed;
-        private Label _wSessDist;
-        private Label _wSessVert;
-        private Label _wSessStacks;
-
-        private Label _wLifeTopSpeed;
-        private Label _wLifeDist;
-        private Label _wLifeVert;
-        private Label _wLifeStacks;
+        // Dedicated Run Tracker watch page
+        private Label _wRunPageName;
+        private Label _wRunPageTime;
+        private Label _wRunPageProgress;
+        private Label _wRunPageTopSpeed;
+        private Label _wRunPageStacks;
+        private VisualElement _wRunPageFill;
+        private VisualElement _runTrackerFill;
 
         private VisualElement _watchTasksList;
-
-        private Label _wAch1;
-        private Label _wAch2;
-
-        private VisualElement _btnWatchSOS;
-
-        // Watch air-time state (per-jump)
-        private bool _watchWasGrounded = true;
-        private float _watchAirStartTime = 0f;
-        private float _watchLastAirDuration = 0f;
-        private float _watchCurrentAirDuration = 0f;
 
         // Phone
         private VisualElement _phoneExpanded;
@@ -139,6 +133,7 @@ namespace SkiGame.Progression
         private VisualElement _tileTasks;
         private VisualElement _tileAchievements;
         private VisualElement _tileMap;
+        private VisualElement _tileRunTracker;
         private VisualElement _tileSave;
         private VisualElement _tileSettings;
         private VisualElement _tileSOS;
@@ -173,42 +168,162 @@ namespace SkiGame.Progression
         private VisualElement _panelStatsSession;
         private VisualElement _panelStatsLifetime;
 
-        private Label _statsS_TopSpeed;
-        private Label _statsS_Distance;
-        private Label _statsS_Vert;
-        private Label _statsS_Stacks;
-
-        private Label _statsL_TopSpeed;
-        private Label _statsL_Distance;
-        private Label _statsL_Vert;
-        private Label _statsL_Stacks;
-
-        // Stats tiles (secondary)
-        private Label _statsS_AirTime;
-        private Label _statsS_AirDist;
-        private Label _statsS_Runs;
-        private Label _statsS_Lifts;
-
-        private Label _statsL_AvgSpeed;
-        private Label _statsL_AirTime;
-        private Label _statsL_AirDist;
-        private Label _statsL_Runs;
-        private Label _statsL_Lifts;
-
-        // Stats page (sleek dashboard)
+        // Stats page (Lifetime dashboard)
         private VisualElement _statsDashSession;
         private VisualElement _statsDashLifetime;
 
+        // Stats page (Day/Weeks calendar + selected-day dashboard)
+        private VisualElement _statsWeeksToolbar;
+        private VisualElement _btnStatsWeeksBack;
+        private VisualElement _btnStatsWeeksUnused;
+        private Label _lblStatsWeeksTitle;
+
+        private VisualElement _statsWeeksList;
+        private VisualElement _statsDayPanel;
+        private VisualElement _btnStatsPrevDay;
+        private VisualElement _btnStatsNextDay;
+        private Label _lblStatsDay;
+        private VisualElement _statsDashDay;
+
+        private int _statsExpandedWeekIndex = -1;
+        private int _statsCurrentWeekIndex = -1;
+
+        private DayKey? _statsSelectedDay;   // currently viewed day (detail panel)
+        private DayState _statsDayState;     // live + persisted baseline/max tracking
+        // “First day” / bounds
+        private const string Pref_StatsBaseDay = "skigame.stats.calendarBaseDay.v1";
+        private int _statsBaseDayOfYear = 0;
+        private bool _statsBaseLoaded = false;
+
+        // Daily archive (persisted)
+        private const string Pref_StatsDailyArchive = "skigame.stats.dailyArchive.v1";
+        [Serializable] private sealed class DayStatsArchive { public List<DayStatsRecord> days = new List<DayStatsRecord>(); }
+        [Serializable] private struct DayStatsRecord { public int year; public int monthIndex; public int dayOfMonth; public DayStatsSnapshot stats; }
+
+        private struct DayStatsSnapshot
+        {
+            public float topSpeedMps;
+            public float avgSpeedMps;
+            public float distanceMeters;
+
+            public float verticalAscentMeters;
+            public float verticalDescentMeters;
+
+            public float airTimeSeconds;
+            public float airDistanceMeters;
+
+            public float grindTimeSeconds;
+            public float grindDistanceMeters;
+
+            public int runsCompleted;
+            public int runsCompletedClean;
+            public float topRunSpeedMps;
+
+            public int liftsUsed;
+            public int stacks;
+
+            public int runsVisited;
+            public int landmarksVisited;
+
+            public static implicit operator DaySnapshot(DayStatsSnapshot s)
+            {
+                return new DaySnapshot
+                {
+                    topSpeedMps = s.topSpeedMps,
+                    avgSpeedMps = s.avgSpeedMps,
+                    distanceMeters = s.distanceMeters,
+
+                    verticalAscentMeters = s.verticalAscentMeters,
+                    verticalDescentMeters = s.verticalDescentMeters,
+
+                    airTimeSeconds = s.airTimeSeconds,
+                    airDistanceMeters = s.airDistanceMeters,
+
+                    grindTimeSeconds = s.grindTimeSeconds,
+                    grindDistanceMeters = s.grindDistanceMeters,
+
+                    runsVisited = s.runsVisited,
+                    runsCompleted = s.runsCompleted,
+                    runsCompletedClean = s.runsCompletedClean,
+
+                    topRunSpeedMps = s.topRunSpeedMps,
+
+                    liftsUsed = s.liftsUsed,
+                    stacks = s.stacks,
+
+                    landmarksVisited = s.landmarksVisited
+                };
+            }
+
+        }
+
+        private struct SessionSnapshot
+        {
+            public float topSpeedMps;
+            public float avgSpeedMps;
+            public float distanceMeters;
+
+            public float verticalAscentMeters;
+            public float verticalDescentMeters;
+
+            public float airTimeSeconds;
+            public float airDistanceMeters;
+
+            public float grindTimeSeconds;
+            public float grindDistanceMeters;
+
+            public int runsCompleted;
+            public int runsCompletedClean;
+            public float topRunSpeedMps;
+
+            public int liftsUsed;
+            public int stacks;
+
+            public int runsVisited;
+            public int landmarksVisited;
+        }
+
+        private bool _dailyArchiveLoaded = false;
+        private DayStatsArchive _dailyArchive = new DayStatsArchive();
+        private readonly Dictionary<long, DayStatsSnapshot> _dailyArchiveMap = new Dictionary<long, DayStatsSnapshot>(128);
+
+        // Live “today” tracking (turn old session into a daily slice)
+        private bool _liveDayKeyValid = false;
+        private DayKey _liveDayKey;
+        private SessionSnapshot _liveDaySessionBaseline;
+        private float _liveDayStartUnscaled = 0f;
+        private float _liveDayMaxSpeedMps = 0f;
+        private float _liveDayMaxRunSpeedMps = 0f;
+
+        private bool _statsWeeksDirty = true;
+        private readonly List<StatCardRefs> _statCardsDay = new List<StatCardRefs>(32);
+
         private sealed class StatCardRefs
         {
+            // Existing usage
             public Label value;
             public Func<PlayerStatsProfile, string> valueProvider;
+
+            // Compatibility for newer code that references these names
+            public string label;
+            public Func<PlayerStatsProfile, string> provider;
+            public Func<DaySnapshot, string> dayProvider;
         }
 
         private readonly List<StatCardRefs> _statCardsSession = new();
         private readonly List<StatCardRefs> _statCardsLifetime = new();
 
         private bool _statsShowSession = true;
+
+        // --- Stats: Day/Calendar UI (shim fields to satisfy compiler) ---
+        private VisualElement _statsWeeksPanel;     // container for the day list / weeks list (if you added one)
+        private VisualElement _btnStatsDayBack;     // back from day detail to list
+        private VisualElement _btnStatsDayPrev;     // previous day
+        private VisualElement _btnStatsDayNext;     // next day
+        private Label _lblStatsDayTitle;            // title for selected day (e.g. "Mon 12 Jan")
+
+        // Active day selection (nullable so we can gate comparisons safely)
+        private DayKey? _statsActiveDay;
 
         private Label _tasksBody;
 
@@ -241,6 +356,8 @@ namespace SkiGame.Progression
 
         private Label _achievementsBody;
         private Label _timeWeatherBody; // legacy fallback
+
+        private readonly List<AchievementDefinitionSO> _achTileCatalog = new(256);
 
         // Time & Weather page (new layout)
         private Label _twTime;
@@ -289,11 +406,21 @@ namespace SkiGame.Progression
         private Rigidbody _playerRb;
         private SkiController _skiController;
         private ProgressionDirector _progression;
+        private RunProgressTracker _runProgressTracker;
 
         // Time/Weather
         private TimeWeather.TimeController _time;
         private TimeWeather.WeatherController _weather;
         private WindController _wind;
+
+
+        // Home tile: run tracker (current run / quick entry to runs page)
+        private Label _runTrackerLine1;
+        private Label _runTrackerLine2;
+        private Label _runTrackerLine3;
+
+        // Runs page
+        private RunsPageUI _runsPageUI;
 
         // Input state
         private bool _tabHeld;
@@ -313,11 +440,49 @@ namespace SkiGame.Progression
         // Otherwise elements can be destroyed between PointerDown/PointerUp and clicks feel “random”.
         private float _suppressTasksMatrixRebuildUntil = 0f;
 
+        // --- Ski Pass (Home tile) ---
+        private VisualElement _tileSkiPass;
+        private Label _lblTileSkiPassLevel;
+
+        // --- Ski Pass (Page) ---
+        private VisualElement _skiPassTimeFill;
+        private Label _lblSkiPassCurrentName;
+        private Label _lblSkiPassCurrentExpiry;
+        private Label _lblSkiPassTimeRemaining;
+
+        private VisualElement _listSkiPassAvailableLifts;
+
+        private VisualElement _gridSkiPassCards;
+        private Label _lblSkiPassSelectedName;
+        private Label _lblSkiPassLevel;
+        private Label _lblSkiPassPrice;
+        private VisualElement _rowSkiPassDurations;
+        private VisualElement _listSkiPassSelectedLifts;
+        private Button _btnSkiPassPurchase;
+        private Label _lblSkiPassResult;
+
+        // Ski Pass runtime
+        private SkiPassManager _skiPassMgr;
+        private int _skiPassSelectedLevel = -1;
+        private int _skiPassSelectedDurationIndex = 0;
+        private bool _skiPassCardsBuilt = false;
+
+        [Serializable]
+        private sealed class SkiPassCardMeta
+        {
+            public int level;
+            public Color mapColor;
+            public bool lockedBelow;
+        }
 
         private void Reset()
         {
             if (document == null) document = GetComponent<UIDocument>();
         }
+
+        private bool _uiBound;
+        private bool _uiBindScheduled;
+        private int _uiBindAttempts;
 
         private void OnEnable()
         {
@@ -330,21 +495,64 @@ namespace SkiGame.Progression
             if (styleSheet != null && !_root.styleSheets.Contains(styleSheet))
                 _root.styleSheets.Add(styleSheet);
 
-            CacheSceneReferences();
-            BindUI();
-            BindInput();
+            // IMPORTANT:
+            // UIDocument may not have cloned the UXML yet when THIS component's OnEnable runs.
+            // So we schedule binding for the next UI tick, and retry a few times if needed.
+            ScheduleUiBind();
+        }
 
-            SetPhoneOpen(startPhoneOpen);
-            SetWatchPage(Mathf.Clamp(_watchIndex, 0, _watchPages.Count - 1), force: true);
-            NavigateTo("Page_Home", clearStack: true);
+        private void ScheduleUiBind()
+        {
+            if (_root == null) return;
+            if (_uiBindScheduled) return;
 
-            // Ensure consistent visuals on start.
-            RefreshAllUI(force: true);
+            _uiBindScheduled = true;
+
+            _root.schedule.Execute(() =>
+            {
+                _uiBindScheduled = false;
+                if (_root == null) return;
+
+                // If the UXML tree hasn't been cloned into the root yet, key elements won't exist.
+                // Retry a few times (cheap) instead of binding null references.
+                var home = _root.Q<VisualElement>("Page_Home");
+                var stats = _root.Q<VisualElement>("Page_Stats");
+
+                if ((home == null && stats == null) && _uiBindAttempts < 10)
+                {
+                    _uiBindAttempts++;
+                    ScheduleUiBind();
+                    return;
+                }
+
+                _uiBindAttempts = 0;
+
+                CacheSceneReferences();
+                BindUI();
+                BindInput();
+
+                SetPhoneOpen(startPhoneOpen);
+                SetWatchPage(Mathf.Clamp(_watchIndex, 0, _watchPages.Count - 1), force: true);
+                NavigateTo("Page_Home", clearStack: true);
+
+                // Ensure consistent visuals on start.
+                RefreshAllUI(force: true);
+
+                _uiBound = true;
+            }).StartingIn(0);
         }
 
         private void OnDisable()
         {
+            _uiBound = false;
+            _uiBindAttempts = 0;
+            _uiBindScheduled = false;
+
             UnbindInput();
+
+            // Persist current day stats so the user can browse today's numbers after a restart.
+            if (_dailyArchiveLoaded)
+                PersistLiveDayToArchive();
         }
 
         private void Update()
@@ -359,19 +567,22 @@ namespace SkiGame.Progression
                 if (_statsManager == null) _statsManager = FindObjectOfType<PlayerStatsManager>();
                 if (_statsManager != null) _profile = _statsManager.Profile;
 
-                if (_playerRb == null || _skiController == null)
+                if (_playerRb == null || _skiController == null || _runProgressTracker == null)
                 {
                     var tracker = FindObjectOfType<PlayerStatsTracker>();
                     if (tracker != null)
                     {
                         if (_playerRb == null) _playerRb = tracker.GetComponent<Rigidbody>();
                         if (_skiController == null) _skiController = tracker.GetComponent<SkiController>();
+                        if (_runProgressTracker == null) _runProgressTracker = tracker.GetComponent<RunProgressTracker>();
                     }
 
                     // Fallback (in case Tracker isn't on the same object as SkiController)
                     if (_skiController == null) _skiController = FindObjectOfType<SkiController>();
+                    if (_runProgressTracker == null) _runProgressTracker = FindObjectOfType<RunProgressTracker>();
                 }
 
+                
                 if (_time == null)
                     _time = TimeWeather.TimeController.instance != null
                         ? TimeWeather.TimeController.instance
@@ -400,35 +611,36 @@ namespace SkiGame.Progression
                 RefreshAllUI(force: false);
             }
 
-            // Live-map updates while the map page is open.
-            // Map updates
+            // Map + minimaps should update continuously so the breadcrumb is always sampling/rendering
+            // regardless of which page is open.
             if (_skiController != null)
             {
                 var t = _skiController.transform;
+                float dt = Time.unscaledDeltaTime;
 
-                if (_phoneOpen)
+                // Authoritative sampler: map page UI
+                _mapPageUI?.SetPlayer(t);
+                _mapPageUI?.Tick(dt);
+
+                // Share the same breadcrumb trail to minimaps (so they show it even if map page isn't open)
+                var sharedTrail = _mapPageUI != null ? _mapPageUI.GetWorldTrailXZ() : null;
+
+                if (_watchMiniMapUI != null)
                 {
-                    string page = GetActivePhonePage();
-
-                    if (page == "Page_Map")
-                    {
-                        _mapPageUI?.SetPlayer(t);
-                        _mapPageUI?.Tick(Time.unscaledDeltaTime);
-                    }
-                    else if (page == "Page_Home")
-                    {
-                        _homeTileMiniMapUI?.SetPlayer(t);
-                        _homeTileMiniMapUI?.Tick(Time.unscaledDeltaTime);
-                    }
+                    _watchMiniMapUI.SetPlayer(t);
+                    _watchMiniMapUI.SetTrailSamplingEnabled(false);
+                    if (sharedTrail != null) _watchMiniMapUI.SetWorldTrailXZ(sharedTrail);
+                    _watchMiniMapUI.Tick(dt);
                 }
-                else
+
+                if (_homeTileMiniMapUI != null)
                 {
-                    // Watch is visible when phone is closed
-                    _watchMiniMapUI?.SetPlayer(t);
-                    _watchMiniMapUI?.Tick(Time.unscaledDeltaTime);
+                    _homeTileMiniMapUI.SetPlayer(t);
+                    _homeTileMiniMapUI.SetTrailSamplingEnabled(false);
+                    if (sharedTrail != null) _homeTileMiniMapUI.SetWorldTrailXZ(sharedTrail);
+                    _homeTileMiniMapUI.Tick(dt);
                 }
             }
-
         }
 
         private void CacheSceneReferences()
@@ -460,6 +672,9 @@ namespace SkiGame.Progression
             _watchTitle = Q<Label>("Lbl_WatchTitle");
             _watchDots = Q<VisualElement>("WatchDots");
             _watchPagesRoot = Q<VisualElement>("WatchPages");
+            _wRunPageFill = Q<VisualElement>("WatchRunPageFill");
+            _runTrackerFill = Q<VisualElement>("RunTrackerFill");
+
 
             _dotElems.Clear();
             if (_watchDots != null)
@@ -478,10 +693,17 @@ namespace SkiGame.Progression
             _watchPageMap = Q<ScrollView>("WatchPage_Map");
             _watchPages.Add(_watchPageMap);
 
-            _watchPages.Add(Q<ScrollView>("WatchPage_Session"));
-            _watchPages.Add(Q<ScrollView>("WatchPage_Lifetime"));
+            // Dedicated run tracker screen (after Map)
+            _watchPages.Add(Q<ScrollView>("WatchPage_RunTracker"));
+
+            _statsWeeksPanel = _root.Q<VisualElement>("StatsWeeksToolbar");     // only if you added it to UXML
+            _btnStatsDayBack = _root.Q<VisualElement>("Btn_StatsWeeksBack");
+            _btnStatsDayPrev = _root.Q<VisualElement>("Btn_StatsDayPrev");
+            _btnStatsDayNext = _root.Q<VisualElement>("Btn_StatsDayNext");
+            _lblStatsDayTitle = _root.Q<Label>("Lbl_StatsDayTitle");
+
+            // Tasks
             _watchPages.Add(Q<ScrollView>("WatchPage_Tasks"));
-            _watchPages.Add(Q<ScrollView>("WatchPage_Achievements"));
 
             //_watchPages.Add(Q<ScrollView>("WatchPage_SOS"));
 
@@ -489,44 +711,55 @@ namespace SkiGame.Progression
             _wSpeed = Q<Label>("Lbl_WatchSpeed");
 
             // These MUST exist on the WatchPage_Speed (Home) page in UXML:
-            _wHomeTime = Q<Label>("Lbl_WatchSpeedTime");          // top-left
-            _wHomeWeather = Q<Label>("Lbl_WatchSpeedWeather");    // top-right
-            _wAirBox = Q<VisualElement>("WatchAirBox");           // bottom-left container
-            _wAirTime = Q<Label>("Lbl_WatchAirTime");             // bottom-left value
-            _wAirHint = Q<Label>("Lbl_WatchAirHint");             // optional label
+            _wHomeTime = Q<Label>("Lbl_WatchSpeedTime");
+            _wHomeWeather = Q<Label>("Lbl_WatchSpeedWeather");
+            _wRunBox = Q<VisualElement>("WatchAirBox");
+            _wRunName = Q<Label>("Lbl_WatchRunName");
+            _wRunTime = Q<Label>("Lbl_WatchRunTime");
+            _wRunTrackerCard = Q<VisualElement>("WatchRunTrackerCard");
 
-            // Session / Lifetime / Tasks / Achievements
-            _wSessTopSpeed = Q<Label>("Lbl_WatchSessTopSpeed");
-            _wSessDist = Q<Label>("Lbl_WatchSessDist");
-            _wSessVert = Q<Label>("Lbl_WatchSessVert");
-            _wSessStacks = Q<Label>("Lbl_WatchSessStacks");
+            // Dedicated Run Tracker watch page
+            _wRunPageName = Q<Label>("Lbl_WatchRunPageName");
+            _wRunPageTime = Q<Label>("Lbl_WatchRunPageTime");
+            _wRunPageProgress = Q<Label>("Lbl_WatchRunPageProgress");
+            _wRunPageTopSpeed = Q<Label>("Lbl_WatchRunPageTopSpeed");
+            _wRunPageStacks = Q<Label>("Lbl_WatchRunPageStacks");
 
-            _wLifeTopSpeed = Q<Label>("Lbl_WatchLifeTopSpeed");
-            _wLifeDist = Q<Label>("Lbl_WatchLifeDist");
-            _wLifeVert = Q<Label>("Lbl_WatchLifeVert");
-            _wLifeStacks = Q<Label>("Lbl_WatchLifeStacks");
+            // Ski Pass
+            _tileSkiPass = Q<VisualElement>("Tile_SkiPass");
+            WireTile(_tileSkiPass, () => NavigateTo("Page_SkiPass"));
 
+            _lblTileSkiPassLevel = Q<Label>("Lbl_TileSkiPassLevel");
+
+            // Ski Pass page
+            _lblSkiPassCurrentName = Q<Label>("Lbl_SkiPassCurrentName");
+            _lblSkiPassCurrentExpiry = Q<Label>("Lbl_SkiPassCurrentExpiry");
+            _lblSkiPassTimeRemaining = Q<Label>("Lbl_SkiPassTimeRemaining");
+            _skiPassTimeFill = Q<VisualElement>("SkiPassTimeFill");
+
+            _listSkiPassAvailableLifts = Q<VisualElement>("List_SkiPassAvailableLifts");
+
+            _gridSkiPassCards = Q<VisualElement>("Grid_SkiPassCards");
+            _lblSkiPassSelectedName = Q<Label>("Lbl_SkiPassSelectedName");
+            _lblSkiPassPrice = Q<Label>("Lbl_SkiPassPrice");
+            _rowSkiPassDurations = Q<VisualElement>("Row_SkiPassDurations");
+            _listSkiPassSelectedLifts = Q<VisualElement>("List_SkiPassSelectedLifts");
+
+            _btnSkiPassPurchase = Q<Button>("Btn_SkiPassPurchase");
+            _lblSkiPassResult = Q<Label>("Lbl_SkiPassResult");
+
+            if (_btnSkiPassPurchase != null)
+            {
+                _btnSkiPassPurchase.clicked -= OnClickSkiPassPurchase;
+                _btnSkiPassPurchase.clicked += OnClickSkiPassPurchase;
+            }
+
+            HookSkiPassManager();
+            RefreshSkiPassTile();
+            _skiPassCardsBuilt = false;
+
+            // Tasks (Watch)
             _watchTasksList = Q<VisualElement>("WatchTasksList");
-
-            _wAch1 = Q<Label>("Lbl_WatchAch1");
-            _wAch2 = Q<Label>("Lbl_WatchAch2");
-
-            _wSessTopSpeed = Q<Label>("Lbl_WatchSessTopSpeed");
-            _wSessDist = Q<Label>("Lbl_WatchSessDist");
-            _wSessVert = Q<Label>("Lbl_WatchSessVert");
-            _wSessStacks = Q<Label>("Lbl_WatchSessStacks");
-
-            _wLifeTopSpeed = Q<Label>("Lbl_WatchLifeTopSpeed");
-            _wLifeDist = Q<Label>("Lbl_WatchLifeDist");
-            _wLifeVert = Q<Label>("Lbl_WatchLifeVert");
-            _wLifeStacks = Q<Label>("Lbl_WatchLifeStacks");
-
-            _wAch1 = Q<Label>("Lbl_WatchAch1");
-            _wAch2 = Q<Label>("Lbl_WatchAch2");
-
-            _btnWatchSOS = Q<VisualElement>("Btn_WatchSOS");
-            if (_btnWatchSOS != null)
-                _btnWatchSOS.RegisterCallback<ClickEvent>(_ => TriggerRespawn());
 
             // Phone
             _phoneExpanded = Q<VisualElement>("PhoneExpanded");
@@ -543,8 +776,10 @@ namespace SkiGame.Progression
             RegisterPage("Page_Stats");
             RegisterPage("Page_Tasks");
             RegisterPage("Page_Achievements");
+            RegisterPage("Page_SkiPass");
             RegisterPage("Page_TimeWeather");
             RegisterPage("Page_Map");
+            RegisterPage("Page_Runs");
             RegisterPage("Page_Save");
             RegisterPage("Page_Settings");
             RegisterPage("Page_SOS");
@@ -556,6 +791,9 @@ namespace SkiGame.Progression
             _tileTasks = Q<VisualElement>("Tile_Tasks");
             _tileAchievements = Q<VisualElement>("Tile_Achievements");
             _tileMap = Q<VisualElement>("Tile_Map");
+            _tileRunTracker = Q<VisualElement>("Tile_RunTracker");
+            WireTile(_tileRunTracker, () => NavigateTo("Page_Runs"));
+
             _tileSave = Q<VisualElement>("Tile_Save");
             _tileSettings = Q<VisualElement>("Tile_Settings");
             _tileSOS = Q<VisualElement>("Tile_SOS");
@@ -589,7 +827,8 @@ namespace SkiGame.Progression
 
                 _watchMiniMapUI = new PhoneMapPageUI();
                 _watchMiniMapUI.Bind(watchMiniRoot, mapData, mapReferenceCamera);
-                _watchMiniMapUI.SetPlayerTracking(showMarker: true, drawTrail: false);
+                _watchMiniMapUI.SetPlayerTracking(showMarker: true, drawTrail: true);
+                _watchMiniMapUI.SetTrailSamplingEnabled(false);
                 _watchMiniMapUI.SetMinimapMode(
                     enabled: true,
                     followPlayer: true,
@@ -626,7 +865,8 @@ namespace SkiGame.Progression
 
                 _homeTileMiniMapUI = new PhoneMapPageUI();
                 _homeTileMiniMapUI.Bind(tileMiniRoot, mapData, mapReferenceCamera);
-                _homeTileMiniMapUI.SetPlayerTracking(showMarker: true, drawTrail: false);
+                _homeTileMiniMapUI.SetPlayerTracking(showMarker: true, drawTrail: true);
+                _homeTileMiniMapUI.SetTrailSamplingEnabled(false);
                 _homeTileMiniMapUI.SetMinimapMode(enabled: true, followPlayer: true, lockPan: true, allowZoom: false, suppressSelection: true, hideMarkerLabels: true);
 
                 // Hide the "(placeholder)" / tile subtext so the minimap reads cleanly
@@ -647,7 +887,6 @@ namespace SkiGame.Progression
                     tmpSubs[i].style.display = DisplayStyle.None;
 
             }
-
 
             WireTile(_tileSave, () => NavigateTo("Page_Save"));
             WireTile(_tileSettings, () => NavigateTo("Page_Settings"));
@@ -676,46 +915,54 @@ namespace SkiGame.Progression
             // Phone bodies
             _statsSessionBody = Q<Label>("Lbl_StatsSession");
             _statsLifetimeBody = Q<Label>("Lbl_StatsLifetime");
-            // Stats tabs + panels
-            _btnStatsTabSession = Q<VisualElement>("Btn_StatsTabSession");
-            _btnStatsTabLifetime = Q<VisualElement>("Btn_StatsTabLifetime");
+            // -------------------------
+            // Stats page
+            // -------------------------
             _panelStatsSession = Q<VisualElement>("Panel_StatsSession");
             _panelStatsLifetime = Q<VisualElement>("Panel_StatsLifetime");
 
-            _statsS_TopSpeed = Q<Label>("Lbl_StatsS_TopSpeed");
-            _statsS_Distance = Q<Label>("Lbl_StatsS_Distance");
-            _statsS_Vert = Q<Label>("Lbl_StatsS_Vert");
-            _statsS_Stacks = Q<Label>("Lbl_StatsS_Stacks");
-
-            _statsL_TopSpeed = Q<Label>("Lbl_StatsL_TopSpeed");
-            _statsL_Distance = Q<Label>("Lbl_StatsL_Distance");
-            _statsL_Vert = Q<Label>("Lbl_StatsL_Vert");
-            _statsL_Stacks = Q<Label>("Lbl_StatsL_Stacks");
-
-            // Secondary stats tiles
-            _statsS_AirTime = Q<Label>("Lbl_StatsS_AirTime");
-            _statsS_AirDist = Q<Label>("Lbl_StatsS_AirDist");
-            _statsS_Runs = Q<Label>("Lbl_StatsS_Runs");
-            _statsS_Lifts = Q<Label>("Lbl_StatsS_Lifts");
-
-            _statsL_AvgSpeed = Q<Label>("Lbl_StatsL_AvgSpeed");
-            _statsL_AirTime = Q<Label>("Lbl_StatsL_AirTime");
-            _statsL_AirDist = Q<Label>("Lbl_StatsL_AirDist");
-            _statsL_Runs = Q<Label>("Lbl_StatsL_Runs");
-            _statsL_Lifts = Q<Label>("Lbl_StatsL_Lifts");
+            _btnStatsTabSession = Q<VisualElement>("Btn_StatsTabSession");
+            _btnStatsTabLifetime = Q<VisualElement>("Btn_StatsTabLifetime");
 
             if (_btnStatsTabSession != null)
                 _btnStatsTabSession.RegisterCallback<ClickEvent>(_ => SetStatsTab(true));
-
             if (_btnStatsTabLifetime != null)
                 _btnStatsTabLifetime.RegisterCallback<ClickEvent>(_ => SetStatsTab(false));
 
-            _statsDashSession = Q<VisualElement>("StatsDash_Session");
+            // Lifetime dashboard
             _statsDashLifetime = Q<VisualElement>("StatsDash_Lifetime");
 
-            BuildStatsDashboard();
+            // Daily stats calendar (Weeks) + selected day panel
+            _statsWeeksToolbar = Q<VisualElement>("StatsWeeksToolbar");
+            _btnStatsWeeksBack = Q<VisualElement>("Btn_StatsWeeksBack");
+            _btnStatsWeeksUnused = Q<VisualElement>("Btn_StatsWeeksUnused");
+            _lblStatsWeeksTitle = Q<Label>("Lbl_StatsWeeksTitle");
 
-            // Default tab
+            _statsWeeksList = Q<VisualElement>("StatsCalendarGrid");
+            _statsDayPanel = Q<VisualElement>("Panel_StatsDayDetail");
+            _btnStatsPrevDay = Q<VisualElement>("Btn_StatsPrevDay");
+            _btnStatsNextDay = Q<VisualElement>("Btn_StatsNextDay");
+            _lblStatsDay = Q<Label>("Lbl_StatsDayTitle");
+            _statsDashDay = Q<VisualElement>("StatsDash_Day");
+
+            if (_btnStatsWeeksBack != null)
+                _btnStatsWeeksBack.RegisterCallback<ClickEvent>(_ => CloseStatsDayDetail());
+
+            // This right arrow is unused on Stats – hide it for clarity.
+            if (_btnStatsWeeksUnused != null)
+                _btnStatsWeeksUnused.style.display = DisplayStyle.None;
+
+            if (_btnStatsPrevDay != null)
+                _btnStatsPrevDay.RegisterCallback<ClickEvent>(_ => StepStatsDay(-1));
+            if (_btnStatsNextDay != null)
+                _btnStatsNextDay.RegisterCallback<ClickEvent>(_ => StepStatsDay(+1));
+
+            LoadDailyStatsArchive();
+            EnsureStatsBaseDayLoaded();
+            BuildStatsDashboard();
+            BuildStatsDayDashboard();
+            RebuildStatsWeeksList();
+
             SetStatsTab(true, force: true);
 
             _tasksBody = Q<Label>("Lbl_TasksBody");
@@ -746,6 +993,11 @@ namespace SkiGame.Progression
                 });
 
             }
+
+            _runTrackerLine1 = Q<Label>("Lbl_RunTrackerLine1");
+            _runTrackerLine2 = Q<Label>("Lbl_RunTrackerLine2");
+            _runTrackerLine3 = Q<Label>("Lbl_RunTrackerLine3");
+            _runTrackerFill = Q<VisualElement>("RunTrackerFill"); // ok if null (older UXML)
 
             _achievementsBody = Q<Label>("Lbl_AchievementsBody");
             _timeWeatherBody = Q<Label>("Lbl_TimeWeatherBody");
@@ -828,6 +1080,17 @@ namespace SkiGame.Progression
             _mapPageUI.Bind(mapPage != null ? (VisualElement)mapPage : _root, mapData, mapReferenceCamera);
             _mapPageUI.SetDebugCompareProjections(false);
 
+            var reg = PointOfInterestRegistry.Instance;
+
+            _mapPageUI.ApplyStyle(mapStyle);
+            _mapPageUI.SetPOIRegistry(reg);
+
+            _watchMiniMapUI?.ApplyStyle(mapStyle);
+            _watchMiniMapUI?.SetPOIRegistry(reg);
+
+            _homeTileMiniMapUI?.ApplyStyle(mapStyle);
+            _homeTileMiniMapUI?.SetPOIRegistry(reg);
+
             // Hook selection events -> info panel
             _mapPageUI.MarkerSelected += OnMapMarkerSelected;
             _mapPageUI.PolylineSelected += OnMapPolylineSelected;
@@ -835,6 +1098,22 @@ namespace SkiGame.Progression
 
             // Build the map info panel (bottom overlay) once.
             BuildMapInfoPanel();
+
+            _runsPageUI = GetComponent<RunsPageUI>();
+
+            if (_runsPageUI != null)
+            {
+                _runsPageUI.SetMapData(mapData);
+
+                _runsPageUI.NavigateToMapRequested = (runId) =>
+                {
+                    NavigateTo("Page_Map", true);
+                    NavigateToMapAndSelectRun(runId);
+                };
+            }
+
+            HookSkiPassManager();
+            RefreshSkiPassTile();
 
         }
 
@@ -988,10 +1267,8 @@ namespace SkiGame.Progression
             {
                 0 => "Home",
                 1 => "Map",
-                2 => "Session",
-                3 => "Lifetime",
-                4 => "Tasks",
-                5 => "Achievements",
+                2 => "Run",
+                3 => "Tasks",
                 _ => "Watch"
             };
         }
@@ -1088,12 +1365,13 @@ namespace SkiGame.Progression
             viewport.style.overflow = Overflow.Hidden;
 
             // Content (pan/zoom transform applied here)
+            // IMPORTANT: do NOT pin right/bottom; PhoneMapPageUI sets explicit width/height.
             var content = new VisualElement { name = "MapContent" };
             content.style.position = Position.Absolute;
             content.style.left = 0;
             content.style.top = 0;
-            content.style.right = 0;
-            content.style.bottom = 0;
+            content.style.right = StyleKeyword.Auto;
+            content.style.bottom = StyleKeyword.Auto;
 
             // Background, polylines, markers
             var bg = new VisualElement { name = "MapBackground" };
@@ -1104,14 +1382,16 @@ namespace SkiGame.Progression
             polys.style.position = Position.Absolute;
             markers.style.position = Position.Absolute;
 
+            // Match PhoneHUD.uss: only left/top pinned; PhoneMapPageUI sizes these explicitly.
             bg.style.left = polys.style.left = markers.style.left = 0;
             bg.style.top = polys.style.top = markers.style.top = 0;
-            bg.style.right = polys.style.right = markers.style.right = 0;
-            bg.style.bottom = polys.style.bottom = markers.style.bottom = 0;
-            // Helps the baked map texture display like an actual map (not “invisible”/oddly scaled)
+            bg.style.right = polys.style.right = markers.style.right = StyleKeyword.Auto;
+            bg.style.bottom = polys.style.bottom = markers.style.bottom = StyleKeyword.Auto;
+
+            // Reasonable default; PhoneMapPageUI will override to ScaleToFit when binding/refreshing.
             bg.style.unityBackgroundScaleMode = ScaleMode.ScaleAndCrop;
 
-            // Make embedded maps non-interactive by default; specific instances can override by calling SetMinimapMode.
+            // Make embedded maps non-interactive by default; instances can override via SetMinimapMode.
             root.pickingMode = PickingMode.Ignore;
             viewport.pickingMode = PickingMode.Ignore;
             content.pickingMode = PickingMode.Ignore;
@@ -1148,8 +1428,9 @@ namespace SkiGame.Progression
 
         private void BuildStatsDashboard()
         {
-            _statsDashSession ??= _root.Q<VisualElement>("StatsDash_Session");
-            _statsDashLifetime ??= _root.Q<VisualElement>("StatsDash_Lifetime");
+            // Always re-query after bind (in case of re-enable / document rebuild).
+            _statsDashSession = _root?.Q<VisualElement>("StatsDash_Session");
+            _statsDashLifetime = _root?.Q<VisualElement>("StatsDash_Lifetime");
 
             _statCardsSession.Clear();
             _statCardsLifetime.Clear();
@@ -1157,10 +1438,8 @@ namespace SkiGame.Progression
             _statsDashSession?.Clear();
             _statsDashLifetime?.Clear();
 
-            if (_statsDashSession == null || _statsDashLifetime == null)
-                return;
-
-            // SESSION (dense list)
+            // Build SESSION if present
+            if (_statsDashSession != null)
             {
                 int i = 0;
 
@@ -1184,7 +1463,8 @@ namespace SkiGame.Progression
                 AddStatRow(true, _statsDashSession, "POIs Visited", p => p != null ? $"{(p.sessionVisitedLandmarkIds != null ? p.sessionVisitedLandmarkIds.Count : 0)}" : "--", i++);
             }
 
-            // LIFETIME (dense list)
+            // Build LIFETIME if present
+            if (_statsDashLifetime != null)
             {
                 int i = 0;
 
@@ -1208,6 +1488,7 @@ namespace SkiGame.Progression
                 AddStatRow(false, _statsDashLifetime, "POIs Visited", p => p != null ? $"{(p.visitedLandmarkIds != null ? p.visitedLandmarkIds.Count : 0)}" : "--", i++);
             }
 
+            // If profile isn't ready yet, rows still exist and will populate once _profile is assigned.
             RefreshDynamicStatRows();
         }
 
@@ -1251,11 +1532,18 @@ namespace SkiGame.Progression
         {
             if (_profile == null) return;
 
+            // Session tab now represents "Day"
+            DaySnapshot day = GetDisplayedDaySnapshot();
+
             for (int i = 0; i < _statCardsSession.Count; i++)
             {
                 var c = _statCardsSession[i];
-                if (c?.value == null || c.valueProvider == null) continue;
-                c.value.text = c.valueProvider(_profile);
+                if (c?.value == null) continue;
+
+                if (c.dayProvider != null)
+                    c.value.text = c.dayProvider(day);
+                else if (c.valueProvider != null)
+                    c.value.text = c.valueProvider(_profile);
             }
 
             for (int i = 0; i < _statCardsLifetime.Count; i++)
@@ -1333,9 +1621,10 @@ namespace SkiGame.Progression
 
             // Currency only on Home / Tasks / Achievements
             bool showCurrency =
-                pageName == "Page_Home" ||
-                pageName == "Page_Tasks" ||
-                pageName == "Page_Achievements";
+             pageName == "Page_Home" ||
+             pageName == "Page_Tasks" ||
+             pageName == "Page_Achievements" ||
+             pageName == "Page_SkiPass";
 
             if (_navCurrency != null)
             {
@@ -1346,8 +1635,84 @@ namespace SkiGame.Progression
             }
 
             if (pageName == "Page_Map")
+            {
+                EnsureMapLayerBarAboveViewport();
+
                 _mapPageUI?.Refresh();
 
+                // Reliable: request a one-shot center; PhoneMapPageUI.Tick() will retry until layout is valid.
+                _mapPageUI?.RequestCenterOnPlayer(keepZoom: true, minZoom: 1.0f);
+            }
+
+            if (pageName == "Page_SkiPass")
+            {
+                HookSkiPassManager();
+                RefreshSkiPassPage(true);
+            }
+
+        }
+
+        private void EnsureMapLayerBarAboveViewport()
+        {
+            var mapPage = Q<ScrollView>("Page_Map");
+            if (mapPage == null) return;
+
+            var content = mapPage.contentContainer; // unity-content-container
+            if (content == null) return;
+
+            var toolbar = mapPage.Q<VisualElement>(null, "map-toolbar");
+            var layerBar = mapPage.Q<VisualElement>("MapLayerBar");
+            var missing = mapPage.Q<VisualElement>("Lbl_MapMissing");
+            var viewport = mapPage.Q<VisualElement>("MapViewport");
+
+            if (toolbar == null || layerBar == null || viewport == null)
+            {
+#if UNITY_EDITOR
+                Debug.LogWarning($"[PhoneHUD] EnsureMapLayerBarAboveViewport: toolbar={(toolbar != null)} layerBar={(layerBar != null)} viewport={(viewport != null)}");
+#endif
+                return;
+            }
+
+            // Prevent the map content from visually spilling outside the viewport and covering siblings.
+            viewport.style.overflow = Overflow.Hidden;
+
+            // Remove any residue that could make the bar behave like an overlay.
+            layerBar.style.position = Position.Relative;
+            layerBar.style.left = StyleKeyword.Null;
+            layerBar.style.right = StyleKeyword.Null;
+            layerBar.style.top = StyleKeyword.Null;
+            layerBar.style.bottom = StyleKeyword.Null;
+
+            // Enforce exact top-to-bottom order within the content container.
+            int idx = 0;
+
+            Reinsert(content, toolbar, ref idx);
+            Reinsert(content, layerBar, ref idx);
+            if (missing != null) Reinsert(content, missing, ref idx);
+            Reinsert(content, viewport, ref idx);
+
+            // Spacing
+            layerBar.style.marginTop = 0;
+            layerBar.style.marginBottom = 8;
+
+#if UNITY_EDITOR
+            Debug.Log($"[PhoneHUD] Map order enforced. toolbarIdx={content.IndexOf(toolbar)} layerBarIdx={content.IndexOf(layerBar)} viewportIdx={content.IndexOf(viewport)}");
+#endif
+        }
+
+        private static void Reinsert(VisualElement parent, VisualElement child, ref int insertIndex)
+        {
+            if (child == null || parent == null) return;
+
+            // Only reorder within this container; if child is elsewhere, bring it here.
+            if (child.parent != parent)
+                child.RemoveFromHierarchy();
+            else
+                parent.Remove(child);
+
+            insertIndex = Mathf.Clamp(insertIndex, 0, parent.childCount);
+            parent.Insert(insertIndex, child);
+            insertIndex++;
         }
 
         private string GetActivePhonePage()
@@ -1369,8 +1734,10 @@ namespace SkiGame.Progression
                 "Page_Stats" => "Stats",
                 "Page_Tasks" => "Tasks",
                 "Page_Achievements" => "Achievements",
+                "Page_SkiPass" => "Ski Pass",
                 "Page_TimeWeather" => "Time & Weather",
                 "Page_Map" => "Map",
+                "Page_Runs" => "Runs",
                 "Page_Save" => "Save & Load",
                 "Page_Settings" => "Settings",
                 "Page_SOS" => "SOS",
@@ -1380,9 +1747,13 @@ namespace SkiGame.Progression
 
         private void RefreshAllUI(bool force)
         {
+            // Keep "Day" stats tracking current even if the Stats page isn't open.
+            EnsureLiveDayTracking();
+
             // If you later want to throttle updates: you can add a timer here.
             RefreshTimeWeather();
-            RefreshStats();
+            RefreshRunTrackerTile();
+            RefreshWatchRunTrackerPage();
 
             // Updates Watch + Home tiles + currency label.
             RefreshTasksAndAchievements();
@@ -1395,7 +1766,21 @@ namespace SkiGame.Progression
                 RefreshTasksMatrix();
 
             // Home watch page “live” element
-            RefreshWatchAirTime();
+            RefreshWatchRunInfo();
+
+            HookSkiPassManager();
+            RefreshSkiPassTile();
+
+            if (_phoneOpen && GetActivePhonePage() == "Page_SkiPass")
+                RefreshSkiPassPage(false);
+
+            // Live-refresh the Stats page while open
+            if (_phoneOpen && GetActivePhonePage() == "Page_Stats")
+            {
+                TickStatsDayCalendar();
+                RefreshDynamicStatRows();
+            }
+
         }
 
         private void RefreshWatchHomeTopBar(string timeStr, string weatherStr)
@@ -1404,70 +1789,45 @@ namespace SkiGame.Progression
             if (_wHomeWeather != null) _wHomeWeather.text = weatherStr;
         }
 
-        private void RefreshWatchAirTime()
+        private void RefreshWatchRunInfo()
         {
-            if (_wAirTime == null) return;
+            if (_wRunName == null && _wRunTime == null) return;
 
-            // Prefer SkiController grounded state for accuracy (air time should reflect ski-ground contact logic).
-            bool grounded;
-
-            if (_skiController != null)
+            // Ensure we have a tracker (same logic as the phone Run Tracker tile).
+            if (_runProgressTracker == null)
             {
-                grounded = _skiController.IsRiderGrounded;
+                if (_skiController != null)
+                    _runProgressTracker = _skiController.GetComponent<RunProgressTracker>();
+
+                if (_runProgressTracker == null)
+                    _runProgressTracker = FindObjectOfType<RunProgressTracker>();
+            }
+
+            // Avoid CS0170: ensure 'p' is definitely assigned on all paths.
+            RunProgressTracker.ActiveRunProgress p = default;
+            bool onRun = false;
+
+            if (_runProgressTracker != null)
+                onRun = _runProgressTracker.TryGetActiveProgress(out p);
+
+            if (onRun)
+            {
+                // Add % covered without changing the UI structure:
+                // append it to the run name line (keeps run name above timer exactly as requested).
+                int pct = Mathf.Clamp(Mathf.RoundToInt(p.completion01 * 100f), 0, 100);
+
+                if (_wRunName != null) _wRunName.text = $"{p.runName}  {pct}%";
+                if (_wRunTime != null) _wRunTime.text = FormatRunTileTime(p.elapsedSeconds);
             }
             else
             {
-                // Fallback if SkiController isn't available yet.
-                if (_playerRb == null) return;
-
-                Vector3 origin = _playerRb.position + Vector3.up * 0.15f;
-                grounded = Physics.Raycast(origin, Vector3.down, 0.55f, ~0, QueryTriggerInteraction.Ignore);
+                if (_wRunName != null) _wRunName.text = "Not on a run";
+                if (_wRunTime != null) _wRunTime.text = "--:--";
             }
 
-            // State machine:
-            // - grounded -> airborne: reset timer
-            // - airborne -> grounded: freeze last airtime
-            // - airborne: count up
-            if (!grounded)
-            {
-                if (_watchWasGrounded)
-                {
-                    // Just left the ground: reset for this jump.
-                    _watchAirStartTime = Time.time;
-                    _watchCurrentAirDuration = 0f;
-                }
-
-                _watchCurrentAirDuration = Time.time - _watchAirStartTime;
-                // Do NOT touch _watchLastAirDuration here (we freeze it on landing).
-            }
-            else
-            {
-                if (!_watchWasGrounded)
-                {
-                    // Just landed: capture the jump duration and freeze it while grounded.
-                    _watchLastAirDuration = _watchCurrentAirDuration;
-                }
-
-                // While grounded, we do not count up and we keep the "last" value frozen.
-                _watchCurrentAirDuration = 0f;
-            }
-
-            _watchWasGrounded = grounded;
-
-            // Display: while grounded show last air duration; while airborne show live duration.
-            float display = grounded ? _watchLastAirDuration : _watchCurrentAirDuration;
-            _wAirTime.text = $"{display:0.00}s";
-
-            if (_wAirHint != null)
-            {
-                _wAirHint.text = grounded ? "LAST AIR" : "IN-AIR";
-            }
-
-            // Grey out when grounded, white when airborne (active)
-            if (_wAirBox != null)
-                _wAirBox.EnableInClassList("is-active-air", !grounded);
-
-
+            // Reuse existing style hook: brighten when actively on a run.
+            if (_wRunBox != null)
+                _wRunBox.EnableInClassList("is-active-air", onRun);
         }
 
         private static string FormatHoursToClock(float hours)
@@ -1585,7 +1945,7 @@ namespace SkiGame.Progression
 
             // Home tile values
             if (_tileTimeValue != null) _tileTimeValue.text = timeStr;
-            if (_tileDateValue != null) _tileDateValue.text = $"{dayOfWeek}, {dateStr}";
+            if (_tileDateValue != null) _tileDateValue.text = dayOfWeek;
             if (_tileTempValue != null) _tileTempValue.text = tempStr;
             if (_tileWeatherValue != null) _tileWeatherValue.text = condStr;
             if (_tileRainValue != null) _tileRainValue.text = rainChance >= 0f ? $"Rain: {rainChance:0}%" : "Rain: --%";
@@ -1715,91 +2075,63 @@ namespace SkiGame.Progression
 
             }
         }
-        private void RefreshStats()
+
+        private void RefreshRunTrackerTile()
         {
-            // Current speed from RB
-            float speed = 0f;
-            if (_playerRb != null)
+            if (_runTrackerLine1 == null && _runTrackerLine2 == null && _runTrackerLine3 == null && _runTrackerFill == null)
+                return;
+
+            EnsureRunProgressTracker();
+
+            // 1) Active run (highest priority)
+            if (_runProgressTracker != null && _runProgressTracker.TryGetActiveProgress(out RunProgressTracker.ActiveRunProgress p))
             {
-#if UNITY_6000_0_OR_NEWER || UNITY_2023_1_OR_NEWER
-                speed = _playerRb.linearVelocity.magnitude;
-#else
-                speed = _playerRb.velocity.magnitude;
-#endif
+                if (_runTrackerLine1 != null) _runTrackerLine1.text = p.runName;
+
+                float covered01 = Mathf.Clamp01(Mathf.Abs(p.currentFraction01 - p.entryFraction01));
+                if (_runTrackerLine3 != null) _runTrackerLine3.text = $"Progress {(covered01 * 100f):0}%";
+
+                if (_runTrackerLine2 != null)
+                    _runTrackerLine2.text = $"Time {FormatRunTileTime(p.elapsedSeconds)} • Max {p.topSpeedMps:0.0} m/s • Stacks {p.stacks}";
+
+                SetRangeFill(_runTrackerFill, p.entryFraction01, p.currentFraction01, minVisiblePercent: 0.8f);
+                ApplyRunExitHighlight(_tileRunTracker, highlight01: -1f);
+                return;
             }
 
-            if (_wSpeed != null) _wSpeed.text = $"{speed:0.0}";
-
-            if (_profile == null) return;
-
-            var s = _profile.session;
-            var l = _profile.lifetime;
-
-            // Watch session summary
-            if (_wSessTopSpeed != null) _wSessTopSpeed.text = $"Top: {s.topSpeedMps:0.0} m/s";
-            if (_wSessDist != null) _wSessDist.text = $"Dist: {s.distanceMeters:0} m";
-            if (_wSessVert != null) _wSessVert.text = $"Vert: +{s.verticalAscentMeters:0} / -{s.verticalDescentMeters:0}";
-            if (_wSessStacks != null) _wSessStacks.text = $"Stacks: {s.stacks}";
-
-            // Watch lifetime summary
-            if (_wLifeTopSpeed != null) _wLifeTopSpeed.text = $"Top: {l.topSpeedMps:0.0} m/s";
-            if (_wLifeDist != null) _wLifeDist.text = $"Dist: {l.totalDistanceMeters:0} m";
-            if (_wLifeVert != null) _wLifeVert.text = $"Vert: +{l.totalVerticalAscentMeters:0} / -{l.totalVerticalDescentMeters:0}";
-            if (_wLifeStacks != null) _wLifeStacks.text = $"Stacks: {l.totalStacks}";
-
-            // Home tiles summary (Stats tile)
-            if (_tileStats1 != null) _tileStats1.text = $"Top speed: {s.topSpeedMps:0.0} m/s";
-            if (_tileStats2 != null) _tileStats2.text = $"Session dist: {s.distanceMeters:0} m";
-            if (_tileStats3 != null) _tileStats3.text = $"Stacks: {s.stacks}";
-
-            // Full stats page bodies
-            // Stats page: metric grid (primary)
-            if (_statsS_TopSpeed != null) _statsS_TopSpeed.text = $"{s.topSpeedMps:0.0} m/s";
-            if (_statsS_Distance != null) _statsS_Distance.text = $"{s.distanceMeters:0} m";
-            if (_statsS_Vert != null) _statsS_Vert.text = $"+{s.verticalAscentMeters:0} / -{s.verticalDescentMeters:0}";
-            if (_statsS_Stacks != null) _statsS_Stacks.text = $"{s.stacks}";
-
-            if (_statsL_TopSpeed != null) _statsL_TopSpeed.text = $"{l.topSpeedMps:0.0} m/s";
-            if (_statsL_Distance != null) _statsL_Distance.text = $"{l.totalDistanceMeters:0} m";
-            if (_statsL_Vert != null) _statsL_Vert.text = $"+{l.totalVerticalAscentMeters:0} / -{l.totalVerticalDescentMeters:0}";
-            if (_statsL_Stacks != null) _statsL_Stacks.text = $"{l.totalStacks}";
-
-            // Secondary tiles (Session)
-            if (_statsS_AirTime != null) _statsS_AirTime.text = $"{s.airTimeSeconds:0.0}s";
-            if (_statsS_AirDist != null) _statsS_AirDist.text = $"{s.airDistanceMeters:0} m";
-            if (_statsS_Runs != null) _statsS_Runs.text = $"{s.runsCompleted}";
-            if (_statsS_Lifts != null) _statsS_Lifts.text = $"{s.liftsUsed}";
-
-            // Secondary tiles (Lifetime)
-            if (_statsL_AvgSpeed != null) _statsL_AvgSpeed.text = $"{l.AverageSpeedMps:0.0} m/s";
-            if (_statsL_AirTime != null) _statsL_AirTime.text = $"{l.totalAirTimeSeconds:0.0}s";
-            if (_statsL_AirDist != null) _statsL_AirDist.text = $"{l.totalAirDistanceMeters:0} m";
-            if (_statsL_Runs != null) _statsL_Runs.text = $"{l.totalRunsCompleted}";
-            if (_statsL_Lifts != null) _statsL_Lifts.text = $"{l.totalLiftsUsed}";
-
-            // Stats page: details (secondary, no longer a wall of text)
-            if (_statsSessionBody != null)
+            // 2) Last attempt (after exiting run, before starting a new one)
+            if (_runProgressTracker != null && _runProgressTracker.TryGetLastAttemptSummary(out var last))
             {
-                _statsSessionBody.text =
-                    $"Air time: {s.airTimeSeconds:0.0}s\n" +
-                    $"Air dist: {s.airDistanceMeters:0}m\n" +
-                    $"Runs: {s.runsCompleted}\n" +
-                    $"Lifts: {s.liftsUsed}";
+                float covered01 = last.CoveredFraction01;
+
+                if (_runTrackerLine1 != null) _runTrackerLine1.text = last.runName;
+                if (_runTrackerLine3 != null) _runTrackerLine3.text = $"Last {(covered01 * 100f):0}%";
+
+                if (_runTrackerLine2 != null)
+                    _runTrackerLine2.text = $"Time {FormatRunTileTime(last.elapsedSeconds)} • Max {last.topSpeedMps:0.0} m/s • Stacks {last.stacks}";
+
+                SetRangeFill(_runTrackerFill, last.entryFraction01, last.exitFraction01, minVisiblePercent: 0.8f);
+
+                float highlight01 = GetExitHighlight01(last.isCompletion, covered01);
+                ApplyRunExitHighlight(_tileRunTracker, highlight01);
+                return;
             }
 
-            if (_statsLifetimeBody != null)
-            {
-                _statsLifetimeBody.text =
-                    $"Avg speed: {l.AverageSpeedMps:0.0}m/s\n" +
-                    $"Air time: {l.totalAirTimeSeconds:0.0}s\n" +
-                    $"Air dist: {l.totalAirDistanceMeters:0}m\n" +
-                    $"Runs: {l.totalRunsCompleted}\n" +
-                    $"Lifts: {l.totalLiftsUsed}";
-            }
+            // 3) Nothing
+            if (_runTrackerLine1 != null) _runTrackerLine1.text = "Not on a run";
+            if (_runTrackerLine2 != null) _runTrackerLine2.text = $"Completed today: {GetRunsCompletedTodayCount()}";
+            if (_runTrackerLine3 != null) _runTrackerLine3.text = "--%";
 
-            // Ensure panel visibility is consistent (in case UI was rebuilt)
-            SetStatsTab(_statsShowSession, force: true);
+            SetRangeFill(_runTrackerFill, 0f, 0f, minVisiblePercent: 0f);
+            ApplyRunExitHighlight(_tileRunTracker, highlight01: -1f);
+        }
 
+        private static string FormatRunTileTime(float seconds)
+        {
+            if (seconds <= 0.01f) return "--:--";
+            var ts = TimeSpan.FromSeconds(seconds);
+            if (ts.TotalHours >= 1.0) return $"{(int)ts.TotalHours}:{ts.Minutes:00}:{ts.Seconds:00}";
+            return $"{ts.Minutes:00}:{ts.Seconds:00}";
         }
 
         private void RefreshTasksAndAchievements()
@@ -1888,9 +2220,26 @@ namespace SkiGame.Progression
             int metricsTrackedToday = order.Count;
             int claimableMetrics = anyClaimableByRow.Count;
 
-            // Render lines: one per metric (showing its next target)
+            // Aggregate tiers per metric so we can label Completed vs Ready-to-Claim accurately.
+            var totalsByRow = new Dictionary<(string ladderId, ProgressionMetric metric), (int total, int completed, int claimed, bool anyClaimable)>(64);
+            for (int i = 0; i < total; i++)
+            {
+                var d = _dailyTierBuffer[i];
+                var key = (d.ladderId, d.metric);
+
+                if (!totalsByRow.TryGetValue(key, out var agg))
+                    agg = (0, 0, 0, false);
+
+                agg.total++;
+                if (d.completed) agg.completed++;
+                if (d.claimed) agg.claimed++;
+                if (d.completed && !d.claimed) agg.anyClaimable = true;
+
+                totalsByRow[key] = agg;
+            }
+
+            // Render lines: one per metric (compact + status-driven)
             var metricLines = new List<string>(metricsTrackedToday);
-            float metricProgressAvg = 0f;
 
             for (int i = 0; i < metricsTrackedToday; i++)
             {
@@ -1899,90 +2248,90 @@ namespace SkiGame.Progression
 
                 string name = GetDailyMetricDisplayName(d.ladderId, d.metric);
 
-                // Show progress/target to remove ambiguity
-                string progText = FormatMetricValue(d.metric, d.progress);
-                string targetText = FormatMetricValue(d.metric, d.target);
-                string ratioText = $"{progText}/{targetText}";
+                totalsByRow.TryGetValue(key, out var agg);
+                bool anyClaimable = agg.anyClaimable;
+                bool allTargetsReached = (agg.total > 0) && (agg.completed >= agg.total) && !anyClaimable;
 
-                if (d.completed && !d.claimed)
-                    metricLines.Add($"{name}: {ratioText}");
-                else if (!d.completed)
-                    metricLines.Add($"{name}: {ratioText}");
+                string right;
+                if (anyClaimable)
+                {
+                    right = "Ready to Claim";
+                }
+                else if (allTargetsReached)
+                {
+                    right = "Completed";
+                }
                 else
-                    metricLines.Add($"{name}: Complete");
+                {
+                    // Next target progress (x/xx)
+                    string progText = FormatMetricValue(d.metric, d.progress);
+                    string targetText = FormatMetricValue(d.metric, d.target);
+                    right = $"{progText}/{targetText}";
+                }
 
-                metricProgressAvg += Mathf.Clamp01(d.pct01);
+                metricLines.Add($"{name}: {right}");
             }
 
-            if (metricsTrackedToday > 0)
-                metricProgressAvg /= metricsTrackedToday;
-
-            // Populate Watch list: include a top line with claimable ratio, then all metrics
+            // Watch Tasks page: same stacked bars as the phone Tasks tile
             if (_watchTasksList != null)
             {
-                var watchLines = new List<string>(metricLines.Count + 1);
-                watchLines.Add(claimableMetrics > 0
-                    ? $"Claimable: {claimableMetrics}/{metricsTrackedToday}"
-                    : $"Claimable: 0/{metricsTrackedToday}");
-                watchLines.AddRange(metricLines);
-
-                SetDynamicLabelList(_watchTasksList, watchLines, new[] { "watch-kv" });
+                // Reuse the same bar list we build for the phone tile (created below).
+                // If you prefer fewer bars on watch later, we can clamp metricsTrackedToday here.
             }
 
-            // Populate Tile list: just metrics (badge already shows ratio)
+            // Home Tasks tile: stacked progress bars with centered labels
             if (_tileTasksList != null)
             {
-                SetDynamicLabelList(_tileTasksList, metricLines, new[] { "tile-sub", "tile-taskline" });
-            }
+                // Build stacked progress bars (one per daily metric row)
+                var bars = new List<TaskBarRow>(metricsTrackedToday);
 
-            // Badge becomes "claimable metrics / metrics tracked today"
-            if (_tileTasksProgress != null)
-                if (metricsTrackedToday <= 0)
+                for (int i = 0; i < metricsTrackedToday; i++)
                 {
-                    _tileTasksProgress.text = "";
-                    _tileTasksProgress.style.display = DisplayStyle.None;
-                }
-                else
-                {
-                    _tileTasksProgress.text = $"{claimableMetrics}/{metricsTrackedToday}";
-                    _tileTasksProgress.style.display = DisplayStyle.Flex;
-                }
+                    var key = order[i];
+                    var d = bestByRow[key];
 
-            // Progress fill uses average progress to the "next actionable tier" per metric (stable + meaningful)
-            if (_tileTasksProgressFill != null)
-                _tileTasksProgressFill.style.width = Length.Percent(Mathf.RoundToInt(metricProgressAvg * 100f));
+                    totalsByRow.TryGetValue(key, out var agg);
+                    bool anyClaimable = agg.anyClaimable;
+                    bool allTargetsReached = (agg.total > 0) && (agg.completed >= agg.total) && !anyClaimable;
 
-            // Optional: keep the legacy Tasks body label updated if it still exists (safe no-op if null)
-            if (_tasksBody != null)
-            {
-                if (total == 0) _tasksBody.text = "(no tasks)";
-                else
-                {
-                    var sb = new System.Text.StringBuilder();
-                    for (int i = 0; i < total && i < 8; i++)
+                    string name = GetDailyMetricDisplayName(d.ladderId, d.metric);
+
+                    string right;
+                    float pct = Mathf.Clamp01(d.pct01);
+
+                    if (anyClaimable)
                     {
-                        var d = _dailyTierBuffer[i];
-                        string status = d.claimed ? "[CLAIMED]" : d.completed ? "[READY]" : $"[{Mathf.RoundToInt(d.pct01 * 100f)}%]";
-                        sb.AppendLine($"{status} {GetDailyMetricDisplayName(d.ladderId, d.metric)} {FormatMetricValue(d.metric, d.target)}");
+                        right = "Ready to Claim";
+                        pct = 1f;
                     }
-                    _tasksBody.text = sb.ToString().TrimEnd();
+                    else if (allTargetsReached)
+                    {
+                        right = "Completed";
+                        pct = 1f;
+                    }
+                    else
+                    {
+                        string progText = FormatMetricValue(d.metric, d.progress);
+                        string targetText = FormatMetricValue(d.metric, d.target);
+                        right = $"{progText}/{targetText}";
+                    }
+
+                    bars.Add(new TaskBarRow
+                    {
+                        label = $"{name}  {right}",
+                        pct01 = pct,
+                        claimable = anyClaimable
+                    });
                 }
+
+                // Render into watch + phone tile with identical visuals
+                if (_watchTasksList != null)
+                    SetDynamicTaskBars(_watchTasksList, bars);
+
+                if (_tileTasksList != null)
+                    SetDynamicTaskBars(_tileTasksList, bars);
+
             }
-
-            // -------------------------
-            // Achievements (top locked previews)
-            // -------------------------
-            string a1 = "(no achievements)";
-            string a2 = "";
-
-            if (_progression != null)
-                _progression.GetTopAchievementLines(_profile, out a1, out a2);
-
-            if (_wAch1 != null) _wAch1.text = a1;
-            if (_wAch2 != null) _wAch2.text = a2;
-
-            if (_tileAch1 != null) _tileAch1.text = a1;
-            if (_tileAch2 != null) _tileAch2.text = a2;
 
             // Keep nav currency fresh when visible (e.g., after claiming rewards)
             if (_navCurrency != null && _navCurrency.style.display != DisplayStyle.None)
@@ -2020,6 +2369,74 @@ namespace SkiGame.Progression
                 {
                     lbl.style.display = DisplayStyle.None;
                     lbl.text = "";
+                }
+            }
+        }
+
+        private struct TaskBarRow
+        {
+            public string label;
+            public float pct01;
+            public bool claimable;
+        }
+
+        private void SetDynamicTaskBars(VisualElement root, List<TaskBarRow> rows)
+        {
+            if (root == null) return;
+
+            // Ensure enough children
+            while (root.childCount < rows.Count)
+            {
+                var bar = new VisualElement();
+                bar.AddToClassList("taskbar");
+
+                var fill = new VisualElement();
+                fill.AddToClassList("taskbar-fill");
+                bar.Add(fill);
+
+                var lbl = new Label();
+                lbl.AddToClassList("taskbar-label");
+                bar.Add(lbl);
+
+                root.Add(bar);
+            }
+
+            // Update
+            for (int i = 0; i < root.childCount; i++)
+            {
+                var bar = root.ElementAt(i);
+                if (bar == null) continue;
+
+                bool active = i < rows.Count;
+                bar.style.display = active ? DisplayStyle.Flex : DisplayStyle.None;
+                if (!active) continue;
+
+                var r = rows[i];
+
+                // claimable border
+                bar.EnableInClassList("is-claimable", r.claimable);
+
+                // children: [0] fill, [1] label
+                var fill = bar.childCount > 0 ? bar[0] : null;
+                var lbl = bar.childCount > 1 ? bar[1] as Label : null;
+
+                float pct = Mathf.Clamp01(r.pct01);
+
+                if (fill != null)
+                {
+                    fill.style.width = Length.Percent(pct * 100f);
+
+                    // Yellow -> Green ramp
+                    // start: warm yellow (high visibility)
+                    // end: green (completion)
+                    Color c0 = new Color(1.00f, 0.85f, 0.20f, 0.70f);
+                    Color c1 = Color.forestGreen;
+                    fill.style.backgroundColor = Color.Lerp(c0, c1, pct);
+                }
+
+                if (lbl != null)
+                {
+                    lbl.text = r.label ?? "";
                 }
             }
         }
@@ -2469,6 +2886,482 @@ namespace SkiGame.Progression
         }
 
         // -------------------------
+        // Stats (Day / Weeks calendar)
+        // -------------------------
+
+        private void BuildStatsDayDashboard()
+        {
+            _statCardsDay.Clear();
+            _statsDashDay?.Clear();
+            if (_statsDashDay == null)
+                return;
+
+            int i = 0;
+
+            AddDayStatRow(_statsDashDay, "Top Speed", s => $"{s.topSpeedMps:0.0} m/s", i++, kpi: true);
+            AddDayStatRow(_statsDashDay, "Avg Speed", s => $"{s.avgSpeedMps:0.0} m/s", i++, kpi: true);
+            AddDayStatRow(_statsDashDay, "Distance", s => FormatMeters(s.distanceMeters), i++, kpi: true);
+
+            AddDayStatRow(_statsDashDay, "Vertical Distance", s => $"+{s.verticalAscentMeters:0} / -{s.verticalDescentMeters:0}", i++);
+            AddDayStatRow(_statsDashDay, "Air Time", s => $"{s.airTimeSeconds:0.0}s", i++);
+            AddDayStatRow(_statsDashDay, "Air Distance", s => FormatMeters(s.airDistanceMeters), i++);
+            AddDayStatRow(_statsDashDay, "Grind Time", s => $"{s.grindTimeSeconds:0.0}s", i++);
+            AddDayStatRow(_statsDashDay, "Grind Distance", s => FormatMeters(s.grindDistanceMeters), i++);
+
+            AddDayStatRow(_statsDashDay, "Runs Completed", s => $"{s.runsCompleted}", i++);
+            AddDayStatRow(_statsDashDay, "Runs Visited", s => $"{s.runsVisited}", i++);
+            AddDayStatRow(_statsDashDay, "Clean Runs", s => $"{s.runsCompletedClean}", i++);
+            AddDayStatRow(_statsDashDay, "Top Run Speed", s => $"{s.topRunSpeedMps:0.0} m/s", i++);
+            AddDayStatRow(_statsDashDay, "Lifts Used", s => $"{s.liftsUsed}", i++);
+            AddDayStatRow(_statsDashDay, "Stacks", s => $"{s.stacks}", i++);
+            AddDayStatRow(_statsDashDay, "Landmarks Visited", s => $"{s.landmarksVisited}", i++);
+
+            RefreshDayStatRows();
+        }
+
+        private void AddDayStatRow(
+     VisualElement listRoot,
+     string label,
+     Func<DaySnapshot, string> dayProvider,
+     int index,
+     bool kpi = false)
+        {
+            if (listRoot == null) return;
+
+            var row = new VisualElement();
+            row.AddToClassList("stat-row");
+            if ((index % 2) == 0) row.AddToClassList("is-even");
+            if (kpi) row.AddToClassList("is-kpi");
+
+            var lbl = new Label(label);
+            lbl.AddToClassList("stat-row-label");
+
+            var val = new Label("--");
+            val.AddToClassList("stat-row-value");
+
+            row.Add(lbl);
+            row.Add(val);
+            listRoot.Add(row);
+
+            _statCardsSession.Add(new StatCardRefs
+            {
+                value = val,
+                dayProvider = dayProvider,
+                valueProvider = null
+            });
+        }
+
+        private void RefreshDayStatRows()
+        {
+            var day = _statsActiveDay ?? GetTodayKey();
+
+            if (!TryGetDaySnapshot(day, out var snap))
+                snap = default;
+
+            for (int i = 0; i < _statCardsDay.Count; i++)
+            {
+                var c = _statCardsDay[i];
+                if (c.value == null || c.dayProvider == null) continue;
+                c.value.text = c.dayProvider(snap) ?? "--";
+            }
+        }
+
+
+        private int CountActiveDaysInWeek(int weekIndex)
+        {
+            if (_time == null) return 0;
+
+            int startAbs = ToAbsoluteDayOfYear(weekIndex * 7);
+            int count = 0;
+
+            for (int i = 0; i < 7; i++)
+            {
+                int absDoy = startAbs + i;
+                if (absDoy < _statsBaseDayOfYear) continue;
+                if (absDoy > _time.dayCount) continue;
+
+                if (!TryConvertDayOfYear(absDoy, out int m, out int d))
+                    continue;
+
+                var k = new DayKey(_time.currentYear, m, d);
+                if (TryGetDaySnapshot(k, out var s) && HasAnyStats(s))
+                    count++;
+            }
+
+            return count;
+        }
+
+        private bool HasAnyStats(DayStatsSnapshot s)
+        {
+            // “Active day” heuristic: any meaningful movement/activity
+            if (s.distanceMeters > 5f) return true;
+            if (s.runsCompleted > 0) return true;
+            if (s.liftsUsed > 0) return true;
+            if (s.airTimeSeconds > 0.1f) return true;
+            if (s.grindTimeSeconds > 0.1f) return true;
+            return false;
+        }
+
+        private VisualElement BuildStatsDayTile(DayKey day, bool enabled)
+        {
+            var tile = new VisualElement();
+            tile.AddToClassList("runs-day-tile");
+
+            var dayNum = new Label($"{day.dayOfMonth}");
+            dayNum.AddToClassList("runs-day-num");
+
+            var month = new Label(_time != null && _time.monthPresets != null && day.monthIndex >= 0 && day.monthIndex < _time.monthPresets.Length
+                ? _time.monthPresets[day.monthIndex].month
+                : "");
+            month.AddToClassList("runs-day-mon");
+
+            tile.Add(dayNum);
+            tile.Add(month);
+
+            bool isToday = false;
+            if (_time != null)
+            {
+                var today = GetTodayKey();
+                isToday = day.year == today.year && day.monthIndex == today.monthIndex && day.dayOfMonth == today.dayOfMonth;
+            }
+
+            bool hasStats = TryGetDaySnapshot(day, out var snap) && HasAnyStats(snap);
+
+            tile.EnableInClassList("is-today", isToday);
+            tile.EnableInClassList("has-runs", hasStats); // reuse Runs styling
+            SetEnabledAndVisual(tile, enabled);
+
+            if (enabled)
+            {
+                tile.RegisterCallback<ClickEvent>(_ =>
+                {
+                    OpenStatsDayDetail(day);
+                });
+            }
+
+            return tile;
+        }
+
+        private string FormatDayLabel(DayKey day)
+        {
+            if (_time == null || _time.monthPresets == null) return "Day";
+            string mon = (day.monthIndex >= 0 && day.monthIndex < _time.monthPresets.Length) ? _time.monthPresets[day.monthIndex].month : "Month";
+            return $"{mon} {day.dayOfMonth}";
+        }
+
+        private static void SetEnabledAndVisual(VisualElement ve, bool enabled)
+        {
+            if (ve == null) return;
+            ve.SetEnabled(enabled);
+            ve.EnableInClassList("is-disabled", !enabled);
+        }
+
+        // -------------------------
+        // Daily archive load/save
+        // -------------------------
+
+        private void LoadDailyStatsArchive()
+        {
+            _dailyArchiveLoaded = true;
+
+            _dailyArchiveMap.Clear();
+            _dailyArchive = new DayStatsArchive();
+
+            string json = PlayerPrefs.GetString(Pref_StatsDailyArchive, "");
+            if (string.IsNullOrEmpty(json))
+                return;
+
+            try
+            {
+                var parsed = JsonUtility.FromJson<DayStatsArchive>(json);
+                if (parsed != null && parsed.days != null)
+                    _dailyArchive = parsed;
+            }
+            catch { /* ignore */ }
+
+            for (int i = 0; i < _dailyArchive.days.Count; i++)
+            {
+                var r = _dailyArchive.days[i];
+                long k = MakeArchiveKey(r.year, r.monthIndex, r.dayOfMonth);
+                _dailyArchiveMap[k] = r.stats;
+            }
+        }
+
+        private void SaveDailyStatsArchive()
+        {
+            if (!_dailyArchiveLoaded) return;
+
+            _dailyArchive.days.Clear();
+            foreach (var kv in _dailyArchiveMap)
+            {
+                UnpackArchiveKey(kv.Key, out int y, out int m, out int d);
+                _dailyArchive.days.Add(new DayStatsRecord
+                {
+                    year = y,
+                    monthIndex = m,
+                    dayOfMonth = d,
+                    stats = kv.Value
+                });
+            }
+
+            string json = JsonUtility.ToJson(_dailyArchive);
+            PlayerPrefs.SetString(Pref_StatsDailyArchive, json);
+            PlayerPrefs.Save();
+        }
+
+        // -------------------------
+        // Base day + snapshot retrieval
+        // -------------------------
+
+        private void EnsureStatsBaseDayLoaded()
+        {
+            if (_statsBaseLoaded) return;
+            if (_time == null) return;
+
+            if (!PlayerPrefs.HasKey(Pref_StatsBaseDay))
+            {
+                _statsBaseDayOfYear = _time.dayCount;
+                PlayerPrefs.SetInt(Pref_StatsBaseDay, _statsBaseDayOfYear);
+                PlayerPrefs.Save();
+            }
+            else
+            {
+                _statsBaseDayOfYear = PlayerPrefs.GetInt(Pref_StatsBaseDay, _time.dayCount);
+            }
+
+            _statsBaseDayOfYear = Mathf.Clamp(_statsBaseDayOfYear, 0, _time.dayCount);
+
+            // If archive contains earlier days (same year), shift base earlier so they are reachable.
+            if (_dailyArchiveLoaded && _dailyArchive != null && _dailyArchive.days != null && _dailyArchive.days.Count > 0)
+            {
+                int min = int.MaxValue;
+                for (int i = 0; i < _dailyArchive.days.Count; i++)
+                {
+                    var r = _dailyArchive.days[i];
+                    if (r.year != _time.currentYear) continue;
+
+                    var k = new DayKey(r.year, r.monthIndex, r.dayOfMonth);
+                    int doy = DayKeyToDayOfYear(k);
+                    if (doy >= 0 && doy < min) min = doy;
+                }
+
+                if (min != int.MaxValue && min < _statsBaseDayOfYear)
+                {
+                    _statsBaseDayOfYear = min;
+                    PlayerPrefs.SetInt(Pref_StatsBaseDay, _statsBaseDayOfYear);
+                    PlayerPrefs.Save();
+                }
+            }
+
+            _statsBaseLoaded = true;
+        }
+
+        private int GetRelativeDayCount()
+        {
+            if (_time == null) return 0;
+            return Mathf.Max(0, _time.dayCount - _statsBaseDayOfYear);
+        }
+
+        private int ToAbsoluteDayOfYear(int relativeDay)
+        {
+            return _statsBaseDayOfYear + Mathf.Max(0, relativeDay);
+        }
+
+        private bool IsFutureDay(DayKey day)
+        {
+            if (_time == null) return false;
+            int doy = DayKeyToDayOfYear(day);
+            return doy > _time.dayCount;
+        }
+
+        private bool IsBeforeBaseDay(DayKey day)
+        {
+            int doy = DayKeyToDayOfYear(day);
+            return doy < _statsBaseDayOfYear;
+        }
+
+        private bool TryGetDaySnapshot(DayKey day, out DayStatsSnapshot snap)
+        {
+            // Today should always be live (even if empty) so the "Day" tab behaves predictably.
+            var today = GetTodayKey();
+            if (_liveDayKeyValid && day.year == today.year && day.monthIndex == today.monthIndex && day.dayOfMonth == today.dayOfMonth)
+            {
+                snap = ComputeLiveDaySnapshot();
+                return true;
+            }
+
+            long key = MakeArchiveKey(day.year, day.monthIndex, day.dayOfMonth);
+            if (_dailyArchiveMap.TryGetValue(key, out snap))
+                return true;
+
+            snap = default;
+            return false;
+        }
+
+        private void SetArchivedDaySnapshot(DayKey day, DayStatsSnapshot snap)
+        {
+            long key = MakeArchiveKey(day.year, day.monthIndex, day.dayOfMonth);
+            _dailyArchiveMap[key] = snap;
+            _statsWeeksDirty = true;
+        }
+
+        private static long MakeArchiveKey(int year, int monthIndex, int dayOfMonth)
+        {
+            unchecked
+            {
+                long k = (long)year & 0xFFFFFFFFL;
+                k = (k << 16) ^ (uint)(ushort)monthIndex;
+                k = (k << 16) ^ (uint)(ushort)dayOfMonth;
+                return k;
+            }
+        }
+
+        private static void UnpackArchiveKey(long key, out int year, out int monthIndex, out int dayOfMonth)
+        {
+            dayOfMonth = (int)(key & 0xFFFF);
+            monthIndex = (int)((key >> 16) & 0xFFFF);
+            year = (int)((key >> 32) & 0xFFFFFFFF);
+        }
+
+        // -------------------------
+        // Daily stats live tracking (turn "session" into "day")
+        // -------------------------
+
+        private void EnsureLiveDayTracking()
+        {
+            if (_profile == null || _time == null) return;
+            if (!_statsBaseLoaded) EnsureStatsBaseDayLoaded();
+
+            var today = GetTodayKey();
+
+            if (!_liveDayKeyValid)
+            {
+                StartLiveDay(today);
+                return;
+            }
+
+            bool changed = today.year != _liveDayKey.year || today.monthIndex != _liveDayKey.monthIndex || today.dayOfMonth != _liveDayKey.dayOfMonth;
+            if (changed)
+            {
+                // Finalize previous day into archive
+                var prevSnap = ComputeLiveDaySnapshot();
+                SetArchivedDaySnapshot(_liveDayKey, prevSnap);
+                SaveDailyStatsArchive();
+
+                // Start new day tracking
+                StartLiveDay(today);
+            }
+
+            // Update max speed continuously (cheap)
+            if (_playerRb != null)
+                _liveDayMaxSpeedMps = Mathf.Max(_liveDayMaxSpeedMps, _playerRb.linearVelocity.magnitude);
+        }
+
+        private void StartLiveDay(DayKey day)
+        {
+            _liveDayKey = day;
+            _liveDayKeyValid = true;
+            _liveDaySessionBaseline = ReadSessionSnapshot(_profile);
+            _liveDayStartUnscaled = Time.unscaledTime;
+            _liveDayMaxSpeedMps = 0f;
+            _liveDayMaxRunSpeedMps = 0f;
+            _statsWeeksDirty = true;
+        }
+
+        private void PersistLiveDayToArchive()
+        {
+            if (!_liveDayKeyValid) return;
+            var snap = ComputeLiveDaySnapshot();
+            SetArchivedDaySnapshot(_liveDayKey, snap);
+            SaveDailyStatsArchive();
+        }
+
+        private DayStatsSnapshot ComputeLiveDaySnapshot()
+        {
+            if (_profile == null) return default;
+
+            var cur = ReadSessionSnapshot(_profile);
+            var baseSnap = _liveDaySessionBaseline;
+
+            float elapsed = Mathf.Max(1f, Time.unscaledTime - _liveDayStartUnscaled);
+
+            float dist = Mathf.Max(0f, cur.distanceMeters - baseSnap.distanceMeters);
+            float avg = dist / elapsed;
+
+            int runsVisited = Mathf.Max(0, cur.runsVisited - baseSnap.runsVisited);
+            int poisVisited = Mathf.Max(0, cur.landmarksVisited - baseSnap.landmarksVisited);
+
+            return new DayStatsSnapshot
+            {
+                topSpeedMps = Mathf.Max(_liveDayMaxSpeedMps, 0f),
+                avgSpeedMps = avg,
+                distanceMeters = dist,
+
+                verticalAscentMeters = Mathf.Max(0f, cur.verticalAscentMeters - baseSnap.verticalAscentMeters),
+                verticalDescentMeters = Mathf.Max(0f, cur.verticalDescentMeters - baseSnap.verticalDescentMeters),
+
+                airTimeSeconds = Mathf.Max(0f, cur.airTimeSeconds - baseSnap.airTimeSeconds),
+                airDistanceMeters = Mathf.Max(0f, cur.airDistanceMeters - baseSnap.airDistanceMeters),
+
+                grindTimeSeconds = Mathf.Max(0f, cur.grindTimeSeconds - baseSnap.grindTimeSeconds),
+                grindDistanceMeters = Mathf.Max(0f, cur.grindDistanceMeters - baseSnap.grindDistanceMeters),
+
+                runsCompleted = Mathf.Max(0, cur.runsCompleted - baseSnap.runsCompleted),
+                runsCompletedClean = Mathf.Max(0, cur.runsCompletedClean - baseSnap.runsCompletedClean),
+
+                topRunSpeedMps = _liveDayMaxRunSpeedMps,
+                liftsUsed = Mathf.Max(0, cur.liftsUsed - baseSnap.liftsUsed),
+                stacks = Mathf.Max(0, cur.stacks - baseSnap.stacks),
+
+                runsVisited = runsVisited,
+                landmarksVisited = poisVisited,
+            };
+        }
+
+        private SessionSnapshot ReadSessionSnapshot(PlayerStatsProfile p)
+        {
+            if (p == null) return default;
+
+            return new SessionSnapshot
+            {
+                topSpeedMps = p.session.topSpeedMps,
+                avgSpeedMps = p.session.AverageSpeedMps,
+                distanceMeters = p.session.distanceMeters,
+                verticalAscentMeters = p.session.verticalAscentMeters,
+                verticalDescentMeters = p.session.verticalDescentMeters,
+                airTimeSeconds = p.session.airTimeSeconds,
+                airDistanceMeters = p.session.airDistanceMeters,
+                grindTimeSeconds = p.session.grindTimeSeconds,
+                grindDistanceMeters = p.session.grindDistanceMeters,
+                runsCompleted = p.session.runsCompleted,
+                runsCompletedClean = p.session.runsCompletedClean,
+                topRunSpeedMps = p.session.topRunSpeedMps,
+                liftsUsed = p.session.liftsUsed,
+                stacks = p.session.stacks,
+                runsVisited = p.sessionVisitedRunIds != null ? p.sessionVisitedRunIds.Count : 0,
+                landmarksVisited = p.sessionVisitedLandmarkIds != null ? p.sessionVisitedLandmarkIds.Count : 0,
+            };
+        }
+
+        // -------------------------
+        // Calendar conversion helpers (copied from RunsPageUI, kept local)
+        // -------------------------
+
+      
+        private int DayKeyToDayOfYear(DayKey day)
+        {
+            if (_time == null || _time.monthPresets == null) return 0;
+
+            int doy = 0;
+            for (int i = 0; i < day.monthIndex; i++)
+                doy += Mathf.Max(1, _time.monthPresets[i].daysInMonth);
+
+            doy += Mathf.Clamp(day.dayOfMonth - 1, 0, 9999);
+            return doy;
+        }
+
+        
+        // -------------------------
         // Daily Tasks UI helpers
         // -------------------------
 
@@ -2813,19 +3706,33 @@ namespace SkiGame.Progression
             var mapPage = Q<ScrollView>("Page_Map");
             if (mapPage == null) return;
 
-            // Attach to the map page so it overlays the viewport.
-            // Ensure the page is a positioning context.
-            mapPage.style.position = Position.Relative;
+            // Always enforce correct placement (layer bar above viewport; info panel docked).
+            // This is important because older versions may have reparented MapLayerBar into the bottom dock.
+            EnforceMapLayerBarAboveViewport(mapPage);
+            EnforceMapBottomDock(mapPage);
 
-            // If we already built it (domain reload etc), skip.
+            // If we already built the info panel, just ensure it's docked correctly and exit.
             if (_mapInfoPanel != null && _mapInfoPanel.parent != null)
+            {
+                DockInfoPanelToBottom();
                 return;
+            }
+
 
             _mapInfoPanel = new VisualElement { name = "MapInfoPanel" };
-            _mapInfoPanel.style.position = Position.Absolute;
-            _mapInfoPanel.style.left = 8;
-            _mapInfoPanel.style.right = 8;
-            _mapInfoPanel.style.bottom = 8;
+
+            // IMPORTANT:
+            // This used to be an absolute bottom overlay.
+            // We now want it to be a normal layout element that lives UNDER the layer bar.
+            _mapInfoPanel.style.position = Position.Relative;
+
+            // Layout spacing (acts like previous left/right/bottom inset, but in flow layout)
+            _mapInfoPanel.style.marginLeft = 8;
+            _mapInfoPanel.style.marginRight = 8;
+            _mapInfoPanel.style.marginTop = 6;
+            _mapInfoPanel.style.marginBottom = 8;
+
+            // Visual styling (keep your existing look)
             _mapInfoPanel.style.paddingLeft = 10;
             _mapInfoPanel.style.paddingRight = 10;
             _mapInfoPanel.style.paddingTop = 8;
@@ -2834,7 +3741,7 @@ namespace SkiGame.Progression
             _mapInfoPanel.style.borderTopRightRadius = 12;
             _mapInfoPanel.style.borderBottomLeftRadius = 12;
             _mapInfoPanel.style.borderBottomRightRadius = 12;
-            _mapInfoPanel.style.backgroundColor = new StyleColor(new Color(0f, 0f, 0f, 0.72f));
+            _mapInfoPanel.style.backgroundColor = new StyleColor(new Color(0f, 0f, 0f, 0.9f));
             _mapInfoPanel.style.display = DisplayStyle.None;
 
             // Header row
@@ -2845,9 +3752,11 @@ namespace SkiGame.Progression
             _mapInfoTitle = new Label("Selection");
             _mapInfoTitle.style.unityFontStyleAndWeight = FontStyle.Bold;
             _mapInfoTitle.style.flexGrow = 1;
-            _mapInfoTitle.style.color = Color.white;   // ✅ white text
+            _mapInfoTitle.style.color = Color.white;
 
             _mapInfoCloseBtn = new Button(() => HideMapInfoPanel()) { text = "×" };
+            _mapInfoCloseBtn.AddToClassList("map-info-close");
+
             _mapInfoCloseBtn.style.width = 28;
             _mapInfoCloseBtn.style.height = 24;
 
@@ -2857,87 +3766,102 @@ namespace SkiGame.Progression
             _mapInfoBody = new Label();
             _mapInfoBody.style.whiteSpace = WhiteSpace.Normal;
             _mapInfoBody.style.marginTop = 6;
-            _mapInfoBody.style.color = Color.white;    // ✅ white text
-
-            // Attempt viewer (hidden unless a run with attempts is selected)
-            _mapAttemptBox = new VisualElement { name = "MapRunAttemptBox" };
-            _mapAttemptBox.style.marginTop = 8;
-            _mapAttemptBox.style.paddingTop = 6;
-            _mapAttemptBox.style.borderTopWidth = 1;
-            _mapAttemptBox.style.borderTopColor = new StyleColor(new Color(1f, 1f, 1f, 0.15f));
-            _mapAttemptBox.style.display = DisplayStyle.None;
-
-            var attemptHeaderRow = new VisualElement();
-            attemptHeaderRow.style.flexDirection = FlexDirection.Row;
-            attemptHeaderRow.style.alignItems = Align.Center;
-
-            _mapAttemptPrevBtn = new Button(() => StepAttempt(-1)) { text = "◀" };
-            _mapAttemptPrevBtn.style.width = 34;
-            _mapAttemptPrevBtn.style.height = 24;
-
-            _mapAttemptNextBtn = new Button(() => StepAttempt(+1)) { text = "▶" };
-            _mapAttemptNextBtn.style.width = 34;
-            _mapAttemptNextBtn.style.height = 24;
-
-            _mapAttemptHeader = new Label("Attempt");
-            _mapAttemptHeader.style.flexGrow = 1;
-            _mapAttemptHeader.style.unityFontStyleAndWeight = FontStyle.Bold;
-            _mapAttemptHeader.style.unityTextAlign = TextAnchor.MiddleCenter;
-            _mapAttemptHeader.style.color = Color.white; // ✅ white text
-
-            attemptHeaderRow.Add(_mapAttemptPrevBtn);
-            attemptHeaderRow.Add(_mapAttemptHeader);
-            attemptHeaderRow.Add(_mapAttemptNextBtn);
-
-            _mapAttemptDetails = new Label();
-            _mapAttemptDetails.style.whiteSpace = WhiteSpace.Normal;
-            _mapAttemptDetails.style.marginTop = 6;
-            _mapAttemptDetails.style.color = Color.white; // ✅ white text
-
-            _mapAttemptBox.Add(attemptHeaderRow);
-            _mapAttemptBox.Add(_mapAttemptDetails);
+            _mapInfoBody.style.color = Color.white;
 
             _mapInfoPanel.Add(header);
             _mapInfoPanel.Add(_mapInfoBody);
-            _mapInfoPanel.Add(_mapAttemptBox);
 
-            // Run history navigation (only shown for Ski Runs)
-            _mapInfoRunNavRow = new VisualElement();
-            _mapInfoRunNavRow.style.flexDirection = FlexDirection.Row;
-            _mapInfoRunNavRow.style.alignItems = Align.Center;
-            _mapInfoRunNavRow.style.marginTop = 8;
-            _mapInfoRunNavRow.style.display = DisplayStyle.None;
+            // Actions row (contextual)
+            _mapInfoActionsRow = new VisualElement();
+            _mapInfoActionsRow.style.flexDirection = FlexDirection.Row;
+            _mapInfoActionsRow.style.marginTop = 8;
+            _mapInfoActionsRow.style.display = DisplayStyle.None;
 
-            _mapInfoRunPrevBtn = new Button(() =>
+            _mapInfoViewRunBtn = new Button(() =>
             {
                 if (string.IsNullOrEmpty(_mapInfoActiveRunId)) return;
-                _mapInfoActiveAttemptIndex--;
-                RefreshMapInfoForActiveSelection();
+                NavigateTo("Page_Runs");
+                _runsPageUI?.RequestFocusRun(_mapInfoActiveRunId);
             })
-            { text = "◀" };
-            _mapInfoRunPrevBtn.style.width = 34;
+            { text = "View Run History" };
 
-            _mapInfoRunNextBtn = new Button(() =>
+            _mapInfoActionsRow.Add(_mapInfoViewRunBtn);
+            _mapInfoPanel.Add(_mapInfoActionsRow);
+
+            // Disable legacy run-history UI elements (kept as fields elsewhere, but not used anymore).
+            _mapInfoActiveRunId = null;
+            _mapInfoActiveAttemptIndex = -1;
+            if (_mapAttemptBox != null) _mapAttemptBox.style.display = DisplayStyle.None;
+            if (_mapInfoRunNavRow != null) _mapInfoRunNavRow.style.display = DisplayStyle.None;
+
+            // ----------------------------
+            // Ensure the layer bar sits ABOVE the viewport (between header and viewport)
+            // ----------------------------
             {
-                if (string.IsNullOrEmpty(_mapInfoActiveRunId)) return;
-                _mapInfoActiveAttemptIndex++;
-                RefreshMapInfoForActiveSelection();
-            })
-            { text = "▶" };
-            _mapInfoRunNextBtn.style.width = 34;
+                var layerBar = mapPage.Q<VisualElement>("MapLayerBar");
+                var mapViewportEl = mapPage.Q<VisualElement>("MapViewport");
 
-            _mapInfoRunAttemptDetails = new Label();
-            _mapInfoRunAttemptDetails.style.whiteSpace = WhiteSpace.Normal;
-            _mapInfoRunAttemptDetails.style.flexGrow = 1;
-            _mapInfoRunAttemptDetails.style.marginLeft = 8;
+                if (layerBar != null && mapViewportEl != null)
+                {
+                    var desiredParent = mapViewportEl.parent; // wherever the viewport lives (likely Page_Map content)
+                    if (desiredParent != null)
+                    {
+                        // Put the layer bar immediately before the viewport.
+                        int viewportIndex = desiredParent.IndexOf(mapViewportEl);
 
-            _mapInfoRunNavRow.Add(_mapInfoRunPrevBtn);
-            _mapInfoRunNavRow.Add(_mapInfoRunNextBtn);
-            _mapInfoRunNavRow.Add(_mapInfoRunAttemptDetails);
+                        // If it's not already in the right place, move it.
+                        if (layerBar.parent != desiredParent || desiredParent.IndexOf(layerBar) != viewportIndex)
+                        {
+                            layerBar.RemoveFromHierarchy();
+                            desiredParent.Insert(Mathf.Max(0, viewportIndex), layerBar);
+                        }
 
-            _mapInfoPanel.Add(_mapInfoRunNavRow);
+                        // Tighten spacing since it now lives in-flow above the viewport.
+                        layerBar.style.marginTop = 0;
+                        layerBar.style.marginBottom = 6;
+                    }
+                }
+            }
 
-            mapPage.Add(_mapInfoPanel);
+            // ----------------------------
+            // Dock (legend bar + info panel) to bottom of the scroll viewport
+            // ----------------------------
+            var scrollViewport = mapPage.Q<VisualElement>("unity-content-viewport");
+            if (scrollViewport == null)
+            {
+                // Fallback: if Unity changes internals, keep old behavior.
+                mapPage.Add(_mapInfoPanel);
+                return;
+            }
+
+            if (_mapBottomDock == null)
+            {
+                _mapBottomDock = new VisualElement { name = "MapBottomDock" };
+                _mapBottomDock.style.position = Position.Absolute;
+                _mapBottomDock.style.left = 0;
+                _mapBottomDock.style.right = 0;
+                _mapBottomDock.style.bottom = 0;
+
+                _mapBottomDock.style.flexDirection = FlexDirection.Column;
+
+                // padding should belong to the panel now; keep dock itself minimal
+                _mapBottomDock.style.paddingLeft = 0;
+                _mapBottomDock.style.paddingRight = 0;
+                _mapBottomDock.style.paddingTop = 0;
+                _mapBottomDock.style.paddingBottom = 0;
+
+                // Optional: remove dock backing so only the panel has a background
+                _mapBottomDock.style.backgroundColor = StyleKeyword.Null;
+            }
+
+            // Ensure dock is attached to the scroll viewport (so it doesn't scroll away)
+            if (_mapBottomDock.parent != scrollViewport)
+            {
+                _mapBottomDock.RemoveFromHierarchy();
+                scrollViewport.Add(_mapBottomDock);
+            }
+
+            DockInfoPanelToBottom();
         }
 
         private void ShowMapInfo(string title, string body)
@@ -2953,22 +3877,16 @@ namespace SkiGame.Progression
             if (_mapAttemptBox != null) _mapAttemptBox.style.display = DisplayStyle.None;
 
             _mapInfoPanel.style.display = DisplayStyle.Flex;
+            _mapPageUI?.RequestViewportRecalc();
+
         }
 
         private void HideMapInfoPanel()
         {
             if (_mapInfoPanel == null) return;
             _mapInfoPanel.style.display = DisplayStyle.None;
-        }
+            _mapPageUI?.RequestViewportRecalc();
 
-        private void RefreshMapInfoForActiveSelection()
-        {
-            // Re-render current selection details (used by run history nav)
-            if (string.IsNullOrEmpty(_mapInfoActiveRunId))
-                return;
-
-            // We don't know the display name here, so just show the runId if needed.
-            ShowRunInfo(_mapInfoActiveRunId, _mapInfoTitle != null ? _mapInfoTitle.text : _mapInfoActiveRunId);
         }
 
         private void ShowRunInfo(string runId, string displayName)
@@ -2976,66 +3894,27 @@ namespace SkiGame.Progression
             if (_profile == null)
             {
                 ShowMapInfo(displayName, "No stats profile loaded.");
-                _mapInfoActiveRunId = null;
-                _mapInfoRunNavRow.style.display = DisplayStyle.None;
                 return;
             }
 
             var record = FindRunRecord(_profile, runId);
+            int completions = record != null ? record.timesCompleted : 0;
 
-            int visitsLife = _profile.GetRunVisitCount(runId, session: false);
-            int visitsSess = _profile.GetRunVisitCount(runId, session: true);
-
-            int completed = record != null ? record.timesCompleted : 0;
-            int completedClean = record != null ? record.timesCompletedClean : 0;
-
-            float bestTime = record != null ? record.bestTimeSeconds : 0f;
-            float bestCleanTime = record != null ? record.bestCleanTimeSeconds : 0f;
-
-            int attemptCount = (record != null && record.attempts != null) ? record.attempts.Count : 0;
-
-            // Default attempt index to latest
-            if (_mapInfoActiveRunId != runId)
-                _mapInfoActiveAttemptIndex = attemptCount - 1;
+            string difficulty = TryGetRunDifficultyLabel(runId, out var diffLabel) ? diffLabel : "--";
 
             _mapInfoActiveRunId = runId;
+            _mapInfoActiveAttemptIndex = -1;
+            if (_mapAttemptBox != null) _mapAttemptBox.style.display = DisplayStyle.None;
+            if (_mapInfoRunNavRow != null) _mapInfoRunNavRow.style.display = DisplayStyle.None;
 
-            string summary =
-                $"Visits: {visitsLife} (session {visitsSess})\n" +
-                $"Completions: {completed} (clean {completedClean})\n" +
-                $"Best time: {(bestTime > 0 ? $"{bestTime:0.0}s" : "--")}\n" +
-                $"Best clean time: {(bestCleanTime > 0 ? $"{bestCleanTime:0.0}s" : "--")}\n" +
-                $"Attempts saved: {attemptCount}";
+            string body =
+                $"Difficulty: {difficulty}\n" +
+                $"Completions: {completions}";
 
-            ShowMapInfo(displayName, summary);
+            if (_mapInfoActionsRow != null)
+                _mapInfoActionsRow.style.display = DisplayStyle.Flex;
 
-            // Attempt details + nav
-            if (_mapInfoRunNavRow == null || _mapInfoRunAttemptDetails == null)
-                return;
-
-            if (attemptCount <= 0)
-            {
-                _mapInfoRunNavRow.style.display = DisplayStyle.Flex;
-                _mapInfoRunPrevBtn.SetEnabled(false);
-                _mapInfoRunNextBtn.SetEnabled(false);
-                _mapInfoRunAttemptDetails.text = "No completion history yet.";
-                return;
-            }
-
-            _mapInfoActiveAttemptIndex = Mathf.Clamp(_mapInfoActiveAttemptIndex, 0, attemptCount - 1);
-
-            var a = record.attempts[_mapInfoActiveAttemptIndex];
-
-            _mapInfoRunNavRow.style.display = DisplayStyle.Flex;
-            _mapInfoRunPrevBtn.SetEnabled(_mapInfoActiveAttemptIndex > 0);
-            _mapInfoRunNextBtn.SetEnabled(_mapInfoActiveAttemptIndex < attemptCount - 1);
-
-            _mapInfoRunAttemptDetails.text =
-                $"Run history: {(_mapInfoActiveAttemptIndex + 1)}/{attemptCount}\n" +
-                $"Time: {a.timeSeconds:0.0}s | Avg: {a.averageSpeedMps:0.0} m/s | Top: {a.topSpeedMps:0.0} m/s\n" +
-                $"Air: {a.airTimeSeconds:0.0}s ({a.airDistanceMeters:0.0}m) | Stacks: {a.stacks}\n" +
-                $"On-route: {a.onRouteDistanceMeters:0.0}m | Off-route: {a.offRouteDistanceMeters:0.0}m\n" +
-                $"Completion: {(a.completionFraction * 100f):0}%";
+            ShowMapInfo(displayName, body);
         }
 
         private void ShowLiftInfo(string liftId, string displayName)
@@ -3043,56 +3922,132 @@ namespace SkiGame.Progression
             if (_profile == null)
             {
                 ShowMapInfo(displayName, "No stats profile loaded.");
-                _mapInfoActiveRunId = null;
-                if (_mapInfoRunNavRow != null) _mapInfoRunNavRow.style.display = DisplayStyle.None;
                 return;
             }
 
             int ridesLife = _profile.GetLiftRideCount(liftId, session: false);
-            int ridesSess = _profile.GetLiftRideCount(liftId, session: true);
-
-            string body =
-                $"Rides: {ridesLife} (session {ridesSess})\n" +
-                $"Lifetime lifts used: {_profile.lifetime.totalLiftsUsed}\n" +
-                $"Session lifts used: {_profile.session.liftsUsed}";
 
             _mapInfoActiveRunId = null;
+            _mapInfoActiveAttemptIndex = -1;
+            if (_mapAttemptBox != null) _mapAttemptBox.style.display = DisplayStyle.None;
             if (_mapInfoRunNavRow != null) _mapInfoRunNavRow.style.display = DisplayStyle.None;
 
-            ShowMapInfo(displayName, body);
+            if (_mapInfoActionsRow != null)
+                _mapInfoActionsRow.style.display = DisplayStyle.None;
+
+            ShowMapInfo(displayName, $"Rides: {ridesLife}");
         }
 
-        private void ShowPOIInfo(string poiId, string displayName)
+        private void EnforceMapLayerBarAboveViewport(ScrollView mapPage)
         {
-            if (_profile == null)
+            var layerBar = mapPage.Q<VisualElement>("MapLayerBar");
+            if (layerBar == null) return;
+
+            // If a previous version docked it, rip it out first.
+            if (_mapBottomDock != null && layerBar.parent == _mapBottomDock)
+                layerBar.RemoveFromHierarchy();
+
+            // Clear any “docking” style residue.
+            layerBar.style.position = Position.Relative;
+            layerBar.style.left = StyleKeyword.Null;
+            layerBar.style.right = StyleKeyword.Null;
+            layerBar.style.top = StyleKeyword.Null;
+            layerBar.style.bottom = StyleKeyword.Null;
+
+            var viewport = mapPage.Q<VisualElement>("MapViewport");
+            if (viewport == null) return;
+
+            var desiredParent = viewport.parent;
+            if (desiredParent == null) return;
+
+            // Prefer placing it directly after the toolbar if the toolbar shares this parent.
+            // Toolbar has class "map-toolbar" (no name), so query by class.
+            var toolbar = mapPage.Q<VisualElement>(null, "map-toolbar");
+            if (toolbar != null && toolbar.parent == desiredParent)
             {
-                ShowMapInfo(displayName, "No stats profile loaded.");
-                _mapInfoActiveRunId = null;
-                if (_mapInfoRunNavRow != null) _mapInfoRunNavRow.style.display = DisplayStyle.None;
-                return;
+                int toolbarIndex = desiredParent.IndexOf(toolbar);
+                int desiredIndex = Mathf.Clamp(toolbarIndex + 1, 0, desiredParent.childCount);
+
+                if (layerBar.parent != desiredParent || desiredParent.IndexOf(layerBar) != desiredIndex)
+                {
+                    layerBar.RemoveFromHierarchy();
+                    desiredParent.Insert(desiredIndex, layerBar);
+                }
+            }
+            else
+            {
+                // Fallback: immediately before MapViewport
+                int viewportIndex = desiredParent.IndexOf(viewport);
+                int desiredIndex = Mathf.Max(0, viewportIndex);
+
+                if (layerBar.parent != desiredParent || desiredParent.IndexOf(layerBar) != desiredIndex)
+                {
+                    layerBar.RemoveFromHierarchy();
+                    desiredParent.Insert(desiredIndex, layerBar);
+                }
             }
 
-            int visitsLife = _profile.GetLandmarkVisitCount(poiId, session: false);
-            int visitsSess = _profile.GetLandmarkVisitCount(poiId, session: true);
+            // Keep spacing tight and consistent.
+            layerBar.style.marginTop = 6;
+            layerBar.style.marginBottom = 6;
+        }
 
-            string body =
-                $"Visits: {visitsLife} (session {visitsSess})\n" +
-                $"Unique POIs visited (lifetime): {_profile.visitedLandmarkIds?.Count ?? 0}\n" +
-                $"Unique POIs visited (session): {_profile.sessionVisitedLandmarkIds?.Count ?? 0}";
+        private void EnforceMapBottomDock(ScrollView mapPage)
+        {
+            var scrollViewport = mapPage.Q<VisualElement>("unity-content-viewport");
+            if (scrollViewport == null) return;
 
-            _mapInfoActiveRunId = null;
-            if (_mapInfoRunNavRow != null) _mapInfoRunNavRow.style.display = DisplayStyle.None;
+            if (_mapBottomDock == null)
+            {
+                _mapBottomDock = new VisualElement { name = "MapBottomDock" };
+                _mapBottomDock.style.position = Position.Absolute;
+                _mapBottomDock.style.left = 0;
+                _mapBottomDock.style.right = 0;
+                _mapBottomDock.style.bottom = 0;
 
-            ShowMapInfo(displayName, body);
+                _mapBottomDock.style.flexDirection = FlexDirection.Column;
+
+                // Dock itself should be invisible; panel provides styling.
+                _mapBottomDock.style.paddingLeft = 0;
+                _mapBottomDock.style.paddingRight = 0;
+                _mapBottomDock.style.paddingTop = 0;
+                _mapBottomDock.style.paddingBottom = 0;
+                _mapBottomDock.style.backgroundColor = StyleKeyword.Null;
+            }
+
+            if (_mapBottomDock.parent != scrollViewport)
+            {
+                _mapBottomDock.RemoveFromHierarchy();
+                scrollViewport.Add(_mapBottomDock);
+            }
+
+            // If the dock still contains a layer bar from an older version, force-remove it.
+            var dockedLayerBar = _mapBottomDock.Q<VisualElement>("MapLayerBar");
+            if (dockedLayerBar != null)
+                dockedLayerBar.RemoveFromHierarchy();
+        }
+
+        private void DockInfoPanelToBottom()
+        {
+            if (_mapInfoPanel == null || _mapBottomDock == null) return;
+
+            if (_mapInfoPanel.parent != _mapBottomDock)
+            {
+                _mapInfoPanel.RemoveFromHierarchy();
+                _mapBottomDock.Add(_mapInfoPanel);
+            }
+
+            // Tight inside dock
+            _mapInfoPanel.style.marginLeft = 0;
+            _mapInfoPanel.style.marginRight = 0;
+            _mapInfoPanel.style.marginTop = 0;
+            _mapInfoPanel.style.marginBottom = 0;
         }
 
         private void OnMapMarkerSelected(Map.MapMarker m)
         {
-            if (_profile == null)
-            {
-                ShowMapInfo(m.displayName, "No stats profile loaded.");
-                return;
-            }
+            // Always center on the selected marker.
+            _mapPageUI?.CenterOnWorldPosition(m.worldPosition);
 
             // If this marker ID matches a baked polyline, treat it like selecting the line (run/lift markers).
             if (TryFindPolylineById(m.id, out var poly))
@@ -3101,50 +4056,62 @@ namespace SkiGame.Progression
                 return;
             }
 
-            string title = string.IsNullOrWhiteSpace(m.displayName) ? "POI" : m.displayName;
+            // Fallback: lift station markers may not share the polyline ID.
+            // If the marker is backed by a LiftLine, try treat the lift as selected.
+            if (m.type == SkiGame.POI.POIType.SkiLift && m.source is LiftLine ll)
+            {
+                if (TryFindPolylineById(ll.gameObject.name, out var liftPoly))
+                {
+                    OnMapPolylineSelected(liftPoly);
+                    return;
+                }
+            }
 
-            int sessVisits = GetIdCount(_profile.sessionLandmarkVisitCounts, m.id);
-            int lifeVisits = GetIdCount(_profile.landmarkVisitCounts, m.id);
+            // Custom / general POI: minimal name + description (meta)
+            string title = string.IsNullOrWhiteSpace(m.displayName) ? "Point" : m.displayName;
+            string body = string.IsNullOrWhiteSpace(m.meta) ? "" : m.meta.Trim();
 
-            // Fallback if count-lists aren't present yet (unique visit lists only)
-            if (lifeVisits <= 0 && _profile.visitedLandmarkIds != null && _profile.visitedLandmarkIds.Contains(m.id)) lifeVisits = 1;
-            if (sessVisits <= 0 && _profile.sessionVisitedLandmarkIds != null && _profile.sessionVisitedLandmarkIds.Contains(m.id)) sessVisits = 1;
+            _mapInfoActiveRunId = null;
+            _mapInfoActiveAttemptIndex = -1;
+            if (_mapAttemptBox != null) _mapAttemptBox.style.display = DisplayStyle.None;
+            if (_mapInfoRunNavRow != null) _mapInfoRunNavRow.style.display = DisplayStyle.None;
 
-            var lines = new List<string>
-    {
-        $"Type: {m.type}",
-        $"Visits (session): {sessVisits}",
-        $"Visits (lifetime): {lifeVisits}",
-    };
+            if (_mapInfoActionsRow != null)
+                _mapInfoActionsRow.style.display = DisplayStyle.None;
 
-            // Placeholders for future POI metrics you mentioned
-            lines.Add("Other stats: (placeholder)");
-
-            if (!string.IsNullOrWhiteSpace(m.meta))
-                lines.Add($"\n{m.meta}");
-
-            ShowMapInfo(title, string.Join("\n", lines));
+            ShowMapInfo(title, body);
         }
 
         private void OnMapPolylineSelected(MapPolyline p)
         {
             if (!p.IsValid) return;
 
+            // Center on an approximate midpoint of the polyline.
+            if (p.pointsWorldXZ != null && p.pointsWorldXZ.Count > 0)
+            {
+                int mid = p.pointsWorldXZ.Count / 2;
+                Vector2 wxz = p.pointsWorldXZ[Mathf.Clamp(mid, 0, p.pointsWorldXZ.Count - 1)];
+                _mapPageUI?.CenterOnWorldPosition(new Vector3(wxz.x, 0f, wxz.y));
+            }
+
+            string name = string.IsNullOrWhiteSpace(p.displayName) ? p.id : p.displayName;
+
             switch (p.lineType)
             {
                 case MapLineType.SkiRun:
-                    ShowRunInfo(p.id, string.IsNullOrWhiteSpace(p.displayName) ? p.id : p.displayName);
+                    ShowRunInfo(p.id, name);
                     break;
 
                 case MapLineType.SkiLift:
-                    ShowLiftInfo(p.id, string.IsNullOrWhiteSpace(p.displayName) ? p.id : p.displayName);
-                    break;
+                    {
+                        // If the click originated from a station marker, append "(Top)/(Bottom)" to the title only.
+                        string suffix = _mapPageUI != null ? _mapPageUI.SelectedLiftStationSuffix : null;
+                        ShowLiftInfo(p.id, name + (suffix ?? ""));
+                        break;
+                    }
 
                 default:
-                    // If you ever add polylines for other types, fall back:
-                    ShowMapInfo(p.displayName, $"Selected polyline '{p.id}' ({p.lineType}).");
-                    _mapInfoActiveRunId = null;
-                    if (_mapInfoRunNavRow != null) _mapInfoRunNavRow.style.display = DisplayStyle.None;
+                    ShowMapInfo(name, "");
                     break;
             }
         }
@@ -3159,6 +4126,92 @@ namespace SkiGame.Progression
                     return list[i].count;
             }
             return 0;
+        }
+
+        private static bool TryGetRunDifficultyLabel(string runId, out string label)
+        {
+            label = "--";
+
+            var run = FindRunById(runId);
+            if (run == null) return false;
+
+            var t = run.GetType();
+
+            // 1) Try common property/field names
+            string[] names =
+            {
+        "Difficulty", "difficulty",
+        "RunDifficulty", "runDifficulty",
+        "difficultyLevel", "DifficultyLevel",
+        "difficultyName", "DifficultyName"
+    };
+
+            foreach (var n in names)
+            {
+                var pi = t.GetProperty(n, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (pi != null)
+                {
+                    object v = pi.GetValue(run);
+                    if (TryFormatDifficulty(v, out label)) return true;
+                }
+
+                var fi = t.GetField(n, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (fi != null)
+                {
+                    object v = fi.GetValue(run);
+                    if (TryFormatDifficulty(v, out label)) return true;
+                }
+            }
+
+            // 2) Try common methods
+            string[] methods = { "GetDifficultyLabel", "GetDifficultyName", "GetDifficulty" };
+            foreach (var mn in methods)
+            {
+                var mi = t.GetMethod(mn, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (mi != null && mi.GetParameters().Length == 0)
+                {
+                    object v = mi.Invoke(run, null);
+                    if (TryFormatDifficulty(v, out label)) return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryFormatDifficulty(object v, out string label)
+        {
+            label = "--";
+            if (v == null) return false;
+
+            if (v is string s)
+            {
+                label = string.IsNullOrWhiteSpace(s) ? "--" : s.Trim();
+                return true;
+            }
+
+            var type = v.GetType();
+            if (type.IsEnum)
+            {
+                label = v.ToString();
+                return true;
+            }
+
+            // If it’s stored as an int, map the common 0-3 scheme.
+            if (v is int i)
+            {
+                label = i switch
+                {
+                    0 => "Green",
+                    1 => "Blue",
+                    2 => "Red",
+                    3 => "Black",
+                    _ => i.ToString()
+                };
+                return true;
+            }
+
+            label = v.ToString();
+            return !string.IsNullOrWhiteSpace(label);
         }
 
         private RunRecordEntry FindRunRecord(PlayerStatsProfile profile, string runId)
@@ -3192,83 +4245,19 @@ namespace SkiGame.Progression
             return false;
         }
 
-        private void ShowRunAttemptViewer(RunRecordEntry record)
+        /// <summary>
+        /// Used by the Runs page to jump to the map and select the matching run polyline.
+        /// </summary>
+        public void NavigateToMapAndSelectRun(string runId)
         {
-            if (_mapAttemptBox == null) return;
-
-            _activeRunRecord = record;
-            _activeAttemptIndex = -1;
-
-            if (record == null || record.attempts == null || record.attempts.Count == 0)
+            if (string.IsNullOrWhiteSpace(runId))
             {
-                _mapAttemptBox.style.display = DisplayStyle.None;
+                NavigateTo("Page_Map");
                 return;
             }
 
-            // Default to most recent attempt
-            _activeAttemptIndex = record.attempts.Count - 1;
-
-            _mapAttemptBox.style.display = DisplayStyle.Flex;
-            RefreshAttemptViewer();
-        }
-
-        private void StepAttempt(int delta)
-        {
-            if (_activeRunRecord == null || _activeRunRecord.attempts == null) return;
-            int n = _activeRunRecord.attempts.Count;
-            if (n <= 0) return;
-
-            _activeAttemptIndex = Mathf.Clamp(_activeAttemptIndex + delta, 0, n - 1);
-            RefreshAttemptViewer();
-        }
-
-        private void RefreshAttemptViewer()
-        {
-            if (_mapAttemptHeader == null || _mapAttemptDetails == null || _mapAttemptPrevBtn == null || _mapAttemptNextBtn == null)
-                return;
-
-            if (_activeRunRecord == null || _activeRunRecord.attempts == null || _activeRunRecord.attempts.Count == 0)
-            {
-                _mapAttemptBox.style.display = DisplayStyle.None;
-                return;
-            }
-
-            int n = _activeRunRecord.attempts.Count;
-            _activeAttemptIndex = Mathf.Clamp(_activeAttemptIndex, 0, n - 1);
-
-            _mapAttemptPrevBtn.SetEnabled(_activeAttemptIndex > 0);
-            _mapAttemptNextBtn.SetEnabled(_activeAttemptIndex < n - 1);
-
-            _mapAttemptHeader.text = $"Completion {_activeAttemptIndex + 1} / {n}";
-
-            var a = _activeRunRecord.attempts[_activeAttemptIndex];
-            if (a == null)
-            {
-                _mapAttemptDetails.text = "(missing attempt data)";
-                return;
-            }
-
-            // Completed time
-            string when = "";
-            try
-            {
-                var dt = a.completedUtc.ToDateTimeUtc().ToLocalTime();
-                when = dt.ToString("g");
-            }
-            catch { when = ""; }
-
-            float totalDist = a.onRouteDistanceMeters + a.offRouteDistanceMeters;
-
-            _mapAttemptDetails.text =
-                (string.IsNullOrEmpty(when) ? "" : $"Completed: {when}\n") +
-                $"Time: {a.timeSeconds:0.0}s\n" +
-                $"Avg speed: {a.averageSpeedMps:0.0} m/s\n" +
-                $"Top speed: {a.topSpeedMps:0.0} m/s\n" +
-                $"Airtime: {a.airTimeSeconds:0.00}s  (air dist {a.airDistanceMeters:0} m)\n" +
-                $"Distance: {totalDist:0} m  (on {a.onRouteDistanceMeters:0} / off {a.offRouteDistanceMeters:0})\n" +
-                $"Stacks: {a.stacks}\n" +
-                $"Completion: {a.completionFraction * 100f:0}%  (start @ {a.startDistanceMeters:0} m)\n" +
-                $"Stack events: {(a.stackEvents != null ? a.stackEvents.Count : 0)}";
+            NavigateTo("Page_Map");
+            _mapPageUI?.SelectPolylineById(runId, center: true, minZoom: 1.25f);
         }
 
         private static SkiRunLine FindRunById(string runId)
@@ -3288,134 +4277,1159 @@ namespace SkiGame.Progression
             return null;
         }
 
-        private static bool TryGetRunAttemptSummary(PlayerStatsProfile profile, string runId, out int attempts, out int cleanAttempts, out float bestTopSpeedMps)
+        private void RefreshWatchRunTrackerPage()
         {
-            attempts = 0;
-            cleanAttempts = 0;
-            bestTopSpeedMps = 0f;
+            if (_wRunPageName == null && _wRunPageTime == null && _wRunPageProgress == null &&
+                _wRunPageTopSpeed == null && _wRunPageStacks == null && _wRunPageFill == null)
+                return;
 
-            if (profile == null || string.IsNullOrWhiteSpace(runId))
-                return false;
-
-            try
+            // Ensure we have a tracker
+            if (_runProgressTracker == null)
             {
-                // Try method first: GetOrCreateRunRecord(string runId)
-                var t = profile.GetType();
-                var mi = t.GetMethod("GetOrCreateRunRecord", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                object record = null;
+                if (_skiController != null)
+                    _runProgressTracker = _skiController.GetComponent<RunProgressTracker>();
 
-                if (mi != null)
+                if (_runProgressTracker == null)
+                    _runProgressTracker = FindObjectOfType<RunProgressTracker>();
+            }
+
+            // -------- 1) Active run (highest priority) --------
+            RunProgressTracker.ActiveRunProgress p = default;
+            bool onRun = _runProgressTracker != null && _runProgressTracker.TryGetActiveProgress(out p);
+
+            if (onRun)
+            {
+                // IMPORTANT: percent should reflect entry->current coverage (consistent with the range bar)
+                float covered01 = Mathf.Clamp01(Mathf.Abs(p.currentFraction01 - p.entryFraction01));
+                int pct = Mathf.Clamp(Mathf.RoundToInt(covered01 * 100f), 0, 100);
+
+                if (_wRunPageName != null) _wRunPageName.text = p.runName;
+                if (_wRunPageProgress != null) _wRunPageProgress.text = $"{pct}%";
+                if (_wRunPageTime != null) _wRunPageTime.text = $"Time {FormatRunTileTime(p.elapsedSeconds)}";
+                if (_wRunPageTopSpeed != null) _wRunPageTopSpeed.text = $"Top {p.topSpeedMps:0.0} m/s";
+                if (_wRunPageStacks != null) _wRunPageStacks.text = $"Stacks {p.stacks}";
+
+                SetRangeFill(_wRunPageFill, p.entryFraction01, p.currentFraction01, minVisiblePercent: 0.8f);
+
+                // Clear exit tint while actively tracking
+                ApplyRunExitHighlight(_wRunTrackerCard, -1f);
+                return;
+            }
+
+            // -------- 2) Not on a run: show last attempt (exit highlight) --------
+            if (_runProgressTracker != null && _runProgressTracker.TryGetLastAttemptSummary(out var last))
+            {
+                float covered01 = last.isCompletion ? 1f : Mathf.Clamp01(Mathf.Abs(last.exitFraction01 - last.entryFraction01));
+                int pct = Mathf.Clamp(Mathf.RoundToInt(covered01 * 100f), 0, 100);
+
+                if (_wRunPageName != null) _wRunPageName.text = last.runName;
+                if (_wRunPageProgress != null) _wRunPageProgress.text = $"{pct}%";
+                if (_wRunPageTime != null) _wRunPageTime.text = $"Time {FormatRunTileTime(last.elapsedSeconds)}";
+                if (_wRunPageTopSpeed != null) _wRunPageTopSpeed.text = $"Top {last.topSpeedMps:0.0} m/s";
+                if (_wRunPageStacks != null) _wRunPageStacks.text = $"Stacks {last.stacks}";
+
+                SetRangeFill(_wRunPageFill, last.entryFraction01, last.exitFraction01, minVisiblePercent: 0.8f);
+
+                // Yellow -> green based on coverage relative to minimum tracked threshold
+                float highlight01 = GetExitHighlight01(last.isCompletion, covered01);
+                ApplyRunExitHighlight(_wRunTrackerCard, highlight01);
+                return;
+            }
+
+            // -------- 3) Empty --------
+            if (_wRunPageName != null) _wRunPageName.text = "Not on a run";
+            if (_wRunPageProgress != null) _wRunPageProgress.text = "--%";
+            if (_wRunPageTime != null) _wRunPageTime.text = "Time --:--";
+            if (_wRunPageTopSpeed != null) _wRunPageTopSpeed.text = "Top --.- m/s";
+            if (_wRunPageStacks != null) _wRunPageStacks.text = "Stacks 0";
+
+            SetRangeFill(_wRunPageFill, 0f, 0f, minVisiblePercent: 0f);
+            ApplyRunExitHighlight(_wRunTrackerCard, -1f);
+        }
+
+        private static void SetRangeFill(VisualElement fill, float start01, float end01, float minVisiblePercent = 0f)
+        {
+            if (fill == null)
+                return;
+
+            float a = Mathf.Clamp01(start01);
+            float b = Mathf.Clamp01(end01);
+
+            float lo = Mathf.Min(a, b);
+            float hi = Mathf.Max(a, b);
+
+            float leftPct = lo * 100f;
+            float widthPct = (hi - lo) * 100f;
+
+            if (minVisiblePercent > 0f && widthPct <= 0.0001f)
+                widthPct = minVisiblePercent;
+            else if (minVisiblePercent > 0f)
+                widthPct = Mathf.Max(widthPct, minVisiblePercent);
+
+            if (leftPct + widthPct > 100f)
+                widthPct = Mathf.Max(0f, 100f - leftPct);
+
+            fill.style.left = Length.Percent(leftPct);
+            fill.style.width = Length.Percent(widthPct);
+        }
+
+        private void EnsureRunProgressTracker()
+        {
+            if (_runProgressTracker != null) return;
+
+            if (_skiController != null)
+                _runProgressTracker = _skiController.GetComponent<RunProgressTracker>();
+
+            if (_runProgressTracker == null)
+                _runProgressTracker = FindObjectOfType<RunProgressTracker>();
+        }
+
+        private float GetExitHighlight01(bool isCompletion, float covered01)
+        {
+            EnsureRunProgressTracker();
+            if (_runProgressTracker == null) return -1f;
+
+            float min = Mathf.Clamp01(_runProgressTracker.MinCoverageFractionToLog01);
+
+            if (isCompletion) return 1f;
+            if (covered01 < min) return -1f; // don’t highlight if it wouldn’t have been logged
+
+            return Mathf.InverseLerp(min, 1f, Mathf.Clamp01(covered01));
+        }
+
+        private static void ApplyRunExitHighlight(VisualElement el, float highlight01)
+        {
+            if (el == null) return;
+
+            if (highlight01 < 0f)
+            {
+                el.style.backgroundColor = StyleKeyword.Null; // revert to USS default
+                return;
+            }
+
+            // Yellow -> Green
+            Color yellow = new Color(1f, 0.85f, 0.25f, 0.35f);
+            Color green = new Color(0.20f, 0.90f, 0.45f, 0.35f);
+
+            el.style.backgroundColor = Color.Lerp(yellow, green, Mathf.Clamp01(highlight01));
+        }
+
+        private int GetRunsCompletedTodayCount()
+        {
+            var profile = _statsManager != null ? _statsManager.Profile : null;
+            if (profile == null || profile.runRecords == null) return 0;
+
+            var tc = FindObjectOfType<TimeController>();
+            if (tc == null) return 0;
+
+            // Resolve the current month index from monthPresets + currentMonthData.
+            int monthIndex = -1;
+            if (tc.monthPresets != null && tc.currentMonthData != null)
+            {
+                for (int i = 0; i < tc.monthPresets.Length; i++)
                 {
-                    var pars = mi.GetParameters();
-                    if (pars.Length == 1 && pars[0].ParameterType == typeof(string))
-                        record = mi.Invoke(profile, new object[] { runId });
-                }
-
-                // Fallback: search a runRecords field/property
-                if (record == null)
-                {
-                    object runRecordsObj = null;
-
-                    var fi = t.GetField("runRecords", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                    if (fi != null) runRecordsObj = fi.GetValue(profile);
-
-                    if (runRecordsObj == null)
+                    if (tc.monthPresets[i] == tc.currentMonthData)
                     {
-                        var pi = t.GetProperty("runRecords", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                        if (pi != null) runRecordsObj = pi.GetValue(profile);
+                        monthIndex = i;
+                        break;
                     }
+                }
+            }
 
-                    if (runRecordsObj is System.Collections.IEnumerable enumerable)
+            // If we can't resolve month index, we can't compare attempts reliably.
+            if (monthIndex < 0) return 0;
+
+            int count = 0;
+
+            for (int r = 0; r < profile.runRecords.Count; r++)
+            {
+                var rec = profile.runRecords[r];
+                if (rec?.attempts == null) continue;
+
+                for (int i = 0; i < rec.attempts.Count; i++)
+                {
+                    var a = rec.attempts[i];
+                    if (!a.isCompletion) continue;
+
+                    if (a.gameYear == tc.currentYear &&
+                        a.gameMonthIndex == monthIndex &&
+                        a.gameDayOfMonth == tc.dayOfMonth)
                     {
-                        foreach (var rec in enumerable)
+                        count++;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        private void HookSkiPassManager()
+        {
+            var inst = SkiPassManager.Instance;
+            if (_skiPassMgr == inst) return;
+            _skiPassMgr = inst;
+            _skiPassCardsBuilt = false;
+        }
+
+        private void ResetSkiPassTileTintToUSS()
+        {
+            if (_tileSkiPass == null) return;
+
+            // Revert to USS defaults (the .tile rule)
+            _tileSkiPass.style.backgroundColor = StyleKeyword.Null;
+            _tileSkiPass.style.borderLeftColor = StyleKeyword.Null;
+            _tileSkiPass.style.borderRightColor = StyleKeyword.Null;
+            _tileSkiPass.style.borderTopColor = StyleKeyword.Null;
+            _tileSkiPass.style.borderBottomColor = StyleKeyword.Null;
+        }
+
+        private void ApplySkiPassTileTint(Color mapColor)
+        {
+            if (_tileSkiPass == null) return;
+
+            // Keep it subtle so text remains readable.
+            // Use the level’s mapColor as a tint, with stronger border cue.
+            var bg = mapColor;
+            bg.a = 0.20f;
+
+            var br = mapColor;
+            br.a = 0.45f;
+
+            _tileSkiPass.style.backgroundColor = new StyleColor(bg);
+            _tileSkiPass.style.borderLeftColor = new StyleColor(br);
+            _tileSkiPass.style.borderRightColor = new StyleColor(br);
+            _tileSkiPass.style.borderTopColor = new StyleColor(br);
+            _tileSkiPass.style.borderBottomColor = new StyleColor(br);
+        }
+
+        private void RefreshSkiPassTile()
+        {
+            if (_lblTileSkiPassLevel == null) return;
+
+            if (_skiPassMgr == null)
+            {
+                _lblTileSkiPassLevel.text = "No manager";
+                ResetSkiPassTileTintToUSS();
+                return;
+            }
+
+            _lblTileSkiPassLevel.text = _skiPassMgr.GetCurrentPassDisplayName();
+
+            // Tint the tile based on the player’s ACTIVE pass level.
+            var cfg = _skiPassMgr.Config;
+            var level = cfg != null ? cfg.Get(_skiPassMgr.CurrentLevel) : null;
+
+            if (level == null)
+            {
+                ResetSkiPassTileTintToUSS();
+                return;
+            }
+
+            ApplySkiPassTileTint(level.mapColor);
+        }
+
+        private void RefreshSkiPassPage(bool forceRebuildCards)
+        {
+            if (_skiPassMgr == null) return;
+
+            // Ensure selection is valid
+            if (_skiPassSelectedLevel < 0)
+                _skiPassSelectedLevel = _skiPassMgr.CurrentLevel;
+
+            if (!_skiPassCardsBuilt || forceRebuildCards)
+                BuildSkiPassCardsAndDurations();
+
+            // Current pass info
+            if (_lblSkiPassCurrentName != null)
+                _lblSkiPassCurrentName.text = _skiPassMgr.GetCurrentPassDisplayName();
+
+            if (_lblSkiPassCurrentExpiry != null)
+                _lblSkiPassCurrentExpiry.text = _skiPassMgr.HasTimedPass ? "Active" : "Default pass";
+
+            if (_lblSkiPassTimeRemaining != null)
+                _lblSkiPassTimeRemaining.text = _skiPassMgr.GetRemainingTimeString();
+
+            if (_skiPassTimeFill != null)
+            {
+                float frac = _skiPassMgr.GetRemainingFraction01();
+                _skiPassTimeFill.style.width = new Length(Mathf.Clamp01(frac) * 100f, LengthUnit.Percent);
+            }
+
+            // Available lifts (current)
+            RebuildLiftList(_listSkiPassAvailableLifts, _skiPassMgr.CurrentLevel, showLocked: false);
+
+            // Selected pass details + price
+            RefreshSelectedPassDetails();
+        }
+
+        private void ApplySkiPassCardBackground(VisualElement card)
+        {
+            if (card == null) return;
+
+            var meta = card.userData as SkiPassCardMeta;
+            if (meta == null) return;
+
+            bool isSelected = card.ClassListContains("is-selected");
+
+            // Use the pass level mapColor as the card background tint.
+            // Keep alpha conservative so text stays readable.
+            Color c = meta.mapColor;
+
+            float a =
+                meta.lockedBelow ? 0.08f :
+                isSelected ? 0.32f :
+                0.18f;
+
+            c.a = a;
+            card.style.backgroundColor = new StyleColor(c);
+        }
+
+        private void RefreshAllSkiPassCardBackgrounds()
+        {
+            if (_gridSkiPassCards == null) return;
+
+            _gridSkiPassCards
+                .Query<VisualElement>(className: "skipass-passcard")
+                .ForEach(ApplySkiPassCardBackground);
+        }
+
+        private void BuildSkiPassCardsAndDurations()
+        {
+            _skiPassCardsBuilt = true;
+
+            // Cards
+            if (_gridSkiPassCards != null)
+            {
+                _gridSkiPassCards.Clear();
+
+                var cfg = _skiPassMgr != null ? _skiPassMgr.Config : null;
+                if (cfg != null && cfg.levels != null)
+                {
+                    for (int i = 0; i < cfg.levels.Length; i++)
+                    {
+                        int lvl = i;
+                        var p = cfg.Get(lvl);
+                        if (p == null) continue;
+
+                        // Prevent buying below current active level by simply not showing lower cards as selectable
+                        bool lockedBelow = lvl < _skiPassMgr.CurrentLevel;
+
+                        var card = new VisualElement();
+                        card.AddToClassList("skipass-passcard");
+                        if (lvl == _skiPassSelectedLevel) card.AddToClassList("is-selected");
+                        if (lockedBelow) card.AddToClassList("is-locked");
+
+                        // Store pass-level UI color so we can reapply visuals on selection changes.
+                        card.userData = new SkiPassCardMeta
                         {
-                            if (rec == null) continue;
+                            level = lvl,
+                            mapColor = p.mapColor,
+                            lockedBelow = lockedBelow
+                        };
 
-                            var rt = rec.GetType();
+                        // Apply initial background tint from PassLevel.mapColor.
+                        ApplySkiPassCardBackground(card);
 
-                            // try to read runId
-                            string rid = null;
-                            var ridField = rt.GetField("runId", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                            if (ridField != null) rid = ridField.GetValue(rec) as string;
+                        var title = new Label($"{p.displayName}");
+                        title.AddToClassList("skipass-passcard-title");
+                        card.Add(title);
 
-                            if (rid == null)
-                            {
-                                var ridProp = rt.GetProperty("runId", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                                if (ridProp != null) rid = ridProp.GetValue(rec) as string;
-                            }
+                        var sub = new Label($"L{lvl} • {p.dayPrice:N0}/day");
+                        sub.AddToClassList("skipass-passcard-sub");
+                        card.Add(sub);
 
-                            if (rid == runId)
-                            {
-                                record = rec;
-                                break;
-                            }
-                        }
+                        card.RegisterCallback<ClickEvent>(_ =>
+                        {
+                            if (_skiPassMgr == null) return;
+                            if (lvl < _skiPassMgr.CurrentLevel) return; // hard gate
+                            _skiPassSelectedLevel = lvl;
+
+                            UpdateSkiPassPurchaseControlsVisibility();
+
+                            // refresh selected class
+                            _gridSkiPassCards.Query<VisualElement>(className: "skipass-passcard").ForEach(e => e.RemoveFromClassList("is-selected"));
+                            card.AddToClassList("is-selected");
+
+                            // Re-apply per-card background tint (selected/locked alpha changes).
+                            RefreshAllSkiPassCardBackgrounds();
+
+                            RefreshSelectedPassDetails();
+
+                        });
+
+                        _gridSkiPassCards.Add(card);
                     }
+
+                    RefreshAllSkiPassCardBackgrounds();
                 }
+            }
 
-                if (record == null)
-                    return false;
+            // Duration buttons
+            if (_rowSkiPassDurations != null)
+            {
+                _rowSkiPassDurations.Clear();
 
-                // Pull attempts list
-                var rType = record.GetType();
-                object attemptsObj = null;
-
-                var aField = rType.GetField("attempts", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                if (aField != null) attemptsObj = aField.GetValue(record);
-
-                if (attemptsObj == null)
+                var cfg = _skiPassMgr != null ? _skiPassMgr.Config : null;
+                if (cfg != null && cfg.durations != null && cfg.durations.Length > 0)
                 {
-                    var aProp = rType.GetProperty("attempts", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                    if (aProp != null) attemptsObj = aProp.GetValue(record);
-                }
+                    _skiPassSelectedDurationIndex = Mathf.Clamp(_skiPassSelectedDurationIndex, 0, cfg.durations.Length - 1);
 
-                if (attemptsObj == null)
-                {
-                    var aProp2 = rType.GetProperty("Attempts", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                    if (aProp2 != null) attemptsObj = aProp2.GetValue(record);
-                }
-
-                if (!(attemptsObj is System.Collections.IEnumerable aEnum))
-                    return false;
-
-                foreach (var a in aEnum)
-                {
-                    if (a == null) continue;
-                    attempts++;
-
-                    var at = a.GetType();
-
-                    // stacks
-                    int stacks = 0;
-                    var sf = at.GetField("stacks", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                    if (sf != null && sf.FieldType == typeof(int)) stacks = (int)sf.GetValue(a);
-                    else
+                    for (int i = 0; i < cfg.durations.Length; i++)
                     {
-                        var sp = at.GetProperty("stacks", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                        if (sp != null && sp.PropertyType == typeof(int)) stacks = (int)sp.GetValue(a);
+                        int idx = i;
+                        var d = cfg.durations[i];
+
+                        var b = new Button();
+                        b.text = d != null ? d.label : $"Option {i}";
+                        b.AddToClassList("skipass-duration-btn");
+                        if (idx == _skiPassSelectedDurationIndex) b.AddToClassList("is-on");
+
+                        b.clicked += () =>
+                        {
+                            _skiPassSelectedDurationIndex = idx;
+
+                            _rowSkiPassDurations.Query<Button>().ForEach(bb => bb.RemoveFromClassList("is-on"));
+                            b.AddToClassList("is-on");
+
+                            RefreshSelectedPassDetails();
+                        };
+
+                        _rowSkiPassDurations.Add(b);
                     }
-
-                    if (stacks == 0) cleanAttempts++;
-
-                    // top speed
-                    float ts = 0f;
-                    var tf = at.GetField("topSpeedMps", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                    if (tf != null && tf.FieldType == typeof(float)) ts = (float)tf.GetValue(a);
-                    else
-                    {
-                        var tp = at.GetProperty("topSpeedMps", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                        if (tp != null && tp.PropertyType == typeof(float)) ts = (float)tp.GetValue(a);
-                    }
-
-                    if (ts > bestTopSpeedMps) bestTopSpeedMps = ts;
                 }
+            }
 
+            RefreshSelectedPassDetails();
+        }
+
+        private void RefreshSelectedPassDetails()
+        {
+            if (_skiPassMgr == null) return;
+            var cfg = _skiPassMgr.Config;
+            if (cfg == null) return;
+
+            UpdateSkiPassPurchaseControlsVisibility();
+
+            var p = cfg.Get(_skiPassSelectedLevel);
+            if (_lblSkiPassSelectedName != null)
+                _lblSkiPassSelectedName.text = p != null ? $"{p.displayName} (L{_skiPassSelectedLevel})" : $"Level {_skiPassSelectedLevel}";
+
+            // Show lifts unlocked at selected level (locked included so user sees what's gated)
+            RebuildLiftList(_listSkiPassSelectedLifts, _skiPassSelectedLevel, showLocked: true);
+
+            // Price quote
+            if (_lblSkiPassPrice != null)
+            {
+                int freeLevel = (cfg != null) ? cfg.defaultLevelIndex : 0;
+
+                if (_skiPassSelectedLevel == freeLevel)
+                {
+                    _lblSkiPassPrice.text = "Free (default pass)";
+                }
+                else if (_skiPassMgr.TryQuotePurchase(_skiPassSelectedLevel, _skiPassSelectedDurationIndex, out var q, out var reason))
+                {
+                    string creditStr = q.credit > 0 ? $" • Credit {q.credit:N0}" : "";
+                    string mode = q.isUpgrade ? "Upgrade" : (q.isExtend ? "Extend" : "Purchase");
+                    _lblSkiPassPrice.text = $"{mode}: {q.finalCost:N0}{creditStr}";
+                }
+                else
+                {
+                    _lblSkiPassPrice.text = reason;
+                }
+            }
+        }
+
+        private void UpdateSkiPassPurchaseControlsVisibility()
+        {
+            if (_skiPassMgr == null) return;
+
+            var cfg = _skiPassMgr.Config;
+            int freeLevel = (cfg != null) ? cfg.defaultLevelIndex : 0;
+
+            bool isFreeSelected = (_skiPassSelectedLevel == freeLevel);
+
+            // Hide duration buttons & purchase button for the free level
+            if (_rowSkiPassDurations != null)
+                _rowSkiPassDurations.style.display = isFreeSelected ? DisplayStyle.None : DisplayStyle.Flex;
+
+            if (_btnSkiPassPurchase != null)
+                _btnSkiPassPurchase.style.display = isFreeSelected ? DisplayStyle.None : DisplayStyle.Flex;
+
+            // Optional: clear any previous result text when switching to free tier
+            if (isFreeSelected && _lblSkiPassResult != null)
+                _lblSkiPassResult.text = "";
+        }
+
+        private void OnClickSkiPassPurchase()
+        {
+            var cfg = _skiPassMgr.Config;
+            if (_skiPassMgr == null || _profile == null || _skiPassSelectedLevel == cfg.defaultLevelIndex) return;
+
+            bool TrySpend(int cost)
+            {
+                if (cost <= 0) return true;
+                if (_profile.currency < cost) return false;
+                _profile.currency -= cost;
                 return true;
             }
-            catch
+
+            bool ok = _skiPassMgr.TryPurchase(_skiPassSelectedLevel, _skiPassSelectedDurationIndex, TrySpend, out var q, out var reason);
+
+            if (_lblSkiPassResult != null)
+                _lblSkiPassResult.text = ok ? "Purchased!" : reason;
+
+            if (_navCurrency != null && _navCurrency.style.display == DisplayStyle.Flex)
+                _navCurrency.text = $"${_profile.currency:N0}";
+
+            RefreshSkiPassTile();
+            RefreshSkiPassPage(forceRebuildCards: true);
+        }
+
+        private void RebuildLiftList(VisualElement container, int level, bool showLocked)
+        {
+            if (container == null) return;
+
+            container.Clear();
+
+            var lifts = FindObjectsOfType<LiftLine>(includeInactive: false);
+            if (lifts == null || lifts.Length == 0)
             {
-                return false;
+                container.Add(new Label("No lifts found."));
+                return;
             }
+
+            Array.Sort(lifts, (a, b) =>
+            {
+                int ar = a != null ? Mathf.Max(0, a.RequiredPassLevel) : 0;
+                int br = b != null ? Mathf.Max(0, b.RequiredPassLevel) : 0;
+                return ar.CompareTo(br);
+            });
+
+            for (int i = 0; i < lifts.Length; i++)
+            {
+                var lift = lifts[i];
+                if (lift == null) continue;
+
+                int req = Mathf.Max(0, lift.RequiredPassLevel);
+                bool ok = level >= req;
+
+                if (!showLocked && !ok) continue;
+
+                var row = new Label(ok ? lift.name : $"{lift.name} (Requires L{req})");
+                row.AddToClassList("skipass-liftrow");
+                if (!ok) row.AddToClassList("is-locked");
+                container.Add(row);
+            }
+        }
+
+        /// <summary>
+        /// Uses reflection so this compiles even if LiftLine hasn't been updated yet.
+        /// Supports: int requiredPassLevel field, or int RequiredPassLevel property.
+        /// Defaults to 0 (basic).
+        /// </summary>
+        private static int GetLiftRequiredPassLevel(LiftLine lift)
+        {
+            if (lift == null) return 0;
+
+            var t = lift.GetType();
+
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+            var f = t.GetField("requiredPassLevel", flags);
+            if (f != null && f.FieldType == typeof(int))
+                return Mathf.Max(0, (int)f.GetValue(lift));
+
+            var p = t.GetProperty("RequiredPassLevel", flags);
+            if (p != null && p.PropertyType == typeof(int) && p.CanRead)
+                return Mathf.Max(0, (int)p.GetValue(lift));
+
+            return 0;
+        }
+
+        // =====================================================================
+        // Stats "Day" calendar (Weeks + Day detail) using TimeWeather.TimeController
+        // =====================================================================
+
+        [System.Serializable]
+        private struct DayKey
+        {
+            public int year;
+            public int monthIndex;
+            public int dayOfMonth;
+            public int dayOfYear; // uses TimeController.dayCount for ordering
+
+            public DayKey(int year, int monthIndex, int dayOfMonth, int dayOfYear)
+            {
+                this.year = year;
+                this.monthIndex = monthIndex;
+                this.dayOfMonth = dayOfMonth;
+                this.dayOfYear = dayOfYear;
+            }
+
+            public DayKey(int year, int monthIndex, int dayOfMonth)
+            {
+                this.year = year;
+                this.monthIndex = monthIndex;
+                this.dayOfMonth = dayOfMonth;
+                this.dayOfYear = -1; // unknown/not needed for all call sites
+            }
+
+            public string ToId() => $"{year}-{monthIndex}-{dayOfMonth}";
+        }
+
+        [Serializable]
+        private struct DaySnapshot
+        {
+            // Core stats
+            public float topSpeedMps;
+            public float avgSpeedMps;
+            public float distanceMeters;
+
+            public float verticalAscentMeters;
+            public float verticalDescentMeters;
+
+            public float airTimeSeconds;
+            public float airDistanceMeters;
+
+            public float grindTimeSeconds;
+            public float grindDistanceMeters;
+
+            // Counts
+            public int runsVisited;
+            public int runsCompleted;
+            public int runsCompletedClean;
+
+            public float topRunSpeedMps;
+
+            public int liftsUsed;
+            public int stacks;
+
+            public int landmarksVisited;
+        }
+
+        [System.Serializable]
+        private struct DayBaseline
+        {
+            public float totalDistanceMeters;
+            public float totalVerticalAscentMeters;
+            public float totalVerticalDescentMeters;
+
+            public float totalAirTimeSeconds;
+            public float totalAirDistanceMeters;
+
+            public float totalGrindTimeSeconds;
+            public float totalGrindDistanceMeters;
+
+            public int totalRunsCompleted;
+            public int totalRunsCompletedClean;
+            public int totalLiftsUsed;
+            public int totalStacks;
+        }
+
+        [System.Serializable]
+        private class DayRecord
+        {
+            public DayKey key;
+            public DaySnapshot snapshot;
+        }
+
+        [System.Serializable]
+        private class DayRecordStore
+        {
+            public int firstDayOfYear = -1;
+            public List<DayRecord> records = new();
+        }
+
+        [System.Serializable]
+        private class DayState
+        {
+            public bool hasActive;
+            public DayKey activeKey;
+            public DayBaseline baseline;
+            public float activeMaxSpeedMps;
+
+            public DayRecordStore store = new();
+        }
+
+        private const string PREF_STATS_DAY_STATE = "PhoneHUD.StatsDayState.v1";
+
+        private void TickStatsDayCalendar()
+        {
+            if (_time == null || _profile == null) return;
+            if (!_statsShowSession) return; // only on Day tab
+
+            EnsureStatsDayState();
+
+            // Update active max speed using current session max (best available without deeper hooks)
+            float sessionTop = _profile.session.topSpeedMps;
+            if (sessionTop > _statsDayState.activeMaxSpeedMps)
+                _statsDayState.activeMaxSpeedMps = sessionTop;
+
+            // Rebuild weeks UI if week changed (or first time)
+            int wk = GetCurrentWeekIndexRelative();
+            if (wk != _statsCurrentWeekIndex)
+            {
+                _statsCurrentWeekIndex = wk;
+                if (_statsExpandedWeekIndex < 0) _statsExpandedWeekIndex = wk;
+                RebuildStatsWeeksList();
+            }
+
+            // Update day title (detail panel)
+            if (_statsDayPanel != null && !_statsDayPanel.ClassListContains("is-hidden"))
+            {
+                UpdateStatsDayTitle();
+                UpdateStatsDayNavButtons();
+            }
+
+            // Persist occasionally (cheap JSON, but don’t spam: only when phone open + stats page open)
+            SaveStatsDayState();
+        }
+
+        private DaySnapshot GetDisplayedDaySnapshot()
+        {
+            EnsureStatsDayState();
+
+            // If day detail open, show selected day. Otherwise show today.
+            DayKey key = _statsSelectedDay.HasValue ? _statsSelectedDay.Value : _statsDayState.activeKey;
+
+            // Active day is computed live from baseline; others from records.
+            if (_statsDayState.hasActive && key.ToId() == _statsDayState.activeKey.ToId())
+                return ComputeActiveSnapshot();
+
+            if (_statsDayState.store != null && _statsDayState.store.records != null)
+            {
+                for (int i = 0; i < _statsDayState.store.records.Count; i++)
+                {
+                    var r = _statsDayState.store.records[i];
+                    if (r != null && r.key.ToId() == key.ToId())
+                        return r.snapshot;
+                }
+            }
+
+            // Fallback: empty snapshot
+            return new DaySnapshot { topSpeedMps = -1f };
+        }
+
+        private void EnsureStatsDayState()
+        {
+            if (_statsDayState == null || _statsDayState.store == null)
+                LoadStatsDayState();
+
+            if (_time == null || _profile == null) return;
+
+            DayKey today = GetTodayKey();
+            if (!_statsDayState.hasActive)
+            {
+                // first ever init
+                _statsDayState.hasActive = true;
+                _statsDayState.activeKey = today;
+                _statsDayState.baseline = ReadLifetimeBaseline(_profile);
+                _statsDayState.activeMaxSpeedMps = _profile.session.topSpeedMps;
+
+                if (_statsDayState.store.firstDayOfYear < 0)
+                    _statsDayState.store.firstDayOfYear = today.dayOfYear;
+
+                SaveStatsDayState();
+                return;
+            }
+
+            // Day rollover: finalize old day, start new day
+            if (_statsDayState.activeKey.ToId() != today.ToId())
+            {
+                FinalizeAndStoreActiveDay();
+                _statsDayState.activeKey = today;
+                _statsDayState.baseline = ReadLifetimeBaseline(_profile);
+                _statsDayState.activeMaxSpeedMps = _profile.session.topSpeedMps;
+
+                SaveStatsDayState();
+
+                // When day changes, if viewing old "today", keep them on the new today
+                if (!_statsSelectedDay.HasValue)
+                    RebuildStatsWeeksList();
+            }
+        }
+
+        private void FinalizeAndStoreActiveDay()
+        {
+            DaySnapshot snap = ComputeActiveSnapshot();
+
+            if (_statsDayState.store.records == null)
+                _statsDayState.store.records = new List<DayRecord>();
+
+            // Replace if exists, else add
+            string id = _statsDayState.activeKey.ToId();
+            for (int i = 0; i < _statsDayState.store.records.Count; i++)
+            {
+                if (_statsDayState.store.records[i] != null && _statsDayState.store.records[i].key.ToId() == id)
+                {
+                    _statsDayState.store.records[i].snapshot = snap;
+                    return;
+                }
+            }
+
+            _statsDayState.store.records.Add(new DayRecord
+            {
+                key = _statsDayState.activeKey,
+                snapshot = snap
+            });
+        }
+
+        private DaySnapshot ComputeActiveSnapshot()
+        {
+            var life = _profile.lifetime;
+
+            DaySnapshot d = new DaySnapshot();
+
+            d.distanceMeters = Mathf.Max(0f, life.totalDistanceMeters - _statsDayState.baseline.totalDistanceMeters);
+            d.verticalAscentMeters = Mathf.Max(0f, life.totalVerticalAscentMeters - _statsDayState.baseline.totalVerticalAscentMeters);
+            d.verticalDescentMeters = Mathf.Max(0f, life.totalVerticalDescentMeters - _statsDayState.baseline.totalVerticalDescentMeters);
+
+            d.airTimeSeconds = Mathf.Max(0f, life.totalAirTimeSeconds - _statsDayState.baseline.totalAirTimeSeconds);
+            d.airDistanceMeters = Mathf.Max(0f, life.totalAirDistanceMeters - _statsDayState.baseline.totalAirDistanceMeters);
+
+            d.grindTimeSeconds = Mathf.Max(0f, life.totalGrindTimeSeconds - _statsDayState.baseline.totalGrindTimeSeconds);
+            d.grindDistanceMeters = Mathf.Max(0f, life.totalGrindDistanceMeters - _statsDayState.baseline.totalGrindDistanceMeters);
+
+            d.runsCompleted = Mathf.Max(0, life.totalRunsCompleted - _statsDayState.baseline.totalRunsCompleted);
+            d.runsCompletedClean = Mathf.Max(0, life.totalRunsCompletedClean - _statsDayState.baseline.totalRunsCompletedClean);
+            d.liftsUsed = Mathf.Max(0, life.totalLiftsUsed - _statsDayState.baseline.totalLiftsUsed);
+            d.stacks = Mathf.Max(0, life.totalStacks - _statsDayState.baseline.totalStacks);
+
+            d.topSpeedMps = Mathf.Max(0f, _statsDayState.activeMaxSpeedMps);
+
+            return d;
+        }
+
+        private static DayBaseline ReadLifetimeBaseline(PlayerStatsProfile p)
+        {
+            var life = p.lifetime;
+            return new DayBaseline
+            {
+                totalDistanceMeters = life.totalDistanceMeters,
+                totalVerticalAscentMeters = life.totalVerticalAscentMeters,
+                totalVerticalDescentMeters = life.totalVerticalDescentMeters,
+                totalAirTimeSeconds = life.totalAirTimeSeconds,
+                totalAirDistanceMeters = life.totalAirDistanceMeters,
+                totalGrindTimeSeconds = life.totalGrindTimeSeconds,
+                totalGrindDistanceMeters = life.totalGrindDistanceMeters,
+                totalRunsCompleted = life.totalRunsCompleted,
+                totalRunsCompletedClean = life.totalRunsCompletedClean,
+                totalLiftsUsed = life.totalLiftsUsed,
+                totalStacks = life.totalStacks
+            };
+        }
+
+        private DayKey GetTodayKey()
+        {
+            int year = _time != null ? _time.currentYear : 0;
+
+            int monthIndex = GetCurrentMonthIndex();
+            int dom = _time != null ? _time.dayOfMonth : 1;
+            int doy = _time != null ? _time.dayCount : 0;
+
+            return new DayKey(year, monthIndex, dom, doy);
+        }
+
+        private int GetCurrentMonthIndex()
+        {
+            if (_time == null || _time.monthPresets == null || _time.monthPresets.Length == 0 || _time.currentMonthData == null)
+                return 0;
+
+            string m = _time.currentMonthData.month;
+            for (int i = 0; i < _time.monthPresets.Length; i++)
+            {
+                if (_time.monthPresets[i] != null && _time.monthPresets[i].month == m)
+                    return i;
+            }
+            return 0;
+        }
+
+        private int GetCurrentWeekIndexRelative()
+        {
+            if (_time == null) return 0;
+
+            int first = Mathf.Max(0, _statsDayState.store.firstDayOfYear);
+            int rel = Mathf.Max(0, _time.dayCount - first);
+            return rel / 7;
+        }
+
+        private void RebuildStatsWeeksList()
+        {
+            if (_statsWeeksList == null || _time == null) return;
+
+            _statsWeeksList.Clear();
+
+            int first = Mathf.Max(0, _statsDayState.store.firstDayOfYear);
+            int relDays = Mathf.Max(0, _time.dayCount - first);
+            int weeksSoFar = Mathf.Max(1, (relDays / 7) + 1);
+
+            if (_statsExpandedWeekIndex >= weeksSoFar) _statsExpandedWeekIndex = weeksSoFar - 1;
+            if (_statsExpandedWeekIndex < -1) _statsExpandedWeekIndex = -1;
+
+            for (int weekIndex = weeksSoFar - 1; weekIndex >= 0; weekIndex--)
+            {
+                int weekNumber = weekIndex + 1;
+
+                var weekCard = new VisualElement();
+                weekCard.AddToClassList("runs-week-card");
+
+                var header = new VisualElement();
+                header.AddToClassList("runs-week-header");
+
+                var title = new Label($"Week {weekNumber}");
+                title.AddToClassList("runs-week-title");
+
+
+                header.pickingMode = PickingMode.Position;
+                title.pickingMode = PickingMode.Ignore;
+
+                int capturedWeek = weekIndex;
+                header.AddManipulator(new Clickable(() =>
+                {
+                    _statsExpandedWeekIndex = (_statsExpandedWeekIndex == capturedWeek) ? -1 : capturedWeek;
+                    RebuildStatsWeeksList();
+                }));
+
+                header.Add(title);
+
+                var daysRow = new VisualElement();
+                daysRow.AddToClassList("runs-week-days");
+
+                bool expanded = (_statsExpandedWeekIndex == weekIndex);
+                daysRow.EnableInClassList("is-hidden", !expanded);
+
+                for (int dow = 0; dow < 7; dow++)
+                {
+                    int relDay = weekIndex * 7 + dow;
+                    int absDay = first + relDay;
+
+                    // gate: no future days
+                    bool isFuture = absDay > _time.dayCount;
+
+                    if (!TryConvertDayOfYear(absDay, out int monthIndex, out int dayOfMonth))
+                        continue;
+
+                    var key = new DayKey(_time.currentYear, monthIndex, dayOfMonth, absDay);
+
+                    DaySnapshot snap = (absDay == _time.dayCount) ? ComputeActiveSnapshot() : GetSnapshotIfRecorded(key);
+
+                    bool hasStats = (snap.distanceMeters > 0.1f) || (snap.runsCompleted > 0) || (snap.liftsUsed > 0);
+
+                    var tile = BuildStatsDayTile(dow, dayOfMonth, hasStats, isFuture);
+
+                    if (isFuture)
+                    {
+                        tile.AddToClassList("is-future");
+                        SetEnabledAndVisual(tile, false);
+                    }
+                    else
+                    {
+                        tile.RegisterCallback<PointerDownEvent>(evt =>
+                        {
+                            evt.StopPropagation();
+                            OpenStatsDayDetail(key);
+                        });
+                    }
+
+                    daysRow.Add(tile);
+                }
+
+                weekCard.Add(header);
+                weekCard.Add(daysRow);
+                _statsWeeksList.Add(weekCard);
+            }
+        }
+
+        private int CountRunsCompletedInWeek(int weekIndex, int firstDayOfYear)
+        {
+            int count = 0;
+            for (int dow = 0; dow < 7; dow++)
+            {
+                int abs = firstDayOfYear + (weekIndex * 7 + dow);
+                if (_time != null && abs > _time.dayCount) continue;
+
+                if (!TryConvertDayOfYear(abs, out int m, out int d)) continue;
+                var key = new DayKey(_time.currentYear, m, d, abs);
+
+                DaySnapshot s = (abs == _time.dayCount) ? ComputeActiveSnapshot() : GetSnapshotIfRecorded(key);
+                count += Mathf.Max(0, s.runsCompleted);
+            }
+            return count;
+        }
+
+        private DaySnapshot GetSnapshotIfRecorded(DayKey key)
+        {
+            if (_statsDayState.store?.records == null)
+                return new DaySnapshot { topSpeedMps = -1f };
+
+            string id = key.ToId();
+            for (int i = 0; i < _statsDayState.store.records.Count; i++)
+            {
+                var r = _statsDayState.store.records[i];
+                if (r != null && r.key.ToId() == id)
+                    return r.snapshot;
+            }
+
+            return new DaySnapshot { topSpeedMps = -1f };
+        }
+
+        private VisualElement BuildStatsDayTile(int dow, int dayOfMonth, bool hasStats, bool isFuture)
+        {
+            var tile = new VisualElement();
+            tile.AddToClassList("runs-day-tile");
+            if (hasStats) tile.AddToClassList("has-runs");
+            if (isFuture) tile.AddToClassList("is-future");
+
+            string dowStr = ((System.DayOfWeek)(((int)System.DayOfWeek.Monday + dow) % 7)).ToString().Substring(0, 3);
+
+            var l1 = new Label(dowStr);
+            l1.AddToClassList("runs-day-dow");
+
+            var l2 = new Label(dayOfMonth.ToString());
+            l2.AddToClassList("runs-day-dom");
+
+            tile.Add(l1);
+            tile.Add(l2);
+
+            return tile;
+        }
+
+        private void OpenStatsDayDetail(DayKey day)
+        {
+            // gate: cannot open future
+            if (_time != null && day.dayOfYear > _time.dayCount)
+                return;
+
+            _statsSelectedDay = day;
+
+            _statsDayPanel?.EnableInClassList("is-hidden", false);
+            _statsWeeksList?.EnableInClassList("is-hidden", true);
+            // Show "Back to Weeks" only on the day detail view
+            _btnStatsDayBack?.EnableInClassList("is-hidden", false);
+            _statsWeeksPanel?.EnableInClassList("is-hidden", false);
+
+            UpdateStatsDayTitle();
+            UpdateStatsDayNavButtons();
+
+            RefreshDynamicStatRows();
+        }
+
+        private void CloseStatsDayDetail()
+        {
+            _statsSelectedDay = null;
+            _statsDayPanel?.EnableInClassList("is-hidden", true);
+            _statsWeeksList?.EnableInClassList("is-hidden", false);
+            // Hide "Back to Weeks" on the weeks list view
+            _btnStatsDayBack?.EnableInClassList("is-hidden", true);
+            _statsWeeksPanel?.EnableInClassList("is-hidden", true);
+
+        }
+
+        private void StepStatsDay(int delta)
+        {
+            if (!_statsSelectedDay.HasValue || _time == null) return;
+
+            int next = _statsSelectedDay.Value.dayOfYear + delta;
+
+            // gate: before first day or after today
+            int first = Mathf.Max(0, _statsDayState.store.firstDayOfYear);
+            if (next < first) return;
+            if (next > _time.dayCount) return;
+
+            if (!TryConvertDayOfYear(next, out int mi, out int dom))
+                return;
+
+            _statsSelectedDay = new DayKey(_time.currentYear, mi, dom, next);
+            UpdateStatsDayTitle();
+            UpdateStatsDayNavButtons();
+            RefreshDynamicStatRows();
+        }
+
+        private void UpdateStatsDayTitle()
+        {
+            if (_lblStatsDayTitle == null || !_statsSelectedDay.HasValue || _time == null) return;
+
+            var d = _statsSelectedDay.Value;
+            string monthName = SafeMonthName(d.monthIndex);
+            _lblStatsDayTitle.text = $"{monthName} {d.dayOfMonth}, Y{d.year}";
+        }
+
+        private void UpdateStatsDayNavButtons()
+        {
+            if (_btnStatsDayPrev == null && _btnStatsDayNext == null) return;
+            if (_time == null || !_statsSelectedDay.HasValue) return;
+
+            int first = Mathf.Max(0, _statsDayState.store.firstDayOfYear);
+
+            bool canPrev = _statsSelectedDay.Value.dayOfYear > first;
+            bool canNext = _statsSelectedDay.Value.dayOfYear < _time.dayCount;
+
+            if (_btnStatsDayPrev != null) SetEnabledAndVisual(_btnStatsDayPrev, canPrev);
+            if (_btnStatsDayNext != null) SetEnabledAndVisual(_btnStatsDayNext, canNext);
+        }
+
+        private string SafeMonthName(int monthIndex)
+        {
+            if (_time == null || _time.monthPresets == null || _time.monthPresets.Length == 0) return "Month";
+            if (monthIndex < 0 || monthIndex >= _time.monthPresets.Length) return "Month";
+            return _time.monthPresets[monthIndex] != null ? _time.monthPresets[monthIndex].month : "Month";
+        }
+
+        // Same conversion approach as RunsPageUI, but using TimeController.monthPresets + daysInMonth
+        private bool TryConvertDayOfYear(int dayOfYear, out int monthIndex, out int dayOfMonth)
+        {
+            monthIndex = 0;
+            dayOfMonth = 1;
+
+            if (_time == null || _time.monthPresets == null || _time.monthPresets.Length == 0)
+                return false;
+
+            int remaining = Mathf.Max(0, dayOfYear);
+
+            for (int i = 0; i < _time.monthPresets.Length; i++)
+            {
+                int dim = _time.monthPresets[i] != null ? Mathf.Max(1, _time.monthPresets[i].daysInMonth) : 30;
+                if (remaining < dim)
+                {
+                    monthIndex = i;
+                    dayOfMonth = remaining + 1;
+                    return true;
+                }
+                remaining -= dim;
+            }
+
+            // Clamp to last month
+            monthIndex = _time.monthPresets.Length - 1;
+            int lastDim2 = _time.monthPresets[monthIndex] != null ? Mathf.Max(1, _time.monthPresets[monthIndex].daysInMonth) : 30;
+            dayOfMonth = Mathf.Clamp(remaining + 1, 1, lastDim2);
+            return true;
+        }
+
+        private void LoadStatsDayState()
+        {
+            _statsDayState = new DayState();
+
+            string json = PlayerPrefs.GetString(PREF_STATS_DAY_STATE, "");
+            if (!string.IsNullOrEmpty(json))
+            {
+                try { _statsDayState = JsonUtility.FromJson<DayState>(json); }
+                catch { _statsDayState = new DayState(); }
+            }
+
+            if (_statsDayState.store == null)
+                _statsDayState.store = new DayRecordStore();
+            if (_statsDayState.store.records == null)
+                _statsDayState.store.records = new List<DayRecord>();
+        }
+
+        private void SaveStatsDayState()
+        {
+            try
+            {
+                string json = JsonUtility.ToJson(_statsDayState);
+                PlayerPrefs.SetString(PREF_STATS_DAY_STATE, json);
+            }
+            catch { /* ignore */ }
         }
 
     }

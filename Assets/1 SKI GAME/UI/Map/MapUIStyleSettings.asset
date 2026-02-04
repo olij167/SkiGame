@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e6da8b23f93bb54985c4456cb561c24, type: 3}
+  m_Name: MapUIStyleSettings
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Map.UI.MapUIStyleSettings
+  usePOIRegistryMarkerColors: 1
+  markerSize: 8
+  markerSizeSelected: 12
+  markerBorderWidth: 1
+  markerBorderColor: {r: 0, g: 0, b: 0, a: 0.65}
+  playerMarkerSize: 12
+  playerMarkerColor: {r: 0.5176471, g: 0.4392157, b: 1, a: 1}
+  playerBorderWidth: 1
+  playerBorderColor: {r: 0, g: 0, b: 0, a: 0.65}
+  runWidthPx: 3
+  liftWidthPx: 3.5
+  selectedWidthMultiplier: 2
+  outlineExtraPx: 0
+  outlineExtraSelectedPx: 2
+  outlineColor: {r: 1, g: 1, b: 1, a: 0.35}
+  outlineColorSelected: {r: 1, g: 1, b: 1, a: 0.55}
+  polylineWidthZoomExponent: 0.35
+  polylineWidthZoomMinMul: 0.7
+  polylineWidthZoomMaxMul: 1.6
+  labelFontSize: 8
+  labelFontStyle: 1
+  labelColor: {r: 1, g: 1, b: 1, a: 0.8}
+  labelFontSizeSelected: 10
+  labelFontStyleSelected: 1
+  labelColorSelected: {r: 1, g: 1, b: 1, a: 1}
+  markerLabelFontSize: 8
+  markerLabelFontStyle: 0
+  markerLabelColor: {r: 1, g: 1, b: 1, a: 0.95}
+  markerLabelFontSizeSelected: 10
+  markerLabelFontStyleSelected: 1
+  markerLabelColorSelected: {r: 0.9411765, g: 0.9019608, b: 0.5490196, a: 1}
+  polylineLabelFontSize: 8
+  polylineLabelFontStyle: 0
+  polylineLabelColor: {r: 1, g: 1, b: 1, a: 0.95}
+  polylineLabelFontSizeSelected: 10
+  polylineLabelFontStyleSelected: 1
+  polylineLabelColorSelected: {r: 0.94117653, g: 0.90196085, b: 0.54901963, a: 1}
+  labelZoomCompensation: 0
+  labelFontMin: 12
+  labelFontMax: 12
+  labelPlateAlpha: 0.5
+  labelAccentStripeWidth: 5
+  labelClutteredOpacity: 0.65

@@ -373,6 +373,126 @@ namespace SkiGame.Runs
             return true;
         }
 
+
+        /// <summary>
+        /// Runtime helper: corridor half-width (meters) at a given centerline sample (segment + t).
+        /// Mirrors the width logic used by TryGetClosestPointOnCenterlineXZ so run tracking stays consistent.
+        /// </summary>
+        public float GetHalfWidthMetersAtSample(int segIndex, float segT)
+        {
+            if (pointsWorld == null || pointsWorld.Count < 2)
+                return Mathf.Max(0.25f, runWidthMeters * 0.5f);
+
+            segIndex = Mathf.Clamp(segIndex, 0, pointsWorld.Count - 2);
+            float w = Mathf.Max(2f, GetWidthMetersAtSample(segIndex, segT));
+            return Mathf.Max(0.25f, w * 0.5f);
+        }
+
+        /// <summary>
+        /// Detailed closest point query that also returns the segment index + segment t.
+        /// </summary>
+        public bool TryGetClosestPointOnCenterlineXZ_Detailed(
+            Vector3 worldPos,
+            out float distanceAlongMeters,
+            out float distToCenterXZ,
+            out float halfWidthMeters,
+            out Vector3 closest,
+            out int segIndex,
+            out float segT)
+        {
+            return TryGetClosestPointOnCenterlineXZ_RangedDetailed(
+                worldPos,
+                0,
+                (pointsWorld != null ? pointsWorld.Count - 2 : 0),
+                out distanceAlongMeters,
+                out distToCenterXZ,
+                out halfWidthMeters,
+                out closest,
+                out segIndex,
+                out segT);
+        }
+
+        /// <summary>
+        /// Ranged closest point query over a segment window [segStart..segEnd] (inclusive).
+        /// Use this for stable progression tracking (prevents snapping across overlaps).
+        /// </summary>
+        public bool TryGetClosestPointOnCenterlineXZ_RangedDetailed(
+            Vector3 worldPos,
+            int segStart,
+            int segEnd,
+            out float distanceAlongMeters,
+            out float distToCenterXZ,
+            out float halfWidthMeters,
+            out Vector3 closest,
+            out int segIndex,
+            out float segT)
+        {
+            distanceAlongMeters = 0f;
+            distToCenterXZ = 0f;
+            halfWidthMeters = 0f;
+            closest = default;
+            segIndex = -1;
+            segT = 0f;
+
+            if (pointsWorld == null || pointsWorld.Count < 2)
+                return false;
+
+            int segMax = pointsWorld.Count - 2;
+            segStart = Mathf.Clamp(segStart, 0, segMax);
+            segEnd = Mathf.Clamp(segEnd, 0, segMax);
+            if (segEnd < segStart) (segStart, segEnd) = (segEnd, segStart);
+
+            Vector2 p = new Vector2(worldPos.x, worldPos.z);
+            float bestD2 = float.PositiveInfinity;
+            int bestSeg = -1;
+            float bestT = 0f;
+            Vector3 bestClosest = default;
+
+            for (int i = segStart; i <= segEnd; i++)
+            {
+                Vector3 a3 = pointsWorld[i];
+                Vector3 b3 = pointsWorld[i + 1];
+
+                Vector2 a = new Vector2(a3.x, a3.z);
+                Vector2 b = new Vector2(b3.x, b3.z);
+                Vector2 ab = b - a;
+                float abLen2 = ab.sqrMagnitude;
+
+                float t = 0f;
+                if (abLen2 > 1e-6f)
+                    t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / abLen2);
+
+                Vector2 c2 = a + ab * t;
+                float d2 = (p - c2).sqrMagnitude;
+
+                if (d2 < bestD2)
+                {
+                    bestD2 = d2;
+                    bestSeg = i;
+                    bestT = t;
+                    bestClosest = Vector3.LerpUnclamped(a3, b3, t);
+                }
+            }
+
+            if (bestSeg < 0)
+                return false;
+
+            EnsureDistanceCache();
+
+            float segLen = Vector3.Distance(pointsWorld[bestSeg], pointsWorld[bestSeg + 1]);
+            float baseDist = (bestSeg >= 0 && bestSeg < _cumDistCache.Count) ? _cumDistCache[bestSeg] : 0f;
+
+            distanceAlongMeters = baseDist + (Mathf.Clamp01(bestT) * segLen);
+            closest = bestClosest;
+
+            distToCenterXZ = Vector2.Distance(new Vector2(worldPos.x, worldPos.z), new Vector2(bestClosest.x, bestClosest.z));
+            halfWidthMeters = GetHalfWidthMetersAtSample(bestSeg, bestT);
+
+            segIndex = bestSeg;
+            segT = bestT;
+            return true;
+        }
+
         public void BakeMetrics()
         {
             // Cheap change detection: if inputs didn’t change, don’t re-sample slopes every call.

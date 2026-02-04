@@ -48,6 +48,20 @@ public class LiftRopeVisual : MonoBehaviour
 
     private float _texOffset;
 
+    private bool _configDirty = true;
+
+    private bool _lastLoop;
+    private float _lastRopeWidth;
+    private Material _lastRopeMaterial;
+    // Cached config to avoid dirtying the inspector every frame
+    private bool _lrConfigInitialized;
+    private Material _lastRopeMat;
+
+    private static readonly AnimationCurve ConstantWidthCurve = new AnimationCurve(
+        new Keyframe(0f, 1f),
+        new Keyframe(1f, 1f)
+    );
+
     private void Reset()
     {
         // Try to auto-wire references when the component is first added
@@ -58,32 +72,34 @@ public class LiftRopeVisual : MonoBehaviour
     private void OnEnable()
     {
         EnsureSetup();
+        _configDirty = true;
 
 #if UNITY_EDITOR
         if (!Application.isPlaying)
         {
-            // Defer rebuild to the debounced editor Update path instead of doing it immediately
             _editorForceRebuild = true;
             return;
         }
 #endif
 
+        ApplyLineRendererConfigIfNeeded(force: true);
         RebuildRopeFromLiftLine();
     }
 
     private void OnValidate()
     {
         EnsureSetup();
+        _configDirty = true;
 
 #if UNITY_EDITOR
         if (!Application.isPlaying)
         {
-            // Do NOT rebuild immediately in edit mode
             _editorForceRebuild = true;
             return;
         }
 #endif
 
+        ApplyLineRendererConfigIfNeeded(force: true);
         RebuildRopeFromLiftLine();
     }
 
@@ -106,38 +122,31 @@ public class LiftRopeVisual : MonoBehaviour
                 _editorForceRebuild = false;
                 _nextEditorRebuildTime = now + editorRebuildIntervalSeconds;
 
+                ApplyLineRendererConfigIfNeeded(force: true);
                 RebuildRopeFromLiftLine();
             }
             return;
         }
 #endif
 
-        // In play mode, we assume the analytic band is mostly static.
-        // If you animate stations at runtime, you can safely call RebuildRopeFromLiftLine()
-        // here each frame as well, it's cheap enough.
-        // RebuildRopeFromLiftLine();
+        // Play mode: only apply config when something changed (not every frame).
+        if (_configDirty)
+            ApplyLineRendererConfigIfNeeded(force: false);
 
-        // Texture scrolling (do NOT mutate sharedMaterial at runtime)
-        if (Application.isPlaying && lineRenderer != null && Mathf.Abs(textureScrollSpeed) > 0.0001f)
+        // Texture scrolling only (keep this lightweight)
+        if (lineRenderer != null && Mathf.Abs(textureScrollSpeed) > 0.0001f)
         {
-            // Force an instance so we don't dirty/modify the shared asset.
             if (lineRenderer.material == null && lineRenderer.sharedMaterial != null)
                 lineRenderer.material = new Material(lineRenderer.sharedMaterial);
 
             if (lineRenderer.material != null)
             {
                 _texOffset += textureScrollSpeed * Time.deltaTime;
-                lineRenderer.material.SetTextureScale("_MainTex", new Vector2(textureTiling, 1f));
                 lineRenderer.material.SetTextureOffset("_MainTex", new Vector2(_texOffset, 0f));
             }
         }
-
     }
 
-    /// <summary>
-    /// Ensures we have a LiftLine and a configured LineRenderer.
-    /// Returns false if something is fundamentally broken.
-    /// </summary>
     private bool EnsureSetup()
     {
         // --- LiftLine ---
@@ -154,19 +163,15 @@ public class LiftRopeVisual : MonoBehaviour
         // --- LineRenderer ---
         if (lineRenderer == null)
         {
-            // Try to find one in children
             lineRenderer = GetComponentInChildren<LineRenderer>();
 
             if (lineRenderer == null)
             {
-                // Create a child with a LineRenderer
                 GameObject lrGO = new GameObject("RopeLineRenderer");
                 lrGO.transform.SetParent(transform, worldPositionStays: false);
                 lrGO.transform.localPosition = Vector3.zero;
                 lrGO.transform.localRotation = Quaternion.identity;
                 lrGO.transform.localScale = Vector3.one;
-
-                // Match layer so it renders in the same cameras
                 lrGO.layer = gameObject.layer;
 
                 lineRenderer = lrGO.AddComponent<LineRenderer>();
@@ -174,27 +179,31 @@ public class LiftRopeVisual : MonoBehaviour
         }
 
         if (lineRenderer == null)
-        {
-            Debug.LogError($"[{nameof(LiftRopeVisual)}] Failed to create/find LineRenderer.", this);
             return false;
-        }
 
-        // Basic LineRenderer configuration
-        lineRenderer.enabled = true;
-        lineRenderer.useWorldSpace = true;
-        lineRenderer.loop = loop;
-        lineRenderer.widthMultiplier = Mathf.Max(0.0001f, ropeWidth);
-
-        if (ropeMaterial != null && lineRenderer.sharedMaterial != ropeMaterial)
+        // Only apply config when it actually changed
+        if (!_lrConfigInitialized ||
+            _lastLoop != loop ||
+            !Mathf.Approximately(_lastRopeWidth, ropeWidth) ||
+            _lastRopeMat != ropeMaterial)
         {
-            lineRenderer.sharedMaterial = ropeMaterial;
-        }
+            lineRenderer.enabled = true;
+            lineRenderer.useWorldSpace = true;
+            lineRenderer.loop = loop;
+            lineRenderer.widthMultiplier = Mathf.Max(0.0001f, ropeWidth);
 
-        // Set a simple 2-key width curve (constant width)
-        AnimationCurve curve = new AnimationCurve();
-        curve.AddKey(0f, 1f);
-        curve.AddKey(1f, 1f);
-        lineRenderer.widthCurve = curve;
+            if (ropeMaterial != null && lineRenderer.sharedMaterial != ropeMaterial)
+                lineRenderer.sharedMaterial = ropeMaterial;
+
+            // IMPORTANT: do not allocate a new curve every frame
+            if (lineRenderer.widthCurve == null || lineRenderer.widthCurve.length != 2)
+                lineRenderer.widthCurve = ConstantWidthCurve;
+
+            _lastLoop = loop;
+            _lastRopeWidth = ropeWidth;
+            _lastRopeMat = ropeMaterial;
+            _lrConfigInitialized = true;
+        }
 
         return true;
     }
@@ -299,6 +308,37 @@ public class LiftRopeVisual : MonoBehaviour
 
             return h;
         }
+    }
+
+    private void ApplyLineRendererConfigIfNeeded(bool force)
+    {
+        if (lineRenderer == null) return;
+
+        if (!force &&
+            _lastLoop == loop &&
+            Mathf.Approximately(_lastRopeWidth, ropeWidth) &&
+            _lastRopeMaterial == ropeMaterial)
+        {
+            return;
+        }
+
+        lineRenderer.enabled = true;
+        lineRenderer.useWorldSpace = true;
+        lineRenderer.loop = loop;
+        lineRenderer.widthMultiplier = Mathf.Max(0.0001f, ropeWidth);
+
+        if (ropeMaterial != null && lineRenderer.sharedMaterial != ropeMaterial)
+            lineRenderer.sharedMaterial = ropeMaterial;
+
+        // Do NOT allocate a new curve every frame.
+        // Assign once (or reassign if someone changed it externally).
+        if (lineRenderer.widthCurve == null || lineRenderer.widthCurve.length != 2)
+            lineRenderer.widthCurve = ConstantWidthCurve;
+
+        _lastLoop = loop;
+        _lastRopeWidth = ropeWidth;
+        _lastRopeMaterial = ropeMaterial;
+        _configDirty = false;
     }
 
 }

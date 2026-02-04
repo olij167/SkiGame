@@ -19,6 +19,7 @@ namespace SkiGame.POI
         public string id;
         public string displayName;
         public POIType type;
+        public bool alwaysShowLabel;
         public Vector3 position;
         public Color color;
         public string meta;
@@ -90,6 +91,8 @@ namespace SkiGame.POI
         {
             public string id;
             public string name;
+            public bool alwaysShowLabel;
+
             public Vector3 position;
             public Color color = Color.yellow;
             [TextArea] public string meta;
@@ -429,7 +432,8 @@ namespace SkiGame.POI
                     position = c.position,
                     color = c.color,
                     meta = c.meta,
-                    source = null
+                    source = null,
+                    alwaysShowLabel = c.alwaysShowLabel
                 });
             }
         }

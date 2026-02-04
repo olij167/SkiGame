@@ -13,10 +13,7 @@ namespace SkiGame.Progression
         [Header("Definitions")]
         [SerializeField] private ProgressionCatalogSO catalog;
 
-        [Header("Session Tasks (Legacy)")]
-        [SerializeField, Min(0)] private int sessionTaskCount = 2;
-
-        [Header("Daily Task Matrix (New)")]
+        [Header("Daily Tasks")]
         [SerializeField, Min(0)] private int dailyLadderCount = 6;
 
         [Tooltip("Optional external day key")]
@@ -56,7 +53,6 @@ namespace SkiGame.Progression
             var mgr = PlayerStatsManager.Instance;
             if (mgr != null && mgr.Profile != null)
             {
-                EnsureSessionTasks(mgr.Profile);
                 EnsureDailyTasks(mgr.Profile, mgr);
             }
 
@@ -74,10 +70,8 @@ namespace SkiGame.Progression
 
             profile.Sanitize();
 
-            EnsureSessionTasks(profile);
             EnsureDailyTasks(profile, mgr);
 
-            EvaluateTasks(profile, mgr);
             EvaluateDailyTasks(profile, mgr);
             EvaluateAchievements(profile, mgr);
         }
@@ -170,125 +164,6 @@ namespace SkiGame.Progression
             // Stable integer day key: yyyy*1000 + dayOfYear
             var now = DateTime.UtcNow;
             return (now.Year * 1000) + now.DayOfYear;
-        }
-
-        // -------------------- Session Tasks (Legacy) --------------------
-
-        private void EnsureSessionTasks(PlayerStatsProfile profile)
-        {
-            if (profile == null) return;
-            profile.Sanitize();
-
-            profile.activeSessionTasks ??= new List<PlayerStatsProfile.ActiveTaskState>();
-
-            // Remove tasks that no longer exist in the catalog
-            for (int i = profile.activeSessionTasks.Count - 1; i >= 0; i--)
-            {
-                var s = profile.activeSessionTasks[i];
-                if (s == null || string.IsNullOrEmpty(s.taskId) || !TryGetTaskDefinition(s.taskId, out _))
-                    profile.activeSessionTasks.RemoveAt(i);
-            }
-
-            // Trim if too many
-            while (profile.activeSessionTasks.Count > sessionTaskCount)
-                profile.activeSessionTasks.RemoveAt(profile.activeSessionTasks.Count - 1);
-
-            // Fill missing slots
-            while (profile.activeSessionTasks.Count < sessionTaskCount)
-            {
-                var def = PickNewTaskDefinition(profile);
-                if (def == null) break;
-                float baseline = def.ReadCurrent(profile);
-
-                profile.activeSessionTasks.Add(new PlayerStatsProfile.ActiveTaskState
-                {
-                    taskId = def.id,
-                    completed = false,
-                    claimed = false,
-                    completedUtc = default,
-
-                    lastProgress = 0f,
-                    target = Mathf.Max(0.0001f, def.target),
-
-                    baselineValue = baseline,
-                    baselineCaptured = true,
-
-                    lastRewardGranted = 0
-                });
-            }
-
-            // Ensure cached targets are populated
-            for (int i = 0; i < profile.activeSessionTasks.Count; i++)
-            {
-                var s = profile.activeSessionTasks[i];
-                if (s == null) continue;
-
-                if (TryGetTaskDefinition(s.taskId, out var def))
-                {
-                    if (s.target <= 0.0001f)
-                        s.target = Mathf.Max(0.0001f, def.target);
-                }
-            }
-
-            // Ensure baselines are captured
-            for (int i = 0; i < profile.activeSessionTasks.Count; i++)
-            {
-                var s = profile.activeSessionTasks[i];
-                if (s == null) continue;
-
-                if (!TryGetTaskDefinition(s.taskId, out var def) || def == null)
-                    continue;
-
-                if (!s.baselineCaptured)
-                {
-                    s.baselineValue = def.ReadCurrent(profile);
-                    s.baselineCaptured = true;
-                    s.lastProgress = 0f;
-                }
-            }
-        }
-
-        private void EvaluateTasks(PlayerStatsProfile profile, PlayerStatsManager mgr)
-        {
-            if (profile.activeSessionTasks == null) return;
-
-            bool anyCompleted = false;
-
-            for (int i = 0; i < profile.activeSessionTasks.Count; i++)
-            {
-                var state = profile.activeSessionTasks[i];
-                if (state == null) continue;
-                if (state.completed) continue;
-
-                if (!_taskById.TryGetValue(state.taskId, out var def) || def == null)
-                    continue;
-
-                float absolute = def.ReadCurrent(profile);
-
-                if (!state.baselineCaptured)
-                {
-                    state.baselineValue = absolute;
-                    state.baselineCaptured = true;
-                }
-
-                float progress = absolute - state.baselineValue;
-                if (progress < 0f) progress = 0f;
-
-                state.lastProgress = progress;
-                state.target = Mathf.Max(0.0001f, def.target);
-
-                if (progress + 0.0001f >= state.target)
-                {
-                    state.completed = true;
-                    state.completedUtc = DateTimeUtc.Now();
-                    anyCompleted = true;
-
-                    OnTaskCompleted?.Invoke(def);
-                }
-            }
-
-            if (anyCompleted && mgr != null)
-                mgr.Save();
         }
 
         // -------------------- Achievements --------------------

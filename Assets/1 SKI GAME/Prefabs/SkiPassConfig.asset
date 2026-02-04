@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 160a9a3a5b3a2474dabe8eb6a01d1b33, type: 3}
+  m_Name: SkiPassConfig
+  m_EditorClassIdentifier: Assembly-CSharp::SkiPassConfigSO
+  levels:
+  - displayName: Basic
+    levelIndex: 0
+    dayPrice: 0
+    mapColor: {r: 0, g: 0.7490196, b: 1, a: 1}
+  - displayName: Explorer
+    levelIndex: 1
+    dayPrice: 10
+    mapColor: {r: 0.9333334, g: 0.509804, b: 0.9333334, a: 1}
+  - displayName: Daredevil
+    levelIndex: 2
+    dayPrice: 25
+    mapColor: {r: 0.4, g: 0.2, b: 0.6, a: 1}
+  defaultLevelIndex: 0
+  durations:
+  - label: 1 Day
+    days: 1
+    discount01: 0
+  - label: 1 Week
+    days: 7
+    discount01: 0.1
+  - label: 1 Month
+    days: 30
+    discount01: 0.2
+  upgradeCreditMultiplier01: 0.75

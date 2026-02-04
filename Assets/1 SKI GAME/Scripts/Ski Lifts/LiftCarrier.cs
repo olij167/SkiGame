@@ -27,11 +27,46 @@ public class LiftCarrier : MonoBehaviour
         return dist <= attachRadius;
     }
 
-    public void AttachRider(LiftRider rider)
+    public bool AttachRider(LiftRider rider)
     {
-        if (!CanAttach(rider)) return;
+        if (!CanAttach(rider))
+            return false;
+
+        // --- Ski Pass gate (authoritative) ---
+        var passMgr = SkiPassManager.Instance;
+        if (passMgr != null)
+        {
+            int req = line != null ? line.RequiredPassLevel : 0;
+
+            if (!passMgr.CanUseLift(req))
+            {
+                // Watch flash (deny)
+                string requiredName = GetPassDisplayNameForLevel(req);
+                SkiPassWatchFeedbackBus.RaiseDenied(requiredName);
+                return false;
+            }
+
+            // Watch flash (allow)
+            SkiPassWatchFeedbackBus.RaiseAllowed(passMgr.GetCurrentPassDisplayName());
+        }
+
         riders.Add(rider);
         rider.OnAttachedToCarrier(this);
+        return true;
+    }
+
+    private string GetPassDisplayNameForLevel(int level)
+    {
+        var mgr = SkiPassManager.Instance;
+        var cfg = mgr != null ? mgr.Config : null;
+
+        if (cfg != null)
+        {
+            var p = cfg.Get(level);
+            if (p != null) return $"{p.displayName} (L{level})";
+        }
+
+        return $"Pass Level {level}";
     }
 
     public void DetachRider(LiftRider rider)

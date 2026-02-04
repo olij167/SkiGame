@@ -42,12 +42,19 @@ public class LiftRopeColliderProxy : MonoBehaviour
     [Tooltip("Layer to assign when Override Layer is enabled.")]
     public int layer = 0;
 
+    [Tooltip("Hard cap on generated collider count to prevent accidental stalls.")]
+    [Min(16)]
+    public int maxSegmentCount = 2048;
+
     [Header("Rebuild Behavior")]
     [Tooltip("Rebuild colliders continuously in edit mode (useful while moving stations).")]
     public bool rebuildInEditMode = true;
 
     [Tooltip("Rebuild colliders continuously in play mode (usually false; enable only if stations move at runtime).")]
     public bool rebuildInPlayMode = false;
+
+    [Tooltip("If true, forces LiftLine.RebuildAnalyticLoop() every time proxy rebuilds. If false, only rebuilds when line/stations/config changed.")]
+    public bool forceAnalyticRebuild = false;
 
     [Tooltip("Show the generated collider segments as gizmos.")]
     public bool drawGizmos = false;
@@ -186,9 +193,25 @@ public class LiftRopeColliderProxy : MonoBehaviour
 
     private void Update()
     {
+        // If we’re not allowed to rebuild in this mode, do nothing.
+        bool wantsRebuild =
+            (!Application.isPlaying && rebuildInEditMode) ||
+            (Application.isPlaying && rebuildInPlayMode);
+
+        if (!wantsRebuild)
+            return;
+
 #if UNITY_EDITOR
-        if (!Application.isPlaying && rebuildInEditMode)
+        // Edit mode: keep your throttle behavior, but don’t do any work unless pending or dirty.
+        if (!Application.isPlaying)
         {
+            // Mark pending if dirty (cheap check).
+            if (!_pendingEditorRebuild && HasConfigOrStationsChanged())
+            {
+                _pendingEditorRebuild = true;
+                _nextEditorRebuildTime = UnityEditor.EditorApplication.timeSinceStartup; // earliest allowed
+            }
+
             if (_pendingEditorRebuild)
             {
                 double now = UnityEditor.EditorApplication.timeSinceStartup;
@@ -196,40 +219,32 @@ public class LiftRopeColliderProxy : MonoBehaviour
                 {
                     _pendingEditorRebuild = false;
                     _nextEditorRebuildTime = now + editorRebuildIntervalSeconds;
+
+                    if (!EnsureRefs() || !CanModifyHierarchyNow())
+                        return;
+
+                    if (!_poolSynced)
+                        SyncPoolFromChildren();
+
                     Rebuild();
                 }
             }
+
+            return;
         }
 #endif
 
-        if (!EnsureRefs())
+        // Play mode: only rebuild if dirty.
+        if (!HasConfigOrStationsChanged())
             return;
 
-        if (!CanModifyHierarchyNow())
+        if (!EnsureRefs() || !CanModifyHierarchyNow())
             return;
 
-        // Ensure pool is synced at least once even if something reassigns colliderRoot.
         if (!_poolSynced)
             SyncPoolFromChildren();
 
-        if (!Application.isPlaying)
-        {
-            if (!rebuildInEditMode)
-                return;
-
-            // Only rebuild when something actually changed.
-            if (HasConfigOrStationsChanged())
-                Rebuild();
-        }
-        else
-        {
-            if (!rebuildInPlayMode)
-                return;
-
-            // Runtime rebuild only if you intentionally enabled it AND something changed.
-            if (HasConfigOrStationsChanged())
-                Rebuild();
-        }
+        Rebuild();
     }
 
     private bool CanModifyHierarchyNow()
@@ -289,8 +304,9 @@ public class LiftRopeColliderProxy : MonoBehaviour
         if (!EnsureRefs())
             return;
 
-        // Ensure analytic path is current (matches how LiftRopeVisual rebuilds).【LiftRopeVisual calls RebuildAnalyticLoop + BandLength】
-        line.RebuildAnalyticLoop();
+        // Only rebuild the analytic loop when needed (saves a lot in edit mode).
+        if (forceAnalyticRebuild || HasConfigOrStationsChanged())
+            line.RebuildAnalyticLoop();
 
         float total = line.BandLength;
         if (total <= 0.0001f)
@@ -301,6 +317,8 @@ public class LiftRopeColliderProxy : MonoBehaviour
 
         float segLen = Mathf.Max(0.25f, maxSegmentLength);
         int segmentCount = Mathf.Max(4, Mathf.CeilToInt(total / segLen));
+        if (segmentCount > maxSegmentCount)
+            segmentCount = maxSegmentCount;
 
         // We need one capsule per segment (i -> i+1). Loop is implicitly closed by LiftLine.
         EnsurePoolSize(segmentCount);
@@ -357,35 +375,48 @@ public class LiftRopeColliderProxy : MonoBehaviour
         GameObject go = col.gameObject;
         if (!go.activeSelf) go.SetActive(true);
 
-        if (overrideLayer)
+        if (overrideLayer && go.layer != layer)
             go.layer = layer;
 
-        col.isTrigger = isTrigger;
-        col.sharedMaterial = physicsMaterial;
+        if (col.isTrigger != isTrigger)
+            col.isTrigger = isTrigger;
+
+        if (col.sharedMaterial != physicsMaterial)
+            col.sharedMaterial = physicsMaterial;
 
         Vector3 delta = p1 - p0;
-        float len = delta.magnitude;
+        float sqrLen = delta.sqrMagnitude;
 
-        if (len < 0.0005f)
-        {
-            // Degenerate segment: make a small capsule.
+        // Always ensure radius; it affects height too.
+        if (!Mathf.Approximately(col.radius, ropeRadius))
             col.radius = ropeRadius;
-            col.height = Mathf.Max(ropeRadius * 2f, ropeRadius * 2f);
-            go.transform.position = p0;
-            go.transform.rotation = Quaternion.identity;
+
+        if (sqrLen < 0.00000025f) // ~0.0005^2
+        {
+            float h = Mathf.Max(ropeRadius * 2f, ropeRadius * 2f);
+            if (!Mathf.Approximately(col.height, h))
+                col.height = h;
+
+            // Only write transform if changed significantly
+            if ((go.transform.position - p0).sqrMagnitude > 0.000001f)
+                go.transform.position = p0;
+
+            // Don’t spam rotation changes for degenerate segments
             return;
         }
 
+        float len = Mathf.Sqrt(sqrLen);
         Vector3 mid = (p0 + p1) * 0.5f;
         Vector3 dir = delta / len;
 
-        // Orient local Z to segment direction.
-        go.transform.position = mid;
-        go.transform.rotation = Quaternion.LookRotation(dir, Vector3.up);
+        Quaternion rot = Quaternion.LookRotation(dir, Vector3.up);
 
-        col.radius = ropeRadius;
-        // Capsule height includes hemispheres; give it len + 2r so it covers endpoints cleanly.
-        col.height = Mathf.Max(ropeRadius * 2f, len + ropeRadius * 2f);
+        // One combined call is marginally cheaper than setting both separately.
+        go.transform.SetPositionAndRotation(mid, rot);
+
+        float targetHeight = Mathf.Max(ropeRadius * 2f, len + ropeRadius * 2f);
+        if (!Mathf.Approximately(col.height, targetHeight))
+            col.height = targetHeight;
     }
 
     private void DisableAll()

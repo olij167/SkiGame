@@ -240,10 +240,11 @@ public class LiftRider : MonoBehaviour
 
         if (best != null)
         {
-            best.AttachRider(this);
+            bool attached = best.AttachRider(this);
 
-            // Clear buffer once we attach
-            _attachBufferUntilTime = 0f;
+            // Clear buffer only if we actually attached
+            if (attached)
+                _attachBufferUntilTime = 0f;
         }
     }
 

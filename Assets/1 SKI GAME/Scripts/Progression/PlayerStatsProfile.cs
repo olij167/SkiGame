@@ -12,7 +12,7 @@ namespace SkiGame.Progression
     public sealed class PlayerStatsProfile
     {
         public int profileVersion = CurrentVersion;
-        public const int CurrentVersion = 4;  // added run visit + run attempt history
+        public const int CurrentVersion = 6;  // v6: partial run segments + completion flag
 
         public LifetimeStats lifetime = new LifetimeStats();
         public SessionStats session = new SessionStats();
@@ -506,6 +506,326 @@ namespace SkiGame.Progression
             if (lifetime == null) lifetime = new LifetimeStats();
             if (session == null) session = new SessionStats();
         }
+
+        /// <summary>
+        /// Removes non-completion run attempts whose covered fraction is below the threshold.
+        /// Returns number of removed attempts.
+        /// </summary>
+        public int PruneRunSegmentsBelowCoverage(float minCoverageFraction01, bool removeEmptyRecords, bool removeNoCoverageSegments)
+        {
+            minCoverageFraction01 = Mathf.Clamp01(minCoverageFraction01);
+
+            if (runRecords == null || runRecords.Count == 0)
+            {
+                Debug.Log("No run records.");
+                return 0;
+            }
+            int removed = 0;
+
+            // Iterate run records
+            for (int r = runRecords.Count - 1; r >= 0; r--)
+            {
+                var rec = runRecords[r];
+                if (rec == null)
+                {
+                    runRecords.RemoveAt(r);
+                    continue;
+                }
+
+                if (rec.attempts == null || rec.attempts.Count == 0)
+                {
+                    if (removeEmptyRecords && rec.timesCompleted <= 0)
+                        runRecords.RemoveAt(r);
+
+                    continue;
+                }
+
+                // Remove attempts under threshold / missing coverage / 0s
+                for (int i = rec.attempts.Count - 1; i >= 0; i--)
+                {
+                    var a = rec.attempts[i];
+                    if (a == null)
+                    {
+                        rec.attempts.RemoveAt(i);
+                        removed++;
+                        continue;
+                    }
+
+                    // NEW: prune "0-second" attempts as they appear in UI (usually < 1s and formats to 00:00)
+                    const float minSecondsToKeep = 5.0f; // tune: 0.5f if you want to be less aggressive
+
+                    if (a.timeSeconds < minSecondsToKeep || float.IsNaN(a.timeSeconds) || float.IsInfinity(a.timeSeconds))
+                    {
+                        rec.attempts.RemoveAt(i);
+                        removed++;
+                        continue;
+                    }
+
+                    // Keep full completions always (after the 0s prune)
+                    if (a.isCompletion)
+                        continue;
+
+                    bool hasCoverage = TryGetCoveredFraction01Safe(a, out float cov01);
+
+                    // Remove entries that have no progress percentage at all (optional)
+                    if (removeNoCoverageSegments && !hasCoverage)
+                    {
+                        rec.attempts.RemoveAt(i);
+                        removed++;
+                        continue;
+                    }
+
+                    // Remove partial segments below threshold
+                    if (hasCoverage && cov01 < minCoverageFraction01)
+                    {
+                        rec.attempts.RemoveAt(i);
+                        removed++;
+                        continue;
+                    }
+                }
+
+                // After pruning, rebuild cached aggregates so UI doesn't show stale best stats / completions.
+                rec.RebuildAggregatesFromAttempts();
+
+                // Optionally remove empty record entries (no completions + no attempts)
+                if (removeEmptyRecords && rec.timesCompleted <= 0 && (rec.attempts == null || rec.attempts.Count == 0))
+                {
+                    runRecords.RemoveAt(r);
+                }
+            }
+
+            return removed;
+        }
+
+
+        public int ResetRunRecords()
+        {
+            if (runRecords == null || runRecords.Count == 0)
+            {
+                Debug.Log("[PlayerStatsProfile] Run records are already empty.");
+                return 0;
+            }
+
+            int removed = 0;
+
+            for (int r = 0; r < runRecords.Count; r++)
+            {
+                var rec = runRecords[r];
+                if (rec?.attempts == null) continue;
+
+                removed += rec.attempts.Count;
+                rec.attempts.Clear();
+
+                // Ensure caches are cleared too.
+                rec.RebuildAggregatesFromAttempts();
+            }
+
+            // If you cleared all attempts, your lifetime totals should also reflect that.
+            RecalculateLifetimeRunAggregatesFromRunRecords();
+
+            return removed;
+        }
+
+        // --- helpers ---
+
+        public int CountRunAttemptsWhere(System.Func<RunAttemptEntry, bool> predicate)
+        {
+            if (predicate == null || runRecords == null) return 0;
+
+            int count = 0;
+            for (int r = 0; r < runRecords.Count; r++)
+            {
+                var rec = runRecords[r];
+                if (rec?.attempts == null) continue;
+
+                for (int i = 0; i < rec.attempts.Count; i++)
+                    if (predicate(rec.attempts[i])) count++;
+            }
+            return count;
+        }
+
+        private static bool TryGetCoveredFraction01Safe(RunAttemptEntry a, out float cov01)
+        {
+            cov01 = 0f;
+            if (a == null) return false;
+
+            // Primary new field
+            float cov = a.coveredFraction01;
+
+            // Fallback: derive from min/max meters
+            if (cov <= 0f && a.runLengthMeters > 0.001f && a.maxDistanceMeters > a.minDistanceMeters)
+                cov = (a.maxDistanceMeters - a.minDistanceMeters) / a.runLengthMeters;
+
+            // Fallback: approximate from traveled distance
+            if (cov <= 0f && a.runLengthMeters > 0.001f)
+            {
+                float dist = Mathf.Max(0f, a.onRouteDistanceMeters + a.offRouteDistanceMeters);
+                if (dist > 0f) cov = dist / a.runLengthMeters;
+            }
+
+            // Validate
+            if (float.IsNaN(cov) || float.IsInfinity(cov))
+                return false;
+
+            cov01 = Mathf.Clamp01(cov);
+
+            // Treat effectively-zero as "no coverage" (missing) for pruning purposes
+            return cov01 > 0.0001f;
+        }
+
+        private static void RemoveAllIdMatches(List<string> list, string id)
+        {
+            if (list == null || string.IsNullOrEmpty(id)) return;
+            for (int i = list.Count - 1; i >= 0; i--)
+                if (list[i] == id)
+                    list.RemoveAt(i);
+        }
+
+        private static void RemoveIdCountEntry(List<IdCountEntry> list, string id)
+        {
+            if (list == null || string.IsNullOrEmpty(id)) return;
+            for (int i = list.Count - 1; i >= 0; i--)
+                if (list[i].id == id)
+                    list.RemoveAt(i);
+        }
+
+        /// <summary>
+        /// Recomputes lifetime run aggregates from runRecords/attempts (source of truth).
+        /// Call this after pruning/deleting run attempts/records.
+        /// </summary>
+        public void RecalculateLifetimeRunAggregatesFromRunRecords()
+        {
+            lifetime ??= new LifetimeStats();
+
+            int totalCompletions = 0;
+            int totalCleanCompletions = 0;
+            float topRunSpeed = 0f;
+
+            if (runRecords != null)
+            {
+                for (int r = 0; r < runRecords.Count; r++)
+                {
+                    var rec = runRecords[r];
+                    if (rec == null) continue;
+
+                    // Ensure record caches are consistent with attempts.
+                    rec.RebuildAggregatesFromAttempts();
+
+                    if (rec.attempts == null) continue;
+
+                    for (int i = 0; i < rec.attempts.Count; i++)
+                    {
+                        var a = rec.attempts[i];
+                        if (a == null || !a.isCompletion) continue;
+
+                        totalCompletions++;
+                        if (a.stacks == 0) totalCleanCompletions++;
+                        if (a.topSpeedMps > topRunSpeed) topRunSpeed = a.topSpeedMps;
+                    }
+                }
+            }
+
+            lifetime.totalRunsCompleted = totalCompletions;
+            lifetime.totalRunsCompletedClean = totalCleanCompletions;
+            lifetime.topRunSpeedMps = topRunSpeed;
+        }
+
+        /// <summary>
+        /// Removes a single run's record, and optionally also clears visits/counts/session references.
+        /// </summary>
+        public bool RemoveRunRecordCompletely(
+            string runId,
+            bool removeVisits = true,
+            bool removeCounts = true,
+            bool removeSessionRefs = true,
+            bool recalcLifetimeRunAggregates = true)
+        {
+            if (string.IsNullOrEmpty(runId)) return false;
+
+            bool removed = false;
+
+            if (runRecords != null)
+            {
+                for (int i = runRecords.Count - 1; i >= 0; i--)
+                {
+                    var rr = runRecords[i];
+                    if (rr != null && rr.runId == runId)
+                    {
+                        runRecords.RemoveAt(i);
+                        removed = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!removed) return false;
+
+            if (removeVisits)
+            {
+                RemoveAllIdMatches(visitedRunIds, runId);
+                if (removeSessionRefs)
+                    RemoveAllIdMatches(sessionVisitedRunIds, runId);
+            }
+
+            if (removeCounts)
+            {
+                RemoveIdCountEntry(runVisitCounts, runId);
+                if (removeSessionRefs)
+                    RemoveIdCountEntry(sessionRunVisitCounts, runId);
+            }
+
+            if (removeSessionRefs)
+                RemoveAllIdMatches(sessionCompletedRunIds, runId);
+
+            if (recalcLifetimeRunAggregates)
+                RecalculateLifetimeRunAggregatesFromRunRecords();
+
+            return true;
+        }
+
+        /// <summary>
+        /// Hard clears ALL run history (records + optional visit/count/session caches),
+        /// then rebuilds lifetime run aggregates to zero.
+        /// </summary>
+        public int ClearAllRunHistory(
+            bool clearVisits = true,
+            bool clearCounts = true,
+            bool clearSessionRefs = true,
+            bool recalcLifetimeRunAggregates = true)
+        {
+            int removedRecords = runRecords != null ? runRecords.Count : 0;
+
+            runRecords?.Clear();
+
+            if (clearVisits)
+            {
+                visitedRunIds?.Clear();
+                if (clearSessionRefs) sessionVisitedRunIds?.Clear();
+            }
+
+            if (clearCounts)
+            {
+                runVisitCounts?.Clear();
+                if (clearSessionRefs) sessionRunVisitCounts?.Clear();
+            }
+
+            if (clearSessionRefs)
+                sessionCompletedRunIds?.Clear();
+
+            // Also zero session run aggregates, so the UI doesn't still show “this session” bests.
+            if (clearSessionRefs && session != null)
+            {
+                session.runsCompleted = 0;
+                session.runsCompletedClean = 0;
+                session.topRunSpeedMps = 0f;
+            }
+
+            if (recalcLifetimeRunAggregates)
+                RecalculateLifetimeRunAggregatesFromRunRecords();
+
+            return removedRecords;
+        }
+
     }
 
     [Serializable]
@@ -583,6 +903,8 @@ namespace SkiGame.Progression
         public int timesCompletedClean;
         public float bestCleanTimeSeconds = -1f; // -1 = unset
 
+        public int AttemptCount => attempts != null ? attempts.Count : 0;
+
         public void RegisterCompletion(float timeSeconds, float topSpeedMps, float distanceMeters)
         {
             timesCompleted++;
@@ -614,13 +936,21 @@ namespace SkiGame.Progression
                     attempts.RemoveAt(0);
             }
 
-            // Update totals + bests
-            RegisterCompletion(attempt != null ? attempt.timeSeconds : 0f,
-                               attempt != null ? attempt.topSpeedMps : 0f,
-                               attempt != null ? (attempt.onRouteDistanceMeters + attempt.offRouteDistanceMeters) : 0f);
+            if (attempt == null) return;
+
+            // Always accumulate distance spent on this run (partials included)
+            float attemptDist = attempt.onRouteDistanceMeters + attempt.offRouteDistanceMeters;
+            if (attemptDist > 0f)
+                totalDistanceMeters += attemptDist;
+
+            // Only count "completion" aggregates when this attempt is a full completion
+            if (!attempt.isCompletion)
+                return;
+
+            RegisterCompletion(attempt.timeSeconds, attempt.topSpeedMps, attemptDist);
 
             // Clean completion tracking (0 stacks)
-            if (attempt != null && attempt.stacks == 0)
+            if (attempt.stacks == 0)
             {
                 timesCompletedClean++;
 
@@ -628,6 +958,56 @@ namespace SkiGame.Progression
                 {
                     if (bestCleanTimeSeconds < 0f || attempt.timeSeconds < bestCleanTimeSeconds)
                         bestCleanTimeSeconds = attempt.timeSeconds;
+                }
+            }
+        }
+
+        public void RebuildAggregatesFromAttempts()
+        {
+            timesCompleted = 0;
+            timesCompletedClean = 0;
+
+            bestTimeSeconds = -1f;
+            bestCleanTimeSeconds = -1f;
+
+            bestTopSpeedMps = 0f;
+            totalDistanceMeters = 0f;
+
+            if (attempts == null || attempts.Count == 0)
+                return;
+
+            for (int i = 0; i < attempts.Count; i++)
+            {
+                var a = attempts[i];
+                if (a == null) continue;
+
+                float attemptDist = Mathf.Max(0f, a.onRouteDistanceMeters) + Mathf.Max(0f, a.offRouteDistanceMeters);
+                if (attemptDist > 0f)
+                    totalDistanceMeters += attemptDist;
+
+                if (!a.isCompletion)
+                    continue;
+
+                timesCompleted++;
+
+                if (a.timeSeconds > 0f)
+                {
+                    if (bestTimeSeconds < 0f || a.timeSeconds < bestTimeSeconds)
+                        bestTimeSeconds = a.timeSeconds;
+                }
+
+                if (a.topSpeedMps > bestTopSpeedMps)
+                    bestTopSpeedMps = a.topSpeedMps;
+
+                if (a.stacks == 0)
+                {
+                    timesCompletedClean++;
+
+                    if (a.timeSeconds > 0f)
+                    {
+                        if (bestCleanTimeSeconds < 0f || a.timeSeconds < bestCleanTimeSeconds)
+                            bestCleanTimeSeconds = a.timeSeconds;
+                    }
                 }
             }
         }
@@ -649,6 +1029,13 @@ namespace SkiGame.Progression
     {
         public DateTimeUtc completedUtc;
 
+        // In-game date/time snapshot at completion (TimeController)
+        public int gameYear;
+        public int gameMonthIndex;     // 0..monthPresets.Length-1
+        public int gameDayOfMonth;     // 1..daysInMonth
+        public int gameDayOfWeek;      // 0=Mon .. 6=Sun
+        public float gameTimeOfDay;    // 0..24 (hours)
+
         public float timeSeconds;
         public float averageSpeedMps;
         public float topSpeedMps;
@@ -668,6 +1055,28 @@ namespace SkiGame.Progression
         public float completionFraction;
 
         public List<StackEventEntry> stackEvents;
+        // --- Partial segment support (v6) ---
+        public bool isCompletion;
+
+        // Length snapshot at time of attempt (stable even if authoring changes later)
+        public float runLengthMeters;
+
+        // Where on the run they entered/exited (meters along centerline)
+        public float entryDistanceMeters;
+        public float exitDistanceMeters;
+
+        // Full interval covered during the attempt (meters along centerline)
+        public float minDistanceMeters;
+        public float maxDistanceMeters;
+
+        // Normalized (0..1) versions for UI
+        public float entryFraction01;
+        public float exitFraction01;
+        public float coveredMinFraction01;
+        public float coveredMaxFraction01;
+        public float coveredFraction01;
+
+
     }
 
     /// <summary>

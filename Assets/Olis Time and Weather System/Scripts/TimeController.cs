@@ -39,10 +39,32 @@ namespace TimeWeather
             public int daysInMonth;
         }
 
+        public int currentMonthIndex
+        {
+            get
+            {
+                if (monthPresets == null || monthPresets.Length == 0 || currentMonthData == null)
+                    return 0;
+
+                string m = currentMonthData.month;
+                for (int i = 0; i < monthPresets.Length; i++)
+                {
+                    if (monthPresets[i] != null && monthPresets[i].month == m)
+                        return i;
+                }
+                return 0;
+            }
+        }
+
         [Header("Time")]
         [Tooltip("How many real-world seconds it takes for an in-game minute to pass")]
         [Range(0.001f, 60f)] public float secondsPerMinuteInGame = 0.5f; //length of the day in minutes
         [HideInInspector] public float timeScale = 100f;
+
+        private bool _hasExternalSecondsPerMinute;
+        private float _externalSecondsPerMinute;
+        private float _defaultSecondsPerMinute;
+
         [Tooltip("The current in-game time")]
         [Range(0, 24)] public float timeOfDay;
         [HideInInspector] public int timeHours;
@@ -202,6 +224,10 @@ namespace TimeWeather
         {
             if (WeatherController.instance != null) weatherController = WeatherController.instance;
 
+            // Cache the scene's default speed so external systems can temporarily override and later restore it.
+            if (_defaultSecondsPerMinute <= 0f)
+                _defaultSecondsPerMinute = secondsPerMinuteInGame;
+
             if (dayText != null)
                 dayText.text = currentDay.ToString() + ", " + currentMonthData.month + " " + dayOfMonth + ", \n" + currentMonthData.season + ", " + currentYear;
 
@@ -330,6 +356,16 @@ namespace TimeWeather
                     // Avoid exactly 24 to prevent wrap jitter
                     timeOfDay = Mathf.Min(v, 23.999f);
                 }
+            }
+
+            // External override always wins over UI sliders (used for ski resort / cutscenes / etc.).
+            if (_hasExternalSecondsPerMinute)
+            {
+                secondsPerMinuteInGame = _externalSecondsPerMinute;
+
+                // Keep the slider visually in-sync.
+                if (toggleUITimeControls && timeScaleSlider != null)
+                    timeScaleSlider.value = secondsPerMinuteInGame;
             }
 
             // Simulation
@@ -909,6 +945,43 @@ namespace TimeWeather
 
                 timeText.text = timeString;
             }
+        }
+
+        /// <summary>
+        /// Temporarily overrides the time speed (seconds-per-in-game-minute). Useful for areas like the ski resort.
+        /// Pass a value in the same units as secondsPerMinuteInGame.
+        /// </summary>
+        public void SetExternalSecondsPerMinuteOverride(float secondsPerMinute)
+        {
+            // Ensure we have a baseline to restore to.
+            if (_defaultSecondsPerMinute <= 0f)
+                _defaultSecondsPerMinute = secondsPerMinuteInGame;
+
+            _hasExternalSecondsPerMinute = true;
+            _externalSecondsPerMinute = Mathf.Clamp(secondsPerMinute, 0.001f, 60f);
+        }
+
+        /// <summary>
+        /// Temporarily overrides the time speed via multiplier of the scene default.
+        /// Example: 0.25 -> 4x faster time; 2.0 -> 2x slower time.
+        /// </summary>
+        public void SetExternalTimeSpeedMultiplier(float multiplier)
+        {
+            if (_defaultSecondsPerMinute <= 0f)
+                _defaultSecondsPerMinute = secondsPerMinuteInGame;
+
+            multiplier = Mathf.Max(0.001f, multiplier);
+            SetExternalSecondsPerMinuteOverride(_defaultSecondsPerMinute * multiplier);
+        }
+
+        /// <summary>
+        /// Clears any external override and restores the cached scene default.
+        /// </summary>
+        public void ClearExternalTimeOverride()
+        {
+            _hasExternalSecondsPerMinute = false;
+            if (_defaultSecondsPerMinute > 0f)
+                secondsPerMinuteInGame = _defaultSecondsPerMinute;
         }
 
     }

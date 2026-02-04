@@ -20,8 +20,8 @@ namespace SkiGame.Map
     public struct MapPolyline
     {
         [Header("Identity")]
-        public string id;
         public string displayName;
+        public string id;
         public MapLineType lineType;
 
         [Header("Visuals")]
@@ -44,8 +44,8 @@ namespace SkiGame.Map
     public struct MapMarker
     {
         [Header("Identity")]
-        public string id;
         public string displayName;
+        public string id;
         public POIType type;
 
         [Header("Visuals")]

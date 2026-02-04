@@ -150,6 +150,92 @@ public class WalkingController : MonoBehaviour
     private bool _isGrounded;
     private bool _jumpQueued;
 
+    // --- Raw user input capture (ignores external auto-walk overrides) ---
+    private Vector2 _lastUserMoveRaw;
+    private bool _lastUserSprintRaw;
+
+    public Vector2 LastUserMoveRaw => _lastUserMoveRaw;
+    public float LastUserMoveMagnitude => _lastUserMoveRaw.magnitude;
+    public bool LastUserSprintRaw => _lastUserSprintRaw;
+
+    /// <summary>
+    /// Returns true if the player is currently providing movement input (raw input, not external override).
+    /// </summary>
+    public bool IsUserTryingToMove(float threshold = 0.15f)
+    {
+        return _lastUserMoveRaw.sqrMagnitude >= (threshold * threshold);
+    }
+
+    [Header("Runtime Overrides")]
+    [SerializeField] private bool controlsEnabled = true;
+
+    private bool _externalMoveActive;
+    private Vector2 _externalMove;
+    private bool _externalSprint;
+
+    public bool ControlsEnabled
+    {
+        get => controlsEnabled;
+        set => controlsEnabled = value;
+    }
+
+    public bool ExternalMoveActive => _externalMoveActive;
+
+    public void SetExternalMove(Vector2 move01, bool sprint = false)
+    {
+        _externalMoveActive = true;
+        _externalMove = Vector2.ClampMagnitude(move01, 1f);
+        _externalSprint = sprint;
+    }
+
+    public void ClearExternalMove()
+    {
+        _externalMoveActive = false;
+        _externalMove = Vector2.zero;
+        _externalSprint = false;
+    }
+
+    public void ForceEnterWalkMode()
+    {
+        if (_skisOn)
+            EnterWalkMode();
+    }
+
+    public void ForceEnterSkiMode()
+    {
+        if (!_skisOn)
+            EnterSkiMode();
+    }
+
+    public void GetMoveBasis(out Vector3 forward, out Vector3 right)
+    {
+        if (cameraTransform != null)
+        {
+            Vector3 camForward = Vector3.ProjectOnPlane(cameraTransform.forward, Vector3.up);
+            if (camForward.sqrMagnitude < 0.0001f) camForward = transform.forward;
+            camForward.Normalize();
+
+            Vector3 camRight = Vector3.ProjectOnPlane(cameraTransform.right, Vector3.up);
+            if (camRight.sqrMagnitude < 0.0001f) camRight = transform.right;
+            camRight.Normalize();
+
+            forward = camForward;
+            right = camRight;
+        }
+        else
+        {
+            forward = transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;
+            forward.Normalize();
+
+            right = transform.right;
+            right.y = 0f;
+            if (right.sqrMagnitude < 0.0001f) right = Vector3.right;
+            right.Normalize();
+        }
+    }
+
     // ----------------------------------------------------------------------
     // UNITY LIFECYCLE
     // ----------------------------------------------------------------------
@@ -208,12 +294,18 @@ public class WalkingController : MonoBehaviour
 
     private void Update()
     {
+        if (!controlsEnabled)
+            return;
+
         HandleToggleInput();
         HandleJumpInput();
     }
 
     private void FixedUpdate()
     {
+        if (!controlsEnabled)
+            return;
+
         if (!_skisOn)
         {
             UpdateGroundedState();
@@ -479,36 +571,19 @@ public class WalkingController : MonoBehaviour
 
     private void ApplyWalkMovement()
     {
-        Vector2 moveInput = _player.Move.ReadValue<Vector2>();
-        bool sprintHeld = _player.Sprint.IsPressed();
+        // Read raw user input first (used for cancel / intent detection).
+        Vector2 rawInput = _player.Move.ReadValue<Vector2>();
+        bool rawSprint = _player.Sprint.IsPressed();
 
-        Vector3 forward, right;
+        _lastUserMoveRaw = rawInput;
+        _lastUserSprintRaw = rawSprint;
 
-        if (cameraTransform != null)
-        {
-            Vector3 camForward = Vector3.ProjectOnPlane(cameraTransform.forward, Vector3.up);
-            if (camForward.sqrMagnitude < 0.0001f) camForward = transform.forward;
-            camForward.Normalize();
+        // External override wins for movement, but raw input remains available.
+        Vector2 moveInput = _externalMoveActive ? _externalMove : rawInput;
+        bool sprintHeld = _externalMoveActive ? _externalSprint : rawSprint;
 
-            Vector3 camRight = Vector3.ProjectOnPlane(cameraTransform.right, Vector3.up);
-            if (camRight.sqrMagnitude < 0.0001f) camRight = transform.right;
-            camRight.Normalize();
-
-            forward = camForward;
-            right = camRight;
-        }
-        else
-        {
-            forward = transform.forward;
-            forward.y = 0f;
-            if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;
-            forward.Normalize();
-
-            right = transform.right;
-            right.y = 0f;
-            if (right.sqrMagnitude < 0.0001f) right = Vector3.right;
-            right.Normalize();
-        }
+        // Use the same basis we expose for auto-walk.
+        GetMoveBasis(out Vector3 forward, out Vector3 right);
 
         Vector3 desiredDir = forward * moveInput.y + right * moveInput.x;
         float inputMagnitude = desiredDir.magnitude;

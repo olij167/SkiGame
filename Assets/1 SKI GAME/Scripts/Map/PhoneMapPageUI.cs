@@ -1,8 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using SkiGame.Map;
+using SkiGame.POI;
+using static UnityEngine.UIElements.VisualElement;
 
 namespace SkiGame.Map.UI
 {
@@ -27,10 +29,21 @@ namespace SkiGame.Map.UI
         private Label _missingLabel;
         private VisualElement _btnReset;
 
+        private VisualElement _btnCenterPlayer;
+
         private MapPolylineLayer _polyLayer;
 
         private bool _bound;
         private bool _dirty = true;
+
+        private VisualElement _root;
+        private bool _isScrollViewRoot;
+
+        // Tracks when the viewport first gets a real (non-zero) layout rect.
+        // Embedded minimaps can bind/refresh before layout resolves, which leaves the view at (0,0).
+        private bool _pendingCenterOnPlayer;
+        private bool _pendingCenterKeepZoom = true;
+        private float _pendingCenterMinZoom = 1.0f;
 
         // -------------------------
         // Debug: projection validation overlay
@@ -92,6 +105,96 @@ namespace SkiGame.Map.UI
         private bool _suppressSelection = false;
         private bool _hideMarkerLabels = false;
 
+        // -------------------------
+        // Map layer bar (Runs / Lifts / POIs)
+        // -------------------------
+        private VisualElement _layerBar;
+        private VisualElement _btnLayerRuns;
+        private VisualElement _btnLayerLifts;
+        private VisualElement _btnLayerPOIs;
+
+        // -------------------------
+        // Info panel + viewport sizing sync
+        // -------------------------
+        private VisualElement _mapBottomDock;   // "MapBottomDock"
+        private VisualElement _mapInfoPanel;    // "MapInfoPanel"
+
+        private bool _infoPanelRefsResolved;
+        private bool _infoPanelCallbacksHooked;
+
+        // Cached open state so we can react immediately even if no GeometryChanged fires.
+        private bool _infoPanelOpenCached;
+        private float _infoPanelReserveCached;
+
+        // Centering should occur after the viewport is reduced (so the selected point is centered in reduced view).
+        private bool _pendingCenterOnSelection;
+        private float _pendingSelectionMinZoom = -1f;
+
+        private bool _showRunOverlays = true;
+        private bool _showLiftOverlays = true;
+        private bool _showPOIOverlays = true;
+
+        // Marker root bookkeeping so we can hide/show without rebuilding (preserves pan/zoom)
+        private readonly Dictionary<string, VisualElement> _markerRoots = new();
+        private readonly Dictionary<string, POIType> _markerTypes = new();
+
+        private readonly Dictionary<string, SkiGame.Map.MapMarker> _markerById = new();
+        private readonly Dictionary<string, Label> _poiOverlayLabels = new(); // markerId -> overlay label
+
+        private MapUIStyleSettings _style;
+        private PointOfInterestRegistry _poiRegistry;
+
+        // Cache created UI elements so we can restyle them when selection changes
+        private readonly Dictionary<string, (VisualElement dot, Label label)> _markerVisuals = new();
+        private readonly Dictionary<string, Label> _polylineLabelVisuals = new();
+        private readonly Dictionary<string, Color> _polylineColorOverrides = new();
+
+        // Links to unify selection for SkiRuns: selecting any linked element selects all.
+        private readonly Dictionary<string, string> _markerToPolyline = new();   // markerId -> polylineId
+        private readonly Dictionary<string, string> _polylineToMarker = new();   // polylineId -> markerId (first match)
+
+        // Label accent colors (a small coloured stripe) to help disambiguate labels in dense areas.
+        private readonly Dictionary<string, Color> _markerLabelAccent = new();
+        private readonly Dictionary<string, Color> _polylineLabelAccent = new();
+
+        // Lift pass requirement → map colouring
+        private readonly Dictionary<string, int> _liftRequiredLevelByPolyline = new();
+        private readonly Dictionary<string, Color> _liftRequiredColorByPolyline = new();
+
+        private string _lastSelectedPolylineId;
+
+        private const float LiftLabelOffsetPx = 10f; // above the midline (screen px)
+
+        private const float PoiVisibleMinZoom = 1.15f;
+        private const int MaxContextRunLiftLabels = 50;
+        private const int MaxContextPoiLabels = 25;
+
+
+        // -------------------------
+        // Linked selection (Runs + Lifts)
+        // -------------------------
+
+        private enum LiftStationRole { None = 0, Bottom = 1, Top = 2 }
+
+        // lift station marker(s) <-> lift polyline (multiple markers: top + bottom + optional “label marker”)
+        private readonly Dictionary<string, string> _liftMarkerToPolyline = new();
+        private readonly Dictionary<string, List<string>> _liftPolylineToMarkers = new();
+        private readonly Dictionary<string, LiftStationRole> _liftMarkerRole = new();
+
+
+        // If selection came from a lift station marker, we append this to the info panel title.
+        private string _selectedLiftStationSuffix;
+        public bool TryGetSelectedLiftStationSuffix(out string suffix)
+        {
+            suffix = _selectedLiftStationSuffix;
+            return !string.IsNullOrEmpty(suffix);
+        }
+        public string SelectedLiftStationSuffix => _selectedLiftStationSuffix;
+
+        // selection visuals need to support multiple markers (top+bottom at once)
+        private readonly HashSet<string> _selectedMarkerSet = new();
+        private readonly HashSet<string> _lastMarkerSet = new();
+
         /// <summary>
         /// Enables a "minimap" behavior:
         /// - optionally follows player (re-centers every Tick)
@@ -128,25 +231,23 @@ namespace SkiGame.Map.UI
             if (!_allowZoom) return;
             if (_viewport == null) return;
 
-            float vw = _viewport.resolvedStyle.width;
-            float vh = _viewport.resolvedStyle.height;
-            if (vw <= 1f || vh <= 1f) return;
+            if (!TryGetViewportSize(out float vw, out float vh))
+                return;
 
-            // Match WheelEvent behavior (positive scrollDeltaY usually means "scroll up/down" depending on binding).
             float prevZoom = _zoom;
 
-            // We treat positive delta as "zoom out" similar to wheel's evt.delta.y.
             float zoomFactor = Mathf.Pow(1.12f, -scrollDeltaY * 0.1f);
             _zoom = Mathf.Clamp(_zoom * zoomFactor, 0.15f, 10f);
 
             Vector2 center = new Vector2(vw * 0.5f, vh * 0.5f);
 
-            Vector2 contentBefore = (center - _pan) / prevZoom;
-            _pan = center - contentBefore * _zoom;
+            Vector2 contentAtCenterBefore = (center - _pan) / Mathf.Max(0.0001f, prevZoom);
+            _pan = center - contentAtCenterBefore * _zoom;
 
             ApplyTransform();
             _polyLayer?.SetZoom(_zoom);
             _trailLayer?.SetZoom(_zoom);
+
         }
 
         // Click / drag discrimination for selection
@@ -155,13 +256,149 @@ namespace SkiGame.Map.UI
         private Vector2 _pointerDownPosViewport;
         private const float ClickDragThresholdPx = 6f;
 
+
         // Selection state
         private string _selectedMarkerId;
         private string _selectedPolylineId;
 
+        // Make marker hover less finicky (bigger invisible hit targets)
+        private readonly Dictionary<string, VisualElement> _markerHitTargets = new();
+
+        // Cheap lookup for label text (avoids scanning MapData every frame)
+        private readonly Dictionary<string, string> _markerDisplayNames = new();
+
+        // Explicit “always visible label” POIs (driven by marker.meta tokens, not UI toggles).
+        private readonly Dictionary<string, bool> _poiAlwaysLabelById = new();
+
+        // Fixed pixel offsets (screen-space) for labels
+        private const float PoiLabelOffsetPx = 18f;  // label center sits below marker pivot
+        private const float RunLabelOffsetPx = 18f;  // same; tweak independently if needed
+
+        private readonly Dictionary<string, Vector2> _markerAnchorLocal = new();       // markerId -> content-local anchor (pre-zoom)
+
+        // --- Polyline label direction (to offset perpendicular to line) ---
+        private readonly Dictionary<string, Vector2> _polylineLabelNormalLocal = new(); // polylineId -> normal in content-local (y-down)
+
+        // -------------------------
+        // Overlay label system (stable + simple)
+        // Labels live in viewport space (NOT inside scaled MapContent).
+        // -------------------------
+        private VisualElement _labelOverlay;
+
+        // Anchors in content-local (same space as markers / polylines before pan+zoom)
+        private readonly Dictionary<string, Vector2> _polyAnchorLocal = new();       // polylineId -> content-local
+        private readonly Dictionary<string, Vector2> _polyNormalLocal = new();       // polylineId -> preferred normal dir (content-local)
+
+        // Remember the last “slot” we successfully used to reduce jitter
+        private readonly Dictionary<string, int> _labelSlotCache = new();
+
+        // Tunables (screen px)
+        private const float LabelCellSizePx = 96f;            // spatial hash cell size
+        private const float LabelBaseOffsetPx = 12f;          // how far from anchor we try to place
+        private const float RunLiftAlwaysVisibleMinZoom = 0.85f; // show run/lift labels once zoomed enough
+
+        // Overlay labels should behave like any other selectable map element.
+        // (They live in viewport space so we intercept clicks to prevent the viewport drag handler from capturing.)
+        private void MakeOverlayLabelInteractive(Label label, Action onClick)
+        {
+            if (label == null) return;
+
+            // Must be pickable; the overlay container itself is PickingMode.Ignore.
+            label.pickingMode = PickingMode.Position;
+
+            // Hover affordance (USS uses .is-hovered, not :hover)
+            label.RegisterCallback<PointerEnterEvent>(_ => label.AddToClassList("is-hovered"));
+            label.RegisterCallback<PointerLeaveEvent>(_ => label.RemoveFromClassList("is-hovered"));
+
+            // Click selects. Use PointerDown so we can stop propagation before the viewport pans.
+            label.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                if (evt.button != 0) return;
+                if (_suppressSelection) { evt.StopPropagation(); return; }
+
+                onClick?.Invoke();
+                evt.StopPropagation();
+            });
+        }
+
+        private void SelectPOIMarkerOnly(string markerId, bool fireEvent)
+        {
+            if (string.IsNullOrEmpty(markerId)) return;
+
+            _selectedLiftStationSuffix = null;
+            _selectedPolylineId = null;
+            _selectedMarkerId = markerId;
+
+            UpdateSelectionVisuals();
+            _polyLayer?.SetSelected(null);
+
+            if (fireEvent && _markerById.TryGetValue(markerId, out var m))
+            {
+                RequestCenterOnSelectionWhenInfoPanelOpen(minZoom: -1f);
+                MarkerSelected?.Invoke(m);
+            }
+        }
+
+        private void EnsureLabelOverlay()
+        {
+            if (_viewport == null) return;
+
+            if (_labelOverlay == null)
+            {
+                _labelOverlay = new VisualElement();
+                _labelOverlay.name = "MapLabelOverlay";
+                _labelOverlay.style.position = Position.Absolute;
+                _labelOverlay.style.left = 0;
+                _labelOverlay.style.top = 0;
+                _labelOverlay.style.right = 0;
+                _labelOverlay.style.bottom = 0;
+
+                // Overlay itself ignores input; labels inside can still receive input.
+                _labelOverlay.pickingMode = PickingMode.Ignore;
+
+                _viewport.Add(_labelOverlay);
+            }
+
+            _labelOverlay.BringToFront();
+        }
+
+        private void SelectPolylineInternal(string polylineId, Map.MapPolyline polyline, bool fireEvent)
+        {
+            _selectedPolylineId = polylineId;
+
+            // If this is a SkiRun, also select its linked marker (if present).
+            if (polyline.lineType == MapLineType.SkiRun && _polylineToMarker.TryGetValue(polylineId, out var markerId))
+                _selectedMarkerId = markerId;
+            else
+                _selectedMarkerId = null;
+
+            UpdateSelectionVisuals();
+
+            if (fireEvent)
+                PolylineSelected?.Invoke(polyline);
+        }
+
+        private void ClearSelectionInternal(bool fireEvent)
+        {
+            _selectedLiftStationSuffix = null;
+            _selectedPolylineId = null;
+            _selectedMarkerId = null;
+            _pendingCenterOnSelection = false;
+            _pendingSelectionMinZoom = -1f;
+
+
+            UpdateSelectionVisuals();
+
+            if (fireEvent)
+                SelectionCleared?.Invoke();
+        }
+
         public void Bind(VisualElement root, MapData mapData, Camera mapCamera)
         {
             if (root == null) return;
+
+            _root = root;
+            _isScrollViewRoot = root is ScrollView;
 
             _mapData = mapData;
 
@@ -174,10 +411,17 @@ namespace SkiGame.Map.UI
             ConfigureReferenceCamera(); // now becomes a lightweight validator (see replacement below)
 
             _viewport = root.Q<VisualElement>("MapViewport");
+            EnsureLabelOverlay();
+
             _content = root.Q<VisualElement>("MapContent");
             _bg = root.Q<VisualElement>("MapBackground");
             _polyHost = root.Q<VisualElement>("MapPolylines");
             _markerHost = root.Q<VisualElement>("MapMarkers");
+
+            // Critical: our pan/zoom math assumes scaling is about the top-left of MapContent.
+            // If transformOrigin remains at default (center), scaling causes visual drift.
+            if (_content != null)
+                _content.style.transformOrigin = new TransformOrigin(0f, 0f, 0f);
 
             // Ensure absolute positioning for map layers.
             if (_bg != null) _bg.style.position = Position.Absolute;
@@ -195,6 +439,18 @@ namespace SkiGame.Map.UI
 
             if (_btnReset != null)
                 _btnReset.RegisterCallback<ClickEvent>(_ => ResetViewToFit());
+
+            _btnCenterPlayer = root.Q<VisualElement>("Btn_MapCenterPlayer");
+            if (_btnCenterPlayer != null)
+            {
+                _btnCenterPlayer.tooltip = "Center on player";
+                _btnCenterPlayer.RegisterCallback<ClickEvent>(_ => RequestCenterOnPlayer(keepZoom: true, minZoom: 1.0f));
+            }
+
+            BindLayerBar(root);
+
+            // Resolve dock + info panel globally (they are not children of Page_Map in UXML)
+            ResolveInfoPanelRefs();
 
             if (_viewport != null)
             {
@@ -233,7 +489,7 @@ namespace SkiGame.Map.UI
                 _playerMarker.style.borderTopRightRadius = 999;
                 _playerMarker.style.borderBottomLeftRadius = 999;
                 _playerMarker.style.borderBottomRightRadius = 999;
-                _playerMarker.style.backgroundColor = new Color(0.25f, 0.9f, 1f, 0.95f);
+                _playerMarker.style.backgroundColor = Color.mediumSlateBlue;
                 _playerMarker.style.borderLeftWidth = 2;
                 _playerMarker.style.borderRightWidth = 2;
                 _playerMarker.style.borderTopWidth = 2;
@@ -248,6 +504,8 @@ namespace SkiGame.Map.UI
 
                 _markerHost.Add(_playerMarker);
             }
+
+            ApplyPlayerMarkerStyle();
 
             // Install debug overlay layer (above polylines and markers).
             // We attach it to _content so it inherits pan/zoom transforms.
@@ -270,17 +528,135 @@ namespace SkiGame.Map.UI
             _bound = (_viewport != null && _content != null && _bg != null && _polyHost != null && _markerHost != null);
             _dirty = true;
 
-            // First layout pass: when geometry exists, fit the map.
+            // Geometry init:
+            // - For ScrollView root (Page_Map), force a stable viewport height so the map is visible.
+            // - For embedded minimaps, this simply triggers Refresh once sizes resolve.
             if (_viewport != null)
             {
                 _viewport.RegisterCallback<GeometryChangedEvent>(_ =>
                 {
-                    // Embedded minimaps (watch + home tile) don't always get an explicit Refresh() call.
-                    // Once we have a real layout rect, build visuals + fit.
+                    if (_isScrollViewRoot)
+                        EnsureViewportHeightForScrollViewRoot();
+
                     if (_dirty)
                         Refresh();
+                    else
+                        UpdateLayerSizes();
                 });
             }
+
+            if (_isScrollViewRoot)
+            {
+                // Also listen to root size changes (phone open/close, orientation, etc.)
+                _root.RegisterCallback<GeometryChangedEvent>(_ => EnsureViewportHeightForScrollViewRoot());
+                EnsureViewportHeightForScrollViewRoot();
+            }
+        }
+
+        private void BindLayerBar(VisualElement root)
+        {
+            _layerBar = root.Q<VisualElement>("MapLayerBar");
+            if (_layerBar == null) return;
+
+            _btnLayerRuns = _layerBar.Q<VisualElement>("Btn_MapLayerRuns");
+            _btnLayerLifts = _layerBar.Q<VisualElement>("Btn_MapLayerLifts");
+            _btnLayerPOIs = _layerBar.Q<VisualElement>("Btn_MapLayerPOIs");
+
+            HookLayerBtn(_btnLayerRuns, () => { _showRunOverlays = !_showRunOverlays; ApplyLayerVisibility(); });
+            HookLayerBtn(_btnLayerLifts, () => { _showLiftOverlays = !_showLiftOverlays; ApplyLayerVisibility(); });
+            HookLayerBtn(_btnLayerPOIs, () => { _showPOIOverlays = !_showPOIOverlays; ApplyLayerVisibility(); });
+
+            UpdateLayerBarVisuals();
+
+            // NOTE: We intentionally removed the right-click “always visible POI labels” toggle.
+            // POI labels are hover/selected only, except explicitly flagged POIs (marker.meta).
+        }
+
+        private static void HookLayerBtn(VisualElement btn, Action onClick)
+        {
+            if (btn == null) return;
+
+            btn.RegisterCallback<ClickEvent>(e =>
+            {
+                onClick?.Invoke();
+                e.StopPropagation();
+            });
+
+            // Prevent accidental map drag start if this ends up within the viewport area on some layouts.
+            btn.RegisterCallback<PointerDownEvent>(e => e.StopPropagation());
+        }
+
+        private void UpdateLayerBarVisuals()
+        {
+            SetOn(_btnLayerRuns, _showRunOverlays);
+            SetOn(_btnLayerLifts, _showLiftOverlays);
+            SetOn(_btnLayerPOIs, _showPOIOverlays);
+
+            static void SetOn(VisualElement ve, bool on)
+            {
+                if (ve == null) return;
+                ve.EnableInClassList("is-on", on);
+            }
+        }
+
+        private void ApplyLayerVisibility()
+        {
+            _polyLayer?.SetTypeVisibility(_showRunOverlays, _showLiftOverlays);
+
+            foreach (var kv in _markerRoots)
+            {
+                string id = kv.Key;
+                var root = kv.Value;
+                if (root == null) continue;
+
+                if (_markerTypes.TryGetValue(id, out var t))
+                    root.style.display = IsMarkerTypeVisible(t) ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            UpdateLayerBarVisuals();
+
+            ClearSelectionIfHidden();
+        }
+
+        private bool IsMarkerTypeVisible(POIType type)
+        {
+            if (type == POIType.SkiRun) return _showRunOverlays;
+            if (type == POIType.SkiLift) return _showLiftOverlays;
+            return _showPOIOverlays;
+        }
+
+        private bool IsPolylineTypeVisible(MapLineType type)
+        {
+            if (type == MapLineType.SkiRun) return _showRunOverlays;
+            if (type == MapLineType.SkiLift) return _showLiftOverlays;
+            return true;
+        }
+
+        private void ClearSelectionIfHidden()
+        {
+            if (!string.IsNullOrEmpty(_selectedPolylineId) && TryGetPolylineById(_selectedPolylineId, out var p))
+            {
+                if (!IsPolylineTypeVisible(p.lineType))
+                {
+                    ClearSelectionInternal(fireEvent: true);
+                    _polyLayer?.SetSelected(null);
+                    return;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(_selectedMarkerId))
+            {
+                if (_markerTypes.TryGetValue(_selectedMarkerId, out var t) && !IsMarkerTypeVisible(t))
+                {
+                    ClearSelectionInternal(fireEvent: true);
+                    _polyLayer?.SetSelected(null);
+                }
+            }
+        }
+
+        public void RequestViewportRecalc()
+        {
+            EnsureViewportHeightForScrollViewRoot();
         }
 
         /// <summary>
@@ -300,9 +676,9 @@ namespace SkiGame.Map.UI
                 // Clear visuals when missing
                 _bg.style.backgroundImage = StyleKeyword.None;
                 _markerHost.Clear();
-                _polyLayer?.SetData(_mapData,_contentSize,(_mapData != null && _mapData.PreferCameraProjection) ? _mapCamera : null);
+                _polyLayer?.SetData(_mapData, _contentSize, (_mapData != null && _mapData.PreferCameraProjection) ? _mapCamera : null);
 
-                _trailLayer?.SetData(_mapData, _contentSize,(_mapData != null && _mapData.PreferCameraProjection) ? _mapCamera : null);
+                _trailLayer?.SetData(_mapData, _contentSize, (_mapData != null && _mapData.PreferCameraProjection) ? _mapCamera : null);
 
                 _polyLayer?.SetZoom(_zoom);
                 _trailLayer?.SetZoom(_zoom);
@@ -357,7 +733,7 @@ namespace SkiGame.Map.UI
             }
 
             // Polylines
-            _polyLayer?.SetData(_mapData,_contentSize,(_mapData != null && _mapData.PreferCameraProjection) ? _mapCamera : null);
+            _polyLayer?.SetData(_mapData, _contentSize, (_mapData != null && _mapData.PreferCameraProjection) ? _mapCamera : null);
 
             // Player trail (must be initialized with same projection inputs as polylines)
             _trailLayer?.SetData(_mapData, _contentSize, (_mapData != null && _mapData.PreferCameraProjection) ? _mapCamera : null);
@@ -367,8 +743,22 @@ namespace SkiGame.Map.UI
 
             _dirty = false;
 
-            // Fit view after rebuild (only if user hasn't already moved it)
-            ResetViewToFit();
+            // After rebuild: map page fits, minimap centers on player (once viewport size is valid).
+            if (_minimapFollowPlayer && TryGetPlayerLocal(out Vector2 playerLocal))
+            {
+                // Ensure we have a usable zoom for a minimap (otherwise you can end up "fit" and clamped).
+                if (!TryGetViewportSize(out _, out _))
+                    return; // Tick() will center once geometry is valid
+
+                // Pick a stable minimap zoom floor so we actually have room to pan.
+                _zoom = Mathf.Max(_zoom, 2.25f);
+
+                CenterViewOnContentPoint(playerLocal);
+            }
+            else
+            {
+                ResetViewToFit();
+            }
 
             // Keep debug overlay on top (child order defines draw order in most UI Toolkit versions)
             if (_debugHost != null && _content != null && _debugCompareProjections)
@@ -391,50 +781,6 @@ namespace SkiGame.Map.UI
             // Force a rebuild so the overlay reflects current data.
             _dirty = true;
         }
-
-        public void DebugLogSuggestedProjectionFromReferenceCamera(float planeY = 0f)
-        {
-            if (_mapCamera == null)
-            {
-                Debug.LogWarning("[PhoneMapPageUI] No reference camera assigned.");
-                return;
-            }
-
-            // Intersect viewport corner rays with the plane y = planeY.
-            Plane plane = new Plane(Vector3.up, new Vector3(0f, planeY, 0f));
-
-            Vector3 Intersect(float vx, float vy)
-            {
-                Ray r = _mapCamera.ViewportPointToRay(new Vector3(vx, vy, 0f));
-                if (plane.Raycast(r, out float enter))
-                    return r.GetPoint(enter);
-
-                // Fallback: if no intersection, still return something stable.
-                return r.origin;
-            }
-
-            Vector3 p00 = Intersect(0f, 0f);
-            Vector3 p10 = Intersect(1f, 0f);
-            Vector3 p01 = Intersect(0f, 1f);
-            Vector3 p11 = Intersect(1f, 1f);
-
-            float minX = Mathf.Min(p00.x, p10.x, p01.x, p11.x);
-            float maxX = Mathf.Max(p00.x, p10.x, p01.x, p11.x);
-            float minZ = Mathf.Min(p00.z, p10.z, p01.z, p11.z);
-            float maxZ = Mathf.Max(p00.z, p10.z, p01.z, p11.z);
-
-            Vector2 worldMinXZ = new Vector2(minX, minZ);
-            Vector2 worldMaxXZ = new Vector2(maxX, maxZ);
-
-            Debug.Log(
-                $"[PhoneMapPageUI] Suggested MapProjection from reference camera '{_mapCamera.name}' at planeY={planeY}: " +
-                $"worldMinXZ={worldMinXZ:F2} worldMaxXZ={worldMaxXZ:F2} " +
-                $"camPos={_mapCamera.transform.position:F2} camRot={_mapCamera.transform.rotation.eulerAngles:F2} " +
-                $"ortho={_mapCamera.orthographic} orthoSize={_mapCamera.orthographicSize:F2} aspect={_mapCamera.aspect:F4}"
-            );
-        }
-
-        public void MarkDirty() => _dirty = true;
 
         private void ConfigureReferenceCamera()
         {
@@ -466,11 +812,83 @@ namespace SkiGame.Map.UI
         {
             if (_content == null) return;
 
+            // Do NOT override anchors here; UXML/USS already defines correct absolute layout.
+            // Only ensure explicit content sizing so pan/zoom math has a stable space.
             _content.style.width = _contentSize.x;
             _content.style.height = _contentSize.y;
 
-            // Ensure each layer matches content bounds
             UpdateLayerSizes();
+        }
+
+        private void EnsureViewportHeightForScrollViewRoot()
+        {
+            if (_viewport == null) return;
+            if (_root == null) return;
+
+            float h = _root.resolvedStyle.height;
+            if (h <= 1f) h = _root.layout.height;
+            if (h <= 1f) return;
+
+            float chromeBudget = 120f;
+
+            // Reserve space only when the info panel is open.
+            float reserve = GetInfoPanelReserveHeight();
+
+            float target = Mathf.Max(220f, h - chromeBudget - reserve);
+
+            _viewport.style.height = target;
+            _viewport.style.marginBottom = reserve > 0f ? (reserve + 8f) : 0f;
+        }
+
+        private void SyncViewportToInfoPanelState()
+        {
+            bool isOpen = IsInfoPanelOpen();
+            float reserve = GetInfoPanelReserveHeight();
+
+            bool changed =
+                (isOpen != _infoPanelOpenCached) ||
+                (Mathf.Abs(reserve - _infoPanelReserveCached) > 0.5f);
+
+            if (!changed) return;
+
+            _infoPanelOpenCached = isOpen;
+            _infoPanelReserveCached = reserve;
+
+            EnsureViewportHeightForScrollViewRoot();
+
+            if (isOpen && HasSelection())
+                _pendingCenterOnSelection = true;
+        }
+
+        private bool HasSelection()
+        {
+            return !string.IsNullOrEmpty(_selectedMarkerId) || !string.IsNullOrEmpty(_selectedPolylineId);
+        }
+
+        private bool TryGetSelectedAnchorLocal(out Vector2 anchorLocal)
+        {
+            // Prefer marker anchor when available (user expectation: selected marker centers).
+            anchorLocal = default;
+
+            if (!string.IsNullOrEmpty(_selectedMarkerId) && _markerAnchorLocal.TryGetValue(_selectedMarkerId, out var m))
+            {
+                anchorLocal = m;
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(_selectedPolylineId) && _polyAnchorLocal.TryGetValue(_selectedPolylineId, out var p))
+            {
+                anchorLocal = p;
+                return true;
+            }
+
+            return false;
+        }
+
+        private void RequestCenterOnSelectionWhenInfoPanelOpen(float minZoom = -1f)
+        {
+            _pendingCenterOnSelection = true;
+            _pendingSelectionMinZoom = minZoom;
         }
 
         private bool TryProjectWorldToUV(Vector3 worldPos, out Vector2 uv)
@@ -524,15 +942,271 @@ namespace SkiGame.Map.UI
         {
             if (ve == null) return;
 
+            // Respect UXML/USS anchoring. We only guarantee the layer has explicit size.
             ve.style.position = Position.Absolute;
-            ve.style.width = _contentSize.x;
-            ve.style.height = _contentSize.y;
             ve.style.left = 0;
             ve.style.top = 0;
+            ve.style.width = _contentSize.x;
+            ve.style.height = _contentSize.y;
+        }
 
-            // Ensure we don't end up with ambiguous layouts (left+right, top+bottom) across Unity versions.
-            ve.style.right = StyleKeyword.Auto;
-            ve.style.bottom = StyleKeyword.Auto;
+        private bool TryGetPolylineById(string id, out SkiGame.Map.MapPolyline poly)
+        {
+            poly = default;
+            if (_mapData == null || string.IsNullOrEmpty(id)) return false;
+
+            var lines = _mapData.Polylines;
+            if (lines == null) return false;
+
+            for (int i = 0; i < lines.Count; i++)
+            {
+                if (lines[i].id == id)
+                {
+                    poly = lines[i];
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static float DistSqXZ(Vector3 a, Vector3 b)
+        {
+            float dx = a.x - b.x;
+            float dz = a.z - b.z;
+            return dx * dx + dz * dz;
+        }
+
+        private LiftStationRole DetermineLiftStationRole(SkiGame.Map.MapMarker m)
+        {
+            // If this marker ID directly matches a lift polyline ID, treat it as a "line label marker" (not a station).
+            if (TryGetPolylineById(m.id, out var p) && p.lineType == SkiGame.Map.MapLineType.SkiLift)
+                return LiftStationRole.None;
+
+            // Prefer LiftLine station transforms when available.
+            if (m.source is LiftLine ll && ll) // important: Unity "fake null" guard
+            {
+
+                Vector3 bot = ll.bottomStation ? ll.bottomStation.position : ll.transform.position;
+                Vector3 top = ll.topStation ? ll.topStation.position : ll.transform.position;
+
+                float db = DistSqXZ(m.worldPosition, bot);
+                float dt = DistSqXZ(m.worldPosition, top);
+
+                // within ~6m on XZ counts as a station marker
+                const float tolSq = 36f;
+
+                if (db <= tolSq && db <= dt) return LiftStationRole.Bottom;
+                if (dt <= tolSq && dt < db) return LiftStationRole.Top;
+
+                // If ambiguous but still nearer, assign anyway (helps authoring slightly off).
+                if (db < dt) return LiftStationRole.Bottom;
+                if (dt < db) return LiftStationRole.Top;
+            }
+
+            // Heuristic fallback: marker id/name contains station hints.
+            string s = ((m.id ?? "") + " " + (m.displayName ?? "")).ToLowerInvariant();
+            if (s.Contains("top") || s.Contains("upper")) return LiftStationRole.Top;
+            if (s.Contains("bottom") || s.Contains("lower")) return LiftStationRole.Bottom;
+
+            return LiftStationRole.None;
+        }
+
+        private bool TryGetLiftPolylineIdForMarker(SkiGame.Map.MapMarker m, out string polylineId)
+        {
+            polylineId = null;
+            if (_mapData == null) return false;
+
+            // If marker ID is itself a polyline ID, that's the link.
+            if (TryGetPolylineById(m.id, out var byId) && byId.lineType == SkiGame.Map.MapLineType.SkiLift)
+            {
+                polylineId = byId.id;
+                return true;
+            }
+
+            // Prefer LiftLine source object name as polyline id.
+            if (m.source is LiftLine ll && ll) // important: Unity "fake null" guard
+            {
+                // Avoid ll.gameObject on destroyed objects; ll.name is enough and cheaper.
+                string candidate = ll.name;
+
+                if (TryGetPolylineById(candidate, out var p) && p.lineType == SkiGame.Map.MapLineType.SkiLift)
+                {
+                    polylineId = p.id;
+                    return true;
+                }
+
+                // Also try matching by displayName.
+                var lines = _mapData.Polylines;
+                if (lines != null)
+                {
+                    for (int i = 0; i < lines.Count; i++)
+                    {
+                        if (lines[i].lineType != SkiGame.Map.MapLineType.SkiLift) continue;
+                        if (string.Equals(lines[i].displayName, candidate, System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            polylineId = lines[i].id;
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            // Fallback: prefix match (e.g. LiftA_Top, LiftA_Bottom)
+            {
+                var lines = _mapData.Polylines;
+                if (lines != null)
+                {
+                    for (int i = 0; i < lines.Count; i++)
+                    {
+                        if (lines[i].lineType != SkiGame.Map.MapLineType.SkiLift) continue;
+                        string id = lines[i].id;
+                        if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(m.id) &&
+                            (m.id.StartsWith(id + "_") || m.id.StartsWith(id + ":") || m.id.StartsWith(id + "-")))
+                        {
+                            polylineId = id;
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private void AddLiftMarkerLink(string polylineId, string markerId, LiftStationRole role)
+        {
+            if (string.IsNullOrEmpty(polylineId) || string.IsNullOrEmpty(markerId)) return;
+
+            _liftMarkerToPolyline[markerId] = polylineId;
+
+            if (!_liftPolylineToMarkers.TryGetValue(polylineId, out var list))
+            {
+                list = new List<string>(2);
+                _liftPolylineToMarkers[polylineId] = list;
+            }
+
+            if (!list.Contains(markerId))
+                list.Add(markerId);
+
+            if (role != LiftStationRole.None)
+                _liftMarkerRole[markerId] = role;
+        }
+
+        private int GetLiftRequiredPassLevel(SkiGame.Map.MapMarker m)
+        {
+            // Best case: runtime LiftLine reference exists.
+            if (m.source is LiftLine ll && ll)
+            {
+                // Try common field/property names via reflection so we don't hard-bind to a specific implementation.
+                // (Keeps this resilient if your LiftLine changes.)
+                var t = ll.GetType();
+
+                // Properties
+                string[] propNames =
+                {
+            "RequiredPassLevel", "requiredPassLevel",
+            "RequiredSkiPassLevel", "requiredSkiPassLevel",
+            "PassLevelRequired", "passLevelRequired",
+            "MinPassLevel", "minPassLevel",
+            "RequiredLevel", "requiredLevel",
+        };
+
+                for (int i = 0; i < propNames.Length; i++)
+                {
+                    var p = t.GetProperty(propNames[i]);
+                    if (p != null && p.PropertyType == typeof(int) && p.CanRead)
+                    {
+                        try { return Mathf.Max(0, (int)p.GetValue(ll)); }
+                        catch { /* ignore */ }
+                    }
+                }
+
+                // Fields
+                string[] fieldNames =
+                {
+            "requiredPassLevel", "RequiredPassLevel",
+            "requiredSkiPassLevel", "RequiredSkiPassLevel",
+            "passLevelRequired", "PassLevelRequired",
+            "minPassLevel", "MinPassLevel",
+            "requiredLevel", "RequiredLevel",
+        };
+
+                for (int i = 0; i < fieldNames.Length; i++)
+                {
+                    var f = t.GetField(fieldNames[i]);
+                    if (f != null && f.FieldType == typeof(int))
+                    {
+                        try { return Mathf.Max(0, (int)f.GetValue(ll)); }
+                        catch { /* ignore */ }
+                    }
+                }
+            }
+
+            // Fallback: parse marker meta / name for something like "L2", "Level 2", "Pass:2", etc.
+            // (Only used if you don't have LiftLine source objects wired in MapData.)
+            string s = ((m.meta ?? "") + " " + (m.displayName ?? "") + " " + (m.id ?? "")).ToLowerInvariant();
+
+            // Common patterns
+            // "level 2", "pass 2", "pass:2"
+            for (int lvl = 0; lvl <= 10; lvl++)
+            {
+                if (s.Contains($"level {lvl}") || s.Contains($"pass {lvl}") || s.Contains($"pass:{lvl}") || s.Contains($"l{lvl}"))
+                    return lvl;
+            }
+
+            return 0;
+        }
+
+        private Color GetPassLevelMapColor(int level)
+        {
+            level = Mathf.Max(0, level);
+
+            // Prefer your SkiPassConfigSO tier colour.
+            var cfg = SkiPassManager.Instance != null ? SkiPassManager.Instance.Config : null;
+            if (cfg != null)
+            {
+                var p = cfg.Get(level);
+                if (p != null)
+                {
+                    var col = p.mapColor;
+                    // If someone left it as default white, that's still a valid choice.
+                    return col;
+                }
+            }
+
+            // Fallback palette if config is missing / not set.
+            // (0=grey, 1=green, 2=blue, 3=purple, 4=gold, 5=red)
+            Color[] fallback =
+            {
+        new Color(0.80f, 0.80f, 0.80f, 1f),
+        new Color(0.35f, 0.95f, 0.55f, 1f),
+        new Color(0.35f, 0.65f, 1.00f, 1f),
+        new Color(0.75f, 0.45f, 1.00f, 1f),
+        new Color(1.00f, 0.85f, 0.35f, 1f),
+        new Color(1.00f, 0.35f, 0.35f, 1f),
+    };
+
+            return fallback[Mathf.Clamp(level, 0, fallback.Length - 1)];
+        }
+
+        private void CacheLiftRequirementColour(string liftPolylineId, int requiredLevel)
+        {
+            requiredLevel = Mathf.Max(0, requiredLevel);
+
+            // If multiple stations report something, keep the max (most restrictive).
+            if (_liftRequiredLevelByPolyline.TryGetValue(liftPolylineId, out var existing))
+                requiredLevel = Mathf.Max(existing, requiredLevel);
+
+            _liftRequiredLevelByPolyline[liftPolylineId] = requiredLevel;
+
+            Color c = GetPassLevelMapColor(requiredLevel);
+            _liftRequiredColorByPolyline[liftPolylineId] = c;
+
+            // Apply to polyline overrides with your usual alpha feel.
+            _polylineColorOverrides[liftPolylineId] = new Color(c.r, c.g, c.b, 0.70f);
+
+            // Also cache accent colour for polyline labels.
+            _polylineLabelAccent[liftPolylineId] = new Color(c.r, c.g, c.b, 1f);
         }
 
         private void RebuildMarkers()
@@ -543,9 +1217,44 @@ namespace SkiGame.Map.UI
 
             _markerHost.Clear();
 
+            _markerVisuals.Clear();
+            _polylineLabelVisuals.Clear();
+
+            _markerRoots.Clear();
+            _markerTypes.Clear();
+
+            // Clear link maps each rebuild (prevents stale selection links)
+            _markerToPolyline.Clear();
+            _polylineToMarker.Clear();
+
+            _liftMarkerToPolyline.Clear();
+            _liftPolylineToMarkers.Clear();
+            _liftMarkerRole.Clear();
+
+            _markerLabelAccent.Clear();
+            _polylineLabelAccent.Clear();
+
+            _polylineColorOverrides.Clear();
+
+            _liftRequiredLevelByPolyline.Clear();
+            _liftRequiredColorByPolyline.Clear();
+
+            _markerHitTargets.Clear();
+            _markerDisplayNames.Clear();
+            _poiAlwaysLabelById.Clear();
+
+            _markerAnchorLocal.Clear();
+
+            _markerById.Clear();
+
+            _polyAnchorLocal.Clear();
+            _polyNormalLocal.Clear();
+            _labelSlotCache.Clear();
+            EnsureLabelOverlay();
+            _labelOverlay?.Clear();
+
             if (_playerMarker != null)
                 _markerHost.Add(_playerMarker);
-
 
             // Debug overlay cleanup
             if (_debugHost != null)
@@ -554,26 +1263,44 @@ namespace SkiGame.Map.UI
             var list = _mapData.Markers;
             if (list == null) return;
 
-            // Used to keep run/lift name tags from overlapping each other (local content space).
-            var occupiedLabelRects = new List<Rect>(64);
 
-            bool IntersectsAny(Rect r)
+            // Prepass: build run/lift marker linkage so selection/label logic can be cohesive.
+            var polylines = _mapData.Polylines;
+
+            // Runs: marker id == polyline id
+            if (polylines != null)
             {
-                for (int i = 0; i < occupiedLabelRects.Count; i++)
-                    if (occupiedLabelRects[i].Overlaps(r))
-                        return true;
-                return false;
-            }
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var m = list[i];
+                    if (!m.IsValid) continue;
 
-            Rect EstimateLabelRect(Vector2 pivotLocal, string text)
-            {
-                // Rough estimate: good enough to prevent obvious overlaps.
-                int len = string.IsNullOrEmpty(text) ? 6 : Mathf.Clamp(text.Length, 4, 28);
-                float w = Mathf.Clamp(22f + len * 7.5f, 70f, 220f);
-                float h = 20f;
+                    _markerById[m.id] = m;
 
-                // Centered on pivot
-                return new Rect(pivotLocal.x - w * 0.5f, pivotLocal.y - h * 0.5f, w, h);
+                    // Run markers link to run polyline by ID when available.
+                    if (m.type == SkiGame.POI.POIType.SkiRun)
+                    {
+                        if (TryGetPolylineById(m.id, out var p) && p.lineType == SkiGame.Map.MapLineType.SkiRun)
+                        {
+                            _markerToPolyline[m.id] = p.id;
+                            _polylineToMarker[p.id] = m.id;
+                        }
+                    }
+                    // Lift station markers: link to lift polyline via LiftLine or heuristics.
+                    else if (m.type == SkiGame.POI.POIType.SkiLift)
+                    {
+                        if (TryGetLiftPolylineIdForMarker(m, out string liftPolyId))
+                        {
+                            var role = DetermineLiftStationRole(m);
+                            AddLiftMarkerLink(liftPolyId, m.id, role);
+
+                            // Pass requirement colouring
+                            int req = GetLiftRequiredPassLevel(m);
+                            CacheLiftRequirementColour(liftPolyId, req);
+                        }
+                    }
+
+                }
             }
 
             for (int i = 0; i < list.Count; i++)
@@ -615,44 +1342,20 @@ namespace SkiGame.Map.UI
                 Vector2 local = UVToLocal(uv);
 
                 bool isRunOrLiftLabel =
-    m.type == SkiGame.POI.POIType.SkiRun ||
-    m.type == SkiGame.POI.POIType.SkiLift;
+                    m.type == SkiGame.POI.POIType.SkiRun ||
+                    m.type == SkiGame.POI.POIType.SkiLift;
 
-                // For run/lift markers: re-place to midline (and try nearby candidates), and avoid overlaps.
-                if (isRunOrLiftLabel && _polyLayer != null)
+                // For lifts: we only want station markers on the map (top/bottom).
+                // Any SkiLift marker that is NOT a station marker is treated as a legacy "lift label marker" and should not be drawn.
+                bool isLiftStationMarker =
+                    m.type == SkiGame.POI.POIType.SkiLift &&
+                    (m.id.EndsWith("__top", StringComparison.Ordinal) || m.id.EndsWith("__bottom", StringComparison.Ordinal));
+
+                bool isLiftLineMarker = (m.type == SkiGame.POI.POIType.SkiLift) && !isLiftStationMarker;
+                if (isLiftLineMarker)
                 {
-                    Vector2 chosen = local;
-                    bool found = false;
-
-                    // Candidate positions along the polyline (mid, then small offsets).
-                    float[] candidates = { 0.50f, 0.46f, 0.54f, 0.42f, 0.58f, 0.38f, 0.62f };
-
-                    for (int ci = 0; ci < candidates.Length; ci++)
-                    {
-                        if (_polyLayer.TryGetPointAlong(m.id, candidates[ci], out var candidateLocal))
-                        {
-                            var r = EstimateLabelRect(candidateLocal, m.displayName);
-                            if (!IntersectsAny(r))
-                            {
-                                occupiedLabelRects.Add(r);
-                                chosen = candidateLocal;
-                                found = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    // If we couldn't place without overlap, we still allow selection via polyline,
-                    // but we hide the label marker to reduce clutter.
-                    if (!found)
-                    {
-                        // Keep local as-is but we'll hide the label later.
-                        // (Polyline selection remains available.)
-                    }
-                    else
-                    {
-                        local = chosen;
-                    }
+                    // Skip drawing this marker entirely (we use the lift polyline label instead).
+                    continue;
                 }
 
                 if (_debugCompareProjections && _debugHost != null)
@@ -715,13 +1418,134 @@ namespace SkiGame.Map.UI
                 marker.AddToClassList("map-marker");
                 marker.style.position = Position.Absolute;
 
+                _markerRoots[m.id] = marker;
+                _markerTypes[m.id] = m.type;
+
+                // Apply current legend visibility immediately
+                marker.style.display = IsMarkerTypeVisible(m.type) ? DisplayStyle.Flex : DisplayStyle.None;
+
+                // Bigger invisible hit target so hover/click isn’t finicky (marker root is 0x0 pivot).
+                var hit = new VisualElement();
+                hit.AddToClassList("map-marker-hit");
+                hit.style.position = Position.Absolute;
+                const float hitSize = 20f;
+                hit.style.width = hitSize;
+                hit.style.height = hitSize;
+
+                // Center hit zone around the marker pivot (0,0)
+                hit.style.left = -hitSize * 0.5f;
+                hit.style.top = -hitSize * 0.5f;
+
+                hit.style.backgroundColor = new Color(0, 0, 0, 0); // invisible but still pickable
+                hit.pickingMode = PickingMode.Ignore;
+
+                _markerHitTargets[m.id] = hit;
+                marker.Add(hit);
+
                 var dot = new VisualElement();
                 dot.AddToClassList("map-marker-dot");
-                dot.style.backgroundColor = m.color;
 
-                var labelText = string.IsNullOrWhiteSpace(m.displayName) ? "POI" : m.displayName;
+                Color c = m.color;
+                if (_style != null && _style.usePOIRegistryMarkerColors && _poiRegistry != null && _poiRegistry.TryGetById(m.id, out var info))
+                    c = info.color;
+
+                // Lift station markers: colour should reflect the pass tier required by the lift.
+                if (isLiftStationMarker)
+                {
+                    int idx = m.id.LastIndexOf("__", StringComparison.Ordinal);
+                    if (idx > 0)
+                    {
+                        string liftId = m.id.Substring(0, idx);
+
+                        // If we cached a required colour during the prepass, use it.
+                        if (_liftRequiredColorByPolyline.TryGetValue(liftId, out var passCol))
+                        {
+                            c = passCol;
+
+                            // Ensure the lift polyline matches too.
+                            _polylineColorOverrides[liftId] = new Color(c.r, c.g, c.b, 0.70f);
+                            _polylineLabelAccent[liftId] = new Color(c.r, c.g, c.b, 1f);
+                        }
+                    }
+                }
+
+                dot.style.backgroundColor = c;
+
+                // Cache accent colour for this marker's label (used for the left stripe).
+                _markerLabelAccent[m.id] = new Color(c.r, c.g, c.b, 1f);
+
+                // Lift station markers: overlay ^ or v (use resolved role from prepass)
+                if (_liftMarkerRole.TryGetValue(m.id, out var role) && role != LiftStationRole.None)
+                {
+                    dot.style.alignItems = Align.Center;
+                    dot.style.justifyContent = Justify.Center;
+
+                    var glyphLabel = new Label(role == LiftStationRole.Top ? "↑" : "↓");
+                    glyphLabel.pickingMode = PickingMode.Ignore;
+                    glyphLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+                    glyphLabel.style.color = Color.white;
+                    glyphLabel.style.fontSize = 12;
+                    glyphLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+
+                    dot.Add(glyphLabel);
+                }
+
+                var labelText = ResolveMarkerDisplayName(m);
+
+                // Cache explicit POI “always label” flag
+                if (m.type != POIType.SkiRun && m.type != POIType.SkiLift)
+                {
+                    bool always = false;
+
+                    // Prefer explicit registry flag (editor-visible)
+                    if (_poiRegistry != null && _poiRegistry.TryGetById(m.id, out var poiInfo))
+                        always = poiInfo.alwaysShowLabel;
+
+                    // Fallback to meta token if you still want it (optional)
+                    if (!always)
+                        always = HasAlwaysLabelFlag(m.meta);
+
+                    _poiAlwaysLabelById[m.id] = always;
+                }
+                else
+                {
+                    _poiAlwaysLabelById[m.id] = false;
+                }
+
                 var label = new Label(labelText);
                 label.AddToClassList("map-marker-label");
+                label.style.display = DisplayStyle.None; // POI labels are now overlay labels only
+
+                _markerDisplayNames[m.id] = labelText;
+
+                bool isRun = (m.type == SkiGame.POI.POIType.SkiRun);
+                bool isLift = (m.type == SkiGame.POI.POIType.SkiLift);
+
+                // Position labels in SCREEN px below the marker (stable across zoom).
+                float z = Mathf.Max(0.0001f, _zoom);
+                label.style.left = 0f;
+                label.style.top = (isRun ? RunLabelOffsetPx : PoiLabelOffsetPx) / z;
+                // We now render labels in the viewport overlay for stability.
+                // Keep the old label element around (minimal churn), but never show it.
+                label.style.display = DisplayStyle.None;
+
+                // Visibility rules (simplified):
+                // - Runs/Lifts: NEVER show marker labels (their labels live on polylines)
+                // - POIs: hover/selected, plus explicit always-flag
+                if (_hideMarkerLabels)
+                {
+                    label.style.display = DisplayStyle.None;
+                }
+                else if (isLift || isRun)
+                {
+                    label.style.display = DisplayStyle.None;
+                }
+                else
+                {
+                    // POI labels are now handled by the overlay "cling to sides" system.
+                    // Never show the marker-attached label (prevents duplicates).
+                    label.style.display = DisplayStyle.None;
+                }
 
                 // Global minimap suppression still applies
                 if (_hideMarkerLabels)
@@ -730,91 +1554,13 @@ namespace SkiGame.Map.UI
                 marker.Add(dot);
                 marker.Add(label);
 
-                // For run/lift: label-only style (centered) and optionally hidden if we failed overlap placement.
-                if (isRunOrLiftLabel)
-                {
-                    // Dot is optional; remove to make it look like a nametag rather than a POI.
-                    dot.style.display = DisplayStyle.None;
-
-                    // Center label on the pivot
-                    label.style.position = Position.Absolute;
-                    label.style.left = 0;
-                    label.style.top = 0;
-
-                    // Basic overlap-aware placement for non run/lift labels.
-                    // (Run/lift labels use the centered nametag style above.)
-                    int side = 1;           // +1 right, -1 left
-                    float yOffset = 0f;     // vertical nudge
-
-                    if (!_hideMarkerLabels && !isRunOrLiftLabel)
-                    {
-                        float approxW = 12f + (labelText.Length * 7.2f);
-                        float approxH = 20f;
-
-                        // Assume a small dot radius + padding; good enough for overlap testing.
-                        float dotR = 8f;
-                        float xPad = 6f;
-
-                        float[] yOptions = { 0f, 18f, -18f, 34f, -34f };
-                        int[] sideOptions = { 1, -1 };
-
-                        bool found = false;
-                        for (int s = 0; s < sideOptions.Length && !found; s++)
-                        {
-                            for (int yy = 0; yy < yOptions.Length; yy++)
-                            {
-                                int sgn = sideOptions[s];
-                                float y = yOptions[yy];
-
-                                Vector2 center = local + new Vector2(sgn * (dotR + xPad + approxW * 0.5f), y);
-                                Rect r = new Rect(center.x - approxW * 0.5f, center.y - approxH * 0.5f, approxW, approxH);
-
-                                if (!IntersectsAny(r))
-                                {
-                                    occupiedLabelRects.Add(r);
-                                    side = sgn;
-                                    yOffset = y;
-                                    found = true;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (!found)
-                            label.style.display = DisplayStyle.None;
-                    }
-
-                    label.RegisterCallback<GeometryChangedEvent>(_ =>
-                    {
-                        float xPad = 6f;
-                        float dotRight = (dot.resolvedStyle.width * 0.5f) + xPad;
-
-                        // Place label either right or left of the dot, plus a small vertical offset.
-                        if (side > 0)
-                            label.style.left = dotRight;
-                        else
-                            label.style.left = -(dotRight + label.resolvedStyle.width);
-
-                        label.style.top = yOffset;
-
-                        // Vertically center around the pivot line.
-                        label.style.translate = new Translate(0, -label.resolvedStyle.height * 0.5f, 0);
-                    });
-
-                    // If we didn�t successfully reserve a spot (overlap avoidance), hide it.
-                    // We detect this by checking whether this label�s estimated rect exists in the occupied list.
-                    // (Conservative: if it overlaps now, hide it.)
-                    if (!_hideMarkerLabels)
-                    {
-                        var est = EstimateLabelRect(local, labelText);
-                        if (IntersectsAny(est))
-                            label.style.display = DisplayStyle.None;
-                    }
-                }
+                _markerVisuals[m.id] = (dot, label);
+                ApplyMarkerVisual(m.id, selected: _selectedMarkerId == m.id);
 
                 // Anchor at the projected coordinate (this element becomes a 0,0 "pivot")
                 marker.style.left = local.x;
                 marker.style.top = local.y;
+                _markerAnchorLocal[m.id] = local;
 
                 // Make the marker itself a pivot container; children are positioned relative to (0,0)
                 marker.style.width = 0;
@@ -828,209 +1574,123 @@ namespace SkiGame.Map.UI
                 // Center the dot on the pivot once we know its size
                 dot.RegisterCallback<GeometryChangedEvent>(_ =>
                 {
-                    dot.style.translate = new Translate(
-                        -dot.resolvedStyle.width * 0.5f,
-                        -dot.resolvedStyle.height * 0.5f,
-                        0
-                    );
+                    float z = Mathf.Max(0.0001f, _zoom);
+                    float inv = 1f / z;
+
+                    float w = dot.resolvedStyle.width > 0 ? dot.resolvedStyle.width : dot.layout.width;
+                    float h = dot.resolvedStyle.height > 0 ? dot.resolvedStyle.height : dot.layout.height;
+
+                    dot.style.scale = new Scale(new Vector3(inv, inv, 1f));
+                    dot.style.translate = new Translate(-w * 0.5f, -h * 0.5f, 0);
                 });
 
-                // Position label to the right of the dot, vertically centered on the pivot
+                // Label is positioned by our solver (marker-local offsets). We only center it on its anchor.
                 label.style.position = Position.Absolute;
-                label.style.left = 10;   // small default; refined after layout below
-                label.style.top = 0;
+                // NOTE: do NOT reset left/top here — the placement solver above computed an attached offset
+                // (relative to the marker pivot). Resetting would snap the label onto the marker and ruin
+                // disambiguation/overlap avoidance.
 
                 label.RegisterCallback<GeometryChangedEvent>(_ =>
                 {
-                    // place label to the right of the dot with padding
-                    float xPad = 6f;
-                    float dotRight = (dot.resolvedStyle.width * 0.5f) + xPad;
-                    label.style.left = dotRight;
+                    float z = Mathf.Max(0.0001f, _zoom);
+                    float inv = 1f / z;
 
-                    // vertically center label on the pivot
-                    label.style.translate = new Translate(0, -label.resolvedStyle.height * 0.5f, 0);
+                    float w = label.resolvedStyle.width > 0 ? label.resolvedStyle.width : label.layout.width;
+                    float h = label.resolvedStyle.height > 0 ? label.resolvedStyle.height : label.layout.height;
+
+                    label.style.scale = new Scale(new Vector3(inv, inv, 1f));
+                    label.style.translate = new Translate(-w * 0.5f, -h * 0.5f, 0);
                 });
 
-                marker.pickingMode = PickingMode.Position;
+                marker.pickingMode = PickingMode.Ignore;
 
                 string markerId = m.id; // capture for closure safety
                 marker.RegisterCallback<PointerDownEvent>(evt =>
                 {
-                    _selectedMarkerId = markerId;
-                    _selectedPolylineId = null;
-                    _polyLayer?.SetSelected(null);
+                    // Unified selection:
+                    // - Run markers behave like selecting the run polyline
+                    // - Lift station markers behave like selecting the lift polyline, while remembering station suffix
+                    // - General POIs remain marker selection
+                    _selectedLiftStationSuffix = null;
 
-                    MarkerSelected?.Invoke(m);
-
-                    evt.StopPropagation(); // prevent pan handler from stealing this click
-                });
-
-                _markerHost.Add(marker);
-            }
-
-            // Now that marker labels have reserved space, place mid-polyline labels with overlap avoidance.
-            RebuildPolylineLabelsBasic(occupiedLabelRects);
-
-        }
-
-        void RebuildPolylineLabelsBasic(List<Rect> occupiedLabelRects)
-        {
-            var lines = _mapData != null ? _mapData.Polylines : null;
-            if (lines == null || lines.Count == 0) return;
-
-            // Only show these labels when zoomed in enough to reduce clutter.
-            if (_zoom < 0.65f) return;
-
-            // Track placed rects (seed with marker-label occupied rects).
-            var placed = new List<Rect>(64);
-            if (occupiedLabelRects != null && occupiedLabelRects.Count > 0)
-                placed.AddRange(occupiedLabelRects);
-
-            for (int i = 0; i < lines.Count; i++)
-            {
-                var p = lines[i];
-                if (!p.IsValid) continue;
-
-                // Only label runs/lifts here.
-                if (p.lineType != MapLineType.SkiRun && p.lineType != MapLineType.SkiLift)
-                    continue;
-
-                if (p.pointsWorldXZ == null || p.pointsWorldXZ.Count < 2)
-                    continue;
-
-                // Project polyline into content-local space and compute midpoint along length.
-                float total = 0f;
-                Vector2 prev;
-                if (!TryProjectWorldXZToLocal(p.pointsWorldXZ[0], out prev))
-                    continue;
-
-                // quick length pass
-                for (int k = 1; k < p.pointsWorldXZ.Count; k++)
-                {
-                    if (!TryProjectWorldXZToLocal(p.pointsWorldXZ[k], out var cur))
-                        continue;
-                    total += Vector2.Distance(prev, cur);
-                    prev = cur;
-                }
-
-                if (total <= 0.001f) continue;
-
-                // Require a minimum on-screen length
-                if (total * _zoom < 140f) continue;
-
-                float half = total * 0.5f;
-                float accum = 0f;
-
-                if (!TryProjectWorldXZToLocal(p.pointsWorldXZ[0], out var a0))
-                    continue;
-
-                Vector2 mid = a0;
-                Vector2 tangent = Vector2.right;
-
-                for (int k = 1; k < p.pointsWorldXZ.Count; k++)
-                {
-                    if (!TryProjectWorldXZToLocal(p.pointsWorldXZ[k], out var a1))
-                        continue;
-
-                    float seg = Vector2.Distance(a0, a1);
-                    if (seg > 0.0001f && accum + seg >= half)
+                    if (m.type == SkiGame.POI.POIType.SkiRun)
                     {
-                        float t = (half - accum) / seg;
-                        mid = Vector2.Lerp(a0, a1, t);
-                        tangent = (a1 - a0).normalized;
-                        break;
-                    }
+                        // Prefer link map, but fall back to id match so marker + polyline behave identically.
+                        if (!_markerToPolyline.TryGetValue(markerId, out var runPolyId))
+                            runPolyId = markerId;
 
-                    accum += seg;
-                    a0 = a1;
-                }
-
-                string labelText = string.IsNullOrWhiteSpace(p.displayName) ? p.id : p.displayName;
-
-                // Approximate label size for overlap testing (cheap + stable)
-                float approxW = 12f + (labelText.Length * 7.2f);
-                float approxH = 20f;
-
-                Vector2 n = new Vector2(-tangent.y, tangent.x);
-                Vector2 tdir = tangent;
-
-                // More robust candidate offsets: normal, tangent, and diagonals.
-                Vector2[] offsets =
-                {
-            Vector2.zero,
-
-            n * 18f,  n * -18f,
-            tdir * 18f, tdir * -18f,
-
-            n * 34f,  n * -34f,
-            tdir * 34f, tdir * -34f,
-
-            (n + tdir).normalized * 26f,
-            (n - tdir).normalized * 26f,
-            (-n + tdir).normalized * 26f,
-            (-n - tdir).normalized * 26f,
-        };
-
-                bool placedOk = false;
-                Vector2 finalPos = mid;
-                Rect finalRect = default;
-
-                for (int o = 0; o < offsets.Length; o++)
-                {
-                    Vector2 pos = mid + offsets[o];
-                    Rect r = new Rect(pos.x - approxW * 0.5f, pos.y - approxH * 0.5f, approxW, approxH);
-
-                    bool overlaps = false;
-                    for (int rr = 0; rr < placed.Count; rr++)
-                    {
-                        if (placed[rr].Overlaps(r))
+                        if (TryGetPolylineById(runPolyId, out var runPoly))
                         {
-                            overlaps = true;
-                            break;
+                            _selectedMarkerId = markerId;
+                            _selectedPolylineId = runPolyId;
+                            _selectedLiftStationSuffix = null;
+
+                            UpdateSelectionVisuals();
+                            _polyLayer?.SetSelected(runPolyId);
+                            RequestCenterOnSelectionWhenInfoPanelOpen(minZoom: -1f);
+                            PolylineSelected?.Invoke(runPoly);
+
+                            evt.StopPropagation();
+                            return;
                         }
                     }
-
-                    if (!overlaps)
+                    else if (m.type == SkiGame.POI.POIType.SkiLift)
                     {
-                        placed.Add(r);
-                        finalPos = pos;
-                        finalRect = r;
-                        placedOk = true;
-                        break;
+                        // Prefer mapping, but fall back to stripping station suffix.
+                        if (!_liftMarkerToPolyline.TryGetValue(markerId, out var liftPolyId))
+                        {
+                            int idx = markerId.LastIndexOf("__", StringComparison.Ordinal);
+                            liftPolyId = (idx > 0) ? markerId.Substring(0, idx) : markerId;
+                        }
+
+                        if (TryGetPolylineById(liftPolyId, out var liftPoly))
+                        {
+                            _selectedMarkerId = markerId;
+                            _selectedPolylineId = liftPolyId;
+
+                            if (_liftMarkerRole.TryGetValue(markerId, out var role) && role != LiftStationRole.None)
+                                _selectedLiftStationSuffix = role == LiftStationRole.Top ? " (Top)" : " (Bottom)";
+
+                            UpdateSelectionVisuals();
+                            _polyLayer?.SetSelected(liftPolyId);
+                            RequestCenterOnSelectionWhenInfoPanelOpen(minZoom: -1f);
+                            PolylineSelected?.Invoke(liftPoly);
+
+                            evt.StopPropagation();
+                            return;
+                        }
                     }
-                }
+                    else
+                    {
+                        _selectedLiftStationSuffix = null;
+                        _selectedPolylineId = null;
+                        _selectedMarkerId = markerId;
 
-                if (!placedOk)
-                    continue;
-
-                // Reserve for anything that comes after (debug/extra labels, etc.)
-                occupiedLabelRects?.Add(finalRect);
-
-                var label = new Label(labelText);
-                label.AddToClassList("map-polyline-label");
-                label.style.position = Position.Absolute;
-                label.style.left = finalPos.x;
-                label.style.top = finalPos.y;
-
-                // center around anchor
-                label.style.translate = new Translate(-approxW * 0.5f, -approxH * 0.5f, 0);
-
-                // Click selects the polyline (so label + line behave the same)
-                label.pickingMode = PickingMode.Position;
-                var capture = p; // closure safety
-                label.RegisterCallback<PointerDownEvent>(evt =>
-                {
-                    _selectedPolylineId = capture.id;
-                    _selectedMarkerId = null;
-
-                    _polyLayer?.SetSelected(capture.id);
-                    PolylineSelected?.Invoke(capture);
+                        UpdateSelectionVisuals();
+                        _polyLayer?.SetSelected(null);
+                        MarkerSelected?.Invoke(m);
+                    }
 
                     evt.StopPropagation();
                 });
 
-                _markerHost.Add(label);
+                _markerHost.Add(marker);
+
             }
+
+            if (_playerMarker != null)
+            {
+                _markerHost.Add(_playerMarker);
+                _playerMarker.style.display = (_trackPlayerMarker) ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            RebuildLiftPolylineLabels();   // will now only create overlay poly labels + anchor caches
+            RebuildPOIOverlayLabels();     // new
+            LayoutOverlayLabels();         // new
+
+
+            _polyLayer?.SetColorOverrides(_polylineColorOverrides);
+
         }
 
         private bool TryProjectWorldXZToLocal(Vector2 worldXZ, out Vector2 local)
@@ -1045,6 +1705,864 @@ namespace SkiGame.Map.UI
             return true;
         }
 
+        private static string GetLiftPolylineIdFromStationMarkerId(string markerId)
+        {
+            if (string.IsNullOrEmpty(markerId)) return null;
+
+            // Registry emits: "{entry.id}__top" / "{entry.id}__bottom"
+            int idx = markerId.LastIndexOf("__", StringComparison.Ordinal);
+            if (idx <= 0) return null;
+
+            return markerId.Substring(0, idx);
+        }
+
+        private bool IsLiftSelected(string liftPolylineId)
+        {
+            // Selection is lift-wide if the selected polyline is the lift line,
+            // OR if either station marker is selected (shares base id).
+            if (string.IsNullOrEmpty(liftPolylineId)) return false;
+
+            if (string.Equals(_selectedPolylineId, liftPolylineId, StringComparison.Ordinal))
+                return true;
+
+            if (!string.IsNullOrEmpty(_selectedMarkerId))
+            {
+                string selectedBase = GetLiftPolylineIdFromStationMarkerId(_selectedMarkerId);
+                if (!string.IsNullOrEmpty(selectedBase) && string.Equals(selectedBase, liftPolylineId, StringComparison.Ordinal))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool IsPolylineSelected(MapPolyline p)
+        {
+            if (!p.IsValid) return false;
+
+            if (string.Equals(_selectedPolylineId, p.id, StringComparison.Ordinal))
+                return true;
+
+            if (p.lineType == MapLineType.SkiLift)
+                return IsLiftSelected(p.id);
+
+            // Run selection: marker + polyline are linked.
+            if (p.lineType == MapLineType.SkiRun && _polylineToMarker.TryGetValue(p.id, out var markerId))
+                return string.Equals(_selectedMarkerId, markerId, StringComparison.Ordinal);
+
+            return false;
+        }
+
+        private void UpdateAllLabelTransformsForZoom()
+        {
+            float z = Mathf.Max(0.0001f, _zoom);
+            float inv = 1f / z;
+
+            // Markers: dot + label should be screen-locked (inverse-scaled).
+            foreach (var kv in _markerVisuals)
+            {
+                var dot = kv.Value.dot;
+                var lab = kv.Value.label;
+
+                if (dot != null)
+                {
+                    dot.style.scale = new Scale(new Vector3(inv, inv, 1f));
+
+                    float w = dot.resolvedStyle.width > 0 ? dot.resolvedStyle.width : dot.layout.width;
+                    float h = dot.resolvedStyle.height > 0 ? dot.resolvedStyle.height : dot.layout.height;
+                    if (w > 0f && h > 0f)
+                    {
+                        // IMPORTANT: translate is in pre-scale space; do NOT multiply by inv.
+                        dot.style.translate = new Translate(-w * 0.5f, -h * 0.5f, 0);
+                    }
+                }
+
+                if (lab != null)
+                {
+                    lab.style.scale = new Scale(new Vector3(inv, inv, 1f));
+
+                    float w = lab.resolvedStyle.width > 0 ? lab.resolvedStyle.width : lab.layout.width;
+                    float h = lab.resolvedStyle.height > 0 ? lab.resolvedStyle.height : lab.layout.height;
+                    if (w > 0f && h > 0f)
+                    {
+                        // IMPORTANT: translate is in pre-scale space; do NOT multiply by inv.
+                        lab.style.translate = new Translate(-w * 0.5f, -h * 0.5f, 0);
+                    }
+                }
+            }
+
+            // Polyline labels: screen-locked, but allow controlled growth when zooming in.
+            float comp = (_style != null) ? Mathf.Clamp01(_style.labelZoomCompensation) : 1f;
+            float invPoly = 1f / Mathf.Pow(z, Mathf.Max(0.0001f, comp));
+
+            foreach (var kv in _polylineLabelVisuals)
+            {
+                var lab = kv.Value;
+                if (lab == null) continue;
+
+                lab.style.scale = new Scale(new Vector3(invPoly, invPoly, 1f));
+
+                float w = lab.resolvedStyle.width > 0 ? lab.resolvedStyle.width : lab.layout.width;
+                float h = lab.resolvedStyle.height > 0 ? lab.resolvedStyle.height : lab.layout.height;
+                if (w > 0f && h > 0f)
+                {
+                    lab.style.translate = new Translate(-w * 0.5f, -h * 0.5f, 0);
+                }
+            }
+
+            // Player marker (screen-locked)
+            if (_playerMarker != null)
+            {
+                _playerMarker.style.scale = new Scale(new Vector3(inv, inv, 1f));
+
+                float w = _playerMarker.resolvedStyle.width > 0 ? _playerMarker.resolvedStyle.width : _playerMarker.layout.width;
+                float h = _playerMarker.resolvedStyle.height > 0 ? _playerMarker.resolvedStyle.height : _playerMarker.layout.height;
+                if (w > 0f && h > 0f)
+                {
+                    // IMPORTANT: translate is in pre-scale space; do NOT multiply by inv.
+                    _playerMarker.style.translate = new Translate(-w * 0.5f, -h * 0.5f, 0);
+                }
+            }
+        }
+
+        private void ResolveInfoPanelRefs()
+        {
+            if (_root == null) return;
+
+            // Search from the top of the UI tree, not the map page.
+            VisualElement searchRoot = _root.panel?.visualTree;
+            if (searchRoot == null)
+            {
+                searchRoot = _root;
+                while (searchRoot.parent != null)
+                    searchRoot = searchRoot.parent;
+            }
+
+            _mapBottomDock = searchRoot.Q<VisualElement>("MapBottomDock");
+            _mapInfoPanel = searchRoot.Q<VisualElement>("MapInfoPanel");
+
+            _infoPanelRefsResolved = (_mapBottomDock != null || _mapInfoPanel != null);
+
+            // Hook callbacks once, when we first successfully find them.
+            if (!_infoPanelCallbacksHooked && _infoPanelRefsResolved)
+            {
+                if (_mapBottomDock != null)
+                    _mapBottomDock.RegisterCallback<GeometryChangedEvent>(_ => EnsureViewportHeightForScrollViewRoot());
+
+                if (_mapInfoPanel != null)
+                    _mapInfoPanel.RegisterCallback<GeometryChangedEvent>(_ => EnsureViewportHeightForScrollViewRoot());
+
+                _infoPanelCallbacksHooked = true;
+            }
+        }
+
+        private bool IsInfoPanelOpen()
+        {
+            // Prefer dock visibility (most implementations toggle dock on/off).
+            if (_mapBottomDock != null)
+                return _mapBottomDock.resolvedStyle.display != DisplayStyle.None;
+
+            // Fallback to info panel visibility.
+            if (_mapInfoPanel != null)
+                return _mapInfoPanel.resolvedStyle.display != DisplayStyle.None;
+
+            return false;
+        }
+
+        private float GetInfoPanelReserveHeight()
+        {
+            // If panel isn’t open, reserve nothing (expanded map).
+            if (!IsInfoPanelOpen()) return 0f;
+
+            // Prefer reserving dock height.
+            if (_mapBottomDock != null)
+            {
+                float dockH = _mapBottomDock.resolvedStyle.height;
+                if (dockH <= 1f) dockH = _mapBottomDock.layout.height;
+                if (dockH > 1f) return dockH;
+            }
+
+            // Fallback to reserving info panel height.
+            if (_mapInfoPanel != null)
+            {
+                float panelH = _mapInfoPanel.resolvedStyle.height;
+                if (panelH <= 1f) panelH = _mapInfoPanel.layout.height;
+                if (panelH > 1f) return panelH;
+            }
+
+            return 0f;
+        }
+
+        private string ResolveMarkerDisplayName(SkiGame.Map.MapMarker m)
+        {
+            // Prefer the baked marker display name.
+            if (!string.IsNullOrWhiteSpace(m.displayName))
+                return m.displayName;
+
+            // Fallback: POI registry display name (this is usually what you want for runs).
+            if (_poiRegistry != null && _poiRegistry.TryGetById(m.id, out var info) && !string.IsNullOrWhiteSpace(info.displayName))
+                return info.displayName;
+
+            // Last resort: id (should be rare after this change).
+            return m.id;
+        }
+
+        private static bool HasAlwaysLabelFlag(string meta)
+        {
+            if (string.IsNullOrWhiteSpace(meta)) return false;
+
+            // Keep this intentionally simple + robust. You can author baked POIs with:
+            // "label:always"  or  "alwaysLabel"  or  "[label=always]" etc.
+            var m = meta.ToLowerInvariant();
+            return m.Contains("label:always") || m.Contains("label=always") || m.Contains("alwayslabel");
+        }
+
+        private string ResolvePolylineDisplayName(SkiGame.Map.MapPolyline p)
+        {
+            if (!string.IsNullOrWhiteSpace(p.displayName))
+                return p.displayName;
+
+            // If run polyline id maps to a marker, reuse that marker's resolved display name.
+            if (_polylineToMarker != null && _polylineToMarker.TryGetValue(p.id, out var markerId) &&
+                _markerDisplayNames != null && _markerDisplayNames.TryGetValue(markerId, out var name) &&
+                !string.IsNullOrWhiteSpace(name))
+                return name;
+
+            if (_poiRegistry != null && _poiRegistry.TryGetById(p.id, out var info) && !string.IsNullOrWhiteSpace(info.displayName))
+                return info.displayName;
+
+            return p.id;
+        }
+
+        private void RebuildLiftPolylineLabels()
+        {
+            EnsureLabelOverlay();
+            if (_labelOverlay == null) return;
+
+            // Now builds overlay labels for BOTH runs + lifts (single label per polyline).
+            _polyAnchorLocal.Clear();
+            _polyNormalLocal.Clear();
+
+            // Remove existing labels
+            foreach (var kv in _polylineLabelVisuals)
+                kv.Value?.RemoveFromHierarchy();
+            _polylineLabelVisuals.Clear();
+
+            var lines = _mapData != null ? _mapData.Polylines : null;
+            if (lines == null || lines.Count == 0) return;
+
+            for (int i = 0; i < lines.Count; i++)
+            {
+                var p = lines[i];
+                if (!p.IsValid) continue;
+                if (p.lineType != MapLineType.SkiRun && p.lineType != MapLineType.SkiLift) continue;
+                if (p.pointsWorldXZ == null || p.pointsWorldXZ.Count < 2) continue;
+
+                // Project points into content-local.
+                var pts = new List<Vector2>(p.pointsWorldXZ.Count);
+                for (int k = 0; k < p.pointsWorldXZ.Count; k++)
+                {
+                    if (TryProjectWorldXZToLocal(p.pointsWorldXZ[k], out var loc))
+                        pts.Add(loc);
+                }
+                if (pts.Count < 2) continue;
+
+                // Find midpoint by length in local space and direction at midpoint.
+                float total = 0f;
+                for (int k = 1; k < pts.Count; k++)
+                    total += Vector2.Distance(pts[k - 1], pts[k]);
+                if (total <= 0.001f) continue;
+
+                float half = total * 0.5f;
+                float acc = 0f;
+
+                Vector2 mid = pts[0];
+                Vector2 dirAtMid = (pts[1] - pts[0]);
+                if (dirAtMid.sqrMagnitude > 0.0001f) dirAtMid.Normalize();
+                else dirAtMid = Vector2.right;
+
+                for (int k = 1; k < pts.Count; k++)
+                {
+                    float seg = Vector2.Distance(pts[k - 1], pts[k]);
+                    if (acc + seg >= half)
+                    {
+                        float t = (half - acc) / Mathf.Max(0.0001f, seg);
+                        Vector2 a = pts[k - 1];
+                        Vector2 b = pts[k];
+                        mid = Vector2.Lerp(a, b, t);
+
+                        Vector2 d = (b - a);
+                        if (d.sqrMagnitude > 0.0001f)
+                        {
+                            d.Normalize();
+                            dirAtMid = d;
+                        }
+                        break;
+                    }
+                    acc += seg;
+                }
+
+                // Perpendicular normal (UI space is y-down).
+                Vector2 n = new Vector2(-dirAtMid.y, dirAtMid.x);
+                if (n.sqrMagnitude < 0.0001f) n = Vector2.up;
+                n.Normalize();
+
+                // Prefer placing on screen-up side (negative y).
+                if (n.y > 0f) n = -n;
+
+                string labelText = ResolvePolylineDisplayName(p);
+
+                var label = new Label(labelText);
+                label.AddToClassList("map-polyline-label");
+                label.style.position = Position.Absolute;
+
+                // Make labels selectable (same behavior as clicking the polyline itself).
+                string polyId = p.id; // capture
+                MakeOverlayLabelInteractive(label, () =>
+                {
+                    if (TryGetPolylineById(polyId, out var poly))
+                    {
+                        _selectedLiftStationSuffix = null;
+                        SelectPolylineInternal(polyId, poly, fireEvent: true);
+                        _polyLayer?.SetSelected(polyId);
+                    }
+                });
+
+                _polylineLabelVisuals[p.id] = label;
+                _polyAnchorLocal[p.id] = mid;
+                _polyNormalLocal[p.id] = n;
+
+                _polylineLabelAccent[p.id] = GetPolylineDisplayColor(p);
+                ApplyPolylineLabelVisual(p.id, selected: IsPolylineSelected(p));
+
+                _labelOverlay.Add(label);
+            }
+
+            LayoutOverlayLabels();
+        }
+
+        private void RebuildPOIOverlayLabels()
+        {
+            EnsureLabelOverlay();
+            if (_labelOverlay == null) return;
+            if (_mapData == null || _mapData.Markers == null) return;
+
+            // Remove existing POI labels (we’ll keep using _poiOverlayLabels name if you want,
+            // but it now lives inside _labelOverlay only, not a separate overlay element).
+            foreach (var kv in _poiOverlayLabels)
+                kv.Value?.RemoveFromHierarchy();
+            _poiOverlayLabels.Clear();
+
+            var list = _mapData.Markers;
+            for (int i = 0; i < list.Count; i++)
+            {
+                var m = list[i];
+                if (!m.IsValid) continue;
+
+                // POIs only (runs/lifts are labeled via polyline)
+                if (m.type == POIType.SkiRun || m.type == POIType.SkiLift)
+                    continue;
+
+                if (!_markerAnchorLocal.ContainsKey(m.id))
+                    continue;
+
+                string text = ResolveMarkerDisplayName(m);
+                var label = new Label(text);
+                label.AddToClassList("map-marker-label");
+                label.style.position = Position.Absolute;
+
+                // Make overlay POI labels selectable.
+                string markerId = m.id; // capture
+                MakeOverlayLabelInteractive(label, () => SelectPOIMarkerOnly(markerId, fireEvent: true));
+
+                _poiOverlayLabels[m.id] = label;
+                _labelOverlay.Add(label);
+
+                ApplyPOIOverlayLabelVisual(m.id, selected: string.Equals(_selectedMarkerId, m.id, StringComparison.Ordinal));
+            }
+
+            LayoutOverlayLabels();
+        }
+
+        private void ApplyPOIOverlayLabelVisual(string markerId, bool selected)
+        {
+            if (_style == null) return;
+            if (!_poiOverlayLabels.TryGetValue(markerId, out var label) || label == null) return;
+
+            label.style.unityFontStyleAndWeight = selected ? _style.labelFontStyleSelected : _style.labelFontStyle;
+            label.style.color = selected ? _style.labelColorSelected : _style.labelColor;
+
+            if (_markerLabelAccent.TryGetValue(markerId, out var accent))
+            {
+                float stripeW = Mathf.Max(1f, _style.labelAccentStripeWidth);
+                label.style.borderLeftWidth = stripeW;
+                label.style.borderLeftColor = accent;
+
+                float a = Mathf.Clamp01(_style.labelPlateAlpha) * 0.22f;
+                label.style.backgroundColor = new Color(accent.r, accent.g, accent.b, a);
+            }
+        }
+
+        private void LayoutOverlayLabels()
+        {
+            if (_labelOverlay == null) return;
+            if (_style == null) return;
+            if (_viewport == null) return;
+
+            if (!TryGetViewportSize(out float vw, out float vh))
+                return;
+
+            // ---- Helpers ----
+            int ComputeFont(bool selected)
+            {
+                int baseSize = selected ? _style.labelFontSizeSelected : _style.labelFontSize;
+
+                float z = Mathf.Max(0.0001f, _zoom);
+                float comp = Mathf.Clamp01(_style.labelZoomCompensation);
+                float scaled = baseSize / Mathf.Pow(z, comp);
+
+                int sz = Mathf.RoundToInt(scaled);
+                sz = Mathf.Clamp(sz, _style.labelFontMin, _style.labelFontMax);
+                return sz;
+            }
+
+            Vector2 Measure(Label l)
+            {
+                // MeasureTextSize is stable even before a layout pass.
+                var s = l.MeasureTextSize(l.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined);
+                // Add a small safety margin for padding/borders so collisions feel nicer.
+                return new Vector2(s.x + 6f, s.y + 4f);
+            }
+
+            Rect MakeRect(Vector2 topLeft, Vector2 size) => new Rect(topLeft.x, topLeft.y, size.x, size.y);
+
+            int CellKey(int cx, int cy) => (cy << 16) ^ (cx & 0xFFFF);
+
+            void AddRectToGrid(Dictionary<int, List<Rect>> grid, Rect r)
+            {
+                int x0 = Mathf.FloorToInt(r.xMin / LabelCellSizePx);
+                int x1 = Mathf.FloorToInt(r.xMax / LabelCellSizePx);
+                int y0 = Mathf.FloorToInt(r.yMin / LabelCellSizePx);
+                int y1 = Mathf.FloorToInt(r.yMax / LabelCellSizePx);
+
+                for (int y = y0; y <= y1; y++)
+                    for (int x = x0; x <= x1; x++)
+                    {
+                        int key = CellKey(x, y);
+                        if (!grid.TryGetValue(key, out var bucket))
+                        {
+                            bucket = new List<Rect>(8);
+                            grid[key] = bucket;
+                        }
+                        bucket.Add(r);
+                    }
+            }
+
+            bool Overlaps(Dictionary<int, List<Rect>> grid, Rect r)
+            {
+                int x0 = Mathf.FloorToInt(r.xMin / LabelCellSizePx);
+                int x1 = Mathf.FloorToInt(r.xMax / LabelCellSizePx);
+                int y0 = Mathf.FloorToInt(r.yMin / LabelCellSizePx);
+                int y1 = Mathf.FloorToInt(r.yMax / LabelCellSizePx);
+
+                for (int y = y0; y <= y1; y++)
+                    for (int x = x0; x <= x1; x++)
+                    {
+                        int key = CellKey(x, y);
+                        if (!grid.TryGetValue(key, out var bucket)) continue;
+
+                        for (int i = 0; i < bucket.Count; i++)
+                            if (bucket[i].Overlaps(r))
+                                return true;
+                    }
+                return false;
+            }
+
+            // ---- Build a prioritized list of labels to place ----
+            // Priority lower = placed first (wins).
+            var work = new List<(string id, Label label, Vector2 anchorLocal, Vector2 preferDir, int priority, bool mustShow, float distKey)>(256);
+
+            // Global suppression
+            if (_hideMarkerLabels)
+            {
+                foreach (var kv in _polylineLabelVisuals) if (kv.Value != null) kv.Value.style.display = DisplayStyle.None;
+                foreach (var kv in _poiOverlayLabels) if (kv.Value != null) kv.Value.style.display = DisplayStyle.None;
+                return;
+            }
+
+            // Use viewport center as the “focus point” for prioritizing context labels.
+            Vector2 focusContent = ((new Vector2(vw * 0.5f, vh * 0.5f) - _pan) / Mathf.Max(0.0001f, _zoom));
+
+            // If something is selected, hide all other overlay labels (focus mode).
+            // We keep only the label that corresponds to the selected marker/polyline.
+            bool hasSelection =
+                !string.IsNullOrEmpty(_selectedPolylineId) ||
+                !string.IsNullOrEmpty(_selectedMarkerId);
+
+            if (hasSelection)
+            {
+                // Hide everything by default.
+                foreach (var kv in _polylineLabelVisuals)
+                    if (kv.Value != null) kv.Value.style.display = DisplayStyle.None;
+
+                foreach (var kv in _poiOverlayLabels)
+                    if (kv.Value != null) kv.Value.style.display = DisplayStyle.None;
+
+                // Build a tiny placement list (usually 1 item).
+                var workSel = new List<(string id, Label label, Vector2 anchorLocal, Vector2 preferDir, int priority, bool mustShow, float distKey)>(2);
+
+                // Selected polyline label (runs/lifts).
+                if (!string.IsNullOrEmpty(_selectedPolylineId) &&
+                    _polylineLabelVisuals.TryGetValue(_selectedPolylineId, out var polyLabel) &&
+                    polyLabel != null &&
+                    _polyAnchorLocal.TryGetValue(_selectedPolylineId, out var polyAnchor))
+                {
+                    _polyNormalLocal.TryGetValue(_selectedPolylineId, out var polyN);
+
+                    polyLabel.style.fontSize = ComputeFont(true);
+                    polyLabel.style.opacity = 1f;
+                    ApplyPolylineLabelVisual(_selectedPolylineId, selected: true);
+
+                    workSel.Add((_selectedPolylineId, polyLabel, polyAnchor, polyN, priority: 0, mustShow: true, distKey: 0f));
+                }
+
+                // Selected POI label (only applies to non-run/non-lift POIs because those are what _poiOverlayLabels contains).
+                if (!string.IsNullOrEmpty(_selectedMarkerId) &&
+                    _poiOverlayLabels.TryGetValue(_selectedMarkerId, out var poiLabel) &&
+                    poiLabel != null &&
+                    _markerAnchorLocal.TryGetValue(_selectedMarkerId, out var poiAnchor))
+                {
+                    poiLabel.style.fontSize = ComputeFont(true);
+                    poiLabel.style.opacity = 1f;
+                    ApplyPOIOverlayLabelVisual(_selectedMarkerId, selected: true);
+
+                    workSel.Add((_selectedMarkerId, poiLabel, poiAnchor, Vector2.down, priority: 1, mustShow: true, distKey: 0f));
+                }
+
+                // If nothing matches (eg. selected lift station marker -> label is the polyline label above),
+                // we still just return after hiding everything else.
+                if (workSel.Count == 0)
+                    return;
+
+                // Place selected label(s) using the same collision grid (handles rare case where both exist).
+                workSel.Sort((a, b) => a.priority.CompareTo(b.priority));
+
+                var gridSel = new Dictionary<int, List<Rect>>(16);
+
+                for (int i = 0; i < workSel.Count; i++)
+                {
+                    var item = workSel[i];
+
+                    Vector2 anchorVp = _pan + item.anchorLocal * _zoom;
+                    Vector2 size = Measure(item.label);
+
+                    Vector2 dir = item.preferDir;
+                    if (dir.sqrMagnitude < 0.001f) dir = Vector2.up;
+                    dir.Normalize();
+
+                    Vector2[] dirs =
+                    {
+            dir,
+            -dir,
+            Vector2.up,
+            Vector2.down,
+            Vector2.right,
+            Vector2.left,
+            (dir + Vector2.right).normalized,
+            (dir + Vector2.left).normalized,
+        };
+
+                    int startSlot = 0;
+                    if (_labelSlotCache.TryGetValue(item.id, out var cached))
+                        startSlot = Mathf.Clamp(cached, 0, dirs.Length - 1);
+
+                    bool placed = false;
+                    Rect placedRect = default;
+                    Vector2 placedPos = default;
+
+                    for (int attempt = 0; attempt < dirs.Length; attempt++)
+                    {
+                        int slot = (startSlot + attempt) % dirs.Length;
+                        Vector2 pos = anchorVp + dirs[slot] * LabelBaseOffsetPx;
+
+                        Vector2 tl = new Vector2(pos.x - size.x * 0.5f, pos.y - size.y * 0.5f);
+
+                        tl.x = Mathf.Clamp(tl.x, 2f, vw - size.x - 2f);
+                        tl.y = Mathf.Clamp(tl.y, 2f, vh - size.y - 2f);
+
+                        Rect r = MakeRect(tl, size);
+
+                        if (!Overlaps(gridSel, r) || item.mustShow)
+                        {
+                            placed = true;
+                            placedRect = r;
+                            placedPos = tl;
+                            _labelSlotCache[item.id] = slot;
+                            break;
+                        }
+                    }
+
+                    if (!placed)
+                    {
+                        item.label.style.display = DisplayStyle.None;
+                        continue;
+                    }
+
+                    item.label.style.display = DisplayStyle.Flex;
+                    item.label.style.left = placedPos.x;
+                    item.label.style.top = placedPos.y;
+
+                    AddRectToGrid(gridSel, placedRect);
+                }
+
+                return;
+            }
+
+            // --- Polylines: runs + lifts ---
+            var polyContext = new List<(string id, Label label, Vector2 anchor, Vector2 n, bool selected, float dist)>(128);
+
+            foreach (var kv in _polylineLabelVisuals)
+            {
+                string id = kv.Key;
+                var label = kv.Value;
+                if (label == null) continue;
+
+                if (!TryGetPolylineById(id, out var p))
+                {
+                    label.style.display = DisplayStyle.None;
+                    continue;
+                }
+
+                bool layerOn =
+                    (p.lineType == MapLineType.SkiRun && _showRunOverlays) ||
+                    (p.lineType == MapLineType.SkiLift && _showLiftOverlays);
+
+                bool isSelected = IsPolylineSelected(p);
+
+                // Simple visibility rule: selected always; otherwise only when zoomed in and layer enabled.
+                bool show = isSelected || (layerOn && _zoom >= RunLiftAlwaysVisibleMinZoom);
+                if (!show)
+                {
+                    label.style.display = DisplayStyle.None;
+                    continue;
+                }
+
+                _polyAnchorLocal.TryGetValue(id, out var anchor);
+                _polyNormalLocal.TryGetValue(id, out var n);
+
+                float dist = (anchor - focusContent).sqrMagnitude;
+
+                // Style
+                label.style.fontSize = ComputeFont(isSelected);
+                label.style.opacity = 1f;
+                ApplyPolylineLabelVisual(id, selected: isSelected);
+
+                if (isSelected)
+                {
+                    work.Add((id, label, anchor, n, priority: 0, mustShow: true, distKey: dist));
+                }
+                else
+                {
+                    polyContext.Add((id, label, anchor, n, selected: false, dist: dist));
+                }
+            }
+
+            // Cap context polylines by distance to focus
+            polyContext.Sort((a, b) => a.dist.CompareTo(b.dist));
+            for (int i = 0; i < polyContext.Count; i++)
+            {
+                if (i >= MaxContextRunLiftLabels)
+                {
+                    polyContext[i].label.style.display = DisplayStyle.None;
+                    continue;
+                }
+
+                var it = polyContext[i];
+                work.Add((it.id, it.label, it.anchor, it.n, priority: 5, mustShow: false, distKey: it.dist));
+            }
+
+            // --- POIs ---
+            var poiContext = new List<(string id, Label label, Vector2 anchor, bool selected, bool always, float dist)>(128);
+
+            foreach (var kv in _poiOverlayLabels)
+            {
+                string id = kv.Key;
+                var label = kv.Value;
+                if (label == null) continue;
+
+                if (!_markerTypes.TryGetValue(id, out var type))
+                {
+                    label.style.display = DisplayStyle.None;
+                    continue;
+                }
+
+                bool isSelected = string.Equals(_selectedMarkerId, id, StringComparison.Ordinal);
+                bool always = _poiAlwaysLabelById.TryGetValue(id, out var a) && a;
+
+                // Simple visibility: selected always; otherwise only when zoomed in.
+                bool show = _showPOIOverlays && (isSelected || always || _zoom >= PoiVisibleMinZoom);
+                if (!show)
+                {
+                    label.style.display = DisplayStyle.None;
+                    continue;
+                }
+
+                if (!_markerAnchorLocal.TryGetValue(id, out var anchor))
+                {
+                    label.style.display = DisplayStyle.None;
+                    continue;
+                }
+
+                float dist = (anchor - focusContent).sqrMagnitude;
+
+                label.style.fontSize = ComputeFont(isSelected);
+                ApplyPOIOverlayLabelVisual(id, isSelected);
+                label.style.opacity = 1f;
+
+                if (isSelected)
+                {
+                    work.Add((id, label, anchor, Vector2.down, priority: 1, mustShow: true, distKey: dist));
+                }
+                else
+                {
+                    poiContext.Add((id, label, anchor, selected: false, always: always, dist: dist));
+                }
+            }
+
+            // Prefer always-label POIs over ordinary ones, then distance
+            poiContext.Sort((a, b) =>
+            {
+                int c = b.always.CompareTo(a.always);
+                if (c != 0) return c;
+                return a.dist.CompareTo(b.dist);
+            });
+
+            for (int i = 0; i < poiContext.Count; i++)
+            {
+                if (i >= MaxContextPoiLabels)
+                {
+                    poiContext[i].label.style.display = DisplayStyle.None;
+                    continue;
+                }
+
+                var it = poiContext[i];
+                work.Add((it.id, it.label, it.anchor, Vector2.down, priority: it.always ? 6 : 7, mustShow: false, distKey: it.dist));
+            }
+
+            // Sort by priority, then distance, then id for determinism
+            work.Sort((a, b) =>
+            {
+                int c = a.priority.CompareTo(b.priority);
+                if (c != 0) return c;
+                c = a.distKey.CompareTo(b.distKey);
+                if (c != 0) return c;
+                return string.CompareOrdinal(a.id, b.id);
+            });
+
+            // ---- Place labels without overlap ----
+            var grid = new Dictionary<int, List<Rect>>(256);
+
+            // If a label's anchor is far outside the viewport, clamping would pin it to an edge,
+            // which reads as "label detached from its feature". Hide those (except for selected).
+            const float OffscreenAnchorMarginPx = 48f;
+
+            for (int i = 0; i < work.Count; i++)
+            {
+                var item = work[i];
+
+                // Convert content-local anchor to viewport-local anchor
+                Vector2 anchorVp = _pan + item.anchorLocal * _zoom;
+
+                if (!item.mustShow)
+                {
+                    if (anchorVp.x < -OffscreenAnchorMarginPx || anchorVp.x > vw + OffscreenAnchorMarginPx ||
+                        anchorVp.y < -OffscreenAnchorMarginPx || anchorVp.y > vh + OffscreenAnchorMarginPx)
+                    {
+                        item.label.style.display = DisplayStyle.None;
+                        continue;
+                    }
+                }
+
+                Vector2 size = Measure(item.label);
+
+                // Candidate directions (in viewport space)
+                Vector2 dir = item.preferDir;
+                if (dir.sqrMagnitude < 0.001f) dir = Vector2.up;
+                dir.Normalize();
+
+                // Deterministic slot list
+                Vector2[] dirs =
+                {
+        dir,
+        -dir,
+        Vector2.up,
+        Vector2.down,
+        Vector2.right,
+        Vector2.left,
+        (dir + Vector2.right).normalized,
+        (dir + Vector2.left).normalized,
+    };
+
+                int startSlot = 0;
+                if (_labelSlotCache.TryGetValue(item.id, out var cached))
+                    startSlot = Mathf.Clamp(cached, 0, dirs.Length - 1);
+
+                bool placed = false;
+                Rect placedRect = default;
+                Vector2 placedPos = default;
+
+                for (int attempt = 0; attempt < dirs.Length; attempt++)
+                {
+                    int slot = (startSlot + attempt) % dirs.Length;
+
+                    Vector2 pos = anchorVp + dirs[slot] * LabelBaseOffsetPx;
+
+                    // Top-left placement (no translate needed)
+                    Vector2 tlDesired = new Vector2(pos.x - size.x * 0.5f, pos.y - size.y * 0.5f);
+
+                    // Prefer a slot that is naturally in-bounds.
+                    // Only selected labels are allowed to clamp as a last resort.
+                    bool inBounds =
+                        (tlDesired.x >= 2f && tlDesired.x <= (vw - size.x - 2f)) &&
+                        (tlDesired.y >= 2f && tlDesired.y <= (vh - size.y - 2f));
+
+                    Vector2 tl = tlDesired;
+                    if (!inBounds)
+                    {
+                        if (!item.mustShow)
+                            continue;
+
+                        tl.x = Mathf.Clamp(tl.x, 2f, vw - size.x - 2f);
+                        tl.y = Mathf.Clamp(tl.y, 2f, vh - size.y - 2f);
+                    }
+
+                    Rect r = MakeRect(tl, size);
+
+                    if (!Overlaps(grid, r) || item.mustShow)
+                    {
+                        placed = true;
+                        placedRect = r;
+                        placedPos = tl;
+                        _labelSlotCache[item.id] = slot;
+                        break;
+                    }
+                }
+
+                if (!placed)
+                {
+                    item.label.style.display = DisplayStyle.None;
+                    continue;
+                }
+
+                item.label.style.display = DisplayStyle.Flex;
+                item.label.style.left = placedPos.x;
+                item.label.style.top = placedPos.y;
+
+                // Add to collision grid (even if mustShow, so later labels avoid it)
+                AddRectToGrid(grid, placedRect);
+            }
+
+        }
+
         private Vector2 UVToLocal(Vector2 uv)
         {
             uv = ApplyBackgroundInset(uv);
@@ -1056,13 +2574,61 @@ namespace SkiGame.Map.UI
             return new Vector2(uv.x * _contentSize.x, (1f - uv.y) * _contentSize.y);
         }
 
+
         private void ApplyTransform()
         {
             if (_content == null) return;
 
             _content.transform.position = new Vector3(_pan.x, _pan.y, 0f);
             _content.transform.scale = new Vector3(_zoom, _zoom, 1f);
+
+            // Keep markers/player marker screen-locked if you still want that behavior
+            UpdateAllLabelTransformsForZoom();
+
+            // Overlay labels reposition from pan/zoom (no inverse scaling required)
+            LayoutOverlayLabels();
         }
+
+        private bool TryGetViewportSize(out float vw, out float vh)
+        {
+            vw = 0f;
+            vh = 0f;
+
+            if (_viewport == null) return false;
+
+            // resolvedStyle can be 0 for embedded layouts even when layout is valid.
+            vw = _viewport.resolvedStyle.width;
+            vh = _viewport.resolvedStyle.height;
+
+            if (vw <= 1f) vw = _viewport.layout.width;
+            if (vh <= 1f) vh = _viewport.layout.height;
+
+            return (vw > 1f && vh > 1f);
+        }
+
+
+        private int ComputeZoomedLabelFontSize(bool selected)
+        {
+            if (_style == null)
+                return selected ? 13 : 12;
+
+            int baseSize = selected ? _style.labelFontSizeSelected : _style.labelFontSize;
+
+            float z = Mathf.Max(0.0001f, _zoom);
+
+            // Use existing setting, but in the way you actually want:
+            // comp = 1 => constant size, comp = 0 => scale with zoom.
+            float comp = Mathf.Clamp01(_style.labelZoomCompensation);
+            float exp = 1f - comp;
+
+            float scaled = baseSize * Mathf.Pow(z, exp);
+            int size = Mathf.RoundToInt(scaled);
+
+            int min = Mathf.Max(6, _style.labelFontMin);
+            int max = Mathf.Max(min, _style.labelFontMax);
+            return Mathf.Clamp(size, min, max);
+        }
+
 
         private Vector2 ApplyBackgroundInset(Vector2 uv)
         {
@@ -1107,10 +2673,8 @@ namespace SkiGame.Map.UI
         {
             if (_viewport == null || _content == null) return;
 
-            float vw = _viewport.resolvedStyle.width;
-            float vh = _viewport.resolvedStyle.height;
-
-            if (vw <= 1f || vh <= 1f) return;
+            if (!TryGetViewportSize(out float vw, out float vh))
+                return;
 
             float fit = Mathf.Min(vw / Mathf.Max(1f, _contentSize.x), vh / Mathf.Max(1f, _contentSize.y));
             fit *= 0.96f;
@@ -1126,7 +2690,44 @@ namespace SkiGame.Map.UI
             // Keep polyline widths stable in screen space.
             _polyLayer?.SetZoom(_zoom);
             _trailLayer?.SetZoom(_zoom);
+        }
 
+        private bool TryPickMarker(Vector2 contentLocal, float maxDistanceContentPx, out SkiGame.Map.MapMarker picked)
+        {
+            picked = default;
+
+            float bestSqr = maxDistanceContentPx * maxDistanceContentPx;
+            bool found = false;
+
+            foreach (var kv in _markerAnchorLocal)
+            {
+                string id = kv.Key;
+
+                if (!_markerById.TryGetValue(id, out var m))
+                    continue;
+
+                // Respect legend visibility.
+                if (!IsMarkerTypeVisible(m.type))
+                    continue;
+
+                // Skip legacy lift "line markers" (only allow station markers if they exist).
+                if (m.type == SkiGame.POI.POIType.SkiLift)
+                {
+                    bool isStation = id.EndsWith("__top", StringComparison.Ordinal) || id.EndsWith("__bottom", StringComparison.Ordinal);
+                    if (!isStation)
+                        continue;
+                }
+
+                float dSqr = (kv.Value - contentLocal).sqrMagnitude;
+                if (dSqr < bestSqr)
+                {
+                    bestSqr = dSqr;
+                    picked = m;
+                    found = true;
+                }
+            }
+
+            return found;
         }
 
         private void OnPointerDown(PointerDownEvent evt)
@@ -1138,16 +2739,10 @@ namespace SkiGame.Map.UI
             if (_lockPan)
                 return;
 
-            // If clicking a marker/player element, let it handle the event (no pan capture).
-            if (evt.target is VisualElement veTarget)
-            {
-                if (veTarget.ClassListContains("map-marker") || veTarget.ClassListContains("map-player-marker"))
-                    return;
-            }
-
             _pointerDown = true;
             _didDrag = false;
-            _pointerDownPosViewport = new Vector2(evt.position.x, evt.position.y);
+            Vector2 worldPos = new Vector2(evt.position.x, evt.position.y);
+            _pointerDownPosViewport = _viewport.WorldToLocal(worldPos);
 
             _dragging = true;
             _activePointerId = evt.pointerId;
@@ -1160,19 +2755,24 @@ namespace SkiGame.Map.UI
 
         private void OnPointerMove(PointerMoveEvent evt)
         {
-            if (!_dragging) return;
-            if (evt.pointerId != _activePointerId) return;
+            // Dragging: existing pan logic (keep first so it wins)
+            if (_dragging)
+            {
+                if (evt.pointerId != _activePointerId) return;
 
-            Vector2 pos = new Vector2(evt.position.x, evt.position.y);
-            Vector2 delta = pos - _dragStartPointer;
+                Vector2 worldPos = new Vector2(evt.position.x, evt.position.y);
+                Vector2 pos = _viewport.WorldToLocal(worldPos);
+                Vector2 delta = pos - _dragStartPointer;
 
-            if (!_didDrag && delta.magnitude > ClickDragThresholdPx)
-                _didDrag = true;
+                if (!_didDrag && delta.magnitude > ClickDragThresholdPx)
+                    _didDrag = true;
 
-            _pan = _dragStartPan + delta;
+                _pan = _dragStartPan + delta;
 
-            ApplyTransform();
-            evt.StopPropagation();
+                ApplyTransform();
+                evt.StopPropagation();
+                return;
+            }
         }
 
         private void OnPointerUp(EventBase evtBase)
@@ -1189,10 +2789,9 @@ namespace SkiGame.Map.UI
 
             _activePointerId = -1;
 
-            // If this was a click (not a drag), attempt to pick a polyline.
+            // If this was a click (not a drag), attempt to pick marker or polyline (manual, deterministic).
             if (_pointerDown && !_didDrag && evtBase is PointerUpEvent pu)
             {
-                // In minimap mode we can suppress selection entirely.
                 if (_suppressSelection)
                 {
                     _pointerDown = false;
@@ -1200,31 +2799,97 @@ namespace SkiGame.Map.UI
                     return;
                 }
 
-                Vector2 viewportPos = new Vector2(pu.position.x, pu.position.y);
+                Vector2 worldPos = new Vector2(pu.position.x, pu.position.y);
+                Vector2 viewportPos = _viewport.WorldToLocal(worldPos);
                 Vector2 contentLocal = (viewportPos - _pan) / Mathf.Max(0.0001f, _zoom);
 
-                // Try pick polyline (runs/lifts).
-                // Convert an on-screen pixel tolerance into content-space by dividing by zoom.
-                const float hitDistScreenPx = 16f; // more forgiving, especially when zoomed out
+                const float hitDistScreenPx = 18f;
                 float pickDistContent = hitDistScreenPx / Mathf.Max(0.0001f, _zoom);
 
-                if (_polyLayer != null && _polyLayer.TryPick(contentLocal, maxDistancePx: pickDistContent, out var picked))
+                // 1) Prefer marker if within threshold.
+                if (TryPickMarker(contentLocal, pickDistContent, out var pickedMarker))
                 {
-                    _selectedPolylineId = picked.id;
+                    _selectedLiftStationSuffix = null;
+
+                    // Runs: selecting marker selects its linked polyline (if present).
+                    if (pickedMarker.type == SkiGame.POI.POIType.SkiRun)
+                    {
+                        string runPolyId = pickedMarker.id;
+                        if (_markerToPolyline.TryGetValue(pickedMarker.id, out var linked))
+                            runPolyId = linked;
+
+                        if (TryGetPolylineById(runPolyId, out var runPoly))
+                        {
+                            _selectedMarkerId = pickedMarker.id;
+                            _selectedPolylineId = runPolyId;
+
+                            UpdateSelectionVisuals();
+                            _polyLayer?.SetSelected(runPolyId);
+                            PolylineSelected?.Invoke(runPoly);
+
+                            _pointerDown = false;
+                            evtBase.StopPropagation();
+                            return;
+                        }
+                    }
+                    // Lifts: selecting station marker selects lift polyline.
+                    else if (pickedMarker.type == SkiGame.POI.POIType.SkiLift)
+                    {
+                        string liftPolyId = pickedMarker.id;
+                        int idx = liftPolyId.LastIndexOf("__", StringComparison.Ordinal);
+                        if (idx > 0) liftPolyId = liftPolyId.Substring(0, idx);
+
+                        if (TryGetPolylineById(liftPolyId, out var liftPoly))
+                        {
+                            _selectedMarkerId = pickedMarker.id;
+                            _selectedPolylineId = liftPolyId;
+
+                            if (_liftMarkerRole.TryGetValue(pickedMarker.id, out var role) && role != LiftStationRole.None)
+                                _selectedLiftStationSuffix = role == LiftStationRole.Top ? " (Top)" : " (Bottom)";
+
+                            UpdateSelectionVisuals();
+                            _polyLayer?.SetSelected(liftPolyId);
+                            PolylineSelected?.Invoke(liftPoly);
+
+                            _pointerDown = false;
+                            evtBase.StopPropagation();
+                            return;
+                        }
+                    }
+                    // POIs: marker selection.
+                    else
+                    {
+                        _selectedMarkerId = pickedMarker.id;
+                        _selectedPolylineId = null;
+
+                        UpdateSelectionVisuals();
+                        _polyLayer?.SetSelected(null);
+                        MarkerSelected?.Invoke(pickedMarker);
+
+                        _pointerDown = false;
+                        evtBase.StopPropagation();
+                        return;
+                    }
+                }
+
+                // 2) Otherwise pick polyline.
+                if (_polyLayer != null && _polyLayer.TryPick(contentLocal, pickDistContent, out var pickedLine))
+                {
+                    _selectedLiftStationSuffix = null;
+                    _selectedPolylineId = pickedLine.id;
                     _selectedMarkerId = null;
 
-                    _polyLayer.SetSelected(picked.id);
-                    PolylineSelected?.Invoke(picked);
+                    UpdateSelectionVisuals();
+                    _polyLayer.SetSelected(pickedLine.id);
+                    PolylineSelected?.Invoke(pickedLine);
+
+                    _pointerDown = false;
+                    evtBase.StopPropagation();
                     return;
                 }
-                else
-                {
-                    // Clicked empty space: clear selection
-                    _selectedPolylineId = null;
-                    _selectedMarkerId = null;
-                    _polyLayer?.SetSelected(null);
-                    SelectionCleared?.Invoke();
-                }
+
+                // 3) Nothing hit.
+                ClearSelectionInternal(fireEvent: true);
             }
 
             _pointerDown = false;
@@ -1235,31 +2900,32 @@ namespace SkiGame.Map.UI
         {
             if (_viewport == null || _content == null) return;
 
-            if (!_allowZoom)
-            {
-                evt.StopPropagation();
-                evt.PreventDefault();
-                return;
-            }
+            // Always consume wheel so the ScrollView doesn't also scroll (which looks like panning).
+            evt.StopPropagation();
+            evt.PreventDefault();
 
-            float vw = _viewport.resolvedStyle.width;
-            float vh = _viewport.resolvedStyle.height;
-            if (vw <= 1f || vh <= 1f) return;
+            if (!_allowZoom) return;
+
+            if (!TryGetViewportSize(out float vw, out float vh))
+                return;
 
             float prevZoom = _zoom;
 
-            // Wheel delta: positive is usually scroll down; invert for natural zoom
+            // Zoom factor (invert wheel Y for natural feel)
             float zoomFactor = Mathf.Pow(1.12f, -evt.delta.y * 0.1f);
             _zoom = Mathf.Clamp(_zoom * zoomFactor, 0.15f, 10f);
 
-            // Zoom around cursor position (keep point under cursor stable)
-            Vector2 cursor = evt.localMousePosition;
+            // Zoom around the viewport center (stable "camera zoom").
+            Vector2 center = new Vector2(vw * 0.5f, vh * 0.5f);
 
-            Vector2 contentBefore = (cursor - _pan) / prevZoom;
-            _pan = cursor - contentBefore * _zoom;
+            // Keep the content point currently under the viewport center fixed in viewport space.
+            Vector2 contentAtCenterBefore = (center - _pan) / Mathf.Max(0.0001f, prevZoom);
+            _pan = center - contentAtCenterBefore * _zoom;
 
             ApplyTransform();
-            // Keep polyline widths stable in screen space.
+
+
+            // Keep polyline/trail widths stable in screen space.
             _polyLayer?.SetZoom(_zoom);
             _trailLayer?.SetZoom(_zoom);
 
@@ -1276,10 +2942,30 @@ namespace SkiGame.Map.UI
             _trackPlayerTrail = drawTrail;
 
             if (_playerMarker != null)
-                _playerMarker.style.display = _trackPlayerMarker ? DisplayStyle.Flex : DisplayStyle.None;
+                _playerMarker.style.display = (_trackPlayerMarker) ? DisplayStyle.Flex : DisplayStyle.None;
 
             if (_trailLayer != null)
                 _trailLayer.SetEnabled(_trackPlayerTrail);
+        }
+
+        public IReadOnlyList<Vector2> GetWorldTrailXZ() => _trailWorldXZ;
+
+        public void SetWorldTrailXZ(IReadOnlyList<Vector2> worldTrailXZ)
+        {
+            // Used by minimaps to display a shared breadcrumb trail.
+            _trailLayer?.SetWorldTrail(worldTrailXZ);
+        }
+
+
+        public void SetTrailSamplingEnabled(bool enabled)
+        {
+            _trackPlayerTrail = enabled;
+
+            if (!enabled)
+            {
+                // Prevent internal sampler state from fighting shared trails.
+                _hasLastTrailSample = false;
+            }
         }
 
         public void ClearPlayerTrail()
@@ -1298,23 +2984,64 @@ namespace SkiGame.Map.UI
             if (!_bound) return;
             if (_mapData == null || !_mapData.Projection.IsValid) return;
 
+            // Keep viewport sizing in sync with info panel open/close even if geometry events don't fire.
+            if (_isScrollViewRoot)
+            {
+                if (!_infoPanelRefsResolved || (_mapBottomDock == null && _mapInfoPanel == null))
+                    ResolveInfoPanelRefs();
+
+                SyncViewportToInfoPanelState();
+            }
+
             // Compute once; follow-centering should not be gated on marker visibility.
             bool havePlayerLocal = TryGetPlayerLocal(out Vector2 playerLocal);
+
+            // One-shot centering request (e.g., when the map page opens).
+            // This retries until the viewport has a valid size and we can project the player.
+            if (_pendingCenterOnPlayer && havePlayerLocal)
+            {
+                if (TryGetViewportSize(out _, out _))
+                {
+                    if (!_pendingCenterKeepZoom)
+                        ResetViewToFit();
+
+                    _zoom = Mathf.Max(_zoom, _pendingCenterMinZoom);
+                    CenterViewOnContentPoint(playerLocal);
+
+                    _pendingCenterOnPlayer = false;
+                }
+            }
 
             // Update player marker every tick (cheap).
             if (_trackPlayerMarker && _playerMarker != null && havePlayerLocal)
             {
-                // Center the marker on the location.
-                float w = _playerMarker.resolvedStyle.width > 0 ? _playerMarker.resolvedStyle.width : 12f;
-                float h = _playerMarker.resolvedStyle.height > 0 ? _playerMarker.resolvedStyle.height : 12f;
-
-                _playerMarker.style.left = playerLocal.x - w * 0.5f;
-                _playerMarker.style.top = playerLocal.y - h * 0.5f;
+                _playerMarker.style.left = playerLocal.x;
+                _playerMarker.style.top = playerLocal.y;
             }
+
 
             // Follow-player mode should always re-center (watch/tile minimaps rely on this).
             if (_minimapFollowPlayer && havePlayerLocal)
                 CenterViewOnContentPoint(playerLocal);
+
+            // If selection happened while the viewport was still expanded, wait until the info panel is open
+            // (and the viewport has been reduced) before centering.
+            if (_pendingCenterOnSelection)
+            {
+                bool panelOpen = (_mapInfoPanel != null &&
+                                  _mapInfoPanel.resolvedStyle.display != DisplayStyle.None);
+
+                if (panelOpen && TryGetSelectedAnchorLocal(out var anchorLocal))
+                {
+                    if (_pendingSelectionMinZoom > 0f)
+                        _zoom = Mathf.Max(_zoom, _pendingSelectionMinZoom);
+
+                    CenterViewOnContentPoint(anchorLocal);
+
+                    _pendingCenterOnSelection = false;
+                    _pendingSelectionMinZoom = -1f;
+                }
+            }
 
             // Sample trail at a throttled rate.
             if (_trackPlayerTrail)
@@ -1333,24 +3060,29 @@ namespace SkiGame.Map.UI
             return true;
         }
 
-        private bool UpdatePlayerMarker(out Vector2 playerLocal)
+        public void CenterOnPlayerIfPossible(bool keepZoom = true, float minZoom = 1.0f)
         {
-            playerLocal = default;
+            if (!_bound) return;
+            if (!TryGetViewportSize(out _, out _)) return;
 
-            if (_playerTransform == null || _playerMarker == null) return false;
+            if (!TryGetPlayerLocal(out Vector2 playerLocal))
+                return;
 
-            if (!TryProjectWorldToUV(_playerTransform.position, out Vector2 uv))
-                return false;
+            if (!keepZoom)
+                ResetViewToFit();
 
-            playerLocal = UVToLocal(uv);
+            _zoom = Mathf.Max(_zoom, minZoom);
+            CenterViewOnContentPoint(playerLocal);
+        }
 
-            // Center the marker on the location.
-            float w = _playerMarker.resolvedStyle.width > 0 ? _playerMarker.resolvedStyle.width : 12f;
-            float h = _playerMarker.resolvedStyle.height > 0 ? _playerMarker.resolvedStyle.height : 12f;
+        public void RequestCenterOnPlayer(bool keepZoom = true, float minZoom = 1.0f)
+        {
+            _pendingCenterOnPlayer = true;
+            _pendingCenterKeepZoom = keepZoom;
+            _pendingCenterMinZoom = minZoom;
 
-            _playerMarker.style.left = playerLocal.x - w * 0.5f;
-            _playerMarker.style.top = playerLocal.y - h * 0.5f;
-            return true;
+            // Try immediately in case we're already laid out.
+            CenterOnPlayerIfPossible(keepZoom, minZoom);
         }
 
         private void CenterViewOnContentPoint(Vector2 contentLocal)
@@ -1359,45 +3091,68 @@ namespace SkiGame.Map.UI
             // Embedded minimaps still provide MapViewport (it just lives under a different root).
             if (_viewport == null) return;
 
-            float vw = _viewport.resolvedStyle.width;
-            float vh = _viewport.resolvedStyle.height;
-
-            // If layout hasn't resolved yet, we can't center reliably this frame.
-            // Tick() will call again once geometry exists (and Bind() already registers a GeometryChangedEvent -> Refresh()).
-            if (vw <= 1f || vh <= 1f) return;
+            if (!TryGetViewportSize(out float vw, out float vh))
+                return;
 
             Vector2 center = new Vector2(vw * 0.5f, vh * 0.5f);
 
             // Pan so the content point lands at the viewport center.
             _pan = center - contentLocal * _zoom;
 
-            // Clamp pan so we don't drift past edges.
+            // Clamp only when content exceeds viewport (prevents zoom drift due to forced centering)
+            ClampPanToBounds(vw, vh);
+
+            ApplyTransform();
+        }
+
+        /// <summary>
+        /// Centers the viewport on a world-space position (using the same projection as markers).
+        /// This does NOT change zoom by default; it only pans so the target is centered.
+        /// </summary>
+        public bool CenterOnWorldPosition(Vector3 worldPosition, float minZoom = -1f)
+        {
+            if (!_bound) return false;
+            if (_viewport == null) return false;
+
+            // Ensure we have a valid viewport rect; otherwise centering will noop.
+            float vw = _viewport.resolvedStyle.width;
+            float vh = _viewport.resolvedStyle.height;
+            if (vw <= 1f || vh <= 1f) return false;
+
+            if (!TryProjectWorldToUV(worldPosition, out Vector2 uv))
+                return false;
+
+            Vector2 contentLocal = UVToLocal(uv);
+
+            // Optional: enforce a minimum zoom (useful if you want a marker selection to "snap in").
+            if (minZoom > 0f)
+                _zoom = Mathf.Max(_zoom, minZoom);
+
+            CenterViewOnContentPoint(contentLocal);
+            return true;
+        }
+
+        private void ClampPanToBounds(float vw, float vh)
+        {
             float scaledW = _contentSize.x * _zoom;
             float scaledH = _contentSize.y * _zoom;
 
-            float minX, maxX, minY, maxY;
-
-            // If content is smaller than viewport, keep it centered.
-            if (scaledW <= vw)
-                minX = maxX = (vw - scaledW) * 0.5f;
-            else
+            // IMPORTANT:
+            // Only clamp axes where the content is larger than the viewport.
+            // If the content is smaller, clamping would "recenter" it and cause drift when zooming.
+            if (scaledW > vw)
             {
-                minX = vw - scaledW;
-                maxX = 0f;
+                float minX = vw - scaledW; // leftmost
+                float maxX = 0f;          // rightmost
+                _pan.x = Mathf.Clamp(_pan.x, minX, maxX);
             }
 
-            if (scaledH <= vh)
-                minY = maxY = (vh - scaledH) * 0.5f;
-            else
+            if (scaledH > vh)
             {
-                minY = vh - scaledH;
-                maxY = 0f;
+                float minY = vh - scaledH; // topmost
+                float maxY = 0f;           // bottommost
+                _pan.y = Mathf.Clamp(_pan.y, minY, maxY);
             }
-
-            _pan.x = Mathf.Clamp(_pan.x, minX, maxX);
-            _pan.y = Mathf.Clamp(_pan.y, minY, maxY);
-
-            ApplyTransform();
         }
 
         private void SamplePlayerTrail()
@@ -1432,6 +3187,38 @@ namespace SkiGame.Map.UI
         }
 
         /// <summary>
+        /// Programmatically selects a polyline by id and raises the same selection callback
+        /// used for user clicks. Useful when navigating from the Runs page.
+        /// </summary>
+        public bool SelectPolylineById(string polylineId, bool center = true, float minZoom = 1.25f)
+        {
+            if (!_bound) return false;
+            if (_mapData == null || string.IsNullOrWhiteSpace(polylineId)) return false;
+
+            var list = _mapData.Polylines;
+            if (list == null) return false;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                var p = list[i];
+                if (!p.IsValid) continue;
+                if (p.id != polylineId) continue;
+
+                if (center && p.pointsWorldXZ != null && p.pointsWorldXZ.Count > 0)
+                {
+                    int mid = p.pointsWorldXZ.Count / 2;
+                    var w = p.pointsWorldXZ[mid];
+                    CenterOnWorldPosition(new Vector3(w.x, 0f, w.y), minZoom);
+                }
+
+                SelectPolylineInternal(polylineId, p, fireEvent: true);
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Painter2D polyline renderer + hit testing.
         /// </summary>
         private sealed class MapPolylineLayer : VisualElement
@@ -1442,6 +3229,9 @@ namespace SkiGame.Map.UI
             private float _zoom = 1f;
 
             private string _selectedId;
+            private MapUIStyleSettings _style;
+            private bool _showRuns = true;
+            private bool _showLifts = true;
 
             private struct CachedLine
             {
@@ -1451,6 +3241,8 @@ namespace SkiGame.Map.UI
             }
 
             private readonly List<CachedLine> _cache = new();
+
+            private IReadOnlyDictionary<string, Color> _colorOverrides;
 
             public MapPolylineLayer()
             {
@@ -1462,6 +3254,7 @@ namespace SkiGame.Map.UI
                 style.bottom = 0;
                 generateVisualContent += OnGenerate;
             }
+
 
             public void SetData(MapData data, Vector2 contentSize, Camera cam)
             {
@@ -1484,6 +3277,26 @@ namespace SkiGame.Map.UI
                 MarkDirtyRepaint();
             }
 
+            public void SetTypeVisibility(bool showRuns, bool showLifts)
+            {
+                _showRuns = showRuns;
+                _showLifts = showLifts;
+                MarkDirtyRepaint();
+            }
+
+            private bool IsVisible(MapLineType t)
+            {
+                if (t == MapLineType.SkiRun) return _showRuns;
+                if (t == MapLineType.SkiLift) return _showLifts;
+                return true;
+            }
+
+            public void SetColorOverrides(IReadOnlyDictionary<string, Color> overrides)
+            {
+                _colorOverrides = overrides;
+                MarkDirtyRepaint();
+            }
+
             public bool TryPick(Vector2 contentLocal, float maxDistancePx, out MapPolyline picked)
             {
                 picked = default;
@@ -1494,6 +3307,8 @@ namespace SkiGame.Map.UI
                 for (int i = 0; i < _cache.Count; i++)
                 {
                     var c = _cache[i];
+                    if (!IsVisible(c.src.lineType))
+                        continue;
 
                     // quick bounds reject (expand bounds)
                     Rect b = c.bounds;
@@ -1528,57 +3343,6 @@ namespace SkiGame.Map.UI
                 return false;
             }
 
-            public bool TryGetPointAlong(string id, float t01, out Vector2 local)
-            {
-                local = default;
-                if (string.IsNullOrEmpty(id)) return false;
-
-                t01 = Mathf.Clamp01(t01);
-
-                for (int i = 0; i < _cache.Count; i++)
-                {
-                    var c = _cache[i];
-                    if (!string.Equals(c.src.id, id, StringComparison.Ordinal))
-                        continue;
-
-                    var pts = c.localPts;
-                    if (pts == null || pts.Count < 2) return false;
-
-                    // total length
-                    float total = 0f;
-                    for (int k = 0; k < pts.Count - 1; k++)
-                        total += Vector2.Distance(pts[k], pts[k + 1]);
-
-                    if (total <= 0.0001f)
-                    {
-                        local = pts[0];
-                        return true;
-                    }
-
-                    float target = total * t01;
-                    float accum = 0f;
-
-                    for (int k = 0; k < pts.Count - 1; k++)
-                    {
-                        float seg = Vector2.Distance(pts[k], pts[k + 1]);
-                        if (seg <= 0.00001f) continue;
-
-                        if (accum + seg >= target)
-                        {
-                            float u = (target - accum) / seg;
-                            local = Vector2.Lerp(pts[k], pts[k + 1], u);
-                            return true;
-                        }
-
-                        accum += seg;
-                    }
-
-                    local = pts[pts.Count - 1];
-                    return true;
-                }
-
-                return false;
-            }
 
             private void OnGenerate(MeshGenerationContext ctx)
             {
@@ -1592,24 +3356,47 @@ namespace SkiGame.Map.UI
                 {
                     var c = _cache[i];
                     var line = c.src;
+                    if (!IsVisible(line.lineType))
+                        continue;
                     var pts = c.localPts;
                     if (pts == null || pts.Count < 2) continue;
 
-                    // Stable screen-space width: divide by zoom because MapContent is scaled.
-                    float screenW = (line.lineType == MapLineType.SkiLift) ? 2.1f : 2.8f;
-                    float w = screenW / _zoom;
+                    float runW = _style != null ? _style.runWidthPx : 2.8f;
+                    float liftW = _style != null ? _style.liftWidthPx : 2.1f;
 
-                    Color baseColor = (line.color.a <= 0.001f) ? new Color(1f, 1f, 1f, 0.70f) : line.color;
+                    float screenW = (line.lineType == MapLineType.SkiLift) ? liftW : runW;
+                    float zoomMul = 1f;
+                    if (_style != null)
+                    {
+                        float exp = Mathf.Clamp01(_style.polylineWidthZoomExponent);
+                        zoomMul = Mathf.Pow(Mathf.Max(0.0001f, _zoom), exp);
+                        zoomMul = Mathf.Clamp(zoomMul, _style.polylineWidthZoomMinMul, _style.polylineWidthZoomMaxMul);
+                    }
+
+                    float w = (screenW * zoomMul) / _zoom;
                     bool selected = (!string.IsNullOrEmpty(_selectedId) && line.id == _selectedId);
+                    float selMul = _style != null ? _style.selectedWidthMultiplier : 1.35f;
 
-                    // Outline for legibility
-                    p.strokeColor = new Color(0f, 0f, 0f, selected ? 0.55f : 0.35f);
-                    p.lineWidth = (screenW + (selected ? 3.0f : 2.0f)) / _zoom;
+                    Color outlineCol = _style != null ? (selected ? _style.outlineColorSelected : _style.outlineColor)
+                                                      : new Color(0f, 0f, 0f, selected ? 0.55f : 0.35f);
+
+                    float outlineExtra = _style != null ? (selected ? _style.outlineExtraSelectedPx : _style.outlineExtraPx)
+                                                        : (selected ? 3.0f : 2.0f);
+
+                    // Outline
+                    p.strokeColor = outlineCol;
+                    p.lineWidth = ((screenW + outlineExtra) * zoomMul) / _zoom;
                     Stroke(p, pts);
 
                     // Main stroke
+                    Color baseColor = (line.color.a <= 0.001f) ? new Color(1f, 1f, 1f, 0.70f) : line.color;
+
+                    // If we have an override (e.g., SkiLift from station marker colour), use it.
+                    if (_colorOverrides != null && _colorOverrides.TryGetValue(line.id, out var ov))
+                        baseColor = ov;
+
                     p.strokeColor = selected ? new Color(baseColor.r, baseColor.g, baseColor.b, 1f) : baseColor;
-                    p.lineWidth = selected ? (w * 1.35f) : w;
+                    p.lineWidth = selected ? (w * selMul) : w;
                     Stroke(p, pts);
                 }
             }
@@ -1730,6 +3517,12 @@ namespace SkiGame.Map.UI
                 Vector2 proj = a + ab * t;
                 return (p - proj).sqrMagnitude;
             }
+
+            public void SetStyle(MapUIStyleSettings style)
+            {
+                _style = style;
+                MarkDirtyRepaint();
+            }
         }
 
         /// <summary>
@@ -1822,7 +3615,7 @@ namespace SkiGame.Map.UI
                 Stroke(p, _localPts);
 
                 // Main (cyan-ish, matches player dot)
-                p.strokeColor = new Color(0.25f, 0.9f, 1f, 0.85f);
+                p.strokeColor = Color.mediumSlateBlue;
                 p.lineWidth = w;
                 Stroke(p, _localPts);
             }
@@ -1887,6 +3680,186 @@ namespace SkiGame.Map.UI
                     p.LineTo(pts[i]);
                 p.Stroke();
             }
+        }
+
+        public void ApplyStyle(MapUIStyleSettings style)
+        {
+            _style = style;
+            _polyLayer?.SetStyle(style);
+            ApplyPlayerMarkerStyle();
+            _dirty = true;
+        }
+
+        public void SetPOIRegistry(PointOfInterestRegistry registry)
+        {
+            _poiRegistry = registry;
+            _dirty = true;
+        }
+
+        private void ApplyPlayerMarkerStyle()
+        {
+            if (_playerMarker == null) return;
+            if (_style == null) return;
+
+            float s = Mathf.Max(1f, _style.playerMarkerSize);
+            _playerMarker.style.width = s;
+            _playerMarker.style.height = s;
+
+            _playerMarker.style.backgroundColor = _style.playerMarkerColor;
+
+            float bw = Mathf.Max(0f, _style.playerBorderWidth);
+            _playerMarker.style.borderLeftWidth = bw;
+            _playerMarker.style.borderRightWidth = bw;
+            _playerMarker.style.borderTopWidth = bw;
+            _playerMarker.style.borderBottomWidth = bw;
+
+            _playerMarker.style.borderLeftColor = _style.playerBorderColor;
+            _playerMarker.style.borderRightColor = _style.playerBorderColor;
+            _playerMarker.style.borderTopColor = _style.playerBorderColor;
+            _playerMarker.style.borderBottomColor = _style.playerBorderColor;
+
+            // Keep it circular
+            _playerMarker.style.borderTopLeftRadius = 999;
+            _playerMarker.style.borderTopRightRadius = 999;
+            _playerMarker.style.borderBottomLeftRadius = 999;
+            _playerMarker.style.borderBottomRightRadius = 999;
+        }
+
+        private void ApplyMarkerVisual(string id, bool selected)
+        {
+            if (_style == null) return;
+            if (!_markerVisuals.TryGetValue(id, out var v)) return;
+
+            float s = Mathf.Max(1f, selected ? _style.markerSizeSelected : _style.markerSize);
+            v.dot.style.width = s;
+            v.dot.style.height = s;
+
+            float bw = Mathf.Max(0f, _style.markerBorderWidth);
+            v.dot.style.borderLeftWidth = bw;
+            v.dot.style.borderRightWidth = bw;
+            v.dot.style.borderTopWidth = bw;
+            v.dot.style.borderBottomWidth = bw;
+
+            v.dot.style.borderLeftColor = _style.markerBorderColor;
+            v.dot.style.borderRightColor = _style.markerBorderColor;
+            v.dot.style.borderTopColor = _style.markerBorderColor;
+            v.dot.style.borderBottomColor = _style.markerBorderColor;
+
+            v.dot.style.borderTopLeftRadius = 999;
+            v.dot.style.borderTopRightRadius = 999;
+            v.dot.style.borderBottomLeftRadius = 999;
+            v.dot.style.borderBottomRightRadius = 999;
+
+            v.label.style.fontSize = selected ? _style.labelFontSizeSelected : _style.labelFontSize;
+
+            v.label.style.unityFontStyleAndWeight = selected ? _style.labelFontStyleSelected : _style.labelFontStyle;
+            v.label.style.color = selected ? _style.labelColorSelected : _style.labelColor;
+
+            // Accent stripe + plate tint to visually link label to marker.
+            if (_markerLabelAccent.TryGetValue(id, out var accent))
+            {
+                float stripeW = Mathf.Max(1f, _style.labelAccentStripeWidth);
+                v.label.style.borderLeftWidth = stripeW;
+                v.label.style.borderLeftColor = accent;
+
+                float a = Mathf.Clamp01(_style.labelPlateAlpha) * 0.22f; // subtle tint
+                v.label.style.backgroundColor = new Color(accent.r, accent.g, accent.b, a);
+            }
+
+        }
+
+        private void ApplyPolylineLabelVisual(string id, bool selected)
+        {
+            if (_style == null) return;
+            if (!_polylineLabelVisuals.TryGetValue(id, out var label)) return;
+
+            label.style.fontSize = ComputeZoomedLabelFontSize(selected);
+            label.style.unityFontStyleAndWeight = selected ? _style.labelFontStyleSelected : _style.labelFontStyle;
+            label.style.color = selected ? _style.labelColorSelected : _style.labelColor;
+
+            if (_polylineLabelAccent != null && _polylineLabelAccent.TryGetValue(id, out var accent))
+            {
+                float stripeW = Mathf.Max(1f, _style.labelAccentStripeWidth);
+                label.style.borderLeftWidth = stripeW;
+                label.style.borderLeftColor = accent;
+
+                float a = Mathf.Clamp01(_style.labelPlateAlpha) * 0.22f;
+                label.style.backgroundColor = new Color(accent.r, accent.g, accent.b, a);
+            }
+
+            label.style.opacity = 1f;
+        }
+
+        private Color GetPolylineDisplayColor(SkiGame.Map.MapPolyline p)
+        {
+            // Prefer any runtime override (eg liftline colour derived from station markers / registry).
+            if (_polylineColorOverrides != null && _polylineColorOverrides.TryGetValue(p.id, out var ov))
+                return new Color(ov.r, ov.g, ov.b, 1f);
+
+            // Otherwise use the polyline's baked color. If none provided, fall back to your drawing default.
+            Color c = p.color;
+            if (c.a <= 0.001f)
+                c = new Color(1f, 1f, 1f, 0.70f);
+
+            // Accent/label stripe should be opaque even if the line is semi-transparent.
+            return new Color(c.r, c.g, c.b, 1f);
+        }
+
+        private void UpdateSelectionVisuals()
+        {
+            _selectedMarkerSet.Clear();
+
+            if (!string.IsNullOrEmpty(_selectedMarkerId))
+                _selectedMarkerSet.Add(_selectedMarkerId);
+
+            if (!string.IsNullOrEmpty(_selectedPolylineId) && TryGetPolylineById(_selectedPolylineId, out var p))
+            {
+                if (p.lineType == MapLineType.SkiRun)
+                {
+                    if (_polylineToMarker.TryGetValue(_selectedPolylineId, out var mid))
+                        _selectedMarkerSet.Add(mid);
+                }
+                else if (p.lineType == MapLineType.SkiLift)
+                {
+                    if (_liftPolylineToMarkers.TryGetValue(_selectedPolylineId, out var mids))
+                        for (int i = 0; i < mids.Count; i++)
+                            _selectedMarkerSet.Add(mids[i]);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(_selectedMarkerId) && _liftMarkerToPolyline.TryGetValue(_selectedMarkerId, out var liftPid))
+            {
+                if (_liftPolylineToMarkers.TryGetValue(liftPid, out var mids))
+                    for (int i = 0; i < mids.Count; i++)
+                        _selectedMarkerSet.Add(mids[i]);
+            }
+
+            foreach (var id in _lastMarkerSet)
+                if (!_selectedMarkerSet.Contains(id))
+                    ApplyMarkerVisual(id, selected: false);
+
+            foreach (var id in _selectedMarkerSet)
+                ApplyMarkerVisual(id, selected: true);
+
+            if (_lastSelectedPolylineId != null && _lastSelectedPolylineId != _selectedPolylineId)
+                ApplyPolylineLabelVisual(_lastSelectedPolylineId, selected: false);
+
+            if (_selectedPolylineId != null)
+                ApplyPolylineLabelVisual(_selectedPolylineId, selected: true);
+
+            // Style POI overlay labels (selected vs not)
+            foreach (var kv in _poiOverlayLabels)
+                ApplyPOIOverlayLabelVisual(kv.Key, selected: _selectedMarkerSet.Contains(kv.Key));
+
+            _lastMarkerSet.Clear();
+            foreach (var id in _selectedMarkerSet) _lastMarkerSet.Add(id);
+
+            _lastSelectedPolylineId = _selectedPolylineId;
+
+            _polyLayer?.SetSelected(_selectedPolylineId);
+
+            // Re-run overlay placement so selected label wins
+            LayoutOverlayLabels();
         }
 
     }
