@@ -153,16 +153,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 88f316d1ff294ae41a770a442d94caf3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Runs.SkiFlagReactive
-  rb: {fileID: 0}
+  rb: {fileID: 8351647095013188623}
   plantedConstraints: 14
-  pullOutImpulse: 12
-  plantedTorqueScale: 0.55
+  pullOutImpulse: 1
+  plantedTorqueScale: 2
   maxPlantedAngularSpeed: 8
-  uprootUpBoost: 0.2
-  uprootSpinScale: 0.18
+  uprootUpBoost: 0.5
+  uprootSpinScale: 0.5
   freezeDelay: 0.18
   settleAngularSpeed: 0.6
-  hitCooldownSeconds: 0.08
+  hitCooldownSeconds: 0.5
 --- !u!1 &512581625331148379
 GameObject:
   m_ObjectHideFlags: 0

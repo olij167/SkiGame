@@ -1,5 +1,388 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &5169165453950741202
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5169165453950741204}
+  - component: {fileID: 6767648501014571154}
+  - component: {fileID: 5169165453950741203}
+  m_Layer: 0
+  m_Name: Time Controller
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5169165453950741204
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5169165453950741202}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5169165454233506676}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6767648501014571154
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5169165453950741202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7921435424515c64a804e7f93784e988, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &5169165453950741203
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5169165453950741202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09c997d62f8d0b24fa6c66d90097b05c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  secondsPerMinuteInGame: 0.1
+  timeScale: 365
+  timeOfDay: 7.33
+  timeHours: 17
+  timeMinutes: 0
+  timeSeconds: 0
+  timePercent: 0
+  hourlyTimePercent: 0
+  sunriseTime: 7.0455446
+  sunriseTimePercent: 0.29356435
+  sunsetTime: 17.317066
+  sunsetTimePercent: 0.72154444
+  currentDay: 0
+  dayOfMonth: 23
+  currentMonthData:
+    month: July
+    season: Winter
+    daysInMonth: 31
+  monthPresets:
+  - month: January
+    season: Summer
+    daysInMonth: 31
+  - month: Feburary
+    season: Summer
+    daysInMonth: 28
+  - month: March
+    season: Autumn
+    daysInMonth: 31
+  - month: April
+    season: Autumn
+    daysInMonth: 30
+  - month: May
+    season: Autumn
+    daysInMonth: 31
+  - month: June
+    season: Winter
+    daysInMonth: 30
+  - month: July
+    season: Winter
+    daysInMonth: 31
+  - month: August
+    season: Winter
+    daysInMonth: 31
+  - month: September
+    season: Spring
+    daysInMonth: 30
+  - month: October
+    season: Spring
+    daysInMonth: 31
+  - month: November
+    season: Spring
+    daysInMonth: 30
+  - month: December
+    season: Summer
+    daysInMonth: 31
+  seasonalRotation: {fileID: 4036933613262108550}
+  maxSeasonalTilt: 30
+  currentYear: 2001
+  dayCount: 22
+  skyData:
+    lightIntensity: 1.3
+    moonLightIntensity: 2
+    sunSizeOverTime:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0.2
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.5
+        value: 0.5
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.36666667
+      - serializedVersion: 3
+        time: 0.85
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0.19166672
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    sunIntensityCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0.2
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.5
+        value: 5
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.36666667
+      - serializedVersion: 3
+        time: 0.85
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0.19166672
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    dayTopColorOverTime:
+      serializedVersion: 2
+      key0: {r: 0.18562084, g: 0.109803915, b: 0.5647059, a: 1}
+      key1: {r: 0.4269313, g: 0.6569833, b: 0.7735849, a: 1}
+      key2: {r: 0.40530434, g: 0.8015658, b: 0.8679245, a: 0}
+      key3: {r: 0.4161402, g: 0.6363109, b: 0.7601112, a: 0}
+      key4: {r: 0.18562084, g: 0.109803915, b: 0.5647059, a: 0}
+      key5: {r: 0.19424173, g: 0.23074813, b: 0.4245283, a: 0}
+      key6: {r: 0.14533643, g: 0.23192425, b: 0.4339623, a: 0}
+      key7: {r: 0.14533643, g: 0.23192425, b: 0.4339623, a: 0}
+      ctime0: 127
+      ctime1: 16007
+      ctime2: 32768
+      ctime3: 49151
+      ctime4: 65535
+      ctime5: 65343
+      ctime6: 65535
+      ctime7: 65535
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 5
+      m_NumAlphaKeys: 2
+    dayMidColorOverTime:
+      serializedVersion: 2
+      key0: {r: 0.9137255, g: 0.4862745, b: 0.4117647, a: 1}
+      key1: {r: 1, g: 0.76771796, b: 0.7490196, a: 1}
+      key2: {r: 0.97871006, g: 1, b: 0.76862746, a: 0}
+      key3: {r: 0.51157695, g: 0.8358798, b: 0.9922768, a: 0}
+      key4: {r: 0.5019608, g: 0.8339869, b: 1, a: 0}
+      key5: {r: 0.62299997, g: 0.55916804, b: 0.25022134, a: 0}
+      key6: {r: 0.8392157, g: 0.39607844, b: 0.2509804, a: 0}
+      key7: {r: 0.4249288, g: 0.50672156, b: 0.6996555, a: 0}
+      ctime0: 127
+      ctime1: 4393
+      ctime2: 7194
+      ctime3: 12733
+      ctime4: 41702
+      ctime5: 59911
+      ctime6: 65535
+      ctime7: 65535
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 7
+      m_NumAlphaKeys: 2
+    nightTopColorOverTime:
+      serializedVersion: 2
+      key0: {r: 0.11699335, g: 0, b: 0.7019608, a: 1}
+      key1: {r: 0.04213486, g: 0, b: 0.15, a: 1}
+      key2: {r: 0.11699335, g: 0, b: 0.7019608, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0.027450982, g: 0.2392157, b: 0.30980393, a: 0}
+      key5: {r: 0.14901961, g: 0.43529415, b: 0.58431375, a: 0}
+      key6: {r: 0.4362763, g: 0.47962016, b: 0.7169812, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 32789
+      ctime2: 65535
+      ctime3: 65535
+      ctime4: 55666
+      ctime5: 65535
+      ctime6: 65535
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 3
+      m_NumAlphaKeys: 2
+    nightMidColorOverTime:
+      serializedVersion: 2
+      key0: {r: 0.8396226, g: 0.39535227, b: 0.2508306, a: 1}
+      key1: {r: 0.43921572, g: 0.48235297, b: 0.654902, a: 1}
+      key2: {r: 0.08001327, g: 0.025415987, b: 0.353, a: 0}
+      key3: {r: 0.079324335, g: 0.023529412, b: 0.3529412, a: 0}
+      key4: {r: 0.2627451, g: 0.47450984, b: 0.6627451, a: 0}
+      key5: {r: 0.9137255, g: 0.4872642, b: 0.41176477, a: 0}
+      key6: {r: 0.9150943, g: 0.54099095, b: 0.4115046, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 4266
+      ctime2: 10378
+      ctime3: 60357
+      ctime4: 63540
+      ctime5: 65535
+      ctime6: 65535
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 6
+      m_NumAlphaKeys: 2
+    ambientColour:
+      serializedVersion: 2
+      key0: {r: 0.18562084, g: 0.109803915, b: 0.5647059, a: 1}
+      key1: {r: 0.4269313, g: 0.6569833, b: 0.7735849, a: 1}
+      key2: {r: 0.40530434, g: 0.8015658, b: 0.8679245, a: 0}
+      key3: {r: 0.4161402, g: 0.6363109, b: 0.7601112, a: 0}
+      key4: {r: 0.18562084, g: 0.109803915, b: 0.5647059, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 127
+      ctime1: 16007
+      ctime2: 32768
+      ctime3: 49151
+      ctime4: 65535
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 5
+      m_NumAlphaKeys: 2
+    fogColour:
+      serializedVersion: 2
+      key0: {r: 0.13725491, g: 0.37254903, b: 0.4509804, a: 0.78431374}
+      key1: {r: 0.6, g: 1, b: 1, a: 0}
+      key2: {r: 0.6, g: 1, b: 1, a: 0.78431374}
+      key3: {r: 0.13359372, g: 0.37089843, b: 0.45, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 22937
+      ctime2: 42598
+      ctime3: 65535
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 1966
+      atime1: 32768
+      atime2: 63540
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 4
+      m_NumAlphaKeys: 3
+    fogToDayColor: 0.5
+  sunLight: {fileID: 4036933613455614719}
+  moonLight: {fileID: 6755425952280528562}
+  moon: {fileID: 7267713142196706177}
+  toggleTimeUI: 1
+  showSeconds: 0
+  twelveHourTime: 1
+  timeText: {fileID: 6895476704154214683}
+  dayText: {fileID: 4424475247658219855}
+  timeString: 
+  toggleUITimeControls: 1
+  timeScaleSlider: {fileID: 5169165453016621450}
+  timeOfDaySlider: {fileID: 5169165452683735644}
+  toggleSunTimeUI: 1
+  sunriseText: {fileID: 9159919117717646692}
+  sunsetText: {fileID: 5166621160202450611}
+  showDebugLogs: 0
+  smoothLerp: 0.5
 --- !u!1 &5169165454233506675
 GameObject:
   m_ObjectHideFlags: 0
@@ -1046,117 +1429,4 @@ Light:
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2549189186321043877, guid: 1e42fe1397abfa14dbbaaf2a651da00c, type: 3}
   m_PrefabInstance: {fileID: 5169165453783484964}
-  m_PrefabAsset: {fileID: 0}
---- !u!1001 &6767648501603460599
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 5169165454233506676}
-    m_Modifications:
-    - target: {fileID: 1898008734982147875, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1898008734982147875, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1898008734982147875, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1898008734982147875, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1898008734982147875, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1898008734982147875, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1898008734982147875, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1898008734982147875, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1898008734982147875, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1898008734982147875, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1898008734982147876, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: moon
-      value: 
-      objectReference: {fileID: 7267713142196706177}
-    - target: {fileID: 1898008734982147876, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: dayText
-      value: 
-      objectReference: {fileID: 4424475247658219855}
-    - target: {fileID: 1898008734982147876, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: sunLight
-      value: 
-      objectReference: {fileID: 4036933613455614719}
-    - target: {fileID: 1898008734982147876, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: timeText
-      value: 
-      objectReference: {fileID: 6895476704154214683}
-    - target: {fileID: 1898008734982147876, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: moonLight
-      value: 
-      objectReference: {fileID: 6755425952280528562}
-    - target: {fileID: 1898008734982147876, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: sunsetText
-      value: 
-      objectReference: {fileID: 5166621160202450611}
-    - target: {fileID: 1898008734982147876, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: sunriseText
-      value: 
-      objectReference: {fileID: 9159919117717646692}
-    - target: {fileID: 1898008734982147876, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: timeOfDaySlider
-      value: 
-      objectReference: {fileID: 5169165452683735644}
-    - target: {fileID: 1898008734982147876, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: timeScaleSlider
-      value: 
-      objectReference: {fileID: 5169165453016621450}
-    - target: {fileID: 1898008734982147876, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: seasonalRotation
-      value: 
-      objectReference: {fileID: 4036933613262108550}
-    - target: {fileID: 1898008734982147877, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-      propertyPath: m_Name
-      value: Time Controller
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
---- !u!114 &5169165453950741203 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1898008734982147876, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-  m_PrefabInstance: {fileID: 6767648501603460599}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 09c997d62f8d0b24fa6c66d90097b05c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!4 &5169165453950741204 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 1898008734982147875, guid: 2f16708e9513a8141a6a4d7477356c3e, type: 3}
-  m_PrefabInstance: {fileID: 6767648501603460599}
   m_PrefabAsset: {fileID: 0}

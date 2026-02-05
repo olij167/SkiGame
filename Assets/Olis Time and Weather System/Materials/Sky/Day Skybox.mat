@@ -123,7 +123,7 @@ Material:
     - _Metallic: 0
     - _MoonIntensity: 10
     - _MoonScale: 0.5
-    - _NightOpacity: 0.00043674785
+    - _NightOpacity: 1.3462888e-21
     - _NightSkySpeed: 0.05
     - _OcclusionStrength: 1
     - _Parallax: 0.005
@@ -136,8 +136,8 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _SunDisk: 1
-    - _SunIntensity: 0.32019407
-    - _SunScale: 0.24014546
+    - _SunIntensity: 0.62575334
+    - _SunScale: 0.4693148
     - _SunSize: 0.04
     - _SunSizeConvergence: 10
     - _Surface: 0
@@ -149,9 +149,9 @@ Material:
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _GroundColor: {r: 0.36899996, g: 0.34899998, b: 0.34099993, a: 1}
     - _MoonColor: {r: 0.7264151, g: 0.7162395, b: 0.6144832, a: 0.5176471}
-    - _SkyColor1: {r: 0.24247934, g: 0.2388405, b: 0.6139199, a: 1}
-    - _SkyColor2: {r: 0.98880625, g: 0.7331651, b: 0.7080201, a: 1}
-    - _SkyColor3: {r: 0.602447, g: 0.6060905, b: 0.62594026, a: 0.86793095}
+    - _SkyColor1: {r: 0.34218597, g: 0.46482655, b: 0.70023465, a: 1}
+    - _SkyColor2: {r: 0.7057445, g: 0.9040981, b: 0.89931554, a: 1}
+    - _SkyColor3: {r: 0.52671736, g: 0.780991, b: 0.7999812, a: 0.78438884}
     - _SkyTint: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _SunColor: {r: 1, g: 0.9857807, b: 0.83647794, a: 1}
