@@ -268,19 +268,31 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Runs.SkiFlagReactive
   rb: {fileID: 701401722028746940}
-  col: {fileID: 1701893553419854692}
-  softHitSpeed: 5
-  toppleHitSpeed: 10
-  uprootHitSpeed: 25
+  hitterTags: []
+  hitterLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  minHitSpeed: 1
+  maxHitSpeed: 28
   impulseScale: 0.9
-  upwardBoost: 0.35
-  hingeLimitDeg: 95
-  hingeSpring: 40
-  hingeDamping: 8
-  softBendMaxDeg: 18
-  softBendReturnSpeed: 10
-  hitCooldownSeconds: 0.08
-  replantAfterSeconds: -1
+  uprootUpFraction: 0.25
+  uprootSpinScale: 0.9
+  useTorqueAssist: 1
+  plantedTorqueScale: 0.12
+  freezeDelay: 0.35
+  plantedAngularDamping: 7
+  flyingAngularDamping: 0.6
+  flyingLinearDamping: 0.05
+  uprootImpulseThreshold: 11
+  uprootCooldown: 0.75
+  usePlantedJoint: 1
+  plantedAnchor: {fileID: 0}
+  localBaseAnchor: {x: 0, y: 0, z: 0}
+  tiltLimitDegrees: 25
+  swingLimitDegrees: 25
+  jointAngularDamping: 12
+  drawDebug: 1
+  debugAnchorColor: {r: 1, g: 0.75, b: 0.1, a: 1}
 --- !u!1 &8149688384037525022
 GameObject:
   m_ObjectHideFlags: 0

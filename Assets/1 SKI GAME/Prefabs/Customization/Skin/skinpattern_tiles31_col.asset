@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fdbcba145e2b2044cb595c56dafb02f8, type: 3}
+  m_Name: skinpattern_tiles31_col
+  m_EditorClassIdentifier: Assembly-CSharp::CustomizationOptionSO
+  id: skinpattern_tiles31_col
+  type: 0
+  displayName: Tiles 31 col
+  description: 
+  icon: {fileID: 0}
+  cost: 20
+  customizerIndex: 13
+  gearProfile: {fileID: 0}

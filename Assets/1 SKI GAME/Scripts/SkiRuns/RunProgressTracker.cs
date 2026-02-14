@@ -165,6 +165,26 @@ namespace SkiGame.Progression
         [SerializeField, Tooltip("Extra distance beyond (halfWidth+enterClearance) required to consider the run 'exited' after completion.")]
         private float exitClearanceExtraMeters = 4f;
 
+        [Header("Run Cache")]
+        [SerializeField, Tooltip("How often we refresh the cached list of SkiRunLine objects (seconds).")]
+        private float runsCacheRefreshSeconds = 2.0f;
+
+        private readonly List<SkiRunLine> _cachedRuns = new List<SkiRunLine>(128);
+        private float _nextRunsCacheRefreshTime;
+
+        [Header("Run Switching")]
+        [SerializeField, Tooltip("If true, we can switch attempts to a different run corridor without waiting for abandon.")]
+        private bool enableRunSwitching = true;
+
+        [SerializeField, Tooltip("Candidate run must remain best for this long before we switch (seconds).")]
+        private float switchConfirmSeconds = 0.25f;
+
+        [SerializeField, Tooltip("If the new run is closer than current by at least this many meters, we prefer switching.")]
+        private float switchPreferMarginMeters = 2.0f;
+
+        private string _pendingSwitchRunId;
+        private float _pendingSwitchTime;
+
         [Header("Debug")]
         [SerializeField, Tooltip("Enable verbose logs to diagnose run progress resets, solver failures, corridor exits, and attempt finalization.")]
         private bool debugRunTracking = false;
@@ -283,22 +303,26 @@ namespace SkiGame.Progression
             {
                 DebugLog($"Waiting for exit after completion... blockedRun={_blockedRunIdAfterCompletion}");
 
-                // Wait until we're clearly outside the corridor of the completed run.
+                // Clear the block once we're clearly outside the completed run corridor.
                 if (!IsInsideRunCorridor(_blockedRunIdAfterCompletion))
                 {
                     _waitingForExitAfterCompletion = false;
                     _blockedRunIdAfterCompletion = null;
                 }
-                else
-                {
-                    return; // still inside; don't start new attempts
-                }
+                // IMPORTANT: do NOT return here.
+                // We still want to start OTHER runs even if we're still inside the completed run corridor.
             }
 
             if (Time.time < _nextScanTime) return;
             _nextScanTime = Time.time + Mathf.Max(0.05f, scanIntervalSeconds);
 
-            TryStartRunIfInsideAny();
+            // Ignore the blocked run while waiting-for-exit, but allow others.
+            string ignore = _waitingForExitAfterCompletion ? _blockedRunIdAfterCompletion : null;
+
+            if (TryFindBestRunAtPosition(transform.position, ignore, out var best, out var along, out var distXZ, out var segIdx, out var segT))
+            {
+                StartAttempt(best, along, segIdx, segT, distXZ);
+            }
         }
 
         private void FixedUpdate()
@@ -442,6 +466,66 @@ namespace SkiGame.Progression
 
             // Declare usedAlong early so it can be referenced below.
             float usedAlong = distAlong;
+
+            // --- Run switching (corridor-to-corridor) ---
+            if (recordPartialSegments && enableRunSwitching && _run != null)
+            {
+                // If we just completed a run and are waiting-for-exit, we still allow switching
+                // because Update() won't start a new attempt while _run != null.
+                string ignoreBlocked = (_waitingForExitAfterCompletion ? _blockedRunIdAfterCompletion : null);
+
+                if (TryFindBestRunAtPosition(pos, ignoreBlocked, out var cand, out var candAlong, out var candDistXZ, out var candSegIdx, out var candSegT))
+                {
+                    if (cand != null && cand != _run)
+                    {
+                        // Heuristic: switch if we're beyond abandon on current, or candidate is meaningfully closer.
+                        bool beyondCurrent = distToCenterXZ > abandonThreshold;
+                        bool candidateMuchCloser = (candDistXZ + Mathf.Max(0f, switchPreferMarginMeters)) < distToCenterXZ;
+
+                        if (beyondCurrent || candidateMuchCloser)
+                        {
+                            string candId = cand.RunId;
+
+                            if (_pendingSwitchRunId != candId)
+                            {
+                                _pendingSwitchRunId = candId;
+                                _pendingSwitchTime = 0f;
+                            }
+                            else
+                            {
+                                _pendingSwitchTime += dt;
+
+                                if (_pendingSwitchTime >= Mathf.Max(0.05f, switchConfirmSeconds))
+                                {
+                                    DebugLog($"Switching run: {_run.RunId} -> {candId} (beyondCurrent={beyondCurrent} candCloser={candidateMuchCloser})", force: true);
+
+                                    // Finalize current attempt (partial if it meets thresholds)
+                                    if (_committed) RecordPartialAndClear($"Switched to {candId}");
+                                    else ClearAttemptState($"Switched to {candId} (uncommitted)");
+
+                                    // Start new attempt immediately
+                                    StartAttempt(cand, candAlong, candSegIdx, candSegT, candDistXZ);
+
+                                    _pendingSwitchRunId = null;
+                                    _pendingSwitchTime = 0f;
+
+                                    return; // we restarted state; avoid continuing with old variables this tick
+                                }
+                            }
+                        }
+                        else
+                        {
+                            _pendingSwitchRunId = null;
+                            _pendingSwitchTime = 0f;
+                        }
+                    }
+                    else
+                    {
+                        _pendingSwitchRunId = null;
+                        _pendingSwitchTime = 0f;
+                    }
+                }
+            }
 
             // Track last "inside-ish" sample for exit snapshots
             if (insideCorridor)
@@ -737,6 +821,118 @@ namespace SkiGame.Progression
                 _speedIntegral += speed * dt;
                 _activeTime += dt;
             }
+        }
+
+        private bool TryFindBestRunAtPosition(
+    Vector3 pos,
+    string ignoreRunId,
+    out SkiRunLine best,
+    out float bestAlong,
+    out float bestDistXZ,
+    out int bestSegIdx,
+    out float bestSegT)
+        {
+            best = null;
+            bestAlong = 0f;
+            bestDistXZ = float.PositiveInfinity;
+            bestSegIdx = -1;
+            bestSegT = 0f;
+
+            RefreshRunsCacheIfNeeded();
+            if (_cachedRuns.Count == 0)
+                return false;
+
+            for (int i = 0; i < _cachedRuns.Count; i++)
+            {
+                var r = _cachedRuns[i];
+                if (r == null) continue;
+
+                if (!string.IsNullOrEmpty(ignoreRunId) &&
+                    string.Equals(r.RunId, ignoreRunId, StringComparison.Ordinal))
+                    continue;
+
+                if (!r.TryGetClosestPointOnCenterlineXZ_Detailed(
+                        pos,
+                        out float along,
+                        out float distXZ,
+                        out float halfW,
+                        out Vector3 closest,
+                        out int segIdx,
+                        out float segT))
+                    continue;
+
+                // Reject stacked overlaps (bridges / switchbacks) by height
+                if (verticalToleranceMeters > 0f && Mathf.Abs(pos.y - closest.y) > verticalToleranceMeters)
+                    continue;
+
+                if (distXZ <= (halfW + Mathf.Max(0f, enterClearanceMeters)))
+                {
+                    if (distXZ < bestDistXZ)
+                    {
+                        best = r;
+                        bestDistXZ = distXZ;
+                        bestAlong = along;
+                        bestSegIdx = segIdx;
+                        bestSegT = segT;
+                    }
+                }
+            }
+
+            return best != null;
+        }
+
+        private void StartAttempt(SkiRunLine run, float enteredAlong, int segIdx, float segT, float distXZForDebug)
+        {
+            var mgr = PlayerStatsManager.Instance;
+            var profile = mgr != null ? mgr.Profile : null;
+            if (profile == null || run == null) return;
+
+            _run = run;
+            _hasLastAttempt = false;
+
+            _committed = false;
+            _enteredAtDist = enteredAlong;
+            _maxDistAlong = enteredAlong;
+            _minDistAlong = enteredAlong;
+            _lastInsideDistAlong = enteredAlong;
+            _hasLastInside = true;
+            _directionSign = 0;
+
+            _hasTrackedAlong = false;
+            _trackedAlong = enteredAlong;
+
+            _trackSegIndex = segIdx;
+            _trackSegT = segT;
+
+            _timeEntered = Time.time;
+            _timeInside = 0f;
+            _timeBeyondAbandon = 0f;
+            _lostTrackingTime = 0f;
+
+            BuildRunDistanceCache(run);
+
+            _lastSegIndex = -1;
+            _lastSegT = 0f;
+
+            ResetAttemptMetrics();
+
+            // Visits
+            if (recordSessionVisits)
+            {
+                profile.TryAddVisitedRunThisSession(run.RunId);
+                profile.IncrementRunVisitCount(run.RunId, session: true);
+            }
+
+            if (recordLifetimeVisits)
+            {
+                profile.TryAddVisitedRun(run.RunId);
+                profile.IncrementRunVisitCount(run.RunId, session: false);
+            }
+
+            DebugLog(
+                $"Start attempt: run={run.RunId} name='{run.RunName}' enteredAlong={enteredAlong:F1}m distXZ={distXZForDebug:F1}m seg={segIdx} t={segT:F2}",
+                force: true
+            );
         }
 
         private void TryStartRunIfInsideAny()
@@ -1480,6 +1676,27 @@ namespace SkiGame.Progression
             ResetAttemptMetrics();
             ClearAttemptState();
             Debug.Log("[RunProgressTracker] ResetTrackingState() - cleared current attempt state.");
+        }
+
+        private void RefreshRunsCacheIfNeeded()
+        {
+            if (Time.time < _nextRunsCacheRefreshTime && _cachedRuns.Count > 0)
+                return;
+
+            _nextRunsCacheRefreshTime = Time.time + Mathf.Max(0.25f, runsCacheRefreshSeconds);
+
+#if UNITY_2023_1_OR_NEWER
+            var runs = UnityEngine.Object.FindObjectsByType<SkiRunLine>(FindObjectsSortMode.None);
+#else
+    var runs = UnityEngine.Object.FindObjectsOfType<SkiRunLine>();
+#endif
+
+            _cachedRuns.Clear();
+            if (runs == null) return;
+
+            for (int i = 0; i < runs.Length; i++)
+                if (runs[i] != null)
+                    _cachedRuns.Add(runs[i]);
         }
 
         public readonly struct RunCompletedInfo

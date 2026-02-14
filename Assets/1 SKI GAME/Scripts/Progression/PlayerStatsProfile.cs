@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using static SkiGame.Progression.DateTimeUtc;
 
 namespace SkiGame.Progression
 {
@@ -9,13 +10,14 @@ namespace SkiGame.Progression
     /// Uses Lists (JsonUtility-friendly) instead of Dictionary/HashSet.
     /// </summary>
     [Serializable]
-    public sealed class PlayerStatsProfile
+    public sealed class PlayerStatsProfile : ISerializationCallbackReceiver
     {
         public int profileVersion = CurrentVersion;
-        public const int CurrentVersion = 6;  // v6: partial run segments + completion flag
+        public const int CurrentVersion = 7;  // v7: gear patterns (skis/poles) + legacy skin-pattern migration
 
         public LifetimeStats lifetime = new LifetimeStats();
         public SessionStats session = new SessionStats();
+        public PlaythroughState playthrough = new PlaythroughState();
 
         // Stored as lists for JsonUtility compatibility.
         public List<string> unlockedAchievementIds = new List<string>();
@@ -32,6 +34,82 @@ namespace SkiGame.Progression
 
         // Simple reward currency for Tasks/Achievements (arbitrary for now)
         public int currency = 0;
+
+        // ---------------- Customization (New) ----------------
+
+        public CustomizationState customization = new CustomizationState();
+
+        [Serializable]
+        public sealed class CustomizationState
+        {
+            // All purchased/unlocked customization option IDs (cosmetics + gear unlocks).
+            public List<string> unlockedCustomizationIds = new List<string>();
+
+            // ---- Equipped cosmetics ----
+            // NOTE: Skin is now colour-only; patterns are repurposed as gear textures.
+            // Keep this for legacy save compatibility ONLY (v6 and older).
+            public string equippedSkinPatternId;
+
+            public string equippedEyeIconId;
+            public string equippedHatId;
+            public string equippedCloakId;
+
+            // ---- Equipped gear ----
+            public string equippedSkisId;
+            public string equippedPolesId;
+
+            // ---- Equipped gear patterns (NEW) ----
+            // These IDs refer to your pattern options (we're currently reusing the SkinPattern option type as GearPattern).
+            public string equippedSkisPatternId;
+            public string equippedPolesPatternId;
+
+            // Pattern ids per target (SkinPattern options are repurposed as gear textures)
+            public string equippedHatPatternId;
+            public string equippedJacketPatternId; // jacket == cloak
+
+            // ---- Continuous selections ----
+            public Color skinColor = Color.white;
+            public Color eyeColor = Color.white;
+            public Color skisColor = Color.white;
+            public Color polesColor = Color.white;
+
+            // Hat/Jacket continuous colours
+            public Color hatColor = Color.white;
+            public Color jacketColor = Color.white;
+
+
+
+            public bool IsUnlocked(string id)
+            {
+                if (string.IsNullOrEmpty(id)) return false;
+                return unlockedCustomizationIds != null && unlockedCustomizationIds.Contains(id);
+            }
+
+            public void Unlock(string id)
+            {
+                if (string.IsNullOrEmpty(id)) return;
+                unlockedCustomizationIds ??= new List<string>();
+                if (!unlockedCustomizationIds.Contains(id))
+                    unlockedCustomizationIds.Add(id);
+            }
+
+            /// <summary>
+            /// v6 and older used equippedSkinPatternId for a player body pattern.
+            /// We now use patterns as gear textures. If old profiles only have equippedSkinPatternId,
+            /// default both skis/poles patterns to that value.
+            /// </summary>
+            public void MigrateLegacySkinPatternToGearPatterns()
+            {
+
+                if (!string.IsNullOrEmpty(equippedSkinPatternId))
+                {
+                    if (string.IsNullOrEmpty(equippedSkisPatternId)) equippedSkisPatternId = equippedSkinPatternId;
+                    if (string.IsNullOrEmpty(equippedPolesPatternId)) equippedPolesPatternId = equippedSkinPatternId;
+                    if (string.IsNullOrEmpty(equippedHatPatternId)) equippedHatPatternId = equippedSkinPatternId;
+                    if (string.IsNullOrEmpty(equippedJacketPatternId)) equippedJacketPatternId = equippedSkinPatternId;
+                }
+            }
+        }
 
         // Recent task IDs to avoid repeating the same tasks over and over.
         public List<string> recentTaskIds = new List<string>();
@@ -55,6 +133,27 @@ namespace SkiGame.Progression
 
         public DateTimeUtc createdUtc = DateTimeUtc.Now();
         public DateTimeUtc lastSavedUtc = DateTimeUtc.Now();
+
+        public void OnBeforeSerialize() { }
+
+        public void OnAfterDeserialize()
+        {
+            // Best-effort save migration.
+            // JsonUtility typically routes through Unity serialization; this keeps older profiles usable.
+            EnsureUpToDate();
+        }
+
+        public void EnsureUpToDate()
+        {
+            // If a profile is missing/older, migrate it forward safely.
+            if (profileVersion < 7)
+            {
+                if (customization != null)
+                    customization.MigrateLegacySkinPatternToGearPatterns();
+
+                profileVersion = 7;
+            }
+        }
 
         [Serializable]
         public struct IdCountEntry { public string id; public int count; }
@@ -447,6 +546,8 @@ namespace SkiGame.Progression
             sessionVisitedRunIds.Clear();
             sessionCompletedRunIds.Clear();
 
+            customization = new CustomizationState();
+
             currency = 0;
             recentTaskIds.Clear();
             recentDailyLadderIds.Clear();
@@ -490,6 +591,10 @@ namespace SkiGame.Progression
             visitedRunIds ??= new List<string>();
             sessionVisitedRunIds ??= new List<string>();
             sessionCompletedRunIds ??= new List<string>();
+            playthrough ??= new PlaythroughState();
+
+            customization ??= new CustomizationState();
+            customization.unlockedCustomizationIds ??= new List<string>();
 
             dailyTasks ??= new DailyTaskMatrixState();
             dailyTasks.rows ??= new List<DailyTaskRowState>();
@@ -1104,4 +1209,33 @@ namespace SkiGame.Progression
             return ToDateTimeUtc().ToString("u");
         }
     }
+
+    [Serializable]
+    public sealed class PlaythroughState
+    {
+        public int playthroughId = 0;
+
+        // "Week 1 Day 1" baseline for all calendar UIs (in-game day-of-year).
+        public int calendarStartDayOfYear = -1;
+        public int calendarStartYear = 0;
+
+        public DateTimeUtc startedUtc = DateTimeUtc.Now();
+    }
+
+    [Serializable]
+    public class DailyShopState
+    {
+        public int dayKey = -1;
+        public List<OfferEntry> offers = new();
+    }
+
+    [Serializable]
+    public class OfferEntry
+    {
+        public string optionId;
+        public int remaining;
+        public int initial;
+    }
+
+
 }

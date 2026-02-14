@@ -427,6 +427,12 @@ namespace SkiGame.Progression
         private float _tabDownAt;
         private bool _phoneOpen;
 
+        /// <summary>
+        /// Read-only external access for systems that need to know whether the phone UI is open
+        /// (eg. camera input gating, player input gating, etc.).
+        /// </summary>
+        public bool IsPhoneOpen => _phoneOpen;
+
         // --- Performance throttles (Editor/runtime) ---
         [SerializeField, Range(0.02f, 0.5f)]
         private float uiRefreshIntervalSeconds = 0.10f;
@@ -1752,6 +1758,7 @@ namespace SkiGame.Progression
 
             // If you later want to throttle updates: you can add a timer here.
             RefreshTimeWeather();
+            RefreshWatchSpeedGauge();
             RefreshRunTrackerTile();
             RefreshWatchRunTrackerPage();
 
@@ -1787,6 +1794,27 @@ namespace SkiGame.Progression
         {
             if (_wHomeTime != null) _wHomeTime.text = timeStr;
             if (_wHomeWeather != null) _wHomeWeather.text = weatherStr;
+        }
+
+        private void RefreshWatchSpeedGauge()
+        {
+            if (_wSpeed == null) return;
+
+            // Ensure we have an RB to read speed from.
+            if (_playerRb == null)
+            {
+                if (_skiController != null)
+                    _playerRb = _skiController.GetComponent<Rigidbody>();
+
+                if (_playerRb == null)
+                {
+                    var tracker = FindObjectOfType<PlayerStatsTracker>();
+                    if (tracker != null) _playerRb = tracker.GetComponent<Rigidbody>();
+                }
+            }
+
+            float speedMps = (_playerRb != null) ? _playerRb.linearVelocity.magnitude : 0f;
+            _wSpeed.text = $"{speedMps:0.0}";
         }
 
         private void RefreshWatchRunInfo()
@@ -5018,17 +5046,30 @@ namespace SkiGame.Progression
             if (_time == null || _profile == null) return;
 
             DayKey today = GetTodayKey();
-            if (!_statsDayState.hasActive)
+
+            // Initialize calendar baseline (Week 1) the first time we ever open/use the Stats Day calendar.
+            if (_statsDayState.store.firstDayOfYear < 0)
             {
-                // first ever init
-                _statsDayState.hasActive = true;
+                int start = -1;
+
+                if (_profile != null && _profile.playthrough != null && _profile.playthrough.calendarStartDayOfYear >= 0)
+                    start = _profile.playthrough.calendarStartDayOfYear;
+
+                if (start < 0)
+                    start = Mathf.Max(0, today.dayOfYear); // default to today
+
+                _statsDayState.store.firstDayOfYear = start;
+                SaveStatsDayState();
+            }
+
+            // Migration/repair: if the saved activeKey refers to "today" by dayOfYear but has a bad month/day, fix it.
+            if (_statsDayState.hasActive &&
+                _statsDayState.activeKey.dayOfYear == today.dayOfYear &&
+                (_statsDayState.activeKey.year != today.year ||
+                 _statsDayState.activeKey.monthIndex != today.monthIndex ||
+                 _statsDayState.activeKey.dayOfMonth != today.dayOfMonth))
+            {
                 _statsDayState.activeKey = today;
-                _statsDayState.baseline = ReadLifetimeBaseline(_profile);
-                _statsDayState.activeMaxSpeedMps = _profile.session.topSpeedMps;
-
-                if (_statsDayState.store.firstDayOfYear < 0)
-                    _statsDayState.store.firstDayOfYear = today.dayOfYear;
-
                 SaveStatsDayState();
                 return;
             }
@@ -5122,12 +5163,16 @@ namespace SkiGame.Progression
         private DayKey GetTodayKey()
         {
             int year = _time != null ? _time.currentYear : 0;
-
-            int monthIndex = GetCurrentMonthIndex();
-            int dom = _time != null ? _time.dayOfMonth : 1;
             int doy = _time != null ? _time.dayCount : 0;
 
-            return new DayKey(year, monthIndex, dom, doy);
+            // Prefer deriving month/day from day-of-year using monthPresets (robust; no string matching).
+            if (_time != null && TryConvertDayOfYear(doy, out int mi, out int dom))
+                return new DayKey(year, mi, dom, doy);
+
+            // Fallback (should rarely happen)
+            int fallbackMonthIndex = GetCurrentMonthIndex();
+            int fallbackDom = _time != null ? _time.dayOfMonth : 1;
+            return new DayKey(year, fallbackMonthIndex, fallbackDom, doy);
         }
 
         private int GetCurrentMonthIndex()

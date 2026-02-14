@@ -339,8 +339,21 @@ namespace SkiGame.Runs
 
                 if (!_calendarBaseLoaded)
                 {
-                    _calendarBaseDayOfYear = PlayerPrefs.GetInt(Pref_CalendarBaseDay, 0);
-                    _calendarBaseDayOfYear = Mathf.Clamp(_calendarBaseDayOfYear, 0, _time.dayCount);
+                    int baseDay = -1;
+
+                    // Prefer profile playthrough baseline (authoritative)
+                    if (_profile != null && _profile.playthrough != null && _profile.playthrough.calendarStartDayOfYear >= 0)
+                        baseDay = _profile.playthrough.calendarStartDayOfYear;
+
+                    // Back-compat fallback
+                    if (baseDay < 0)
+                        baseDay = PlayerPrefs.GetInt(Pref_CalendarBaseDay, -1);
+
+                    // If still unset, default to "today" (so Week 1 starts now)
+                    if (baseDay < 0)
+                        baseDay = _time.dayCount;
+
+                    _calendarBaseDayOfYear = Mathf.Clamp(baseDay, 0, _time.dayCount);
                     _calendarBaseLoaded = true;
                 }
 
@@ -1450,6 +1463,15 @@ namespace SkiGame.Runs
 
             // Baseline becomes "today", so relative day count = 0 and UI shows Week 1.
             _calendarBaseDayOfYear = _time.dayCount;
+            var mgr = PlayerStatsManager.Instance;
+            if (mgr != null && mgr.Profile != null)
+            {
+                mgr.Profile.playthrough ??= new PlaythroughState();
+                mgr.Profile.playthrough.calendarStartDayOfYear = _calendarBaseDayOfYear;
+                mgr.Profile.playthrough.calendarStartYear = _time.currentYear;
+                mgr.Save();
+            }
+
             PlayerPrefs.SetInt(Pref_CalendarBaseDay, _calendarBaseDayOfYear);
             PlayerPrefs.Save();
 

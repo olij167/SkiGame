@@ -26,6 +26,9 @@ namespace SkiGame.Progression
         public event Action<PlayerStatsProfile> OnProfileLoaded;
         public event Action<PlayerStatsProfile> OnProfileSaved;
 
+        private const string Pref_RunsCalendarBaseDay = "skigame.runs.calendarBaseDay";
+        private const string Pref_StatsDayState = "PhoneHUD.StatsDayState.v1";
+
         public string ActivePath
         {
             get
@@ -144,6 +147,70 @@ namespace SkiGame.Progression
             EditorSceneManager.MarkSceneDirty(gameObject.scene); // ensures scene saves (if profile is scene-serialized)
             AssetDatabase.SaveAssets();            // harmless; saves assets if any
 #endif
+        }
+
+        [ContextMenu("Playthrough/Set Calendar Start To Today (Week 1 = Today)")]
+        private void Context_SetCalendarStartToToday()
+        {
+            EnsureProfile();
+
+            var time = TimeWeather.TimeController.instance != null
+                ? TimeWeather.TimeController.instance
+                : FindObjectOfType<TimeWeather.TimeController>();
+
+            if (time == null)
+            {
+                Debug.LogWarning("[PlayerStatsManager] TimeController not found.");
+                return;
+            }
+
+            Profile.playthrough ??= new PlaythroughState();
+            Profile.playthrough.calendarStartDayOfYear = time.dayCount;
+            Profile.playthrough.calendarStartYear = time.currentYear;
+
+            Save();
+
+            // Clear cached UI states so both pages rebuild from the new baseline
+            PlayerPrefs.DeleteKey(Pref_RunsCalendarBaseDay);
+            PlayerPrefs.DeleteKey(Pref_StatsDayState);
+            PlayerPrefs.Save();
+
+            Debug.Log($"[PlayerStatsManager] Calendar start set to dayOfYear={time.dayCount} (Y{time.currentYear}).");
+        }
+
+        [ContextMenu("Playthrough/Start New Playthrough (Hard Reset)")]
+        private void Context_StartNewPlaythroughHardReset()
+        {
+            var time = TimeWeather.TimeController.instance != null
+                ? TimeWeather.TimeController.instance
+                : FindObjectOfType<TimeWeather.TimeController>();
+
+            // Create new profile
+            Profile = PlayerStatsStorage.CreateNew();
+
+            Profile.playthrough ??= new PlaythroughState();
+            Profile.playthrough.playthroughId += 1;
+            Profile.playthrough.startedUtc = DateTimeUtc.Now();
+
+            if (time != null)
+            {
+                Profile.playthrough.calendarStartDayOfYear = time.dayCount;
+                Profile.playthrough.calendarStartYear = time.currentYear;
+            }
+            else
+            {
+                Profile.playthrough.calendarStartDayOfYear = 0;
+                Profile.playthrough.calendarStartYear = 0;
+            }
+
+            Save();
+
+            // Clear all UI-local caches/baselines
+            PlayerPrefs.DeleteKey(Pref_RunsCalendarBaseDay);
+            PlayerPrefs.DeleteKey(Pref_StatsDayState);
+            PlayerPrefs.Save();
+
+            Debug.Log("[PlayerStatsManager] New playthrough started (hard reset).");
         }
 
     }

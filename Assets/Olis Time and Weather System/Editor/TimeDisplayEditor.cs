@@ -184,24 +184,14 @@ namespace TimeWeather
                     }
                 }
 
-                if (timeController.dayOfMonth != dayOfMonth)
-                {
-                    if (timeController.dayOfMonth < dayOfMonth)
-                    {
-                        if (timeController.dayOfMonth + (dayOfMonth - timeController.dayOfMonth) > timeController.currentMonthData.daysInMonth)
-                        {
-                            timeController.ProgressDays(timeController.currentMonthData.daysInMonth - timeController.dayOfMonth);
-                        }
-                        else
-                        {
-                            timeController.ProgressDays(dayOfMonth - timeController.dayOfMonth);
-                        }
-                    }
-                    else
-                    {
-                        timeController.RegressDays(timeController.dayOfMonth - dayOfMonth);
-                    }
-                }
+                timeController.dayOfMonth = Mathf.Clamp(dayOfMonth, 1, timeController.currentMonthData.daysInMonth);
+
+                // Ensure dayCount reflects the chosen Month + Day immediately.
+                timeController.SyncDayCountFromDate();
+
+                // Mark dirty so changes persist in editor
+                EditorUtility.SetDirty(timeController);
+
             }
 
         }

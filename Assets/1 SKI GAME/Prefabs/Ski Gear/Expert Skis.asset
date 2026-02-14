@@ -16,6 +16,7 @@ MonoBehaviour:
   shortDescription: 
   cost: 0
   skiPrefab: {fileID: 4725918148240965166, guid: fa5644f06da359a4a8c9f67cc105ac1f, type: 3}
+  polePrefab: {fileID: 3465819460359008692, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
   speed: 8
   handling: 8
   carving: 8

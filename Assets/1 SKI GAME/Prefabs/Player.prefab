@@ -16,12 +16,15 @@ GameObject:
   - component: {fileID: 64565487599071535}
   - component: {fileID: 5130916524721657879}
   - component: {fileID: 2015925916295891446}
+  - component: {fileID: 271245954878826425}
   - component: {fileID: 6194092107584081436}
   - component: {fileID: 3102456178366848837}
   - component: {fileID: 551110874092663367}
   - component: {fileID: 6544998573832570742}
   - component: {fileID: 7792611890400881625}
   - component: {fileID: 4560188940279449419}
+  - component: {fileID: 5101038616418244674}
+  - component: {fileID: 4878505181649446141}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -116,7 +119,7 @@ MonoBehaviour:
   soreness01: 0
   isResting: 0
   recoveryPerSecond: 0
-  restRecoveryPerSecond: 0.08
+  restRecoveryPerSecond: 0.1
   recoveryDelayAfterIncrease: 0.35
   performanceBySoreness:
     serializedVersion: 2
@@ -142,7 +145,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  minPerformanceMult: 0.45
+  minPerformanceMult: 0.6
   postProcessVolume: {fileID: 0}
   postFXWeightBySoreness:
     serializedVersion: 2
@@ -170,8 +173,8 @@ MonoBehaviour:
     m_RotationOrder: 4
   postFXMaxWeight: 1
   postFXWeightLerpSpeed: 4
-  impactSorenessMin: 0.01
-  impactSorenessMax: 0.25
+  impactSorenessMin: 0.001
+  impactSorenessMax: 0.2
   impactSeverityCurve:
     serializedVersion: 2
     m_Curve:
@@ -240,18 +243,22 @@ MonoBehaviour:
   sorenessMeter: {fileID: 8355405585811782512}
   skiController: {fileID: 5130916524721657879}
   decalPrefab: {fileID: 3554105422092337361, guid: 98711efde8ed4cd40a42598d3b80bed7, type: 3}
-  bruiseReceivers: []
-  bruiseColliders: []
+  bruiseReceivers:
+  - {fileID: 8840519732765454305}
+  - {fileID: 6831674719187238288}
+  bruiseColliders:
+  - {fileID: 3831067332482333326}
+  - {fileID: 5905226518409198072}
   forceExcludeReceivers: []
   bruiseRenderingLayerIndex: 7
   autoApplyRenderingLayerToReceivers: 1
   autoStripBruiseLayerFromOtherChildRenderers: 1
   stripInactiveChildRenderers: 1
-  projectionDepth: 0.08
-  outwardSurfacePadding: 0.004
-  inwardOffset: 0.025
-  headRoot: {fileID: 0}
-  bodyRoot: {fileID: 0}
+  projectionDepth: 0.3
+  outwardSurfacePadding: 0.006
+  inwardOffset: 0.008
+  headRoot: {fileID: 1853195655560901651}
+  bodyRoot: {fileID: 3477672529516182850}
   requireHeadOrBody: 1
   impactLayers:
     serializedVersion: 2
@@ -300,8 +307,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef03f8f3dbaee7d4f8390540f0534459, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SkiGearLoadout
-  equippedSkis: {fileID: 11400000, guid: aea6564c77c1a1449b18e01828c56a86, type: 2}
+  equippedSkis: {fileID: 11400000, guid: db0d8e4b205c3e84cafeec9dfb8040b1, type: 2}
   equippedPoles: {fileID: 11400000, guid: db0d8e4b205c3e84cafeec9dfb8040b1, type: 2}
+  skisColor: {r: 1, g: 1, b: 1, a: 1}
+  polesColor: {r: 1, g: 1, b: 1, a: 1}
+  skisPattern: {fileID: 0}
+  polesPattern: {fileID: 0}
 --- !u!114 &5130916524721657879
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -317,10 +328,10 @@ MonoBehaviour:
   bodyTransform: {fileID: 3477672529516182850}
   leftSki: {fileID: 1500085997925863974}
   leftSkiContact: {fileID: 5191879904404988712}
-  leftSkiVisualDefault: {fileID: 5477471834623578040}
+  leftSkiVisual: {fileID: 0}
   rightSki: {fileID: 8235596220883930978}
   rightSkiContact: {fileID: 3070408007898728858}
-  rightSkiVisualDefault: {fileID: 3204729474797573038}
+  rightSkiVisual: {fileID: 0}
   leftPoleContact: {fileID: 858128058096335000}
   rightPoleContact: {fileID: 5727976740622543823}
   sorenessMeter: {fileID: 8355405585811782512}
@@ -352,7 +363,14 @@ MonoBehaviour:
   controlCoyoteTime: 0.08
   alignNormalSmoothSpeed: 10
   alignMaxDegreesPerSec: 120
-  preventSkiTerrainClipping: 0
+  wallCatchMinImpactSpeed: 3
+  wallCatchMinTangentialSpeed: 3
+  wallCatchChance: 1
+  wallCatchTangentialDamp: 0.55
+  wallCatchPushOff: 0.1
+  wallCatchTorqueStrength: 3
+  wallCatchMaxAngularAccel: 25
+  preventSkiTerrainClipping: 1
   skiClearance: 0.03
   skiProbeUp: 0.35
   skiProbeDown: 0.9
@@ -409,23 +427,23 @@ MonoBehaviour:
   jumpSpeedForMaxMultiplier: 12
   jumpUpBlendStartAngle: 55
   jumpUpBlendEndAngle: 80
-  sorenessPerSkateImpulse: 0.0035
-  sorenessPerPoleImpulse: 0.0025
-  sorenessPerJumpImpulse: 0.0025
-  sorenessPerPoleDragSecond: 0.00035
+  sorenessPerSkateImpulse: 0.00035
+  sorenessPerPoleImpulse: 0.00025
+  sorenessPerJumpImpulse: 0.00025
+  sorenessPerPoleDragSecond: 0.000035
   airYawTurnSpeed: 160
   airPitchTurnSpeed: 80
   airAngularAcceleration: 720
   airAngularDamping: 360
   airTuckSpinMultiplier: 1.5
-  airControlBlendInTime: 0.12
-  airPitchUseDeltaFromTakeoff: 0.5
+  airControlBlendInTime: 0.18
+  airPitchUseDeltaFromTakeoff: 0.6
   airPitchDeadzone: 0.05
   grindCoyoteTime: 0.06
   grindCaptureRadius: 0.45
   grindableLayers:
     serializedVersion: 2
-    m_Bits: 65
+    m_Bits: 1
   grindMinPlanarSpeed: 0
   grindSidewaysDotBegin: 0.5
   grindSpring: 20
@@ -435,26 +453,26 @@ MonoBehaviour:
   grindAirControlMultiplier: 0.65
   grindStrengthResponse: 5
   grindReattachCooldown: 0.1
-  grindDriveScale: 2
+  grindDriveScale: 1.5
   grindBalanceUpDotBegin: 0.3
   landingSteepSlopeStartAngle: 40
   landingVerySteepSlopeAngle: 70
   landingAlignBoostDuration: 0.1
   landingAlignBoostMultiplier: 0.5
-  landingProjectionStrength: 1
-  landingVelocityRetention: 1
+  landingProjectionStrength: 0.5
+  landingVelocityRetention: 0.963
   maxLandingTiltAngle: 40
   maxLandingMisalignmentAngle: 40
-  minLandingSpeedForStackCheck: 4
+  minLandingSpeedForStackCheck: 8
   minLandingAirTime: 0.16
-  minLandingDownwardSpeed: 2
-  hardLandingMinFallHeight: 1
-  hardLandingMinDownwardSpeed: 4
+  minLandingDownwardSpeed: 6
+  hardLandingMinFallHeight: 5
+  hardLandingMinDownwardSpeed: 6
   hardLandingMinImpactAngleFromPlane: 50
-  heavyTipStackAngle: 40
+  heavyTipStackAngle: 60
   stackTorqueImpulse: 6
-  stackPlanarVelocityRetention: 0.6
-  showDebugHUD: 1
+  stackPlanarVelocityRetention: 1
+  showDebugHUD: 0
   debugShowInputs: 1
   debugShowTraverseHold: 1
   debugShowGrinding: 1
@@ -481,6 +499,64 @@ MonoBehaviour:
   trackAir: 1
   teleportDistanceThresholdMeters: 25
   autosaveIntervalSeconds: 30
+--- !u!114 &271245954878826425
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 891564543262492690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 939e66badb9fa534b8d7ab6daa01b0d8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.RunProgressTracker
+  skiController: {fileID: 5130916524721657879}
+  rb: {fileID: 4111373406727744186}
+  scanIntervalSeconds: 0.2
+  enterClearanceMeters: 10
+  verticalToleranceMeters: 20
+  commitAfterSecondsInside: 0.35
+  commitAfterAdvanceMeters: 8
+  abandonExtraDistanceMeters: 20
+  abandonAfterSeconds: 2
+  requiredCompletionFraction: 0.95
+  endProximityMeters: 12
+  maxEntryFractionForCompletion: 0.2
+  recordPartialSegments: 1
+  minPartialTimeSeconds: 2
+  minPartialCoverageMeters: 12
+  allowRunSwitching: 1
+  minCoverageFractionToLog: 0.25
+  minActiveSpeedMps: 0.25
+  includeWhileStacked: 0
+  maxAttemptsPerRun: 20
+  recordSessionVisits: 1
+  recordLifetimeVisits: 1
+  snapWindowBackMeters: 25
+  snapWindowForwardMeters: 90
+  allowBacktrackMeters: 6
+  continuityBackSegments: 12
+  continuityForwardSegments: 30
+  maxAdvanceStepMinMeters: 2
+  maxAdvanceStepSpeedMultiplier: 2.2
+  maxAdvanceStepExtraMeters: 1.5
+  progressAdvanceLeewayMeters: 5
+  directionDetectMeters: 4
+  alongBiasWeight: 0.0025
+  alongFollowSpeedMps: 35
+  alongFollowExtraMeters: 2
+  lostTrackingGraceSeconds: 5
+  directionMinSpeedMps: 1
+  directionDotThreshold: 0.25
+  requireExitAfterCompletion: 1
+  exitClearanceExtraMeters: 4
+  runsCacheRefreshSeconds: 2
+  enableRunSwitching: 1
+  switchConfirmSeconds: 0.25
+  switchPreferMarginMeters: 2
+  debugRunTracking: 1
+  debugLogMinIntervalSeconds: 0.35
 --- !u!114 &6194092107584081436
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -559,7 +635,7 @@ MonoBehaviour:
   poleRotationLerpSpeed: 18
   enableLiftDrip: 1
   liftDripRateScale: 0.03
-  liftDripPulseHz: 0.35
+  liftDripPulseHz: 1
   autoPlayWhenEmitting: 1
   autoStopWhenNoEmission: 0
   debugForceSkiSpray: 0
@@ -576,7 +652,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 891564543262492690}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ac1f3301a69b7de468dd6d7806a3aaf2, type: 3}
   m_Name: 
@@ -588,7 +664,7 @@ MonoBehaviour:
   detachDownOffset: 0.2
   liftCarrierLayers:
     serializedVersion: 2
-    m_Bits: 2097149
+    m_Bits: 1
   liftDetectionRadius: 30
   liftDetectPoint: {fileID: 3477672529516182850}
   holdToAttach: 1
@@ -869,6 +945,7 @@ MonoBehaviour:
   - {fileID: 8840519732765454305}
   - {fileID: 6831674719187238288}
   skinPatterns:
+  - {fileID: 0}
   - {fileID: 2800000, guid: 5e2d4bd257111184fac38551fe737f22, type: 3}
   - {fileID: 2800000, guid: 2e3ff3919f6749446b2aed1782b493ce, type: 3}
   - {fileID: 2800000, guid: 0a5a24e49e8b5814ebe400a0f609cf27, type: 3}
@@ -890,7 +967,7 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 7118ba5396a068440bdd06e9b3cc0cd6, type: 3}
   - {fileID: 2800000, guid: 26b6cbb95d0d71c4cb728778641aec2b, type: 3}
   selectedTextureIndex: 0
-  skinColor: {r: 0.24719334, g: 0.8622561, b: 0.06865782, a: 1}
+  skinColor: {r: 0.8666667, g: 0.8039216, b: 0.25490198, a: 1}
   skinTexturePropertyName: _BaseMap
   skinColorPropertyName: _BaseColor
   leftEyeProjector: {fileID: 861789254420401920}
@@ -898,8 +975,8 @@ MonoBehaviour:
   eyeDecalBaseMaterial: {fileID: 2100000, guid: 1909739c3d2e22d4cb54ff47d79b400f, type: 2}
   eyeBaseMapPropertyName: Base_Map
   eyeBaseColorPropertyName: Base_Color
-  selectedEyeOption: 4
-  eyeColour: {r: 0.4594884, g: 0.32014468, b: 0.31680503, a: 1}
+  selectedEyeOption: 1
+  eyeColour: {r: 0, g: 0, b: 0, a: 1}
   eyeOptions:
   - {fileID: 21300000, guid: ace8d0f8ea4254c4a9d762f9d354c261, type: 3}
   - {fileID: 21300000, guid: 48d22b6c15f71c0429f30b88ac2472a1, type: 3}
@@ -920,120 +997,41 @@ MonoBehaviour:
   bodyAnchor: {fileID: 0}
   hatPrefabs: []
   cloakPrefabs: []
---- !u!1 &1024606612919530819
-GameObject:
+--- !u!114 &5101038616418244674
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 3685359202082642551}
-  - component: {fileID: 5926484150314897734}
-  - component: {fileID: 5263535760560957271}
-  - component: {fileID: 3177208175301171301}
-  m_Layer: 3
-  m_Name: Left Pole
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &3685359202082642551
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1024606612919530819}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -3, z: 0}
-  m_LocalScale: {x: 0.7500001, y: 4, z: 0.7500001}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1429341541863567520}
-  m_Father: {fileID: 2147094007822374373}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &5926484150314897734
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1024606612919530819}
-  m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
---- !u!23 &5263535760560957271
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1024606612919530819}
+  m_GameObject: {fileID: 891564543262492690}
   m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!136 &3177208175301171301
-CapsuleCollider:
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0757f7a7043522f42b85f856d85ffc21, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerCustomizationApplier
+  characterCustomizer: {fileID: 4560188940279449419}
+  gearLoadout: {fileID: 64565487599071535}
+  skiController: {fileID: 0}
+  catalog: {fileID: 11400000, guid: 341f1197ef9dc524abc80cf389b1ea02, type: 2}
+--- !u!114 &4878505181649446141
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1024606612919530819}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 0
-  serializedVersion: 2
-  m_Radius: 0.5000001
-  m_Height: 2
-  m_Direction: 1
-  m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
+  m_GameObject: {fileID: 891564543262492690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e0c262014e00fe4b9d8134284f75e66, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkiResortHoldInteractor
+  resortAction: {fileID: 1189063969923822077, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  walkingController: {fileID: 6544998573832570742}
+  holdSeconds: 0.6
+  controller: {fileID: 0}
+  currentZone: {fileID: 0}
+  cancelMoveThreshold: 0.15
+  logEvents: 0
 --- !u!1 &1084462203334655871
 GameObject:
   m_ObjectHideFlags: 0
@@ -1183,118 +1181,6 @@ MonoBehaviour:
   m_FadeFactor: 1
   version: 1
   m_DecalLayerMask: 1
---- !u!1 &1374304850130926892
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2147094007822374373}
-  - component: {fileID: 6061027331067396236}
-  - component: {fileID: 5697604037768687829}
-  - component: {fileID: 6514607231257543587}
-  m_Layer: 3
-  m_Name: Left Pole Handle
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2147094007822374373
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1374304850130926892}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.7, y: 0.3, z: 0}
-  m_LocalScale: {x: 0.2, y: 0.2, z: 0.2}
-  m_ConstrainProportionsScale: 1
-  m_Children:
-  - {fileID: 3685359202082642551}
-  m_Father: {fileID: 5407680099972465189}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &6061027331067396236
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1374304850130926892}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
---- !u!23 &5697604037768687829
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1374304850130926892}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!135 &6514607231257543587
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1374304850130926892}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &1929622266732469391
 GameObject:
   m_ObjectHideFlags: 0
@@ -1710,10 +1596,10 @@ MeshRenderer:
   m_SmallMeshCulling: 1
   m_ForceMeshLod: -1
   m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
+  m_RenderingLayerMask: 129
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: ad9096ab67dfd79439f5e447ebdb7864, type: 2}
+  - {fileID: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -7468,6 +7354,7 @@ MonoBehaviour:
   tipRegionLocalZThreshold: 0.5
   tailRegionLocalZThreshold: -0.3
   minCollisionUpDot: 0.25
+  minProbeUpDot: 0.25
   probeUpOffset: 0.1
   probeDistance: 0.5
   probeContactDistance: 0.18
@@ -7541,10 +7428,10 @@ MeshRenderer:
   m_SmallMeshCulling: 1
   m_ForceMeshLod: -1
   m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
+  m_RenderingLayerMask: 129
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: ad9096ab67dfd79439f5e447ebdb7864, type: 2}
+  - {fileID: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -7588,162 +7475,6 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
---- !u!1 &7888193296590179173
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1429341541863567520}
-  - component: {fileID: 2295235898635438942}
-  - component: {fileID: 4522221093384054487}
-  - component: {fileID: 2846114580290463915}
-  - component: {fileID: 858128058096335000}
-  m_Layer: 3
-  m_Name: Left Pole Tip
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1429341541863567520
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7888193296590179173}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.00008145967, y: -1, z: 0}
-  m_LocalScale: {x: 1.3333333, y: 0.2, z: 1.3333333}
-  m_ConstrainProportionsScale: 1
-  m_Children:
-  - {fileID: 2234595374296371480}
-  m_Father: {fileID: 3685359202082642551}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &2295235898635438942
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7888193296590179173}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
---- !u!23 &4522221093384054487
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7888193296590179173}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!135 &2846114580290463915
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7888193296590179173}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 0
-  serializedVersion: 3
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &858128058096335000
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7888193296590179173}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 268bbd2188ae48f47a5153188a14a6a9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PoleContact
-  isLeftPole: 1
-  groundMask:
-    serializedVersion: 2
-    m_Bits: 64
-  rayLength: 1.5
-  contactOffset: 0.02
-  contactNormalLerpSpeed: 25
-  skiController: {fileID: 5130916524721657879}
-  poleRoot: {fileID: 2147094007822374373}
-  idlePitch: 100
-  entryPitch: -100
-  dragPitch: 10
-  followPitch: 120
-  idleTilt: -7.5
-  entryTilt: 0
-  dragTilt: -15
-  followTilt: -15
-  carveMinSpeed: 3
-  carveMaxSpeed: 20
-  insideCarvePitchDelta: -12
-  outsideCarvePitchDelta: 8
-  insideCarveTiltDelta: 8
-  outsideCarveTiltDelta: 4
-  maxSlopePitchOffset: 10
-  poseLerpSpeed: 10
-  entryForwardOffset: 0.5
-  entryUpOffset: 0.3
-  dragBackOffset: 0.4
-  dragDownOffset: 0.6
-  followBackOffset: 0.4
-  followUpOffset: 0.2
 --- !u!1 &8611631801762312503
 GameObject:
   m_ObjectHideFlags: 0
@@ -7822,6 +7553,7 @@ MonoBehaviour:
   tipRegionLocalZThreshold: 0.5
   tailRegionLocalZThreshold: -0.3
   minCollisionUpDot: 0.25
+  minProbeUpDot: 0.25
   probeUpOffset: 0.1
   probeDistance: 0.5
   probeContactDistance: 0.18
@@ -7965,140 +7697,88 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ParticleWindAdapter
   forceMultiplier: 0.5
   turbulenceMultiplier: 0.2
---- !u!1001 &4575682949579570871
+--- !u!1001 &2525273186521828504
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 1429341541863567520}
+    m_TransformParent: {fileID: 5407680099972465189}
     m_Modifications:
-    - target: {fileID: 2342707164539973551, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
+    - target: {fileID: 2946265073528828928, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
+      propertyPath: skiController
+      value: 
+      objectReference: {fileID: 5130916524721657879}
+    - target: {fileID: 3465819460359008692, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
+      propertyPath: m_Name
+      value: Left Pole Handle
+      objectReference: {fileID: 0}
+    - target: {fileID: 4523742726443538813, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -0.7
       objectReference: {fileID: 0}
-    - target: {fileID: 2342707164539973551, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
+    - target: {fileID: 4523742726443538813, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 0.3
       objectReference: {fileID: 0}
-    - target: {fileID: 2342707164539973551, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
+    - target: {fileID: 4523742726443538813, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
       propertyPath: m_LocalPosition.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 2342707164539973551, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
+    - target: {fileID: 4523742726443538813, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
       propertyPath: m_LocalRotation.w
       value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: 2342707164539973551, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
+    - target: {fileID: 4523742726443538813, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
       propertyPath: m_LocalRotation.x
       value: -0
       objectReference: {fileID: 0}
-    - target: {fileID: 2342707164539973551, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
+    - target: {fileID: 4523742726443538813, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
       propertyPath: m_LocalRotation.y
       value: -0
       objectReference: {fileID: 0}
-    - target: {fileID: 2342707164539973551, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
+    - target: {fileID: 4523742726443538813, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
       propertyPath: m_LocalRotation.z
       value: -0
       objectReference: {fileID: 0}
-    - target: {fileID: 2342707164539973551, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
+    - target: {fileID: 4523742726443538813, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 2342707164539973551, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
+    - target: {fileID: 4523742726443538813, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 2342707164539973551, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
+    - target: {fileID: 4523742726443538813, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8612844576593734233, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
-      propertyPath: playOnAwake
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8612844576593734233, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
-      propertyPath: moveWithTransform
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8612844576593734233, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
-      propertyPath: InitialModule.gravityModifier.scalar
-      value: 0.3
-      objectReference: {fileID: 0}
-    - target: {fileID: 8612844576593734233, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
-      propertyPath: InitialModule.gravityModifier.minScalar
-      value: 0.1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8612844576593734233, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
-      propertyPath: InitialModule.gravityModifier.minMaxState
-      value: 3
-      objectReference: {fileID: 0}
-    - target: {fileID: 8612844576593734233, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
-      propertyPath: EmissionModule.m_Bursts.Array.data[0].countCurve.scalar
-      value: 200
-      objectReference: {fileID: 0}
-    - target: {fileID: 8612844576593734233, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
-      propertyPath: EmissionModule.m_Bursts.Array.data[0].countCurve.minScalar
-      value: 100
-      objectReference: {fileID: 0}
-    - target: {fileID: 8638034960183571623, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
-      propertyPath: m_Name
-      value: Left Pole Snow Particles
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 8638034960183571623, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 6683564432843906724}
-    - targetCorrespondingSourceObject: {fileID: 8638034960183571623, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 7622108332703400355}
-  m_SourcePrefab: {fileID: 100100000, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
---- !u!4 &2234595374296371480 stripped
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
+--- !u!114 &858128058096335000 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2946265073528828928, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
+  m_PrefabInstance: {fileID: 2525273186521828504}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 268bbd2188ae48f47a5153188a14a6a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PoleContact
+--- !u!4 &2147094007822374373 stripped
 Transform:
-  m_CorrespondingSourceObject: {fileID: 2342707164539973551, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
-  m_PrefabInstance: {fileID: 4575682949579570871}
+  m_CorrespondingSourceObject: {fileID: 4523742726443538813, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
+  m_PrefabInstance: {fileID: 2525273186521828504}
   m_PrefabAsset: {fileID: 0}
 --- !u!198 &5190099384112813294 stripped
 ParticleSystem:
-  m_CorrespondingSourceObject: {fileID: 8612844576593734233, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
-  m_PrefabInstance: {fileID: 4575682949579570871}
+  m_CorrespondingSourceObject: {fileID: 7713959662390302838, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
+  m_PrefabInstance: {fileID: 2525273186521828504}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &5215274342008867344 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8638034960183571623, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
-  m_PrefabInstance: {fileID: 4575682949579570871}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &6683564432843906724
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5215274342008867344}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 84a7abe311cc2704a9bc6a60533a5643, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ParticleWindAdapter
-  forceMultiplier: 0.5
-  turbulenceMultiplier: 0.2
---- !u!114 &7622108332703400355
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5215274342008867344}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 84a7abe311cc2704a9bc6a60533a5643, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ParticleWindAdapter
-  forceMultiplier: 0.5
-  turbulenceMultiplier: 0.2
 --- !u!1001 &5581354773835064708
 PrefabInstance:
   m_ObjectHideFlags: 0

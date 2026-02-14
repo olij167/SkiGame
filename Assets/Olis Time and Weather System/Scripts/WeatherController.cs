@@ -169,6 +169,21 @@ namespace TimeWeather
         private static readonly int ID_CloudAlpha = Shader.PropertyToID("_CloudAlpha");
         private static readonly int ID_CloudPower = Shader.PropertyToID("_CloudPower");
         private static readonly int ID_CloudSpeed = Shader.PropertyToID("_CloudSpeed");
+        static readonly int ID_CloudSeed = Shader.PropertyToID("_CloudSeed");
+
+        private Vector2 _lastCloudSpeed;
+
+        // --- CPU/GC optimisations ---
+        // Avoid per-frame List.Contains checks on active cloud renderers.
+        private readonly HashSet<Renderer> _activeCloudSet = new HashSet<Renderer>();
+
+        // Avoid per-frame O(n) scans to find the preset by name.
+        private Dictionary<string, WeatherData> _presetByName;
+
+        // Stop/start particles only when the preset changes (avoid per-frame allocations).
+        private WeatherData _lastAppliedPreset;
+        private readonly HashSet<ParticleSystem> _presetParticleSet = new HashSet<ParticleSystem>();
+
 
         private void OnEnable()
         {
@@ -183,6 +198,44 @@ namespace TimeWeather
             SetSeasonalConditions();
             SetDailyConditions();
 
+            // Build preset lookup once (CPU optimisation)
+            if (_presetByName == null)
+                _presetByName = new Dictionary<string, WeatherData>(System.StringComparer.Ordinal);
+            else
+                _presetByName.Clear();
+
+            if (weatherDataPresets != null)
+            {
+                for (int i = 0; i < weatherDataPresets.Length; i++)
+                {
+                    var p = weatherDataPresets[i];
+                    if (p == null) continue;
+                    if (string.IsNullOrEmpty(p.weatherCondition)) continue;
+
+                    if (_presetByName.ContainsKey(p.weatherCondition))
+                    {
+                        Debug.LogWarning($"Duplicate weatherCondition name '{p.weatherCondition}' found in weatherDataPresets. Names must be unique.");
+                        continue;
+                    }
+                    _presetByName.Add(p.weatherCondition, p);
+                }
+            }
+
+            // If a preset is assigned in the inspector, prime the active-cloud set now
+            // so cloud planes don’t all fade out on the very first update.
+            if (currentWeatherPreset != null)
+            {
+                _lastAppliedPreset = currentWeatherPreset;
+                _activeCloudSet.Clear();
+                if (currentWeatherPreset.activeClouds != null)
+                {
+                    for (int a = 0; a < currentWeatherPreset.activeClouds.Count; a++)
+                    {
+                        var r = currentWeatherPreset.activeClouds[a];
+                        if (r != null) _activeCloudSet.Add(r);
+                    }
+                }
+            }
 
             foreach (WeatherData data in weatherDataPresets)
             {
@@ -484,31 +537,19 @@ namespace TimeWeather
 
                     temperature = Mathf.Lerp(hourlyWeather[timeController.timeHours].temp, hourlyWeather[timeController.timeHours + 1].temp, hourlyTimePercent);
 
+                    rainChance = Mathf.Lerp(hourlyWeather[timeController.timeHours].rainChance, hourlyWeather[timeController.timeHours + 1].rainChance, hourlyTimePercent);
+
                     if (toggleTempUI && tempText != null)
                         tempText.text = temperature.ToString("00") + "°C";
 
-                    //weatherCondition = hourlyWeather[timeController.timeHours].weatherCondition;
-                    for (int w = 0; w < weatherDataPresets.Length; w++)
-                    {
-                        if (temperature >= weatherDataPresets[w].tempRange.x && temperature <= weatherDataPresets[w].tempRange.y)
-                        {
-                            if (rainChance >= weatherDataPresets[w].rainRange.x && rainChance <= weatherDataPresets[w].rainRange.y)
-                            {
-                                if (hourlyWeather[timeController.timeHours].isRaining == weatherDataPresets[w].isRaining)
-                                {
-                                    weatherCondition = weatherDataPresets[w].weatherCondition;
-                                    if (weatherConditionText != null)
-                                        weatherConditionText.text = hourlyWeather[timeController.timeHours].weatherCondition;
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                    // Resolve the most appropriate preset index directly (no per-frame scan).
+                    int resolvedIdx = ResolvePresetIndex(temperature, rainChance, hourlyWeather[timeController.timeHours].isRaining);
+                    if (resolvedIdx >= 0)
+                        weatherCondition = weatherDataPresets[resolvedIdx].weatherCondition;
+
                     if (toggleWeatherUI && weatherConditionText != null)
                         weatherConditionText.text = weatherCondition;
 
-                    rainChance = Mathf.Lerp(hourlyWeather[timeController.timeHours].rainChance, hourlyWeather[timeController.timeHours + 1].rainChance, hourlyTimePercent);
-                   
                     if (toggleRainUI && rainText != null)
                         rainText.text = rainChance.ToString("00") + "% Rain";
 
@@ -520,9 +561,8 @@ namespace TimeWeather
                         // Ensure MPB exists (it should be created in Start(), but keep this robust)
                         if (hc.mpb == null) hc.mpb = new MaterialPropertyBlock();
 
-                        bool isActive = (currentWeatherPreset != null
-                            && currentWeatherPreset.activeClouds != null
-                            && currentWeatherPreset.activeClouds.Contains(hc.cloudRenderer));
+                        // Hot path: use a HashSet to avoid per-frame List.Contains.
+                        bool isActive = (currentWeatherPreset != null && _activeCloudSet.Contains(hc.cloudRenderer));
 
                         // 1) Power + alpha targets
                         if (isActive)
@@ -565,6 +605,8 @@ namespace TimeWeather
                         else
                             cloudSpeed = wind * timeController.timeScale * (23 - timeController.timeOfDay) * (timeController.timePercent * 25f);
 
+                        _lastCloudSpeed = cloudSpeed;
+
                         // 3) Apply to shader via MPB (no material instancing)
                         hc.cloudRenderer.GetPropertyBlock(hc.mpb);
                         hc.mpb.SetFloat(ID_CloudAlpha, hc.cloudAlpha);
@@ -572,9 +614,93 @@ namespace TimeWeather
                         hc.mpb.SetVector(ID_CloudSpeed, new Vector4(cloudSpeed.x * 0.5f, cloudSpeed.y * 0.5f, 0f, 0f));
                         hc.cloudRenderer.SetPropertyBlock(hc.mpb);
 
+
                         // Write back (because HourlyClouds is a class, this is technically not required,
                         // but leaving this makes it explicit if you ever convert it to a struct)
                         cloudRenderer[r] = hc;
+                    }
+
+                    // --- Skybox clouds (drive Skybox.shader using same params) ---
+                    var skyMat = RenderSettings.skybox;
+                    if (skyMat != null)
+                    {
+                        if (skyMat.HasProperty(ID_CloudSeed))
+                        {
+                            // Stable-ish seed: changes with day + weather preset index (or hash)
+                            int presetIndex = currentWeatherPreset != null ? System.Array.IndexOf(weatherDataPresets, currentWeatherPreset) : 0;
+                            float seed = (timeController != null ? timeController.dayCount : 0) * 31.73f + presetIndex * 101.11f;
+                            skyMat.SetFloat(ID_CloudSeed, seed);
+                        }
+
+                        float alphaSum = 0f, powerSum = 0f;
+                        int activeCount = 0;
+
+                        if (currentWeatherPreset != null && currentWeatherPreset.activeClouds != null)
+                        {
+                            for (int r = 0; r < cloudRenderer.Length; r++)
+                            {
+                                var hc = cloudRenderer[r];
+                                if (hc == null || hc.cloudRenderer == null) continue;
+
+                                if (_activeCloudSet.Contains(hc.cloudRenderer))
+                                {
+                                    alphaSum += hc.cloudAlpha;
+                                    powerSum += hc.cloudPower;
+                                    activeCount++;
+                                }
+                            }
+                        }
+
+                        // Average cloud params from the active 3D cloud renderers
+                        float avgAlpha = (activeCount > 0) ? (alphaSum / activeCount) : 0f;
+                        float avgPower = (activeCount > 0) ? (powerSum / activeCount) : 5f;
+
+                        // IMPORTANT:
+                        // Shader Graph clouds use CloudAlpha in ~0..15 (per your material inspector),
+                        // but the skybox shader expects CloudAlpha in 0..1.
+                        // Remap and clamp so we never feed skybox alpha > 1.
+                        const float PLANE_ALPHA_MAX = 15f;
+                        float skyCloudAlpha = Mathf.Clamp01(avgAlpha / PLANE_ALPHA_MAX);
+
+                        // CloudPower is already intended to be 0..5 (0=overcast, 5=clear).
+                        float skyCloudPower = Mathf.Clamp(avgPower, 0f, 5f);
+
+                        skyMat.SetFloat(ID_CloudAlpha, skyCloudAlpha);
+                        skyMat.SetFloat(ID_CloudPower, skyCloudPower);
+
+
+                        // IMPORTANT: use the exact same speed you used for planes
+                        Vector4 skySpeedV4 = new Vector4(_lastCloudSpeed.x * 0.5f, _lastCloudSpeed.y * 0.5f, 0f, 0f);
+
+                        if (skyMat.HasProperty("_CloudAlpha")) skyMat.SetFloat("_CloudAlpha", skyCloudAlpha);
+                        if (skyMat.HasProperty("_CloudPower")) skyMat.SetFloat("_CloudPower", skyCloudPower);
+                        if (skyMat.HasProperty("_CloudSpeed")) skyMat.SetVector("_CloudSpeed", skySpeedV4);
+                    }
+
+                    // --- Feed fog into skybox so fog affects the sky material ---
+                    if (skyMat != null)
+                    {
+                        // RenderSettings fog color is already time-of-day driven in TimeController.
+                        // Weather drives density via fogStrength; we mirror that into the skybox shader.
+                        if (skyMat.HasProperty("_FogColor"))
+                            skyMat.SetColor("_FogColor", RenderSettings.fogColor);
+
+                        if (skyMat.HasProperty("_FogDensity"))
+                            skyMat.SetFloat("_FogDensity", RenderSettings.fogDensity);
+
+                        // Optional: push a stronger “sky fog strength” when the preset is foggy/rainy
+                        // (This does NOT change which preset is chosen; only improves perception.)
+                        if (skyMat.HasProperty("_FogSkyStrength"))
+                        {
+                            float fogSkyStrength = Mathf.Lerp(2.0f, 6.0f, Mathf.Clamp01(currentWeatherPreset != null ? currentWeatherPreset.fogStrength : 0f));
+                            skyMat.SetFloat("_FogSkyStrength", fogSkyStrength);
+                        }
+
+                        if (skyMat.HasProperty("_FogHorizonBoost"))
+                        {
+                            float boost = Mathf.Lerp(2.0f, 5.0f, Mathf.Clamp01(currentWeatherPreset != null ? currentWeatherPreset.fogStrength : 0f));
+                            skyMat.SetFloat("_FogHorizonBoost", boost);
+                        }
                     }
 
                     if (currentWeatherPreset.snowiness < snowiness)
@@ -605,61 +731,93 @@ namespace TimeWeather
 
                     Shader.SetGlobalFloat("_Wetness", wetness);
 
+                    // --- Apply preset (CPU/GC optimised; no per-frame full scans or List allocations) ---
+                    WeatherData resolvedPreset = null;
+                    if (!string.IsNullOrEmpty(weatherCondition) && _presetByName != null)
+                        _presetByName.TryGetValue(weatherCondition, out resolvedPreset);
 
-                    for (int i = 0; i < weatherDataPresets.Length; i++)
+                    if (resolvedPreset != null)
                     {
-                        if (weatherDataPresets[i].weatherCondition == weatherCondition)
+                        // Detect preset change
+                        if (_lastAppliedPreset != resolvedPreset)
                         {
-                            currentWeatherPreset = weatherDataPresets[i];
-                            //Debug.Log("Current weather preset: " + currentWeatherPreset.weatherCondition);
+                            currentWeatherPreset = resolvedPreset;
+                            _lastAppliedPreset = resolvedPreset;
 
-                            RenderSettings.fogDensity = Mathf.Lerp(RenderSettings.fogDensity, currentWeatherPreset.fogStrength, hourlyTimePercent * fogSpeed);
-                            //RenderSettings.fogColor = Color.Lerp(RenderSettings.fogColor, currentWeatherPreset.fogColour, hourlyTimePercent * fogSpeed);
-
-                            if (currentWeatherPreset.clips != null && currentWeatherPreset.clips.Length > 0)
+                            // Rebuild active cloud set once per preset change
+                            _activeCloudSet.Clear();
+                            if (currentWeatherPreset.activeClouds != null)
                             {
-                                weatherAudio.newSoundtrack(hourlyWeather[timeController.timeHours].weatherAudio, currentWeatherPreset.volume);
+                                for (int a = 0; a < currentWeatherPreset.activeClouds.Count; a++)
+                                {
+                                    var r = currentWeatherPreset.activeClouds[a];
+                                    if (r != null) _activeCloudSet.Add(r);
+                                }
                             }
-                        }
 
-                        if (currentWeatherPreset.weatherParticles.Length > 0)
-                        {
+                            // Stop particles that are not part of the new preset (only on change)
+                            _presetParticleSet.Clear();
+                            if (currentWeatherPreset.weatherParticles != null)
                             {
                                 for (int w = 0; w < currentWeatherPreset.weatherParticles.Length; w++)
                                 {
-                                    if (currentWeatherPreset.weatherParticles[w].particleSystem != null)
+                                    var ps = currentWeatherPreset.weatherParticles[w].particleSystem;
+                                    if (ps != null) _presetParticleSet.Add(ps);
+                                }
+                            }
+
+                            if (weatherDataPresets != null)
+                            {
+                                for (int p = 0; p < weatherDataPresets.Length; p++)
+                                {
+                                    var preset = weatherDataPresets[p];
+                                    if (preset == null || preset.weatherParticles == null) continue;
+
+                                    for (int w = 0; w < preset.weatherParticles.Length; w++)
                                     {
-                                        particleEmission = currentWeatherPreset.weatherParticles[w].particleSystem.emission;
-                                        particleNoise = currentWeatherPreset.weatherParticles[w].particleSystem.noise;
-
-                                        particleEmission.rateOverTime = Mathf.Lerp(particleEmission.rateOverTime.constant, currentWeatherPreset.weatherParticles[w].particleAmount, hourlyTimePercent);
-                                        particleNoise.strength = Mathf.Lerp(particleNoise.strength.constant, currentWeatherPreset.weatherParticles[w].noiseStrength, hourlyTimePercent);
-
-                                        if (!currentWeatherPreset.weatherParticles[w].particleSystem.isPlaying)
-                                            currentWeatherPreset.weatherParticles[w].particleSystem.Play();
+                                        var ps = preset.weatherParticles[w].particleSystem;
+                                        if (ps != null && !_presetParticleSet.Contains(ps) && ps.isPlaying)
+                                            ps.Stop();
                                     }
                                 }
                             }
                         }
-
-                        if (weatherDataPresets[i].weatherParticles.Length > 0)
+                        else
                         {
-                            List<ParticleSystem> presetParticles = new List<ParticleSystem>();
-                            List<ParticleSystem> currentParticles = new List<ParticleSystem>();
+                            // Keep pointer up to date even if unchanged
+                            currentWeatherPreset = resolvedPreset;
+                        }
 
-                            for (int w = 0; w < weatherDataPresets[i].weatherParticles.Length; w++)
+                        // Fog + audio (every frame, but O(1))
+                        RenderSettings.fogDensity = Mathf.Lerp(RenderSettings.fogDensity, currentWeatherPreset.fogStrength, hourlyTimePercent * fogSpeed);
+
+                        if (currentWeatherPreset.clips != null && currentWeatherPreset.clips.Length > 0)
+                            weatherAudio.newSoundtrack(hourlyWeather[timeController.timeHours].weatherAudio, currentWeatherPreset.volume);
+
+                        // Particles (update emission/noise; ensure playing)
+                        if (currentWeatherPreset.weatherParticles != null && currentWeatherPreset.weatherParticles.Length > 0)
+                        {
+                            for (int w = 0; w < currentWeatherPreset.weatherParticles.Length; w++)
                             {
-                                presetParticles.Add(weatherDataPresets[i].weatherParticles[w].particleSystem);
+                                var ps = currentWeatherPreset.weatherParticles[w].particleSystem;
+                                if (ps == null) continue;
 
-                                for (int cw = 0; cw < currentWeatherPreset.weatherParticles.Length; cw++)
-                                {
-                                    currentParticles.Add(currentWeatherPreset.weatherParticles[cw].particleSystem);
-                                }
+                                particleEmission = ps.emission;
+                                particleNoise = ps.noise;
 
-                                if (presetParticles[w] != null && !currentParticles.Contains(presetParticles[w]))
-                                {
-                                    presetParticles[w].Stop();
-                                }
+                                particleEmission.rateOverTime = Mathf.Lerp(
+                                    particleEmission.rateOverTime.constant,
+                                    currentWeatherPreset.weatherParticles[w].particleAmount,
+                                    hourlyTimePercent
+                                );
+
+                                particleNoise.strength = Mathf.Lerp(
+                                    particleNoise.strength.constant,
+                                    currentWeatherPreset.weatherParticles[w].noiseStrength,
+                                    hourlyTimePercent
+                                );
+
+                                if (!ps.isPlaying) ps.Play();
                             }
                         }
                     }
