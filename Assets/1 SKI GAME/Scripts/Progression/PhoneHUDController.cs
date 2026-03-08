@@ -37,6 +37,13 @@ namespace SkiGame.Progression
         [Header("Start State")]
         [SerializeField] private bool startPhoneOpen = false;
 
+        [Header("Suppression")]
+        [Tooltip("If enabled, the phone HUD is hidden and input is ignored while the customization shop is open.")]
+        [SerializeField] private bool hideWhenCustomizationShopOpen = true;
+
+        private bool _suppressedByShop;
+        private bool _pendingShopSuppress;
+
         [Header("Map")]
         [SerializeField] private MapData mapData;
         [SerializeField] private Camera mapReferenceCamera;
@@ -158,6 +165,60 @@ namespace SkiGame.Progression
         private Label _tileAch1;
         private Label _tileAch2;
         private Label _tileSunTimes;
+
+        // --- Settings page ---
+        private Slider _sMaster;
+        private Slider _sMusic;
+        private Slider _sSfx;
+        private Label _lblMaster;
+        private Label _lblMusic;
+        private Label _lblSfx;
+
+        private Toggle _tInvertY;
+        private Slider _sLookSens;
+        private Label _lblLookSens;
+
+        private Slider _sUiScale;
+        private Label _lblUiScale;
+        private Toggle _tReduceMotion;
+
+        private DropdownField _ddColourMode;
+        private Button _btnSettingsReset;
+        private Label _lblSettingsNote;
+
+        private DropdownField _ddQuality;
+        private Toggle _tVSync;
+        private DropdownField _ddFpsCap;
+
+        private DropdownField _ddResolution;
+        private DropdownField _ddWindowMode;
+        private DropdownField _ddDisplay;
+        private Button _btnConfigureControls;
+
+        private Slider _sFov;
+        private Label _lblFov;
+
+        private DropdownField _ddUnits;
+
+        private bool _settingsDirty;
+        private float _settingsNextSaveTime;
+
+        // Controls rebinding page
+        [SerializeField] private InputActionAsset rebindActionsAsset;
+
+        private ScrollView _pageControls;
+        private VisualElement _controlsRebindList;
+        private Button _btnControlsResetBindings;
+        private Label _lblControlsNote;
+
+        private Label _lblControlsStatus;
+        private readonly List<Button> _controlsRebindButtons = new List<Button>();
+        private VisualElement _activeRebindRow;
+        private Label _activeRebindBindingLabel;
+        private int _activeRebindBindingIndex = -1;
+        private InputAction _activeRebindAction;
+
+        private InputActionRebindingExtensions.RebindingOperation _activeRebind;
 
         // Phone page bodies
         private Label _statsSessionBody;
@@ -492,6 +553,12 @@ namespace SkiGame.Progression
 
         private void OnEnable()
         {
+            if (hideWhenCustomizationShopOpen)
+            {
+                CustomizationShopRuntime.OnOpenChanged += OnCustomizationShopOpenChanged;
+                OnCustomizationShopOpenChanged(CustomizationShopRuntime.IsOpen);
+            }
+
             if (document == null) document = GetComponent<UIDocument>();
             if (document == null) return;
 
@@ -544,12 +611,29 @@ namespace SkiGame.Progression
                 // Ensure consistent visuals on start.
                 RefreshAllUI(force: true);
 
+                // If the customization shop is already open, ensure the HUD stays hidden.
+                if (hideWhenCustomizationShopOpen)
+                    ApplyShopSuppression(_pendingShopSuppress || CustomizationShopRuntime.IsOpen);
+
                 _uiBound = true;
             }).StartingIn(0);
         }
 
         private void OnDisable()
         {
+            if (hideWhenCustomizationShopOpen)
+                CustomizationShopRuntime.OnOpenChanged -= OnCustomizationShopOpenChanged;
+
+            // If we were suppressed and get disabled during shop teardown, restore visibility.
+            if (_suppressedByShop)
+                ApplyShopSuppression(false);
+
+            if (_settingsDirty && Time.unscaledTime >= _settingsNextSaveTime)
+            {
+                _settingsDirty = false;
+                GameSettingsService.Save();
+            }
+
             _uiBound = false;
             _uiBindAttempts = 0;
             _uiBindScheduled = false;
@@ -559,11 +643,38 @@ namespace SkiGame.Progression
             // Persist current day stats so the user can browse today's numbers after a restart.
             if (_dailyArchiveLoaded)
                 PersistLiveDayToArchive();
+
+            GameSettingsService.OnChanged -= RefreshSettingsUIFromProfile;
+
+        }
+
+        private void OnCustomizationShopOpenChanged(bool isOpen)
+        {
+            _pendingShopSuppress = isOpen;
+            ApplyShopSuppression(isOpen);
+        }
+
+        private void ApplyShopSuppression(bool suppress)
+        {
+            _suppressedByShop = suppress;
+
+            // If UI isn't bound yet, just remember intent.
+            if (_root == null)
+                return;
+
+            _root.style.display = suppress ? DisplayStyle.None : DisplayStyle.Flex;
+
+            // If hiding HUD, force-close the phone so it doesn't pop back oddly.
+            if (suppress)
+                SetPhoneOpen(false);
         }
 
         private void Update()
         {
             float now = Time.unscaledTime;
+
+            if (_suppressedByShop)
+                return;
 
             // Late-bind in case controllers spawn after UI (throttled).
             if (now >= _nextSceneRefPollTime)
@@ -787,7 +898,9 @@ namespace SkiGame.Progression
             RegisterPage("Page_Map");
             RegisterPage("Page_Runs");
             RegisterPage("Page_Save");
-            RegisterPage("Page_Settings");
+            //RegisterPage("Page_Settings");
+            //RegisterPage("Page_Controls");
+
             RegisterPage("Page_SOS");
 
             // Home tiles
@@ -801,7 +914,7 @@ namespace SkiGame.Progression
             WireTile(_tileRunTracker, () => NavigateTo("Page_Runs"));
 
             _tileSave = Q<VisualElement>("Tile_Save");
-            _tileSettings = Q<VisualElement>("Tile_Settings");
+            //_tileSettings = Q<VisualElement>("Tile_Settings");
             _tileSOS = Q<VisualElement>("Tile_SOS");
             _tileStatus = Q<VisualElement>("Tile_Status");
             WireTile(_tileStatus, () => NavigateTo("Page_TimeWeather"));
@@ -895,7 +1008,7 @@ namespace SkiGame.Progression
             }
 
             WireTile(_tileSave, () => NavigateTo("Page_Save"));
-            WireTile(_tileSettings, () => NavigateTo("Page_Settings"));
+            // WireTile(_tileSettings, () => NavigateTo("Page_Settings"));
             WireTile(_tileSOS, () => NavigateTo("Page_SOS"));
 
             // Home tile labels
@@ -4905,6 +5018,781 @@ namespace SkiGame.Progression
             public string ToId() => $"{year}-{monthIndex}-{dayOfMonth}";
         }
 
+        private void BindSettingsPage()
+        {
+            GameSettingsService.EnsureLoaded();
+
+            _sMaster = Q<Slider>("Slider_SettingsMaster");
+            _sMusic = Q<Slider>("Slider_SettingsMusic");
+            _sSfx = Q<Slider>("Slider_SettingsSfx");
+            _lblMaster = Q<Label>("Lbl_SettingsMaster");
+            _lblMusic = Q<Label>("Lbl_SettingsMusic");
+            _lblSfx = Q<Label>("Lbl_SettingsSfx");
+
+            _tInvertY = Q<Toggle>("Toggle_SettingsInvertY");
+            _sLookSens = Q<Slider>("Slider_SettingsLookSensitivity");
+            _lblLookSens = Q<Label>("Lbl_SettingsLookSensitivity");
+
+            _sUiScale = Q<Slider>("Slider_SettingsUiScale");
+            _lblUiScale = Q<Label>("Lbl_SettingsUiScale");
+            _tReduceMotion = Q<Toggle>("Toggle_SettingsReduceMotion");
+
+            _ddColourMode = Q<DropdownField>("Dropdown_SettingsColourMode");
+            _btnSettingsReset = Q<Button>("Btn_SettingsReset");
+            _lblSettingsNote = Q<Label>("Lbl_SettingsNote");
+
+            _ddQuality = Q<DropdownField>("Dropdown_SettingsQuality");
+            _tVSync = Q<Toggle>("Toggle_SettingsVSync");
+            _ddFpsCap = Q<DropdownField>("Dropdown_SettingsFpsCap");
+
+            _ddResolution = Q<DropdownField>("Dropdown_SettingsResolution");
+            _ddWindowMode = Q<DropdownField>("Dropdown_SettingsWindowMode");
+            _ddDisplay = Q<DropdownField>("Dropdown_SettingsDisplay");
+            _btnConfigureControls = Q<Button>("Btn_SettingsConfigureControls");
+
+            _sFov = Q<Slider>("Slider_SettingsFov");
+            _lblFov = Q<Label>("Lbl_SettingsFov");
+
+            _ddUnits = Q<DropdownField>("Dropdown_SettingsUnits");
+
+            // Dropdown options (safe even if element missing).
+            if (_ddColourMode != null)
+            {
+                _ddColourMode.choices = new List<string> { "None", "Protanopia", "Deuteranopia", "Tritanopia" };
+            }
+
+            if (_ddQuality != null)
+            {
+                _ddQuality.choices = new List<string>();
+                var names = QualitySettings.names;
+                for (int i = 0; i < names.Length; i++)
+                    _ddQuality.choices.Add(names[i]);
+            }
+
+            if (_ddFpsCap != null)
+                _ddFpsCap.choices = new List<string> { "Unlimited", "60", "120", "144", "240" };
+
+            if (_ddWindowMode != null)
+                _ddWindowMode.choices = new List<string> { "Windowed", "Borderless", "Fullscreen" };
+
+            if (_ddDisplay != null)
+            {
+                _ddDisplay.choices = new List<string>();
+                int count = Mathf.Max(1, Display.displays != null ? Display.displays.Length : 1);
+                for (int i = 0; i < count; i++)
+                    _ddDisplay.choices.Add($"Display {i + 1}");
+            }
+
+            if (_ddResolution != null)
+            {
+                _ddResolution.choices = new List<string>();
+
+                var res = Screen.resolutions;
+                if (res != null && res.Length > 0)
+                {
+                    // Present as "1920x1080 @ 60Hz"
+                    for (int i = 0; i < res.Length; i++)
+                    {
+#if UNITY_2022_2_OR_NEWER
+                        int hz = (int)Mathf.Round((float)res[i].refreshRateRatio.value);
+#else
+            int hz = res[i].refreshRate;
+#endif
+                        _ddResolution.choices.Add($"{res[i].width}x{res[i].height} @ {hz}Hz");
+                    }
+                }
+                else
+                {
+                    _ddResolution.choices.Add("Current");
+                }
+            }
+
+            if (_ddUnits != null)
+                _ddUnits.choices = new List<string> { "km/h", "mph" };
+
+            // Push model -> UI
+            RefreshSettingsUIFromProfile(GameSettingsService.Current);
+
+            // Wire UI -> model
+            if (_sMaster != null) _sMaster.RegisterValueChangedCallback(evt => { MutateSettings(p => p.masterVolume = evt.newValue); });
+            if (_sMusic != null) _sMusic.RegisterValueChangedCallback(evt => { MutateSettings(p => p.musicVolume = evt.newValue); });
+            if (_sSfx != null) _sSfx.RegisterValueChangedCallback(evt => { MutateSettings(p => p.sfxVolume = evt.newValue); });
+
+            if (_tInvertY != null) _tInvertY.RegisterValueChangedCallback(evt => { MutateSettings(p => p.invertLookY = evt.newValue); });
+            if (_sLookSens != null) _sLookSens.RegisterValueChangedCallback(evt => { MutateSettings(p => p.lookSensitivity = evt.newValue); });
+
+            if (_sUiScale != null) _sUiScale.RegisterValueChangedCallback(evt => { MutateSettings(p => p.uiScale = evt.newValue); });
+            if (_tReduceMotion != null) _tReduceMotion.RegisterValueChangedCallback(evt => { MutateSettings(p => p.reduceMotion = evt.newValue); });
+
+            if (_ddColourMode != null)
+            {
+                _ddColourMode.RegisterValueChangedCallback(evt =>
+                {
+                    int idx = Mathf.Clamp(_ddColourMode.choices.IndexOf(evt.newValue), 0, 3);
+                    MutateSettings(p => p.colorAccessibilityMode = idx);
+                });
+            }
+
+            if (_ddQuality != null)
+            {
+                _ddQuality.RegisterValueChangedCallback(evt =>
+                {
+                    int idx = (_ddQuality.choices != null) ? _ddQuality.choices.IndexOf(evt.newValue) : -1;
+                    MutateSettings(p => p.qualityLevel = idx);
+                });
+            }
+
+            if (_tVSync != null) _tVSync.RegisterValueChangedCallback(evt => { MutateSettings(p => p.vSync = evt.newValue); });
+
+            if (_ddFpsCap != null)
+            {
+                _ddFpsCap.RegisterValueChangedCallback(evt =>
+                {
+                    int fps = 0;
+                    if (int.TryParse(evt.newValue, out int parsed)) fps = parsed; // Unlimited stays 0
+                    MutateSettings(p => p.targetFps = fps);
+                });
+            }
+
+            if (_ddWindowMode != null)
+            {
+                _ddWindowMode.RegisterValueChangedCallback(evt =>
+                {
+                    int idx = _ddWindowMode.choices.IndexOf(evt.newValue);
+                    // Map to FullScreenMode:
+                    // Windowed -> Windowed
+                    // Borderless -> FullScreenWindow
+                    // Fullscreen -> ExclusiveFullScreen
+                    int mode = idx switch
+                    {
+                        0 => (int)FullScreenMode.Windowed,
+                        1 => (int)FullScreenMode.FullScreenWindow,
+                        2 => (int)FullScreenMode.ExclusiveFullScreen,
+                        _ => (int)FullScreenMode.FullScreenWindow
+                    };
+                    MutateSettings(p => p.fullScreenMode = mode);
+                });
+            }
+
+            if (_ddDisplay != null)
+            {
+                _ddDisplay.RegisterValueChangedCallback(evt =>
+                {
+                    int idx = Mathf.Max(0, _ddDisplay.choices.IndexOf(evt.newValue));
+                    MutateSettings(p => p.displayIndex = idx);
+                });
+            }
+
+            if (_ddResolution != null)
+            {
+                _ddResolution.RegisterValueChangedCallback(evt =>
+                {
+                    int idx = _ddResolution.choices.IndexOf(evt.newValue);
+                    var res = Screen.resolutions;
+                    if (res != null && idx >= 0 && idx < res.Length)
+                    {
+                        var r = res[idx];
+#if UNITY_2022_2_OR_NEWER
+                        int hz = (int)Mathf.Round((float)r.refreshRateRatio.value);
+#else
+            int hz = r.refreshRate;
+#endif
+                        MutateSettings(p =>
+                        {
+                            p.resolutionWidth = r.width;
+                            p.resolutionHeight = r.height;
+                            p.resolutionRefreshHz = hz;
+                        });
+                    }
+                });
+            }
+
+            if (_sFov != null) _sFov.RegisterValueChangedCallback(evt => { MutateSettings(p => p.cameraFov = evt.newValue); });
+
+            if (_ddUnits != null)
+            {
+                _ddUnits.RegisterValueChangedCallback(evt =>
+                {
+                    int idx = Mathf.Clamp(_ddUnits.choices.IndexOf(evt.newValue), 0, 1);
+                    MutateSettings(p => p.speedUnitMode = idx);
+                });
+            }
+
+
+            if (_btnSettingsReset != null)
+            {
+                _btnSettingsReset.clicked -= OnClickSettingsReset;
+                _btnSettingsReset.clicked += OnClickSettingsReset;
+            }
+
+            if (_btnConfigureControls != null)
+            {
+                _btnConfigureControls.clicked -= OnClickConfigureControls;
+                _btnConfigureControls.clicked += OnClickConfigureControls;
+            }
+
+            // Keep UI synced if something else changes settings.
+            GameSettingsService.OnChanged -= RefreshSettingsUIFromProfile;
+            GameSettingsService.OnChanged += RefreshSettingsUIFromProfile;
+        }
+
+        private void OnClickSettingsReset()
+        {
+            GameSettingsService.ResetToDefaults();
+            if (_lblSettingsNote != null)
+                _lblSettingsNote.text = "Reset to defaults.";
+        }
+
+        // =====================================================================
+        // Controls page (rebinding UI)
+        // =====================================================================
+
+        private bool _controlsPageBound;
+
+        private void OnClickConfigureControls()
+        {
+            BindControlsPageIfNeeded();
+            NavigateTo("Page_Controls");
+        }
+
+        private void BindControlsPageIfNeeded()
+        {
+            if (_controlsPageBound) return;
+            _controlsPageBound = true;
+
+            _pageControls = Q<ScrollView>("Page_Controls");
+            if (_pageControls == null) return;
+
+            _controlsRebindList = _pageControls.Q<VisualElement>("ControlsRebindList");
+            _btnControlsResetBindings = _pageControls.Q<Button>("Btn_ControlsResetBindings");
+            _lblControlsNote = _pageControls.Q<Label>("Lbl_ControlsNote");
+            _lblControlsStatus = _pageControls.Q<Label>("Lbl_ControlsStatus");
+
+            if (_lblControlsStatus != null)
+            {
+                _lblControlsStatus.text = "Select an action to rebind.";
+                _lblControlsStatus.RemoveFromClassList("is-listening");
+            }
+
+            if (_btnControlsResetBindings != null)
+            {
+                _btnControlsResetBindings.clicked -= OnClickResetBindings;
+                _btnControlsResetBindings.clicked += OnClickResetBindings;
+            }
+
+            RebuildControlsList();
+        }
+
+        private sealed class RebindRow
+        {
+            public string displayName;
+            public InputAction action;
+            public int bindingIndex;
+        }
+
+        private void RebuildControlsList()
+        {
+            if (_controlsRebindList == null) return;
+
+            _controlsRebindList.Clear();
+            _controlsRebindButtons.Clear();
+
+            var rows = CollectRebindRows();
+            if (rows.Count == 0)
+            {
+                _controlsRebindList.Add(new Label("No input actions found in the scene."));
+                return;
+            }
+
+            // Apply saved binding overrides on the owning asset (if present)
+            var anyAsset = rows[0].action?.actionMap?.asset;
+            if (anyAsset != null)
+                InputBindingOverridesStorage.ApplySavedOverrides(anyAsset);
+
+            foreach (var r in rows)
+            {
+                var row = new VisualElement();
+                row.AddToClassList("controls-rebind-row");
+
+                var lblAction = new Label(r.displayName);
+                lblAction.AddToClassList("controls-rebind-action");
+
+                var lblBinding = new Label(GetReadableBinding(r.action, r.bindingIndex));
+                lblBinding.AddToClassList("controls-rebind-binding");
+
+                var btn = new Button();
+                btn.text = "Rebind";
+                btn.AddToClassList("controls-rebind-btn");
+
+                var capturedRow = row;
+                var capturedLabel = lblBinding;
+
+                btn.clicked += () => StartRebind(r.action, r.bindingIndex, capturedLabel, capturedRow);
+
+                _controlsRebindButtons.Add(btn);
+
+                row.Add(lblAction);
+                row.Add(lblBinding);
+                row.Add(btn);
+
+                _controlsRebindList.Add(row);
+            }
+        }
+
+        private List<RebindRow> CollectRebindRows()
+        {
+            // Key is action+bindingIndex so one action can appear twice (Lean + / -)
+            var rows = new Dictionary<string, RebindRow>(64);
+
+            // Scene components that currently define user-facing bindings
+            TryCollectFrom(FindObjectOfType<SkiController>(true), rows);
+            TryCollectFrom(FindObjectOfType<CameraController>(true), rows);
+            TryCollectFrom(FindObjectOfType<LiftRider>(true), rows);
+            TryCollectFrom(FindObjectOfType<SkiResortHoldInteractor>(true), rows);
+            TryCollectFrom(FindObjectOfType<CustomizationPortal>(true), rows);
+            TryCollectFrom(FindObjectOfType<CustomizationSceneBootstrap>(true), rows);
+
+            var list = new List<RebindRow>(rows.Values);
+
+            // Desired order (everything else falls to the bottom in alphabetical order)
+            int Rank(string name)
+            {
+                switch (name)
+                {
+                    case "Interact": return 0;
+                    case "Lean Forward": return 1;
+                    case "Lean Backward": return 2;
+                    case "Left Ski": return 3;
+                    case "Right Ski": return 4;
+                    case "Poles": return 5;
+                    case "Jump": return 6;
+                    case "Shop Orbit": return 7;
+                    default: return 100;
+                }
+            }
+
+            list.Sort((a, b) =>
+            {
+                int ra = Rank(a.displayName);
+                int rb = Rank(b.displayName);
+                if (ra != rb) return ra.CompareTo(rb);
+
+                // Stable fallback for any unexpected extras (shouldn't happen if filtered)
+                return string.Compare(a.displayName, b.displayName, StringComparison.OrdinalIgnoreCase);
+            });
+
+            return list;
+        }
+
+        private void TryCollectFrom(MonoBehaviour component, Dictionary<string, RebindRow> rows)
+        {
+            if (component == null) return;
+
+            var t = component.GetType();
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+            var fields = t.GetFields(flags);
+
+            foreach (var f in fields)
+            {
+                if (f.FieldType != typeof(InputActionReference)) continue;
+
+                // --- Filter: only expose intended rebind inputs ---
+                if (!ShouldExposeForRebind(f.Name))
+                    continue;
+
+                var iar = f.GetValue(component) as InputActionReference;
+                if (iar == null || iar.action == null) continue;
+
+                var action = iar.action;
+
+                // --- SPECIAL CASE: Lean must be split Forward/Backward ---
+                if (f.Name == "leanAction")
+                {
+                    int posIdx = FindCompositePartBindingIndex(action, "positive", "up", "forward");
+                    int negIdx = FindCompositePartBindingIndex(action, "negative", "down", "back");
+
+                    if (posIdx >= 0) AddRow(rows, action, posIdx, "Lean Forward");
+                    if (negIdx >= 0) AddRow(rows, action, negIdx, "Lean Backward");
+
+                    // Fallback if no composite parts found
+                    if (posIdx < 0 && negIdx < 0)
+                        AddRow(rows, action, FindPrimaryBindingIndex(action), "Lean");
+
+                    continue;
+                }
+
+                // Normal case: one row per action
+                int bindingIndex = FindPrimaryBindingIndex(action);
+                string displayName = GetFriendlyActionName(f.Name, action.name);
+
+                AddRow(rows, action, bindingIndex, displayName);
+            }
+        }
+
+        private static bool ShouldExposeForRebind(string fieldName)
+        {
+            // Hide delta/motion style inputs (not something the user should rebind)
+            if (fieldName == "shopOrbitDeltaAction") return false;
+
+            // Look is always mouse delta in your game - don't expose it
+            if (fieldName == "lookAction") return false;
+
+            // Optional: keep the list focused to only the requested set.
+            // If you still have these in the scene scan, hide them:
+            if (fieldName == "rotateDeltaAction") return false;
+            if (fieldName == "rotateStickAction") return false;
+
+            return true;
+        }
+
+        private static void AddRow(Dictionary<string, RebindRow> rows, InputAction action, int bindingIndex, string displayName)
+        {
+            if (action == null) return;
+            if (bindingIndex < 0) bindingIndex = 0;
+
+            string key = $"{action.id:N}:{bindingIndex}";
+            if (rows.ContainsKey(key)) return;
+
+            rows[key] = new RebindRow
+            {
+                displayName = displayName,
+                action = action,
+                bindingIndex = bindingIndex
+            };
+        }
+
+        private static int FindPrimaryBindingIndex(InputAction action)
+        {
+            for (int i = 0; i < action.bindings.Count; i++)
+            {
+                var b = action.bindings[i];
+                if (b.isComposite || b.isPartOfComposite) continue;
+                if (!string.IsNullOrEmpty(b.path)) return i;
+            }
+            return 0;
+        }
+
+        private static int FindCompositePartBindingIndex(InputAction action, params string[] partNames)
+        {
+            if (action == null) return -1;
+
+            for (int i = 0; i < action.bindings.Count; i++)
+            {
+                var b = action.bindings[i];
+                if (!b.isPartOfComposite) continue;
+
+                for (int p = 0; p < partNames.Length; p++)
+                {
+                    if (string.Equals(b.name, partNames[p], StringComparison.OrdinalIgnoreCase))
+                        return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static string GetReadableBinding(InputAction action, int bindingIndex)
+        {
+            if (action == null) return "-";
+            if (bindingIndex < 0 || bindingIndex >= action.bindings.Count) bindingIndex = 0;
+
+            return action.GetBindingDisplayString(bindingIndex,
+                InputBinding.DisplayStringOptions.DontUseShortDisplayNames);
+        }
+
+        private static string GetFriendlyActionName(string fieldName, string fallbackActionName)
+        {
+            // IMPORTANT: Interact should be generic across all uses.
+            switch (fieldName)
+            {
+                // Core
+                case "jumpAction": return "Jump";
+                case "lookAction": return "Look";
+                case "polesAction": return "Poles";
+                case "leftSkiAction": return "Left Ski";
+                case "rightSkiAction": return "Right Ski";
+
+                // Interactions (generic)
+                case "interactAction":
+                case "exitHoldAction":
+                case "resortAction":
+                case "liftInput":
+                    return "Interact";
+
+                // Shop orbit (single input)
+                case "shopOrbitPressAction":
+                    return "Shop Orbit";
+
+                // Shop rotate (if present in your bootstrap)
+                case "rotateDeltaAction":
+                    return "Shop Rotate (Drag)";
+                case "rotateStickAction":
+                    return "Shop Rotate (Stick)";
+            }
+
+            return string.IsNullOrEmpty(fallbackActionName) ? fieldName : fallbackActionName;
+        }
+
+        private void StartRebind(InputAction action, int bindingIndex, Label bindingLabel, VisualElement rowElement)
+        {
+            CancelActiveRebind();
+
+            _activeRebindAction = action;
+            _activeRebindBindingIndex = bindingIndex;
+            _activeRebindRow = rowElement;
+            _activeRebindBindingLabel = bindingLabel;
+
+            // Listening UI
+            if (_lblControlsStatus != null)
+            {
+                _lblControlsStatus.text = $"Listening… press a key/button for {action.name} (Esc to cancel)";
+                _lblControlsStatus.AddToClassList("is-listening");
+            }
+
+            if (_activeRebindRow != null)
+                _activeRebindRow.AddToClassList("is-listening");
+
+            if (_activeRebindBindingLabel != null)
+            {
+                _activeRebindBindingLabel.text = "…";
+                _activeRebindBindingLabel.AddToClassList("is-listening");
+            }
+
+            for (int i = 0; i < _controlsRebindButtons.Count; i++)
+                _controlsRebindButtons[i].SetEnabled(false);
+
+            action.Disable();
+
+            _activeRebind = action.PerformInteractiveRebinding(bindingIndex)
+                .WithCancelingThrough("<Keyboard>/escape")
+                .OnMatchWaitForAnother(0.1f)
+                .OnCancel(op =>
+                {
+                    action.Enable();
+                    op.Dispose();
+                    _activeRebind = null;
+
+                    EndListeningUI();
+
+                    if (_lblControlsNote != null) _lblControlsNote.text = "Rebind cancelled.";
+                    if (_activeRebindBindingLabel != null)
+                        _activeRebindBindingLabel.text = GetReadableBinding(action, bindingIndex);
+
+                    ClearActiveRebindRefs();
+                })
+                .OnComplete(op =>
+                {
+                    action.Enable();
+                    op.Dispose();
+                    _activeRebind = null;
+
+                    // Persist overrides on the owning asset
+                    var asset = action.actionMap?.asset;
+                    if (asset != null)
+                        InputBindingOverridesStorage.SaveOverrides(asset);
+
+                    EndListeningUI();
+
+                    if (_lblControlsNote != null) _lblControlsNote.text = "Binding saved.";
+                    if (_activeRebindBindingLabel != null)
+                        _activeRebindBindingLabel.text = GetReadableBinding(action, bindingIndex);
+
+                    ClearActiveRebindRefs();
+                });
+
+            _activeRebind.Start();
+        }
+
+        private void CancelActiveRebind()
+        {
+            if (_activeRebind == null) return;
+            try { _activeRebind.Cancel(); } catch { }
+        }
+
+        private void EndListeningUI()
+        {
+            if (_lblControlsStatus != null)
+            {
+                _lblControlsStatus.text = "Select an action to rebind.";
+                _lblControlsStatus.RemoveFromClassList("is-listening");
+            }
+
+            if (_activeRebindRow != null)
+                _activeRebindRow.RemoveFromClassList("is-listening");
+
+            if (_activeRebindBindingLabel != null)
+                _activeRebindBindingLabel.RemoveFromClassList("is-listening");
+
+            for (int i = 0; i < _controlsRebindButtons.Count; i++)
+                _controlsRebindButtons[i].SetEnabled(true);
+        }
+
+        private void ClearActiveRebindRefs()
+        {
+            _activeRebindAction = null;
+            _activeRebindBindingIndex = -1;
+            _activeRebindRow = null;
+            _activeRebindBindingLabel = null;
+        }
+
+        private void OnClickResetBindings()
+        {
+            CancelActiveRebind();
+            EndListeningUI();
+            ClearActiveRebindRefs();
+
+            // Reset overrides on the owning asset
+            var rows = CollectRebindRows();
+            if (rows.Count > 0)
+            {
+                var asset = rows[0].action?.actionMap?.asset;
+                if (asset != null)
+                {
+                    asset.RemoveAllBindingOverrides();
+                    InputBindingOverridesStorage.ClearOverrides();
+                }
+                else
+                {
+                    foreach (var r in rows)
+                        r.action?.RemoveAllBindingOverrides();
+                }
+            }
+
+            if (_lblControlsNote != null)
+                _lblControlsNote.text = "Bindings reset.";
+
+            RebuildControlsList();
+        }
+
+        private void MutateSettings(Action<GameSettingsProfile> mutator)
+        {
+            var p = GameSettingsService.Current;
+            // clone-ish: create a new instance so other systems don’t keep stale refs.
+            var next = JsonUtility.FromJson<GameSettingsProfile>(JsonUtility.ToJson(p));
+            mutator?.Invoke(next);
+            next.Sanitize();
+
+            GameSettingsService.Set(next, applyMinimal: true);
+            MarkSettingsDirty();
+
+            if (_lblSettingsNote != null)
+                _lblSettingsNote.text = "Saved.";
+        }
+
+        private void RefreshSettingsUIFromProfile(GameSettingsProfile p)
+        {
+            if (p == null) return;
+
+            if (_sMaster != null) _sMaster.SetValueWithoutNotify(p.masterVolume);
+            if (_sMusic != null) _sMusic.SetValueWithoutNotify(p.musicVolume);
+            if (_sSfx != null) _sSfx.SetValueWithoutNotify(p.sfxVolume);
+
+            if (_tInvertY != null) _tInvertY.SetValueWithoutNotify(p.invertLookY);
+            if (_sLookSens != null) _sLookSens.SetValueWithoutNotify(p.lookSensitivity);
+
+            if (_sUiScale != null) _sUiScale.SetValueWithoutNotify(p.uiScale);
+            if (_tReduceMotion != null) _tReduceMotion.SetValueWithoutNotify(p.reduceMotion);
+
+            if (_ddColourMode != null && _ddColourMode.choices != null && _ddColourMode.choices.Count > 0)
+            {
+                int idx = Mathf.Clamp(p.colorAccessibilityMode, 0, _ddColourMode.choices.Count - 1);
+                _ddColourMode.SetValueWithoutNotify(_ddColourMode.choices[idx]);
+            }
+
+            if (_lblMaster != null) _lblMaster.text = $"{Mathf.RoundToInt(p.masterVolume * 100f)}%";
+            if (_lblMusic != null) _lblMusic.text = $"{Mathf.RoundToInt(p.musicVolume * 100f)}%";
+            if (_lblSfx != null) _lblSfx.text = $"{Mathf.RoundToInt(p.sfxVolume * 100f)}%";
+
+            if (_lblLookSens != null) _lblLookSens.text = $"{p.lookSensitivity:0.00}x";
+            if (_lblUiScale != null) _lblUiScale.text = $"{Mathf.RoundToInt(p.uiScale * 100f)}%";
+
+            if (_ddQuality != null && _ddQuality.choices != null && _ddQuality.choices.Count > 0)
+            {
+                int q = p.qualityLevel;
+                if (q < 0 || q >= _ddQuality.choices.Count) q = QualitySettings.GetQualityLevel();
+                q = Mathf.Clamp(q, 0, _ddQuality.choices.Count - 1);
+                _ddQuality.SetValueWithoutNotify(_ddQuality.choices[q]);
+            }
+
+            if (_tVSync != null) _tVSync.SetValueWithoutNotify(p.vSync);
+
+            if (_ddFpsCap != null && _ddFpsCap.choices != null && _ddFpsCap.choices.Count > 0)
+            {
+                string v = (p.targetFps <= 0) ? "Unlimited" : p.targetFps.ToString();
+                if (_ddFpsCap.choices.Contains(v))
+                    _ddFpsCap.SetValueWithoutNotify(v);
+                else
+                    _ddFpsCap.SetValueWithoutNotify("Unlimited");
+            }
+
+            if (_ddWindowMode != null && _ddWindowMode.choices?.Count > 0)
+            {
+                string v =
+                    ((FullScreenMode)p.fullScreenMode) switch
+                    {
+                        FullScreenMode.Windowed => "Windowed",
+                        FullScreenMode.ExclusiveFullScreen => "Fullscreen",
+                        _ => "Borderless"
+                    };
+
+                if (_ddWindowMode.choices.Contains(v))
+                    _ddWindowMode.SetValueWithoutNotify(v);
+            }
+
+            if (_ddDisplay != null && _ddDisplay.choices?.Count > 0)
+            {
+                int idx = Mathf.Clamp(p.displayIndex, 0, _ddDisplay.choices.Count - 1);
+                _ddDisplay.SetValueWithoutNotify(_ddDisplay.choices[idx]);
+            }
+
+            if (_ddResolution != null && _ddResolution.choices?.Count > 0)
+            {
+                // Find matching string in the current list.
+                string best = null;
+                var res = Screen.resolutions;
+
+                if (p.resolutionWidth > 0 && p.resolutionHeight > 0 && res != null)
+                {
+                    for (int i = 0; i < res.Length && i < _ddResolution.choices.Count; i++)
+                    {
+#if UNITY_2022_2_OR_NEWER
+                        int hz = (int)Mathf.Round((float)res[i].refreshRateRatio.value);
+#else
+            int hz = res[i].refreshRate;
+#endif
+                        if (res[i].width == p.resolutionWidth && res[i].height == p.resolutionHeight &&
+                            (p.resolutionRefreshHz <= 0 || hz == p.resolutionRefreshHz))
+                        {
+                            best = _ddResolution.choices[i];
+                            break;
+                        }
+                    }
+                }
+
+                if (best == null && _ddResolution.choices.Count > 0)
+                    best = _ddResolution.choices[_ddResolution.choices.Count - 1];
+
+                _ddResolution.SetValueWithoutNotify(best);
+            }
+
+            if (_sFov != null) _sFov.SetValueWithoutNotify(p.cameraFov);
+            if (_lblFov != null) _lblFov.text = $"{Mathf.RoundToInt(p.cameraFov)}";
+
+            if (_ddUnits != null && _ddUnits.choices != null && _ddUnits.choices.Count > 0)
+            {
+                int idx = Mathf.Clamp(p.speedUnitMode, 0, _ddUnits.choices.Count - 1);
+                _ddUnits.SetValueWithoutNotify(_ddUnits.choices[idx]);
+            }
+
+        }
+
+        private void MarkSettingsDirty()
+        {
+            _settingsDirty = true;
+            _settingsNextSaveTime = Time.unscaledTime + 0.25f; // debounce writes while dragging sliders
+        }
+
+
         [Serializable]
         private struct DaySnapshot
         {
@@ -5193,6 +6081,10 @@ namespace SkiGame.Progression
         {
             if (_time == null) return 0;
 
+            EnsureStatsDayState();
+            if (_statsDayState == null || _statsDayState.store == null)
+                return 0;
+
             int first = Mathf.Max(0, _statsDayState.store.firstDayOfYear);
             int rel = Mathf.Max(0, _time.dayCount - first);
             return rel / 7;
@@ -5201,6 +6093,15 @@ namespace SkiGame.Progression
         private void RebuildStatsWeeksList()
         {
             if (_statsWeeksList == null || _time == null) return;
+
+            // Stats calendar relies on the persisted day-state store for its baseline.
+            // BindUI can run before this has been loaded/initialized, so ensure it's ready here.
+            EnsureStatsDayState();
+            if (_statsDayState == null || _statsDayState.store == null)
+            {
+                _statsWeeksList.Clear();
+                return;
+            }
 
             _statsWeeksList.Clear();
 

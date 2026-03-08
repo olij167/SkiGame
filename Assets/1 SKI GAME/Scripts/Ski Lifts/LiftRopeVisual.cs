@@ -57,10 +57,29 @@ public class LiftRopeVisual : MonoBehaviour
     private bool _lrConfigInitialized;
     private Material _lastRopeMat;
 
+    private static readonly int MainTexST = Shader.PropertyToID("_MainTex_ST");
+    private static readonly int BaseMapST = Shader.PropertyToID("_BaseMap_ST");
+
+    private MaterialPropertyBlock _mpb; // created in Awake/OnEnable (ExecuteAlways-safe)
+    private int _stPropertyId = -1;     // resolved to _BaseMap_ST or _MainTex_ST
+    private float _tilingX = 1f;        // cached tiling so Update can preserve it
+    private float _texOffsetX = 0f;     // cached offset
+
     private static readonly AnimationCurve ConstantWidthCurve = new AnimationCurve(
         new Keyframe(0f, 1f),
         new Keyframe(1f, 1f)
     );
+
+    private void EnsureMPB()
+    {
+        if (_mpb == null)
+            _mpb = new MaterialPropertyBlock();
+    }
+
+    private void Awake()
+    {
+        EnsureMPB();
+    }
 
     private void Reset()
     {
@@ -72,6 +91,8 @@ public class LiftRopeVisual : MonoBehaviour
     private void OnEnable()
     {
         EnsureSetup();
+        EnsureMPB();
+
         _configDirty = true;
 
 #if UNITY_EDITOR
@@ -108,6 +129,8 @@ public class LiftRopeVisual : MonoBehaviour
         if (!EnsureSetup())
             return;
 
+        if (!Application.isPlaying && !runInEditMode) return;
+
 #if UNITY_EDITOR
         if (!Application.isPlaying)
         {
@@ -136,14 +159,12 @@ public class LiftRopeVisual : MonoBehaviour
         // Texture scrolling only (keep this lightweight)
         if (lineRenderer != null && Mathf.Abs(textureScrollSpeed) > 0.0001f)
         {
-            if (lineRenderer.material == null && lineRenderer.sharedMaterial != null)
-                lineRenderer.material = new Material(lineRenderer.sharedMaterial);
-
-            if (lineRenderer.material != null)
+            if (textureScrollSpeed != 0f && lineRenderer != null && lineRenderer.sharedMaterial != null)
             {
-                _texOffset += textureScrollSpeed * Time.deltaTime;
-                lineRenderer.material.SetTextureOffset("_MainTex", new Vector2(_texOffset, 0f));
+                _texOffsetX += textureScrollSpeed * Time.deltaTime;
+                ApplyST(lineRenderer, Mathf.Max(0.0001f, _tilingX), _texOffsetX);
             }
+
         }
     }
 
@@ -216,6 +237,12 @@ public class LiftRopeVisual : MonoBehaviour
         if (!EnsureSetup())
             return;
 
+        if (!IsValidSceneInstance())
+            return;
+
+        if (!gameObject.scene.IsValid() || !gameObject.scene.isLoaded)
+            return;
+
         // Ensure LiftLine's analytic path is up to date
         line.RebuildAnalyticLoop();
         float totalLength = line.BandLength;
@@ -251,18 +278,12 @@ public class LiftRopeVisual : MonoBehaviour
             lineRenderer.SetPosition(positionCount - 1, first);
         }
 
-        // Optional: adjust texture tiling based on length, if material supports it
-        if (lineRenderer.sharedMaterial != null && textureTiling > 0f)
+        if (lineRenderer != null && lineRenderer.sharedMaterial != null && textureTiling > 0f)
         {
-            float tiling = totalLength * textureTiling;
-            Vector2 scale = new Vector2(tiling, 1f);
-            if (Application.isPlaying)
-            {
-                // Use instance material in play mode if you need runtime tiling/scrolling
-                var mat = lineRenderer.material; // creates instance
-                mat.SetTextureScale("_MainTex", new Vector2(tiling, 1f));
-            }
+            _tilingX = totalLength * textureTiling;
+            ApplyST(lineRenderer, _tilingX, _texOffsetX);
         }
+
     }
 
     private int ComputeEditorHash()
@@ -339,6 +360,48 @@ public class LiftRopeVisual : MonoBehaviour
         _lastRopeWidth = ropeWidth;
         _lastRopeMaterial = ropeMaterial;
         _configDirty = false;
+    }
+
+    private bool IsValidSceneInstance()
+    {
+        // Prefab assets and some editor contexts will have an invalid scene
+        return gameObject.scene.IsValid() && gameObject.scene.isLoaded;
+    }
+
+    private int ResolveSTPropertyId(Renderer r)
+    {
+        if (r == null) return -1;
+
+        var mat = r.sharedMaterial;
+        if (mat == null) return -1;
+
+        // Prefer URP name if present, otherwise fall back to MainTex
+        if (mat.HasProperty(BaseMapST)) return BaseMapST;
+        if (mat.HasProperty(MainTexST)) return MainTexST;
+
+        return -1;
+    }
+
+    private void ApplyST(Renderer r, float scaleX, float offsetX)
+    {
+        if (r == null) return;
+
+        // In ExecuteAlways, Awake/OnEnable should run, but be defensive.
+        EnsureMPB();
+        if (_mpb == null) return;
+
+        if (_stPropertyId < 0)
+            _stPropertyId = ResolveSTPropertyId(r);
+
+        if (_stPropertyId < 0)
+            return;
+
+        r.GetPropertyBlock(_mpb);
+
+        // (scaleX, scaleY, offsetX, offsetY)
+        _mpb.SetVector(_stPropertyId, new Vector4(scaleX, 1f, offsetX, 0f));
+
+        r.SetPropertyBlock(_mpb);
     }
 
 }

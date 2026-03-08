@@ -156,13 +156,14 @@ namespace SkiGame.Runs
             {
                 _profile = liveProfile;
 
-                RebuildRunDefinitions();
-                RebuildCaches();
+                // Force caches/UI refresh on next Update tick.
+                _lastRunRecordsHash = 0;
+                _nextProfilePollTime = 0f;
 
-                _lastRunRecordsHash = ComputeRunRecordsHash();
-                _nextProfilePollTime = Time.unscaledTime + Mathf.Max(0.1f, profilePollInterval);
-
-                RebuildAll(force: true);
+                // ✅ IMPORTANT: profile reset/load means our week baseline must be recomputed
+                _calendarBaseLoaded = false;
+                _expandedWeekIndex = -1;
+                _activeDayOfYear = -1;
             }
 
             // Keep current week accurate
@@ -204,6 +205,18 @@ namespace SkiGame.Runs
             RefreshActiveRunHeader();
             RefreshActiveRunPanel();
 
+        }
+
+        public void ForceRefreshCalendarBaseline()
+        {
+            _calendarBaseLoaded = false;
+            _expandedWeekIndex = -1;
+            _activeDayOfYear = -1;
+
+            ResolveRefs();
+            RebuildRunDefinitions();
+            RebuildCaches();
+            RebuildAll(force: true);
         }
 
         // -------------------------

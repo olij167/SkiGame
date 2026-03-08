@@ -94,6 +94,8 @@ namespace SkiGame.RunsEditor
             Undo.undoRedoPerformed += OnUndoRedo;
             Undo.postprocessModifications += OnPostprocessModifications; // NEW
             _previewDirty = true;
+            _active = this;
+
             LoadEditorPrefs();
 
             SceneView.RepaintAll();
@@ -103,6 +105,8 @@ namespace SkiGame.RunsEditor
         {
             Undo.undoRedoPerformed -= OnUndoRedo;
             Undo.postprocessModifications -= OnPostprocessModifications; // NEW
+            if (_active == this) _active = null;
+
             SaveEditorPrefs();
         }
 
@@ -329,24 +333,46 @@ namespace SkiGame.RunsEditor
 
             DrawRunOverviewCard(run);
             EditorGUILayout.Space(6);
-            DrawWorkflowSection(run);
 
+            // Always visible: mode + minimal scene interaction state
+            DrawAuthoringSection(run);
             EditorGUILayout.Space(6);
 
-            // Only two tabs: Run + Advanced
-            inspectorTab = Mathf.Clamp(inspectorTab, 0, 1);
-            inspectorTab = GUILayout.Toolbar(inspectorTab, new[] { "Run", "Advanced" });
+            // Always visible: identity + main geometry
+            DrawRunIdentitySection();
             EditorGUILayout.Space(6);
 
-            switch (inspectorTab)
+            DrawGeometrySection();
+            EditorGUILayout.Space(6);
+
+            // Gated sections (only what matters for the active scene tool)
+            if (_authoringMode == AuthoringMode.Path)
             {
-                case 0:
-                    DrawRunTab(run);
-                    break;
-                case 1:
-                    DrawAdvancedTab();
-                    break;
+                DrawPointEditingSection();
+                EditorGUILayout.Space(6);
             }
+
+            // Boundaries matter in all modes (they affect corridor + other tools)
+            DrawBoundariesSection();
+            EditorGUILayout.Space(6);
+
+            if (_authoringMode == AuthoringMode.Flags)
+            {
+                DrawFlagsAndGatesSection(run);
+                EditorGUILayout.Space(6);
+
+                DrawIntersectionsSection();
+                EditorGUILayout.Space(6);
+            }
+
+            if (_authoringMode == AuthoringMode.Fences)
+            {
+                DrawFencesSection(run);
+                EditorGUILayout.Space(6);
+            }
+
+            // Utilities always visible
+            DrawUtilitiesSection(run);
 
             serializedObject.ApplyModifiedProperties();
 
@@ -386,137 +412,481 @@ namespace SkiGame.RunsEditor
                         SceneView.lastActiveSceneView?.FrameSelected();
                     }
                 }
+
+                EditorGUILayout.Space(2);
+                EditorGUILayout.LabelField(GetRunQuickStats(serializedObject), EditorStyles.miniLabel);
             }
         }
 
-        // Workflow foldouts (editor-only; fine as non-serialized)
-        private bool _foldWorkflowSceneToggles = true;
-        private bool _foldWorkflowSceneSliders = false;
-        private bool _foldWorkflowUtilities = false;
+        private string GetRunQuickStats(SerializedObject so)
+        {
+            // Points (read via SerializedProperty so we don’t rely on access modifiers)
+            var pPoints = so.FindProperty("pointsWorld");
+            int points = pPoints != null ? pPoints.arraySize : 0;
 
-        private void DrawWorkflowSection(SkiRunLine run)
+            // Compute polyline length cheaply from pointsWorld (XZ+Y distance).
+            // This avoids relying on any cached runtime metrics that may or may not exist.
+            float length = 0f;
+            if (pPoints != null && pPoints.arraySize >= 2)
+            {
+                Vector3 prev = pPoints.GetArrayElementAtIndex(0).vector3Value;
+                for (int i = 1; i < pPoints.arraySize; i++)
+                {
+                    Vector3 cur = pPoints.GetArrayElementAtIndex(i).vector3Value;
+                    length += Vector3.Distance(prev, cur);
+                    prev = cur;
+                }
+            }
+
+            // Flags count: we don’t assume a field name exists.
+            // If you later want this, we can hook it to your actual generated flag list/parent.
+            string flagsStr = "—";
+
+            return $"Points: {points}   Length: {(length > 0.01f ? $"{length:0}m" : "—")}   Flags: {flagsStr}";
+        }
+
+        // ------------------------------------------------------------
+        // Simplified Inspector Layout (no global Workflow/Scene/Advanced tabs)
+        // ------------------------------------------------------------
+
+        private bool _foldAuthoringAdvanced = false;
+        private bool _foldIdentityAdvanced = false;
+        private bool _foldGeometryAdvanced = false;
+
+        private bool _foldPointsAdvanced = false;
+        private bool _foldFlagsAdvanced = false;
+        private bool _foldBoundariesAdvanced = false;
+        private bool _foldIntersectionsAdvanced = false;
+        private bool _foldFencesAdvanced = false;
+        private bool _foldUtilitiesAdvanced = false;
+
+        private void DrawAuthoringSection(SkiRunLine run)
         {
             using (new EditorGUILayout.VerticalScope("box"))
             {
-                EditorGUILayout.LabelField("Workflow", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Authoring", EditorStyles.boldLabel);
 
-                // Mode switch (single source of truth)
-                int newMode = GUILayout.Toolbar(_workflowMode, new[] { "Points", "Gates", "Fences" }, GUILayout.Height(22));
-                if (newMode != _workflowMode)
-                    SetWorkflowMode(newMode);
+                // Single, cohesive scene interaction mode (also accessible via 1/2/3 hotkeys).
+                var newMode = (AuthoringMode)EditorGUILayout.EnumPopup(
+                    new GUIContent("Scene Editing Mode", "Controls which scene handles/interactions are active.\nHotkeys: 1=Path, 2=Flags, 3=Fences"),
+                    _authoringMode);
 
-                SetAuthoringMode((AuthoringMode)newMode, (SkiRunLine)target);
+                if (newMode != _authoringMode)
+                    SetAuthoringMode(newMode, run);
 
-                EditorGUILayout.Space(6);
+                showHotkeyOverlay = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Show hotkey overlay (H)", "Shows a small scene overlay listing useful hotkeys."),
+                    showHotkeyOverlay);
 
-                // ----------------------------
-                // Scene toggles (button toolbar)
-                // ----------------------------
-                _foldWorkflowSceneToggles = EditorGUILayout.Foldout(_foldWorkflowSceneToggles, "Scene Toggles", true);
-                if (_foldWorkflowSceneToggles)
+                _foldAuthoringAdvanced = EditorGUILayout.Foldout(_foldAuthoringAdvanced, "Advanced", true);
+                if (_foldAuthoringAdvanced)
                 {
-                    using (new EditorGUILayout.VerticalScope("box"))
+                    EditorGUI.indentLevel++;
+
+                    sceneVisualYOffset = EditorGUILayout.Slider(
+                        new GUIContent("Scene Visual Y Offset", "Editor-only: lifts handles/gizmos above terrain for readability."),
+                        sceneVisualYOffset, 0f, 2f);
+
+                    previewMaxPairs = EditorGUILayout.IntSlider(
+                        new GUIContent("Preview Max Pairs", "Limits how many sampled pairs/boundary points are drawn in the scene for performance."),
+                        previewMaxPairs, 20, 5000);
+
+                    previewIncludeOverlapAvoidance = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Preview includes overlap avoidance", "If enabled, the scene preview applies corridor overlap avoidance (slower)."),
+                        previewIncludeOverlapAvoidance);
+
+                    EditorGUI.indentLevel--;
+                }
+            }
+        }
+
+        private void DrawRunIdentitySection()
+        {
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Identity & Difficulty", EditorStyles.boldLabel);
+
+                TryDrawProp("runName");
+                TryDrawProp("difficultyProfile");
+
+                var pOverride = serializedObject.FindProperty("overrideDifficulty");
+                if (pOverride != null)
+                {
+                    EditorGUILayout.PropertyField(pOverride);
+                    if (pOverride.boolValue)
                     {
-                        // Row 1
-                        using (new EditorGUILayout.HorizontalScope())
-                        {
-                            showPointGizmos = GUILayout.Toggle(showPointGizmos, "Points", "Button");
-                            showWidthVisuals = GUILayout.Toggle(showWidthVisuals, "Widths", "Button");
-                            showBoundaryPreview = GUILayout.Toggle(showBoundaryPreview, "Corridor", "Button");
-                            showPairPreview = GUILayout.Toggle(showPairPreview, "Pairs", "Button");
-                        }
-
-                        // Row 2
-                        using (new EditorGUILayout.HorizontalScope())
-                        {
-                            showSpacingHandle = GUILayout.Toggle(showSpacingHandle, "Spacing", "Button");
-                            showIntersectionOverlay = GUILayout.Toggle(showIntersectionOverlay, "Intersections", "Button");
-                            showHotkeyOverlay = GUILayout.Toggle(showHotkeyOverlay, "Hotkeys", "Button");
-                        }
-
-                        // Row 3 (declutter / visibility toggles)
-                        using (new EditorGUILayout.HorizontalScope())
-                        {
-                            depthTestPointGizmos = GUILayout.Toggle(depthTestPointGizmos, "Depth Test", "Button");
-                            fadePointsByDistance = GUILayout.Toggle(fadePointsByDistance, "Fade", "Button");
-                            widthVisualsOnlyAnchors = GUILayout.Toggle(widthVisualsOnlyAnchors, "Width Anchors Only", "Button");
-                        }
+                        EditorGUI.indentLevel++;
+                        TryDrawProp("overrideDifficultyValue");
+                        EditorGUI.indentLevel--;
                     }
                 }
 
-                EditorGUILayout.Space(4);
-
-                // ----------------------------
-                // Scene sliders (sliders only)
-                // ----------------------------
-                _foldWorkflowSceneSliders = EditorGUILayout.Foldout(_foldWorkflowSceneSliders, "Scene Sliders", true);
-                if (_foldWorkflowSceneSliders)
+                _foldIdentityAdvanced = EditorGUILayout.Foldout(_foldIdentityAdvanced, "Advanced", true);
+                if (_foldIdentityAdvanced)
                 {
-                    using (new EditorGUILayout.VerticalScope("box"))
+                    EditorGUI.indentLevel++;
+                    TryDrawProp("classifyPerSegment");
+                    EditorGUI.indentLevel--;
+                }
+            }
+        }
+
+        private void DrawGeometrySection()
+        {
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Geometry", EditorStyles.boldLabel);
+
+                TryDrawProp("runWidthMeters");
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button("Clear Width Overrides", GUILayout.Width(180)))
                     {
-                        sceneVisualYOffset = EditorGUILayout.Slider(
-                            new GUIContent("Scene Visual Y Offset", "Editor-only: lifts handles/gizmos above terrain for readability."),
-                            sceneVisualYOffset, 0f, 2f);
-
-                        // Preview size (only matters when previews are enabled)
-                        bool anyPreview = showBoundaryPreview || showPairPreview || showIntersectionOverlay;
-                        using (new EditorGUI.DisabledScope(!anyPreview))
-                        {
-                            previewMaxPairs = EditorGUILayout.IntSlider(
-                                new GUIContent("Preview Max Pairs", "Limits how many sampled pairs are drawn in the scene for performance."),
-                                previewMaxPairs, 20, 5000);
-                        }
-
-                        // Point fade controls
-                        using (new EditorGUI.DisabledScope(!fadePointsByDistance))
-                        {
-                            fadeNearMeters = EditorGUILayout.Slider(new GUIContent("Fade Near (m)"), fadeNearMeters, 1f, 200f);
-                            fadeFarMeters = EditorGUILayout.Slider(new GUIContent("Fade Far (m)"), fadeFarMeters, 10f, 1000f);
-                            fadeMinAlpha = EditorGUILayout.Slider(new GUIContent("Fade Min Alpha"), fadeMinAlpha, 0.01f, 0.5f);
-                        }
-
-                        // Authoring utility sliders (kept here so “sliders live together”)
-                        resampleSpacingMeters = EditorGUILayout.Slider(new GUIContent("Resample Spacing (m)"), resampleSpacingMeters, 1f, 50f);
-                        widthAnchorSpacingMeters = EditorGUILayout.Slider(new GUIContent("Width Anchor Spacing (m)"), widthAnchorSpacingMeters, 5f, 150f);
+                        var run = (SkiRunLine)target;
+                        Undo.RecordObject(run, "Clear Width Overrides");
+                        run.ClearWidthOverrides();
+                        EditorUtility.SetDirty(run);
+                        SceneView.RepaintAll();
                     }
                 }
 
-                EditorGUILayout.Space(4);
-
-                // ----------------------------
-                // Utilities (actions / buttons)
-                // ----------------------------
-                _foldWorkflowUtilities = EditorGUILayout.Foldout(_foldWorkflowUtilities, "Utilities", true);
-                if (_foldWorkflowUtilities)
+                _foldGeometryAdvanced = EditorGUILayout.Foldout(_foldGeometryAdvanced, "Advanced", true);
+                if (_foldGeometryAdvanced)
                 {
-                    using (new EditorGUILayout.VerticalScope("box"))
-                    {
-                        using (new EditorGUILayout.HorizontalScope())
-                        {
-                            if (GUILayout.Button("Resample Points"))
-                            {
-                                Undo.RecordObject(run, "Resample Run Points");
-                                run.ResamplePointsWorld(resampleSpacingMeters);
-                                EditorUtility.SetDirty(run);
-                                SceneView.RepaintAll();
-                            }
+                    EditorGUI.indentLevel++;
+                    TryDrawProp("widthOverrideMeters");
 
-                            if (GUILayout.Button("Clear Width Overrides"))
-                            {
-                                Undo.RecordObject(run, "Clear Width Overrides");
-                                run.ClearWidthOverrides();
-                                EditorUtility.SetDirty(run);
-                                SceneView.RepaintAll();
-                            }
-                        }
+                    showWidthVisuals = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Show width visuals (scene)", "Draws width ticks along the run (editor-only)."),
+                        showWidthVisuals);
+
+                    widthVisualsOnlyAnchors = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Width visuals: anchors only", "If enabled, draws fewer width ticks for clarity/performance."),
+                        widthVisualsOnlyAnchors);
+
+                    widthAnchorSpacingMeters = EditorGUILayout.Slider(
+                        new GUIContent("Width Anchor Spacing (m)", "Distance between width anchors when \"anchors only\" is enabled."),
+                        widthAnchorSpacingMeters, 5f, 150f);
+
+                    EditorGUI.indentLevel--;
+                }
+            }
+        }
+
+        private void DrawPointEditingSection()
+        {
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Points", EditorStyles.boldLabel);
+
+                showPointGizmos = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Show point gizmos (scene)", "Draws selectable point handles in the scene."),
+                    showPointGizmos);
+
+                enableShiftClickInsert = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Shift+Click: insert point", "Insert a point into the polyline at the closest segment (supports start/end)."),
+                    enableShiftClickInsert);
+
+                enableAltClickDelete = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Alt+Click: delete point", "Deletes the selected point (or the clicked point if supported by the current selection)."),
+                    enableAltClickDelete);
+
+                autoSnapToTerrainWhenEditing = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Snap moved points to terrain", "When moving points, snap them to the terrain height."),
+                    autoSnapToTerrainWhenEditing);
+
+                _foldPointsAdvanced = EditorGUILayout.Foldout(_foldPointsAdvanced, "Advanced", true);
+                if (_foldPointsAdvanced)
+                {
+                    EditorGUI.indentLevel++;
+
+                    editNeighborPoints = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Edit neighbor points", "Shows small neighbor handles to smooth kinks while editing."),
+                        editNeighborPoints);
+
+                    pointPickSizeScale = EditorGUILayout.Slider(
+                        new GUIContent("Point handle size", "Scales the clickable size of point handles."),
+                        pointPickSizeScale, 0.02f, 0.20f);
+
+                    depthTestPointGizmos = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Depth test point gizmos", "If enabled, point handles won’t draw through terrain."),
+                        depthTestPointGizmos);
+
+                    fadePointsByDistance = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Fade point gizmos by distance", "Fades point handles when far from the scene camera."),
+                        fadePointsByDistance);
+
+                    using (new EditorGUI.DisabledScope(!fadePointsByDistance))
+                    {
+                        fadeNearMeters = EditorGUILayout.Slider(new GUIContent("Fade Near (m)"), fadeNearMeters, 1f, 200f);
+                        fadeFarMeters = EditorGUILayout.Slider(new GUIContent("Fade Far (m)"), fadeFarMeters, 10f, 1000f);
+                        fadeMinAlpha = EditorGUILayout.Slider(new GUIContent("Fade Min Alpha"), fadeMinAlpha, 0.01f, 0.5f);
+                    }
+
+                    EditorGUI.indentLevel--;
+                }
+            }
+        }
+
+        private void DrawFlagsAndGatesSection(SkiRunLine run)
+        {
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Flags & Gates", EditorStyles.boldLabel);
+
+                TryDrawProp("flagPrefab");
+                TryDrawProp("flagSpacingMeters");
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Rebuild Flags"))
+                    {
+                        Undo.RecordObject(run, "Rebuild Run Flags");
+                        run.RebuildFlags();
+                        run.ApplyColorToGeneratedFlags();
+                        EditorUtility.SetDirty(run);
+                        SceneView.RepaintAll();
+                    }
+
+                    if (GUILayout.Button("Bake Metrics"))
+                    {
+                        Undo.RecordObject(run, "Bake Run Metrics");
+                        run.BakeMetrics();
+                        EditorUtility.SetDirty(run);
+                        SceneView.RepaintAll();
                     }
                 }
 
-                EditorGUILayout.Space(6);
+                showPairPreview = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Show gate pair preview (scene)", "Draws sampled flag pairs/crossbars in the scene."),
+                    showPairPreview);
 
-                // ----------------------------
-                // Primary build actions
-                // ----------------------------
+                showSpacingHandle = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Show spacing handle (scene)", "Shows a drag handle near the start to adjust spacing quickly."),
+                    showSpacingHandle);
+
+                bool newGateEdit = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Enable gate editing (G)", "Enables interactive gate-width handles in the scene. Hotkey: G"),
+                    gateEditMode);
+
+                if (newGateEdit != gateEditMode)
+                {
+                    gateEditMode = newGateEdit;
+                    if (gateEditMode && _authoringMode != AuthoringMode.Flags)
+                        SetAuthoringMode(AuthoringMode.Flags, run);
+                    else
+                        SaveEditorPrefs();
+                }
+
+                _foldFlagsAdvanced = EditorGUILayout.Foldout(_foldFlagsAdvanced, "Advanced", true);
+                if (_foldFlagsAdvanced)
+                {
+                    EditorGUI.indentLevel++;
+
+                    TryDrawProp("flagStartOffsetMeters");
+                    TryDrawProp("flagEndInsetMeters");
+                    TryDrawProp("flagHeightOffset");
+                    TryDrawProp("snapSidesToTerrainIndividually");
+                    TryDrawProp("faceInwards");
+                    TryDrawProp("faceDownhill");
+
+                    var pAvoid = serializedObject.FindProperty("avoidOtherRunsWhenPlacingFlags");
+                    if (pAvoid != null)
+                    {
+                        EditorGUILayout.PropertyField(pAvoid, new GUIContent(
+                            "Avoid other runs (auto placement)",
+                            "When enabled, auto-placed flags will try to avoid other run corridors. Manual flags are always respected."));
+
+                        if (pAvoid.boolValue)
+                        {
+                            EditorGUI.indentLevel++;
+                            TryDrawProp("avoidRunClearanceMeters");
+                            TryDrawProp("avoidRunVerticalToleranceMeters");
+                            TryDrawProp("avoidRunMaxExtraSearchMeters");
+                            TryDrawProp("avoidRunUseBroadphaseBounds");
+                            EditorGUI.indentLevel--;
+                        }
+                    }
+
+                    _showGateHandles = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Show gate handles (scene)", "Shows width handles when gate editing is enabled."),
+                        _showGateHandles);
+
+                    _gateEditAffectsNeighbors = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Edits affect neighbors", "Applies width changes to nearby pairs as well."),
+                        _gateEditAffectsNeighbors);
+
+                    if (_gateEditAffectsNeighbors)
+                    {
+                        _gateNeighborPairs = EditorGUILayout.IntSlider(
+                            new GUIContent("Neighbor Pairs", "Max number of pairs on each side to affect."),
+                            _gateNeighborPairs, 0, 8);
+
+                        _gateNeighborRadiusMeters = EditorGUILayout.Slider(
+                            new GUIContent("Neighbor Radius (m)", "Applies width changes within this distance window."),
+                            _gateNeighborRadiusMeters, 1f, 150f);
+                    }
+
+                    _gateAddSlackMeters = EditorGUILayout.Slider(
+                        new GUIContent("Add slack (m)", "Extra slack applied when widening gates to reduce snapping."),
+                        _gateAddSlackMeters, 0f, 10f);
+
+                    EditorGUI.indentLevel--;
+                }
+            }
+        }
+
+        private void DrawBoundariesSection()
+        {
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Boundaries", EditorStyles.boldLabel);
+
+                TryDrawProp("terrainAwareBoundaries");
+                TryDrawProp("boundaryMaxSlopeDeg");
+                TryDrawProp("boundaryMaxHeightDelta");
+
+                showBoundaryPreview = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Show corridor preview (scene)", "Draws the left/right corridor boundary lines."),
+                    showBoundaryPreview);
+
+                _foldBoundariesAdvanced = EditorGUILayout.Foldout(_foldBoundariesAdvanced, "Advanced", true);
+                if (_foldBoundariesAdvanced)
+                {
+                    EditorGUI.indentLevel++;
+                    TryDrawProp("boundarySearchStepMeters");
+                    TryDrawProp("boundaryPreferFurthestValid");
+                    EditorGUI.indentLevel--;
+                }
+            }
+        }
+
+        private void DrawIntersectionsSection()
+        {
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Intersections & Overlaps", EditorStyles.boldLabel);
+
+                showIntersectionOverlay = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Show intersection overlay (scene)", "Draws entry/exit and overlap diagnostics for intersections."),
+                    showIntersectionOverlay);
+
+                _showIntersectedRunCorridor = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Show intersected run corridors (scene)", "When intersections are shown, also draws nearby run corridors."),
+                    _showIntersectedRunCorridor);
+
+                _foldIntersectionsAdvanced = EditorGUILayout.Foldout(_foldIntersectionsAdvanced, "Advanced", true);
+                if (_foldIntersectionsAdvanced)
+                {
+                    EditorGUI.indentLevel++;
+                    _intersectedRunPreviewRadiusMeters = EditorGUILayout.Slider(
+                        new GUIContent("Preview Radius (m)", "Radius around the camera/selection used to gather intersected runs for preview."),
+                        _intersectedRunPreviewRadiusMeters, 10f, 250f);
+                    EditorGUI.indentLevel--;
+                }
+            }
+        }
+
+        private void DrawFencesSection(SkiRunLine run)
+        {
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Fences", EditorStyles.boldLabel);
+
+                var leftEdgeProp = serializedObject.FindProperty("fenceUseLeftEdge");
+                var rightEdgeProp = serializedObject.FindProperty("fenceUseRightEdge");
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.LabelField("Fence Sides", GUILayout.Width(90));
+                    if (leftEdgeProp != null) leftEdgeProp.boolValue = GUILayout.Toggle(leftEdgeProp.boolValue, "Left Edge", "Button");
+                    if (rightEdgeProp != null) rightEdgeProp.boolValue = GUILayout.Toggle(rightEdgeProp.boolValue, "Right Edge", "Button");
+                }
+
+                TryDrawProp("fenceSegmentPrefab");
+                TryDrawProp("fenceCornerPostPrefab");
+                TryDrawProp("fencePointSpacingMeters");
+
+                bool newFenceEdit = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Enable fence hole editing (scene)", "Shift+Click adds a hole. Click to select. Drag endpoints. Delete removes selected."),
+                    fenceHoleEditMode);
+
+                if (newFenceEdit != fenceHoleEditMode)
+                {
+                    fenceHoleEditMode = newFenceEdit;
+                    if (fenceHoleEditMode && _authoringMode != AuthoringMode.Fences)
+                        SetAuthoringMode(AuthoringMode.Fences, run);
+                    else
+                        SaveEditorPrefs();
+                }
+
+                fenceAddSide = (SkiRunLine.FenceSide)EditorGUILayout.EnumPopup(
+                    new GUIContent("New Hole Side", "Which fence side the next hole will be created on."),
+                    fenceAddSide);
+
+                fenceAddHoleLengthMeters = EditorGUILayout.Slider(
+                    new GUIContent("New Hole Length (m)", "Default length for newly-added holes."),
+                    fenceAddHoleLengthMeters, 1f, 80f);
+
+                _foldFencesAdvanced = EditorGUILayout.Foldout(_foldFencesAdvanced, "Advanced", true);
+                if (_foldFencesAdvanced)
+                {
+                    EditorGUI.indentLevel++;
+
+                    TryDrawProp("fenceUseSmoothSampling");
+                    TryDrawProp("fenceSmoothSamplesPerMeter");
+                    TryDrawProp("fenceSmoothMinSamplesPerSpan");
+
+                    TryDrawProp("fenceAutoExcludeAroundGates");
+                    TryDrawProp("fenceGateExclusionRadiusMeters");
+                    TryDrawProp("fenceExclusionPaddingMeters");
+                    TryDrawProp("fenceConformTerrainMask");
+
+                    TryDrawProp("fenceBoundarySmoothPasses");
+                    TryDrawProp("fenceBoundarySmoothStrength");
+
+                    var holesProp = serializedObject.FindProperty("fenceExcludeHoles");
+                    _foldFenceHolesList = EditorGUILayout.Foldout(_foldFenceHolesList, "Holes List (debug/management)", true);
+                    if (_foldFenceHolesList && holesProp != null)
+                        EditorGUILayout.PropertyField(holesProp, true);
+
+                    EditorGUI.indentLevel--;
+                }
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Clear Holes"))
+                    {
+                        Undo.RecordObject(target, "Clear Fence Holes");
+                        var holesProp = serializedObject.FindProperty("fenceExcludeHoles");
+                        if (holesProp != null)
+                        {
+                            holesProp.ClearArray();
+                            serializedObject.ApplyModifiedProperties();
+                        }
+                        EditorUtility.SetDirty(target);
+                        SceneView.RepaintAll();
+                    }
+
+                    if (GUILayout.Button("Clear Generated"))
+                    {
+                        Undo.RecordObject(target, "Clear Generated Fences");
+                        run.ClearGeneratedFences();
+                        EditorUtility.SetDirty(target);
+                        SceneView.RepaintAll();
+                    }
+                }
+            }
+        }
+
+        private void DrawUtilitiesSection(SkiRunLine run)
+        {
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                EditorGUILayout.LabelField("Utilities", EditorStyles.boldLabel);
+
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     if (GUILayout.Button("Bake Metrics"))
@@ -545,268 +915,37 @@ namespace SkiGame.RunsEditor
                     }
                 }
 
-                EditorGUILayout.HelpBox($"Active edit mode: {GetWorkflowModeLabel()}", MessageType.None);
-            }
-        }
-
-        private void DrawRunTab(SkiRunLine run)
-        {
-            using (new EditorGUILayout.VerticalScope("box"))
-            {
-                // Always-available basics (these are not “mode specific”; they define the run itself)
-                EditorGUILayout.LabelField("Run Settings", EditorStyles.boldLabel);
-
-                DrawPropertySection("Identity",
-                    "runName",
-                    "difficultyProfile",
-                    "overrideDifficulty",
-                    "classifyPerSegment"
-                );
-
-                // Only show override value when override is enabled
-                SerializedProperty pOverrideDifficulty = serializedObject.FindProperty("overrideDifficulty");
-                if (pOverrideDifficulty != null && pOverrideDifficulty.boolValue)
-                {
-                    EditorGUI.indentLevel++;
-                    SerializedProperty pOverrideDifficultyValue = serializedObject.FindProperty("overrideDifficultyValue");
-                    if (pOverrideDifficultyValue != null)
-                        EditorGUILayout.PropertyField(pOverrideDifficultyValue);
-                    EditorGUI.indentLevel--;
-                }
-
-                DrawPropertySection("Geometry",
-                    "runWidthMeters",
-                    "widthOverrideMeters"
-                );
-
-                EditorGUILayout.Space(8);
-
-                // Now: ONLY show the active mode section
-                switch (_workflowMode)
-                {
-                    case 0:
-                        DrawPointsModeSection();
-                        break;
-                    case 1:
-                        DrawGatesModeSection();
-                        break;
-                    case 2:
-                        DrawFencesModeSection(run);
-                        break;
-                }
-            }
-        }
-
-        private void DrawPointsModeSection()
-        {
-            using (new EditorGUILayout.VerticalScope("box"))
-            {
-                EditorGUILayout.LabelField("Point Editing", EditorStyles.boldLabel);
-
-                enableShiftClickInsert = EditorGUILayout.ToggleLeft(
-                    new GUIContent("Shift+Click: Insert point", "Inserts a new point on the closest segment to the cursor."),
-                    enableShiftClickInsert);
-
-                enableAltClickDelete = EditorGUILayout.ToggleLeft(
-                    new GUIContent("Alt+Click: Delete selected point", "Deletes the currently selected point."),
-                    enableAltClickDelete);
-
-                editNeighborPoints = EditorGUILayout.ToggleLeft(
-                    new GUIContent("Edit neighbor points", "Shows small neighbor handles to smooth edits."),
-                    editNeighborPoints);
-
-                autoSnapToTerrainWhenEditing = EditorGUILayout.ToggleLeft(
-                    new GUIContent("Auto-snap moved points to terrain", "When moving points, snap them down to terrain height."),
-                    autoSnapToTerrainWhenEditing);
-
-                EditorGUILayout.HelpBox(
-                    "Points mode:\n" +
-                    "• Click point to select, drag to move.\n" +
-                    "• Shift+Click inserts (optional).\n" +
-                    "• Alt+Click deletes selected (optional).",
-                    MessageType.Info);
-            }
-        }
-
-        private void DrawGatesModeSection()
-        {
-            using (new EditorGUILayout.VerticalScope("box"))
-            {
-                EditorGUILayout.LabelField("Flags & Gates", EditorStyles.boldLabel);
-
-                // Flag placement fields
-                SerializedProperty pFlagPrefab = serializedObject.FindProperty("flagPrefab");
-                if (pFlagPrefab != null) EditorGUILayout.PropertyField(pFlagPrefab);
-
-                SerializedProperty pFlagSpacing = serializedObject.FindProperty("flagSpacingMeters");
-                if (pFlagSpacing != null) EditorGUILayout.PropertyField(pFlagSpacing);
-
-                SerializedProperty pAvoid = serializedObject.FindProperty("avoidOtherRunsWhenPlacingFlags");
-                if (pAvoid != null)
-                {
-                    EditorGUILayout.PropertyField(pAvoid, new GUIContent(
-                        "Avoid Other Runs (auto placement)",
-                        "When enabled, auto-placed flags will try to avoid running through other run corridors. Manual flags are always respected."));
-                }
-
-                if (pAvoid != null && pAvoid.boolValue)
+                _foldUtilitiesAdvanced = EditorGUILayout.Foldout(_foldUtilitiesAdvanced, "Advanced", true);
+                if (_foldUtilitiesAdvanced)
                 {
                     EditorGUI.indentLevel++;
 
-                    TryDrawProp("avoidRunClearanceMeters");
-                    TryDrawProp("avoidRunVerticalToleranceMeters");
-                    TryDrawProp("avoidRunMaxExtraSearchMeters");
-                    TryDrawProp("avoidRunUseBroadphaseBounds");
+                    resampleSpacingMeters = EditorGUILayout.Slider(
+                        new GUIContent("Resample Spacing (m)", "Resamples the current polyline to evenly spaced points."),
+                        resampleSpacingMeters, 1f, 50f);
 
-                    EditorGUI.indentLevel--;
-                }
-
-                EditorGUILayout.Space(6);
-
-                // Gate edit controls (mode-specific; no need to hunt in “scene”)
-                using (new EditorGUILayout.VerticalScope("box"))
-                {
-                    EditorGUILayout.LabelField("Gate Editing", EditorStyles.boldLabel);
-
-                    _showGateHandles = EditorGUILayout.ToggleLeft(
-                        new GUIContent("Enable Gate Handles", "Shows editable gate-width handles in the scene."),
-                        _showGateHandles);
-
-                    _gateEditAffectsNeighbors = EditorGUILayout.ToggleLeft(
-                        new GUIContent("Width edits affect neighbors", "Applies your width edit to nearby pairs too."),
-                        _gateEditAffectsNeighbors);
-
-                    if (_gateEditAffectsNeighbors)
+                    using (new EditorGUILayout.HorizontalScope())
                     {
-                        _gateNeighborRadiusMeters = EditorGUILayout.Slider(
-                            new GUIContent("Neighbor Radius (m)", "Applies width change to nearby pairs within this distance window."),
-                            _gateNeighborRadiusMeters, 1f, 150f);
-                    }
-                }
-
-                EditorGUILayout.HelpBox(
-                    "Gates mode:\n" +
-                    "• Click a gate pair to select.\n" +
-                    "• Drag width handles (if enabled).\n" +
-                    "• Optional neighbor edits spread changes across nearby pairs.",
-                    MessageType.Info);
-            }
-        }
-
-        private void DrawFencesModeSection(SkiRunLine run)
-        {
-            using (new EditorGUILayout.VerticalScope("box"))
-            {
-                EditorGUILayout.LabelField("Fences", EditorStyles.boldLabel);
-
-                var holesProp = serializedObject.FindProperty("fenceExcludeHoles");
-
-                // Side toggles (each side == full-length span)
-                var leftEdgeProp = serializedObject.FindProperty("fenceUseLeftEdge");
-                var rightEdgeProp = serializedObject.FindProperty("fenceUseRightEdge");
-
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    EditorGUILayout.LabelField("Fence Sides", GUILayout.Width(90));
-                    if (leftEdgeProp != null) leftEdgeProp.boolValue = GUILayout.Toggle(leftEdgeProp.boolValue, "Left Edge", "Button");
-                    if (rightEdgeProp != null) rightEdgeProp.boolValue = GUILayout.Toggle(rightEdgeProp.boolValue, "Right Edge", "Button");
-                }
-
-                EditorGUILayout.Space(4);
-
-                // Core settings
-                TryDrawProp("fenceSegmentPrefab");
-                TryDrawProp("fenceCornerPostPrefab");
-                TryDrawProp("fencePointSpacingMeters");
-
-                EditorGUILayout.Space(2);
-
-                // Sampling/smoothing
-                TryDrawProp("fenceUseSmoothSampling");
-                TryDrawProp("fenceSmoothSamplesPerMeter");
-                TryDrawProp("fenceSmoothMinSamplesPerSpan");
-
-                EditorGUILayout.Space(2);
-
-                // Cohesion with flags
-                TryDrawProp("fenceAutoExcludeAroundGates");
-                TryDrawProp("fenceGateExclusionRadiusMeters");
-                TryDrawProp("fenceExclusionPaddingMeters");
-                TryDrawProp("fenceConformTerrainMask");
-
-                EditorGUILayout.Space(2);
-
-                // Post smoothing (polyline)
-                TryDrawProp("fenceBoundarySmoothPasses");
-                TryDrawProp("fenceBoundarySmoothStrength");
-
-                EditorGUILayout.Space(6);
-
-                // Hole authoring settings (mode-specific)
-                fenceAddSide = (SkiRunLine.FenceSide)EditorGUILayout.EnumPopup("Hole Side", fenceAddSide);
-                fenceAddHoleLengthMeters = EditorGUILayout.Slider("New Hole Length (m)", fenceAddHoleLengthMeters, 1f, 80f);
-
-                EditorGUILayout.HelpBox(
-                    "Fences mode:\n" +
-                    "• Each enabled corridor edge generates a fence.\n" +
-                    "• Shift+Click adds a HOLE (gap) on the chosen side.\n" +
-                    "• Click a hole to select; drag endpoints to resize.\n" +
-                    "• Delete/Backspace removes selected hole.\n" +
-                    "• Optional gate exclusions carve around gates automatically.",
-                    MessageType.Info);
-
-                _foldFenceHolesList = EditorGUILayout.Foldout(_foldFenceHolesList, "Holes List (debug/management)", true);
-                if (_foldFenceHolesList && holesProp != null)
-                    EditorGUILayout.PropertyField(holesProp, true);
-
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    if (GUILayout.Button("Clear Holes"))
-                    {
-                        Undo.RecordObject(target, "Clear Fence Holes");
-                        if (holesProp != null)
+                        if (GUILayout.Button("Resample Points"))
                         {
-                            holesProp.ClearArray();
-                            serializedObject.ApplyModifiedProperties();
+                            Undo.RecordObject(run, "Resample Run Points");
+                            run.ResamplePointsWorld(resampleSpacingMeters);
+                            EditorUtility.SetDirty(run);
+                            SceneView.RepaintAll();
                         }
-                        EditorUtility.SetDirty(target);
-                        SceneView.RepaintAll();
+
+                        if (GUILayout.Button("Clear Width Overrides"))
+                        {
+                            Undo.RecordObject(run, "Clear Width Overrides");
+                            run.ClearWidthOverrides();
+                            EditorUtility.SetDirty(run);
+                            SceneView.RepaintAll();
+                        }
                     }
 
-                    if (GUILayout.Button("Clear Generated"))
-                    {
-                        Undo.RecordObject(target, "Clear Generated Fences");
-                        run.ClearGeneratedFences();
-                        EditorUtility.SetDirty(target);
-                        SceneView.RepaintAll();
-                    }
+                    EditorGUI.indentLevel--;
                 }
             }
-        }
-
-        private void DrawAdvancedTab()
-        {
-            using (new EditorGUILayout.VerticalScope("box"))
-            {
-                EditorGUILayout.LabelField("Advanced", EditorStyles.boldLabel);
-                foldAdvanced = EditorGUILayout.Foldout(foldAdvanced, "Raw Inspector (all fields)", true);
-                if (foldAdvanced)
-                {
-                    EditorGUILayout.Space(4);
-                    DrawDefaultInspector();
-                }
-            }
-        }
-
-        private void DrawPropertySection(string title, params string[] propertyNames)
-        {
-            EditorGUILayout.Space(4);
-            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
-
-            EditorGUI.indentLevel++;
-            for (int i = 0; i < propertyNames.Length; i++)
-                TryDrawProp(propertyNames[i]);
-            EditorGUI.indentLevel--;
         }
 
         private bool TryDrawProp(string propertyName)
@@ -837,9 +976,7 @@ namespace SkiGame.RunsEditor
             // Hotkeys + overlay (runs even if we early-return later)
             HandleSceneHotkeys(run);
 
-            if (showHotkeyOverlay)
-                DrawHotkeyOverlay(run);
-
+           
             // Escape clears BOTH point + gate selections
             if (e != null && e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape)
             {
@@ -1240,25 +1377,19 @@ namespace SkiGame.RunsEditor
                     int insertAfter = FindClosestSegmentIndex(pointsProp, hitPos);
                     if (insertAfter >= 0)
                     {
+                        // Unify insertion behaviour with the painter window:
+                        // insert on the closest segment, including start/end when clicking beyond.
                         Undo.RecordObject(run, "Insert Run Point");
+                        int insertedIndex = run.InsertPointWorldSmart(hitPos);
+                        selectedPointIndex = insertedIndex;
 
-                        int insertIndex = insertAfter + 1;
-
-                        pointsProp.InsertArrayElementAtIndex(insertIndex);
-                        pointsProp.GetArrayElementAtIndex(insertIndex).vector3Value = hitPos;
-
-                        widthsProp.InsertArrayElementAtIndex(insertIndex);
-                        widthsProp.GetArrayElementAtIndex(insertIndex).floatValue = -1f;
-
-                        // Prefer selecting the inserted point
-                        selectedPointIndex = insertIndex;
-
+                        // Sync serialized view.
+                        so.Update();
                         so.ApplyModifiedProperties();
-                        _previewDirty = true;
 
+                        _previewDirty = true;
                         EditorUtility.SetDirty(run);
                         SceneView.RepaintAll();
-
                         e.Use();
                     }
                 }
@@ -2666,6 +2797,11 @@ namespace SkiGame.RunsEditor
             {
                 switch (e.keyCode)
                 {
+                    case KeyCode.Tab:
+                        CycleAuthoringMode(run);
+                        consumed = true;
+                        break;
+
                     // Cohesive authoring modes
                     case KeyCode.Alpha1:
                         SetAuthoringMode(AuthoringMode.Path, run);
@@ -2781,6 +2917,12 @@ namespace SkiGame.RunsEditor
                 SceneView.RepaintAll();
                 Repaint();
             }
+        }
+
+        private void CycleAuthoringMode(SkiRunLine run)
+        {
+            int next = ((int)_authoringMode + 1) % 3;
+            SetAuthoringMode((AuthoringMode)next, run);
         }
 
         private void DrawFenceBoundaryPreviewForFenceMode(SkiRunLine run)
@@ -3065,7 +3207,117 @@ namespace SkiGame.RunsEditor
             Handles.EndGUI();
         }
 
-        private void LoadEditorPrefs()
+        private static SkiRunLineEditor _activeEditorInstance;
+
+        // ------------------------------------------------------------
+        // Overlay Bridge (single source of truth = active editor instance)
+        // ------------------------------------------------------------
+
+        private static SkiRunLineEditor _active;
+
+        internal static bool OverlayHasActiveRun()
+        {
+            if (_active == null) return false;
+            return _active.target is SkiRunLine;
+        }
+
+        internal static int OverlayGetMode() => _active != null ? (int)_active._authoringMode : 0;
+
+        internal static void OverlaySetMode(int mode)
+        {
+            if (_active == null) return;
+            var run = _active.target as SkiRunLine;
+            if (run == null) return;
+
+            _active.SetAuthoringMode((AuthoringMode)Mathf.Clamp(mode, 0, 2), run);
+            _active.Repaint();
+        }
+
+        private void OverlaySetBool(ref bool field, bool value, bool affectsPreview)
+        {
+            field = value;
+            if (affectsPreview) _previewDirty = true;
+
+            SaveEditorPrefs();
+            Repaint();
+            SceneView.RepaintAll();
+        }
+
+        // ---- Overlay getters ----
+        internal static bool OverlayGetShowBoundaryPreview() => _active != null && _active.showBoundaryPreview;
+        internal static bool OverlayGetShowPairPreview() => _active != null && _active.showPairPreview;
+        internal static bool OverlayGetShowIntersectionOverlay() => _active != null && _active.showIntersectionOverlay;
+
+        internal static bool OverlayGetShowPointGizmos() => _active != null && _active.showPointGizmos;
+
+        internal static bool OverlayGetGateEditMode() => _active != null && _active.gateEditMode;
+        internal static bool OverlayGetFenceHoleEditMode() => _active != null && _active.fenceHoleEditMode;
+
+        // ---- Overlay setters ----
+        internal static void OverlaySetShowBoundaryPreview(bool value)
+        {
+            if (_active == null) return;
+            _active.OverlaySetBool(ref _active.showBoundaryPreview, value, affectsPreview: true);
+        }
+
+        internal static void OverlaySetShowPairPreview(bool value)
+        {
+            if (_active == null) return;
+            _active.OverlaySetBool(ref _active.showPairPreview, value, affectsPreview: true);
+        }
+
+        internal static void OverlaySetShowIntersectionOverlay(bool value)
+        {
+            if (_active == null) return;
+            _active.OverlaySetBool(ref _active.showIntersectionOverlay, value, affectsPreview: true);
+        }
+
+        internal static void OverlaySetShowPointGizmos(bool value)
+        {
+            if (_active == null) return;
+            _active.OverlaySetBool(ref _active.showPointGizmos, value, affectsPreview: false);
+        }
+
+        internal static void OverlaySetGateEditMode(bool value)
+        {
+            if (_active == null) return;
+            _active.OverlaySetBool(ref _active.gateEditMode, value, affectsPreview: false);
+        }
+
+        internal static void OverlaySetFenceHoleEditMode(bool value)
+        {
+            if (_active == null) return;
+            _active.OverlaySetBool(ref _active.fenceHoleEditMode, value, affectsPreview: false);
+        }
+
+        private void OnFocus()
+        {
+            _activeEditorInstance = this;
+        }
+
+        private void OnDestroy()
+        {
+            if (_activeEditorInstance == this)
+                _activeEditorInstance = null;
+        }
+
+        // Called by overlay
+
+        internal static void OverlayToggle(ref bool field, bool value, bool affectsPreview = false)
+        {
+            if (_activeEditorInstance == null) return;
+
+            field = value;
+
+            if (affectsPreview)
+                _activeEditorInstance._previewDirty = true;
+
+            _activeEditorInstance.SaveEditorPrefs();
+            SceneView.RepaintAll();
+            _activeEditorInstance.Repaint();
+        }
+        
+        internal void LoadEditorPrefs()
         {
             showBoundaryPreview = EditorPrefs.GetBool(PrefKey + "showBoundaryPreview", showBoundaryPreview);
             showPairPreview = EditorPrefs.GetBool(PrefKey + "showPairPreview", showPairPreview);
@@ -3091,7 +3343,7 @@ namespace SkiGame.RunsEditor
 
         }
 
-        private void SaveEditorPrefs()
+        internal void SaveEditorPrefs()
         {
             EditorPrefs.SetBool(PrefKey + "showBoundaryPreview", showBoundaryPreview);
             EditorPrefs.SetBool(PrefKey + "showPairPreview", showPairPreview);

@@ -1779,5 +1779,29 @@ namespace SkiGame.Progression
             return true;
         }
 
+        public static void ClearAllPersistentDataForSlot(int slotId)
+        {
+            // If your run history is in PlayerPrefs
+            // (adjust keys to match your implementation)
+            PlayerPrefs.DeleteKey($"RunHistory_{slotId}");
+            PlayerPrefs.DeleteKey($"RunCalendar_{slotId}");
+
+            // If you write JSON files, delete them here too.
+            // You MUST replace these with your real paths used by RunProgressTracker.
+            try
+            {
+                var dir = Application.persistentDataPath;
+                var pathA = System.IO.Path.Combine(dir, $"run_history_slot_{slotId}.json");
+                var pathB = System.IO.Path.Combine(dir, $"run_calendar_slot_{slotId}.json");
+
+                if (System.IO.File.Exists(pathA)) System.IO.File.Delete(pathA);
+                if (System.IO.File.Exists(pathB)) System.IO.File.Delete(pathB);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[RunProgressTracker] Failed clearing slot {slotId} run data: {e.Message}");
+            }
+        }
+
     }
 }

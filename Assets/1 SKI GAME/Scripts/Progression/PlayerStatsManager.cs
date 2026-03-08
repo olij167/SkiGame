@@ -33,9 +33,13 @@ namespace SkiGame.Progression
         {
             get
             {
+                // If you set a custom path in inspector, it still wins for debugging.
                 if (!string.IsNullOrEmpty(customPath))
                     return customPath;
-                return PlayerStatsStorage.GetDefaultPath();
+
+                // Slot-based structured path
+                int slot = GameSaveSystem.ActiveSlotId;
+                return GameSaveSystem.GetProfilePath(slot);
             }
         }
 
@@ -62,6 +66,8 @@ namespace SkiGame.Progression
         {
             Profile = PlayerStatsStorage.LoadOrCreate(ActivePath);
             OnProfileLoaded?.Invoke(Profile);
+            GameSaveSystem.MarkSlotPlayed(GameSaveSystem.ActiveSlotId);
+
         }
 
         public void Save()

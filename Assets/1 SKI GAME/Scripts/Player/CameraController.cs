@@ -91,6 +91,23 @@ public class CameraController : MonoBehaviour
     private PhoneHUDController _phoneHUD;
     private float _lastManualLookTime;
 
+
+    [Header("Settings")]
+    [SerializeField] private bool applyFovFromSettings = true;
+
+    private Camera _cam;
+    private float _baseFov;
+
+    // --- Settings integration ---
+    private float _baseSensitivityX;
+    private float _baseSensitivityY;
+    private float _baseSmoothTime;
+    private float _baseMaxOrbitDps;
+    private float _baseAutoFollowYawSpeed;
+    private float _basePhoneLockYawSpeed;
+
+    private bool _settingsHooked;
+
     /// <summary>
     /// Allows other scripts to set the camera target at runtime.
     /// </summary>
@@ -106,15 +123,18 @@ public class CameraController : MonoBehaviour
         if (lookAction != null && lookAction.action != null)
             lookAction.action.Enable();
 
-        if (shopOrbitPressAction != null)
+        if (shopOrbitPressAction != null && shopOrbitPressAction.action != null)
         {
             shopOrbitPressAction.action.Enable();
-            shopOrbitPressAction.action.performed += _ => _shopOrbitHeld = true;
-            shopOrbitPressAction.action.canceled += _ => _shopOrbitHeld = false;
+            shopOrbitPressAction.action.performed += OnShopOrbitPressPerformed;
+            shopOrbitPressAction.action.canceled += OnShopOrbitPressCanceled;
         }
 
         if (shopOrbitDeltaAction != null)
             shopOrbitDeltaAction.action.Enable();
+
+        HookSettingsIfNeeded();
+
     }
 
     private void OnDisable()
@@ -122,11 +142,14 @@ public class CameraController : MonoBehaviour
         if (lookAction != null && lookAction.action != null)
             lookAction.action.Disable();
 
-        if (shopOrbitPressAction != null)
+        if (shopOrbitPressAction != null && shopOrbitPressAction.action != null)
         {
-            shopOrbitPressAction.action.performed -= _ => _shopOrbitHeld = true;
-            shopOrbitPressAction.action.canceled -= _ => _shopOrbitHeld = false;
+            shopOrbitPressAction.action.performed -= OnShopOrbitPressPerformed;
+            shopOrbitPressAction.action.canceled -= OnShopOrbitPressCanceled;
         }
+
+        UnhookSettings();
+
     }
 
     private void Start()
@@ -146,6 +169,11 @@ public class CameraController : MonoBehaviour
 
         // Optional: phone HUD may live elsewhere in the scene.
         _phoneHUD = FindObjectOfType<PhoneHUDController>();
+
+        _cam = GetComponent<Camera>();
+        if (_cam != null)
+            _baseFov = _cam.fieldOfView;
+
     }
 
     private float GetAutoFollowYaw()
@@ -355,5 +383,69 @@ public class CameraController : MonoBehaviour
         transform.position = target + offset;
         transform.LookAt(target);
     }
+
+    private void OnShopOrbitPressPerformed(InputAction.CallbackContext ctx) => _shopOrbitHeld = true;
+    private void OnShopOrbitPressCanceled(InputAction.CallbackContext ctx) => _shopOrbitHeld = false;
+
+    private void HookSettingsIfNeeded()
+    {
+        if (_settingsHooked) return;
+        _settingsHooked = true;
+
+        // Cache "designer defaults" from inspector so settings act as multipliers.
+        _baseSensitivityX = sensitivityX;
+        _baseSensitivityY = sensitivityY;
+        _baseSmoothTime = smoothTime;
+        _baseMaxOrbitDps = maxOrbitDegreesPerSecond;
+        _baseAutoFollowYawSpeed = autoFollowYawSpeed;
+        _basePhoneLockYawSpeed = phoneLockYawSpeed;
+
+        GameSettingsService.EnsureLoaded();
+        GameSettingsService.OnChanged += ApplySettings;
+        ApplySettings(GameSettingsService.Current);
+    }
+
+    private void UnhookSettings()
+    {
+        if (!_settingsHooked) return;
+        _settingsHooked = false;
+        GameSettingsService.OnChanged -= ApplySettings;
+    }
+
+    private void ApplySettings(GameSettingsProfile s)
+    {
+        if (s == null) return;
+
+        // Controls
+        float sensMul = Mathf.Clamp(s.lookSensitivity, 0.25f, 3f);
+        sensitivityX = _baseSensitivityX * sensMul;
+
+        // Your pitch input is dpitch = -look.y * sensitivityY, so inverting Y is done by flipping sensitivityY sign.
+        float ySign = s.invertLookY ? -1f : 1f;
+        sensitivityY = _baseSensitivityY * sensMul * ySign;
+
+        // Reduce motion: conservative damping knobs that won’t break behaviour.
+        if (s.reduceMotion)
+        {
+            smoothTime = Mathf.Max(_baseSmoothTime, _baseSmoothTime * 1.35f);
+            maxOrbitDegreesPerSecond = _baseMaxOrbitDps * 0.75f;
+            autoFollowYawSpeed = _baseAutoFollowYawSpeed * 0.65f;
+            phoneLockYawSpeed = _basePhoneLockYawSpeed * 0.85f;
+        }
+        else
+        {
+            smoothTime = _baseSmoothTime;
+            maxOrbitDegreesPerSecond = _baseMaxOrbitDps;
+            autoFollowYawSpeed = _baseAutoFollowYawSpeed;
+            phoneLockYawSpeed = _basePhoneLockYawSpeed;
+        }
+
+        if (applyFovFromSettings && _cam != null)
+        {
+            _cam.fieldOfView = Mathf.Clamp(s.cameraFov, 60f, 110f);
+        }
+
+    }
+
 
 }

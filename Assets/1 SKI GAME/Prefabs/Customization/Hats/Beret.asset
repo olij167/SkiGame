@@ -16,9 +16,22 @@ MonoBehaviour:
   type: 2
   displayName: Beret
   description: 
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 1c6526cebbe62e14c8a2fbeb8740ed7d, type: 3}
   cost: 5
+  skinPatternTexture: {fileID: 0}
+  eyeSprite: {fileID: 0}
+  hatPrefab: {fileID: 6559161750433092136, guid: be38a543befcc7340a9d4c2a68100841, type: 3}
+  jacketPrefab: {fileID: 0}
   customizerIndex: 0
   gearProfile: {fileID: 0}
+  defaultPatternOption: {fileID: 0}
+  defaultPatternId: 
+  unlockPatternOptionsOnPurchase: []
+  unlockPatternIdsOnPurchase: []
+  defaultPatternTiling: {x: 1, y: 1}
+  defaultPatternOffset: {x: 0, y: 0}
+  defaultPatternRotation: 0
+  hasTint: 1
+  defaultTint: {r: 0.6980392, g: 0.1333333, b: 0.1333333, a: 1}
   alwaysInStoreUntilOwned: 0
   excludeFromDailyRotation: 0

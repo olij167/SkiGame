@@ -4712,3 +4712,203 @@ position: relative;
     max-width: 90%;
     white-space: normal;
 }
+
+/* ---------- SETTINGS PAGE (matches existing PhoneHUD page styling) ---------- */
+
+#Page_Settings .settings-section {
+    margin-top: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    border-top-width: 1px;
+    border-top-color: rgba(255,255,255,0.10);
+}
+
+#Page_Settings .settings-h2 {
+    font-size: 14px;                 /* aligns with .page-h2 */
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.80);
+    margin-top: 0px;
+    margin-bottom: 6px;
+}
+
+#Page_Settings .settings-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 6px;
+}
+
+/* Labels / values: enforce readable white */
+#Page_Settings .settings-label {
+    width: 42%;
+    font-size: 11px;
+    color: rgba(255,255,255,0.85);
+}
+
+#Page_Settings .settings-value {
+    width: 14%;
+    text-align: right;
+    font-size: 11px;
+    color: rgba(255,255,255,0.80);
+}
+
+#Page_Settings .settings-note {
+    margin-top: 8px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.55);
+    white-space: normal;
+}
+
+/* Control sizing */
+#Page_Settings .settings-slider {
+    width: 44%;
+    margin-left: 6px;
+    margin-right: 6px;
+}
+
+#Page_Settings .settings-toggle {
+    width: 44%;
+    margin-left: 6px;
+}
+
+#Page_Settings .settings-dropdown {
+    width: 44%;
+    margin-left: 6px;
+}
+
+/* Buttons */
+#Page_Settings .settings-buttonrow {
+    margin-top: 14px;
+    flex-direction: row;
+    justify-content: flex-end;
+}
+
+#Page_Settings .settings-btn {
+    height: 28px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.90);
+}
+
+#Page_Settings .settings-btn:hover {
+    background-color: rgba(255,255,255,0.12);
+}
+
+/* --- UI Toolkit internals (Slider / Toggle / Dropdown visuals) --- */
+
+/* Slider */
+#Page_Settings .settings-slider .unity-base-slider__tracker {
+    background-color: rgba(255,255,255,0.10);
+    height: 6px;
+    border-radius: 999px;
+}
+
+#Page_Settings .settings-slider .unity-base-slider__dragger {
+    background-color: rgba(255,255,255,0.80);
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+}
+
+/* Toggle */
+#Page_Settings .settings-toggle .unity-toggle__text {
+    color: rgba(255,255,255,0.85);
+}
+
+#Page_Settings .settings-toggle .unity-toggle__input {
+    background-color: rgba(255,255,255,0.08);
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+}
+
+/* DropdownField */
+#Page_Settings .settings-dropdown .unity-base-field__label {
+    color: rgba(255,255,255,0.85);
+}
+
+#Page_Settings .settings-dropdown .unity-base-field__input {
+    background-color: rgba(255,255,255,0.08);
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.90);
+}
+
+#Page_Settings .settings-dropdown .unity-popup-field__text {
+    color: rgba(255,255,255,0.90);
+}
+
+#Page_Settings .settings-dropdown .unity-popup-field__arrow {
+    -unity-background-image-tint-color: rgba(255,255,255,0.85);
+}
+
+.controls-rebind-list {
+    flex-direction: column;
+    margin-top: 8px;
+}
+
+.controls-rebind-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    margin-bottom: 6px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+}
+
+.controls-rebind-action {
+    unity-font-style: bold;
+    font-size: 12px;
+    color: #FFFFFF;
+    width: 38%;
+}
+
+.controls-rebind-binding {
+    font-size: 12px;
+    color: rgba(255,255,255,0.75);
+    width: 42%;
+    unity-text-align: middle-left;
+}
+
+.controls-rebind-btn {
+    width: 20%;
+}
+
+    /* Controls status banner */
+.controls-status {
+    margin-top: 6px;
+    margin-bottom: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.85);
+    font-size: 12px;
+}
+
+.controls-status.is-listening {
+    background-color: rgba(255, 214, 0, 0.10);
+    color: rgba(255, 214, 0, 0.95);
+}
+
+/* Rebind row emphasis */
+.controls-rebind-row.is-listening {
+    background-color: rgba(255, 214, 0, 0.10);
+    border-left-width: 3px;
+    border-left-color: rgba(255, 214, 0, 0.9);
+}
+
+/* Binding label when waiting */
+.controls-rebind-binding.is-listening {
+    color: rgba(255, 214, 0, 0.95);
+    unity-font-style: bold;
+}

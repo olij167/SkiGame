@@ -1,0 +1,265 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/UI/MainMenu.uss?fileID=7433441132597879392&amp;guid=5eda19afd96ffa44a900c7c338707bda&amp;type=3#MainMenu" />
+    <ui:VisualElement name="Root" class="menu-root">
+        <ui:VisualElement name="Background" class="menu-bg" style="background-color: rgb(173, 216, 230); top: 1px; bottom: 0; right: 0; left: 0;" />
+        <ui:VisualElement name="Frame" class="menu-frame" style="background-color: rgba(135, 206, 235, 0); border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; align-content: flex-start;">
+            <ui:VisualElement style="flex-grow: 0; flex-direction: row; justify-content: space-between; flex-shrink: 0;">
+                <ui:VisualElement name="Header" class="menu-header" style="padding-bottom: 0; flex-direction: row;">
+                    <ui:VisualElement style="flex-grow: 1;">
+                        <ui:Label name="Label_Title" text="SKI TRIP" class="menu-title" style="font-size: 100px; -unity-font-style: bold-and-italic; color: rgb(224, 255, 255); -unity-text-align: upper-center; -unity-text-outline-color: rgb(114, 148, 178); -unity-text-outline-width: 2px;" />
+                        <ui:Label name="Label_BuildInfo" text="v0.0.0" class="menu-footnote" style="justify-content: flex-start; color: rgba(173, 216, 230, 0.55); align-items: auto; align-self: stretch; flex-grow: 1; align-content: auto; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; -unity-text-align: upper-right; -unity-font-style: italic; font-size: 12px; -unity-text-outline-color: rgb(95, 126, 161); -unity-text-outline-width: 1px; display: none;" />
+                    </ui:VisualElement>
+                    <ui:Label name="Label_Subtitle" text="Main Menu" class="menu-subtitle" style="display: none;" />
+                </ui:VisualElement>
+                <ui:VisualElement name="Nav" class="menu-nav" style="background-color: rgba(255, 255, 255, 0); flex-grow: 0; flex-direction: row; min-width: auto; width: auto; flex-shrink: 0; padding-bottom: 5px; padding-top: 5px; padding-right: 5px; padding-left: 5px; justify-content: space-between; align-content: flex-start; align-self: flex-end;">
+                    <ui:Button name="Button_OpenLoad" text="Play" class="btn btn-main" style="flex-grow: 1; flex-shrink: 0; width: 200px; display: flex;" />
+                    <ui:VisualElement class="spacer" style="align-items: stretch; align-self: auto; flex-shrink: 0; justify-content: flex-start;" />
+                    <ui:Button name="Button_OpenSettings" text="Settings" class="btn btn-main" style="flex-grow: 0; flex-shrink: 1; width: auto; margin-right: 8px; margin-left: 8px; -unity-font-style: normal;" />
+                    <ui:Button name="Button_Quit" text="Quit" class="btn btn-danger btn-main" style="flex-grow: 0; flex-shrink: 1; width: auto; margin-left: 8px; margin-right: 8px; -unity-font-style: normal;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="Body" class="menu-body" style="flex-direction: column; flex-grow: 1;">
+                <ui:VisualElement name="Content" class="menu-content" style="background-color: rgba(255, 255, 255, 0); flex-shrink: 0; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; flex-grow: 1; align-self: auto; flex-direction: row; align-items: flex-start; align-content: auto;">
+                    <ui:VisualElement name="Panel_Main" class="panel hidden" style="display: none; border-top-left-radius: 9px; border-top-right-radius: 9px; border-bottom-right-radius: 9px; border-bottom-left-radius: 9px; display: none; background-color: rgba(95, 126, 161, 0.75);">
+                        <ui:Label text="Welcome" class="panel-title" />
+                        <ui:Label name="Label_MainHint" text="Choose an option on the left to begin." class="panel-body" />
+                        <ui:VisualElement class="panel-sep" />
+                        <ui:VisualElement class="panel-inline">
+                            <ui:Label name="Label_ActiveSlot" text="Active Save: —" class="muted" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="Panel_Load" class="panel hidden" style="display: flex; border-top-left-radius: 9px; border-top-right-radius: 9px; border-bottom-right-radius: 9px; border-bottom-left-radius: 9px; background-color: rgba(95, 126, 161, 0); padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; visibility: visible; align-self: stretch; justify-content: space-between;">
+                        <ui:VisualElement name="Load_Slots" class="slot-list" style="align-self: stretch; flex-direction: row; flex-grow: 0; flex-shrink: 1; width: auto; min-width: auto; flex-wrap: wrap; align-items: flex-start;">
+                            <ui:VisualElement name="Load_SlotCard_0" class="slot-card">
+                                <ui:Button name="Load_SelectSlot_0" text="Select" class="btn btn-small" />
+                                <ui:VisualElement class="slot-meta">
+                                    <ui:Label name="Load_SlotName_0" text="Save 1" class="slot-title" />
+                                    <ui:Label name="Load_SlotStatus_0" text="Empty" class="slot-sub muted" />
+                                    <ui:Label name="Load_SlotLastPlayed_0" text="—" class="slot-sub muted" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:VisualElement name="Load_SlotCard_1" class="slot-card">
+                                <ui:Button name="Load_SelectSlot_1" text="Select" class="btn btn-small" />
+                                <ui:VisualElement class="slot-meta">
+                                    <ui:Label name="Load_SlotName_1" text="Save 2" class="slot-title" />
+                                    <ui:Label name="Load_SlotStatus_1" text="Empty" class="slot-sub muted" />
+                                    <ui:Label name="Load_SlotLastPlayed_1" text="—" class="slot-sub muted" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:VisualElement name="Load_SlotCard_2" class="slot-card">
+                                <ui:Button name="Load_SelectSlot_2" text="Select" class="btn btn-small" />
+                                <ui:VisualElement class="slot-meta">
+                                    <ui:Label name="Load_SlotName_2" text="Save 3" class="slot-title" />
+                                    <ui:Label name="Load_SlotStatus_2" text="Empty" class="slot-sub muted" />
+                                    <ui:Label name="Load_SlotLastPlayed_2" text="—" class="slot-sub muted" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="two-col" style="justify-content: flex-start; flex-direction: column; align-self: stretch; display: flex;">
+                            <ui:VisualElement name="Load_Preview" class="preview-card" style="display: flex;">
+                                <ui:Label text="Slot Preview" class="preview-title" />
+                                <ui:VisualElement class="panel-sep" />
+                                <ui:Label name="Load_Preview_Title" text="—" class="preview-big" />
+                                <ui:Label name="Load_Preview_Sub" text="Select a slot." class="muted" />
+                                <ui:VisualElement class="panel-sep" />
+                                <ui:VisualElement class="kv">
+                                    <ui:Label text="Playthrough" class="kv-key" />
+                                    <ui:Label name="Load_Preview_Playthrough" text="—" class="kv-val" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="kv">
+                                    <ui:Label text="Calendar" class="kv-key" />
+                                    <ui:Label name="Load_Preview_Calendar" text="—" class="kv-val" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="kv">
+                                    <ui:Label text="Stats" class="kv-key" />
+                                    <ui:Label name="Load_Preview_Stats" text="—" class="kv-val" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="panel-sep" />
+                                <ui:Label name="Load_WarnText" class="warn-text hidden" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="panel-actions" style="justify-content: center; flex-grow: 0;">
+                            <ui:Button name="Button_ConfirmLoad" text="Load" class="btn btn-primary" style="flex-grow: 1;" />
+                            <ui:Button name="Button_DeleteSlot" text="Delete" class="btn btn-danger" style="flex-grow: 0; width: 30%;" />
+                            <ui:Button name="Button_BackFromLoad" text="Back" class="btn" style="display: none;" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="Panel_New" class="panel hidden" style="display: none;">
+                        <ui:Label text="New Game" class="panel-title" />
+                        <ui:Label text="Choose a slot. Creating a new game overwrites the slot." class="panel-body muted" />
+                        <ui:VisualElement class="panel-sep" />
+                        <ui:VisualElement class="two-col">
+                            <ui:VisualElement name="New_Slots" class="slot-list">
+                                <ui:VisualElement name="New_SlotCard_0" class="slot-card">
+                                    <ui:Button name="New_SelectSlot_0" text="Select" class="btn btn-small" />
+                                    <ui:VisualElement class="slot-meta">
+                                        <ui:Label name="New_SlotName_0" text="Save 1" class="slot-title" />
+                                        <ui:Label name="New_SlotStatus_0" text="Empty" class="slot-sub muted" />
+                                        <ui:Label name="New_SlotLastPlayed_0" text="—" class="slot-sub muted" />
+                                    </ui:VisualElement>
+                                </ui:VisualElement>
+                                <ui:VisualElement name="New_SlotCard_1" class="slot-card">
+                                    <ui:Button name="New_SelectSlot_1" text="Select" class="btn btn-small" />
+                                    <ui:VisualElement class="slot-meta">
+                                        <ui:Label name="New_SlotName_1" text="Save 2" class="slot-title" />
+                                        <ui:Label name="New_SlotStatus_1" text="Empty" class="slot-sub muted" />
+                                        <ui:Label name="New_SlotLastPlayed_1" text="—" class="slot-sub muted" />
+                                    </ui:VisualElement>
+                                </ui:VisualElement>
+                                <ui:VisualElement name="New_SlotCard_2" class="slot-card">
+                                    <ui:Button name="New_SelectSlot_2" text="Select" class="btn btn-small" />
+                                    <ui:VisualElement class="slot-meta">
+                                        <ui:Label name="New_SlotName_2" text="Save 3" class="slot-title" />
+                                        <ui:Label name="New_SlotStatus_2" text="Empty" class="slot-sub muted" />
+                                        <ui:Label name="New_SlotLastPlayed_2" text="—" class="slot-sub muted" />
+                                    </ui:VisualElement>
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:VisualElement name="New_Preview" class="preview-card">
+                                <ui:Label text="New Game Setup" class="preview-title" />
+                                <ui:VisualElement class="panel-sep" />
+                                <ui:Label name="New_Preview_Title" text="Week 1 • Day 1" class="preview-big" />
+                                <ui:Label name="New_Preview_Sub" text="Spawn: Ski Resort • Default gear &amp; customization" class="muted" />
+                                <ui:VisualElement class="panel-sep" />
+                                <ui:Label name="New_Preview_Warn" text="This will reset run progress, stats, and calendar state for the selected slot." class="warn-text" style="color: rgb(255, 238, 140);" />
+                                <ui:VisualElement class="panel-sep" />
+                                <ui:VisualElement class="panel-actions">
+                                    <ui:Button name="Button_OpenNewConfirm" text="Create" class="btn btn-primary" />
+                                    <ui:Button name="Button_BackFromNew" text="Back" class="btn btn-primary" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="Panel_Settings" class="panel hidden" style="display: flex; flex-direction: column; flex-shrink: 0; align-self: center; justify-content: flex-start; align-items: stretch; border-top-left-radius: 12px; border-top-right-radius: 12px; border-bottom-right-radius: 12px; border-bottom-left-radius: 12px;">
+                        <ui:Label text="Settings" class="panel-title" />
+                        <ui:Label text="Changes apply immediately" class="panel-body muted" />
+                        <ui:VisualElement class="panel-sep settings-scroll" />
+                        <ui:ScrollView name="Settings_Scroll" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="AlwaysVisible" style="display: flex; flex-grow: 0; height: auto; width: auto; flex-direction: column; flex-shrink: 0; max-height: 450px; padding-bottom: 0;">
+                            <ui:VisualElement class="settings-group">
+                                <ui:Label text="Audio" class="group-title" />
+                                <ui:VisualElement class="field">
+                                    <ui:Label text="Master" class="field-label" />
+                                    <ui:Slider name="Slider_MasterVolume" low-value="0" high-value="1" value="1" class="field-slider" />
+                                    <ui:Label name="Label_MasterVolume" text="100%" class="field-value muted" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="field">
+                                    <ui:Label text="Music" class="field-label" />
+                                    <ui:Slider name="Slider_MusicVolume" low-value="0" high-value="1" value="1" class="field-slider" />
+                                    <ui:Label name="Label_MusicVolume" text="100%" class="field-value muted" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="field">
+                                    <ui:Label text="SFX" class="field-label" />
+                                    <ui:Slider name="Slider_SfxVolume" low-value="0" high-value="1" value="1" class="field-slider" />
+                                    <ui:Label name="Label_SfxVolume" text="100%" class="field-value muted" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:VisualElement class="settings-group">
+                                <ui:Label text="Controls" class="group-title" />
+                                <ui:VisualElement class="field">
+                                    <ui:Label text="Invert Look Y" class="field-label" />
+                                    <ui:Toggle name="Toggle_InvertLookY" class="field-toggle" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="field">
+                                    <ui:Label text="Look Sensitivity" class="field-label" />
+                                    <ui:Slider name="Slider_LookSensitivity" low-value="0.25" high-value="3" value="1" class="field-slider" />
+                                    <ui:Label name="Label_LookSensitivity" text="1.00" class="field-value muted" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:VisualElement class="settings-group">
+                                <ui:Label text="UI &amp; Accessibility" class="group-title" />
+                                <ui:VisualElement class="field">
+                                    <ui:Label text="UI Scale" class="field-label" />
+                                    <ui:Slider name="Slider_UiScale" low-value="0.8" high-value="1.3" value="1" class="field-slider" />
+                                    <ui:Label name="Label_UiScale" text="100%" class="field-value muted" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="field">
+                                    <ui:Label text="Reduce Motion" class="field-label" />
+                                    <ui:Toggle name="Toggle_ReduceMotion" class="field-toggle" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="field">
+                                    <ui:Label text="Color Accessibility" class="field-label" />
+                                    <ui:DropdownField name="Dropdown_ColorAccessibility" value="None" class="field-dropdown" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:VisualElement class="settings-group">
+                                <ui:Label text="Performance" class="group-title" />
+                                <ui:VisualElement class="field">
+                                    <ui:Label text="Quality" class="field-label" />
+                                    <ui:DropdownField name="Dropdown_Quality" value="High" class="field-dropdown" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="field">
+                                    <ui:Label text="VSync" class="field-label" />
+                                    <ui:Toggle name="Toggle_VSync" class="field-toggle" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="field">
+                                    <ui:Label text="FPS Cap" class="field-label" />
+                                    <ui:DropdownField name="Dropdown_FpsCap" value="Unlimited" class="field-dropdown" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:VisualElement class="settings-group">
+                                <ui:Label text="Display" class="group-title" />
+                                <ui:VisualElement class="field">
+                                    <ui:Label text="Resolution" class="field-label" />
+                                    <ui:DropdownField name="Dropdown_Resolution" value="Current" class="field-dropdown" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="field">
+                                    <ui:Label text="Window Mode" class="field-label" />
+                                    <ui:DropdownField name="Dropdown_WindowMode" value="Borderless" class="field-dropdown" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="field">
+                                    <ui:Label text="Display" class="field-label" />
+                                    <ui:DropdownField name="Dropdown_Display" value="Display 1" class="field-dropdown" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:VisualElement class="settings-group">
+                                <ui:Label text="Camera" class="group-title" />
+                                <ui:VisualElement class="field">
+                                    <ui:Label text="FOV" class="field-label" />
+                                    <ui:Slider name="Slider_Fov" low-value="60" high-value="110" value="85" class="field-slider" />
+                                    <ui:Label name="Label_Fov" text="85" class="field-value muted" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:VisualElement class="settings-group">
+                                <ui:Label text="Units" class="group-title" />
+                                <ui:VisualElement class="field">
+                                    <ui:Label text="Speed" class="field-label" />
+                                    <ui:DropdownField name="Dropdown_Units" value="km/h" class="field-dropdown" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:VisualElement class="panel-sep" />
+                            <ui:VisualElement class="panel-actions">
+                                <ui:Button name="Button_ResetSettings" text="Reset Defaults" class="btn btn-danger" />
+                                <ui:Button name="Button_SaveSettings" text="Save" class="btn btn-primary" />
+                                <ui:Button name="Button_BackFromSettings" text="Back" class="btn" />
+                            </ui:VisualElement>
+                        </ui:ScrollView>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="Modal_NewConfirm" class="modal hidden" style="display: none;">
+            <ui:VisualElement class="modal-backdrop" />
+            <ui:VisualElement class="modal-card">
+                <ui:Label text="Create New Game?" class="modal-title" />
+                <ui:Label name="Modal_NewConfirmText" text="This will overwrite the selected slot and reset progress." class="modal-body muted" />
+                <ui:VisualElement class="panel-sep" />
+                <ui:VisualElement class="panel-actions">
+                    <ui:Button name="Button_ConfirmNewGame" text="Confirm" class="btn btn-primary" />
+                    <ui:Button name="Button_CancelNewGame" text="Cancel" class="btn" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="Modal_DeleteConfirm" class="modal hidden">
+            <ui:VisualElement class="modal-backdrop" />
+            <ui:VisualElement class="modal-card">
+                <ui:Label text="Delete Save?" class="modal-title" />
+                <ui:Label name="Modal_DeleteConfirmText" text="This will permanently delete this slot." class="modal-body muted" />
+                <ui:VisualElement class="panel-sep" />
+                <ui:VisualElement class="panel-actions">
+                    <ui:Button name="Button_ConfirmDeleteSlot" text="Delete" class="btn btn-danger" />
+                    <ui:Button name="Button_CancelDeleteSlot" text="Cancel" class="btn" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

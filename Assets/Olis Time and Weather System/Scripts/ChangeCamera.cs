@@ -28,9 +28,8 @@ public class ChangeCamera : MonoBehaviour
             else count = 0;
 
             currentCam = cameraList[count];
-            setParent.parentTransform = currentCam.transform;
 
-            setParent.SetParent();
+            setParent.SetParent(currentCam.transform);
 
             currentCam.gameObject.SetActive(true);
 

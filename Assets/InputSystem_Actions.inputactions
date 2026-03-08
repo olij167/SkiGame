@@ -124,9 +124,18 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "SkiLift",
+                    "name": "Interact",
                     "type": "Button",
                     "id": "6c4f4055-07ec-406c-b2d8-4d9cb32f9287",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Pause",
+                    "type": "Button",
+                    "id": "bc3049fd-8491-4c2c-8bee-d71c4928dcaa",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -647,7 +656,18 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "SkiLift",
+                    "action": "Interact",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "07d776c7-c33c-4ba9-9300-4c1ece0f5295",
+                    "path": "<Keyboard>/escape",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Pause",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

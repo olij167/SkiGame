@@ -791,7 +791,16 @@ namespace TimeWeather
                         // Fog + audio (every frame, but O(1))
                         RenderSettings.fogDensity = Mathf.Lerp(RenderSettings.fogDensity, currentWeatherPreset.fogStrength, hourlyTimePercent * fogSpeed);
 
-                        if (currentWeatherPreset.clips != null && currentWeatherPreset.clips.Length > 0)
+                        // Weather audio can be moved during menu->game transition.
+                        // If the serialized reference was destroyed, re-acquire safely.
+                        if (weatherAudio == null)
+                        {
+                            weatherAudio = GetComponentInChildren<CrossFadeAudio>(true);
+                            if (weatherAudio == null)
+                                weatherAudio = FindObjectOfType<CrossFadeAudio>(true);
+                        }
+
+                        if (weatherAudio != null && currentWeatherPreset.clips != null && currentWeatherPreset.clips.Length > 0)
                             weatherAudio.newSoundtrack(hourlyWeather[timeController.timeHours].weatherAudio, currentWeatherPreset.volume);
 
                         // Particles (update emission/noise; ensure playing)

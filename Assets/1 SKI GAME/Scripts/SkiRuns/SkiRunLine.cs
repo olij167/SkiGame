@@ -262,6 +262,91 @@ namespace SkiGame.Runs
             MarkDistanceCacheDirty();
         }
 
+        /// <summary>
+        /// Inserts a point into the run polyline at a specific index, keeping widthOverrideMeters aligned.
+        /// </summary>
+        public int InsertPointWorld(int index, Vector3 p)
+        {
+            if (pointsWorld == null)
+                pointsWorld = new List<Vector3>();
+
+            if (widthOverrideMeters == null)
+                widthOverrideMeters = new List<float>();
+
+            index = Mathf.Clamp(index, 0, pointsWorld.Count);
+
+            pointsWorld.Insert(index, p);
+            widthOverrideMeters.Insert(index, -1f);
+
+            MarkDistanceCacheDirty();
+            return index;
+        }
+
+        /// <summary>
+        /// Inserts a point on the closest segment of the polyline.
+        /// If the pick lies beyond the start/end, inserts at index 0 / Count.
+        /// Returns the inserted index.
+        /// </summary>
+        public int InsertPointWorldSmart(Vector3 p)
+        {
+            if (pointsWorld == null)
+                pointsWorld = new List<Vector3>();
+
+            int n = pointsWorld.Count;
+
+            // Empty / single point: append.
+            if (n <= 1)
+                return InsertPointWorld(n, p);
+
+            int bestSeg = -1;
+            float bestDist = float.PositiveInfinity;
+            float bestTUnclamped = 0f;
+
+            // Work in XZ so terrain vertical variation doesn't skew insertion.
+            Vector2 pp = new Vector2(p.x, p.z);
+
+            for (int i = 0; i < n - 1; i++)
+            {
+                Vector3 a3 = pointsWorld[i];
+                Vector3 b3 = pointsWorld[i + 1];
+
+                Vector2 a = new Vector2(a3.x, a3.z);
+                Vector2 b = new Vector2(b3.x, b3.z);
+
+                Vector2 ab = b - a;
+                float abLen2 = ab.sqrMagnitude;
+
+                float tUnclamped = 0f;
+                if (abLen2 > 0.000001f)
+                    tUnclamped = Vector2.Dot(pp - a, ab) / abLen2;
+
+                float t = Mathf.Clamp01(tUnclamped);
+                Vector2 proj = a + ab * t;
+                float d = Vector2.Distance(pp, proj);
+
+                if (d < bestDist)
+                {
+                    bestDist = d;
+                    bestSeg = i;
+                    bestTUnclamped = tUnclamped;
+                }
+            }
+
+            if (bestSeg < 0)
+                return InsertPointWorld(n, p);
+
+            // If the closest projection lies before the first point or after the last point,
+            // treat it as start/end insertion.
+            if (bestSeg == 0 && bestTUnclamped < 0f)
+                return InsertPointWorld(0, p);
+
+            if (bestSeg == n - 2 && bestTUnclamped > 1f)
+                return InsertPointWorld(n, p);
+
+            // Otherwise, insert between bestSeg and bestSeg+1.
+            return InsertPointWorld(bestSeg + 1, p);
+        }
+
         public bool RemoveLastPoint()
         {
             if (pointsWorld.Count == 0) return false;

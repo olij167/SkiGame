@@ -45,7 +45,7 @@ GameObject:
   - component: {fileID: 3296443867870463602}
   - component: {fileID: 2187600236171099934}
   m_Layer: 3
-  m_Name: Hood
+  m_Name: Beanie
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

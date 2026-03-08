@@ -1,0 +1,100 @@
+.pause-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.pause-backdrop {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.55);
+}
+
+.pause-panel {
+    position: relative;
+    width: 520px;
+    max-width: 92%;
+    height: 82%;
+    max-height: 92%;
+    border-radius: 12px;
+    background-color: rgba(18, 18, 18, 0.96);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+}
+
+.pause-panel-inner {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    color: rgb(224, 255, 255);
+}
+
+.pause-title {
+    unity-font-style: bold;
+    font-size: 20px;
+    color: rgb(224, 255, 255);
+    margin-bottom: 12px;
+}
+
+.pause-subheader {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.pause-subtitle {
+    unity-font-style: bold;
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.pause-buttoncol {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.pause-btn {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgb(224, 255, 255);
+}
+
+.pause-btn-primary {
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.pause-btn-danger {
+    background-color: rgba(255, 80, 80, 0.18);
+}
+
+.pause-btn-back {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.pause-hint {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 12px;
+    margin-top: auto;
+}
+
+.pause-page {
+    flex-grow: 1;
+}

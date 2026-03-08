@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 using SkiGame.Progression;
 
 public class PlayerCustomizationApplier : MonoBehaviour
@@ -11,6 +12,16 @@ public class PlayerCustomizationApplier : MonoBehaviour
     [Header("Catalog")]
     [SerializeField] private CustomizationCatalogSO catalog;
 
+    [Header("Runtime Apply")]
+    [Tooltip("If enabled, applies the saved profile customization automatically when runtime starts (and when the profile loads).")]
+    [SerializeField] private bool autoApplyOnRuntimeStart = true;
+
+    [Tooltip("If enabled, re-applies whenever PlayerStatsManager loads a profile (useful if load order varies).")]
+    [SerializeField] private bool applyOnProfileLoadedEvent = true;
+
+    private PlayerStatsManager _statsMgr;
+    private bool _subscribed;
+
     private void Awake()
     {
         if (characterCustomizer == null) characterCustomizer = GetComponentInChildren<CharacterCustomizer>(true);
@@ -18,54 +29,140 @@ public class PlayerCustomizationApplier : MonoBehaviour
         if (skiController == null) skiController = GetComponent<SkiController>();
     }
 
+    private void OnEnable()
+    {
+        TryHookStatsManager();
+
+        if (autoApplyOnRuntimeStart)
+            StartCoroutine(ApplyFromCurrentProfileDeferred());
+    }
+
+    private void OnDisable()
+    {
+        UnhookStatsManager();
+    }
+
+    private void TryHookStatsManager()
+    {
+        if (_subscribed) return;
+
+        _statsMgr = PlayerStatsManager.Instance != null
+            ? PlayerStatsManager.Instance
+            : FindObjectOfType<PlayerStatsManager>();
+
+        if (_statsMgr != null && applyOnProfileLoadedEvent)
+        {
+            _statsMgr.OnProfileLoaded += OnProfileLoaded;
+            _subscribed = true;
+        }
+    }
+
+    private void UnhookStatsManager()
+    {
+        if (!_subscribed) return;
+        if (_statsMgr != null) _statsMgr.OnProfileLoaded -= OnProfileLoaded;
+        _subscribed = false;
+    }
+
+    private void OnProfileLoaded(PlayerStatsProfile profile)
+    {
+        if (!isActiveAndEnabled) return;
+        if (!autoApplyOnRuntimeStart) return;
+
+        StartCoroutine(ApplyDeferred(profile));
+    }
+
+    private IEnumerator ApplyFromCurrentProfileDeferred()
+    {
+        // Wait a tick so PlayerStatsManager.Awake has run + profile is loaded.
+        yield return null;
+
+        if (_statsMgr == null)
+            _statsMgr = PlayerStatsManager.Instance != null ? PlayerStatsManager.Instance : FindObjectOfType<PlayerStatsManager>();
+
+        var profile = _statsMgr != null ? _statsMgr.Profile : null;
+        if (profile == null) yield break;
+
+        yield return ApplyDeferred(profile);
+    }
+
+    private IEnumerator ApplyDeferred(PlayerStatsProfile profile)
+    {
+        // Ensure SkiController/loadout visuals are initialized.
+        yield return new WaitForEndOfFrame();
+        ApplyFromProfile(profile);
+    }
+
     public void ApplyFromProfile(PlayerStatsProfile profile)
     {
         if (profile == null || profile.customization == null) return;
         var state = profile.customization;
 
-        // Defaults
-        if (catalog != null)
+        // Defaults (only on first-time init; later empty hat/jacket means "none")
+        if (catalog != null && state != null)
         {
-            if (string.IsNullOrEmpty(state.equippedEyeIconId))
-                state.equippedEyeIconId = GetDefaultId(CustomizationOptionType.EyeIcon);
+            if (!state.customizationInitialized)
+            {
+                if (string.IsNullOrEmpty(state.equippedEyeIconId))
+                    state.equippedEyeIconId = GetDefaultId(CustomizationOptionType.EyeIcon);
 
-            if (string.IsNullOrEmpty(state.equippedSkisId))
-                state.equippedSkisId = GetDefaultGearId(CustomizationOptionType.Skis);
+                if (string.IsNullOrEmpty(state.equippedSkisId))
+                    state.equippedSkisId = GetDefaultGearId(CustomizationOptionType.Skis);
 
-            if (string.IsNullOrEmpty(state.equippedPolesId))
-                state.equippedPolesId = GetDefaultGearId(CustomizationOptionType.Poles);
+                if (string.IsNullOrEmpty(state.equippedPolesId))
+                    state.equippedPolesId = GetDefaultGearId(CustomizationOptionType.Poles);
 
-            if (string.IsNullOrEmpty(state.equippedHatId))
-                state.equippedHatId = GetDefaultId(CustomizationOptionType.Hat);
+                // IMPORTANT: Leave these empty to mean "None"
+                if (string.IsNullOrEmpty(state.equippedHatId))
+                    state.equippedHatId = "";
 
-            if (string.IsNullOrEmpty(state.equippedCloakId))
-                state.equippedCloakId = GetDefaultId(CustomizationOptionType.Jacket);
+                if (string.IsNullOrEmpty(state.equippedJacketId))
+                    state.equippedJacketId = "";
+
+                state.customizationInitialized = true;
+            }
         }
 
-        // Apply continuous values
+        // Apply continuous values (skin/eyes always use saved values)
         if (characterCustomizer != null)
         {
             characterCustomizer.SetSkinColor(state.skinColor);
             characterCustomizer.SetEyeColor(state.eyeColor);
 
+            // Eyes always resolve via catalog
             ApplyCosmetic(state.equippedEyeIconId);
-            ApplyCosmetic(state.equippedHatId);
-            ApplyCosmetic(state.equippedCloakId);
 
-            characterCustomizer.SetHatColor(state.hatColor);
-            characterCustomizer.SetCloakColor(state.jacketColor);
+            // Hat: empty = none
+            if (string.IsNullOrEmpty(state.equippedHatId)) characterCustomizer.ClearHat();
+            else ApplyCosmetic(state.equippedHatId);
+
+            // Jacket/Jacket: empty = none
+            if (string.IsNullOrEmpty(state.equippedJacketId)) characterCustomizer.ClearJacket();
+            else ApplyCosmetic(state.equippedJacketId);
+
+            // Hat/Jacket colors are applied after cosmetics are ensured
+            var hatApplied = ResolveAppliedGearColor(state.hatColor, state.hatUseDefaultColor, state.equippedHatId);
+            var jacketApplied = ResolveAppliedGearColor(state.jacketColor, state.jacketUseDefaultColor, state.equippedJacketId);
+
+            characterCustomizer.SetHatColor(hatApplied);
+            characterCustomizer.SetJacketColor(jacketApplied);
         }
 
+        // Apply gear prefabs
         ApplyGear(state.equippedSkisId, isSkis: true);
         ApplyGear(state.equippedPolesId, isSkis: false);
 
+        // Apply gear colors (resolved via toggle)
         if (gearLoadout != null)
         {
-            gearLoadout.SetSkisColor(state.skisColor);
-            gearLoadout.SetPolesColor(state.polesColor);
+            var skisApplied = ResolveAppliedGearColor(state.skisColor, state.skisUseDefaultColor, state.equippedSkisId);
+            var polesApplied = ResolveAppliedGearColor(state.polesColor, state.polesUseDefaultColor, state.equippedPolesId);
+
+            gearLoadout.SetSkisColor(skisApplied);
+            gearLoadout.SetPolesColor(polesApplied);
         }
 
-        // Apply patterns (textures)
+        // Apply gear patterns (resolved via toggle)
         ApplyGearPatternsFromState(state);
     }
 
@@ -77,16 +174,26 @@ public class PlayerCustomizationApplier : MonoBehaviour
         var opt = catalog.FindById(optionId);
         if (opt == null) return;
 
-        // Preview is just “apply now” without writing equipped ids.
+        // Preview should show the preview gear's DEFAULTS (even if player is in custom mode)
         if (opt.type == CustomizationOptionType.Skis)
         {
             if (gearLoadout != null && opt.gearProfile != null) gearLoadout.EquipSkis(opt.gearProfile);
-            gearLoadout?.SetSkisColor(profile.customization.skisColor);
+
+            var previewColor = ResolveGearDefaultTint(optionId);
+            gearLoadout?.SetSkisColor(previewColor);
+
+            var previewPatternId = ResolveDefaultPatternIdForGear(optionId);
+            skiController?.SetSkisPatternTexture(ResolvePatternTextureById(previewPatternId));
         }
         else if (opt.type == CustomizationOptionType.Poles)
         {
             if (gearLoadout != null && opt.gearProfile != null) gearLoadout.EquipPoles(opt.gearProfile);
-            gearLoadout?.SetPolesColor(profile.customization.polesColor);
+
+            var previewColor = ResolveGearDefaultTint(optionId);
+            gearLoadout?.SetPolesColor(previewColor);
+
+            var previewPatternId = ResolveDefaultPatternIdForGear(optionId);
+            skiController?.SetPolesPatternTexture(ResolvePatternTextureById(previewPatternId));
         }
     }
 
@@ -104,27 +211,23 @@ public class PlayerCustomizationApplier : MonoBehaviour
 
     private void ApplyGearPatternsFromState(PlayerStatsProfile.CustomizationState state)
     {
-        if (state == null || catalog == null) return;
+        if (state == null) return;
 
-        // Patterns are SkinPattern options; their customizerIndex maps to CharacterCustomizer texture list.
-        Texture2D ResolvePattern(string patternId)
-        {
-            if (string.IsNullOrEmpty(patternId) || characterCustomizer == null) return null;
-            var opt = catalog.FindById(patternId);
-            if (opt == null || opt.type != CustomizationOptionType.SkinPattern) return null;
-            return characterCustomizer.GetSkinPatternTexture2D(opt.customizerIndex);
-        }
+        var skisPatternId = ResolveAppliedPatternId(state.equippedSkisPatternId, state.skisUseDefaultPattern, state.equippedSkisId);
+        var polesPatternId = ResolveAppliedPatternId(state.equippedPolesPatternId, state.polesUseDefaultPattern, state.equippedPolesId);
+        var hatPatternId = ResolveAppliedPatternId(state.equippedHatPatternId, state.hatUseDefaultPattern, state.equippedHatId);
+        var jacketPatternId = ResolveAppliedPatternId(state.equippedJacketPatternId, state.jacketUseDefaultPattern, state.equippedJacketId);
 
-        var skisTex = ResolvePattern(state.equippedSkisPatternId);
-        var polesTex = ResolvePattern(state.equippedPolesPatternId);
-        var hatTex = ResolvePattern(state.equippedHatPatternId);
-        var jacketTex = ResolvePattern(state.equippedJacketPatternId);
+        var skisTex = ResolvePatternTextureById(skisPatternId);
+        var polesTex = ResolvePatternTextureById(polesPatternId);
+        var hatTex = ResolvePatternTextureById(hatPatternId);
+        var jacketTex = ResolvePatternTextureById(jacketPatternId);
 
         skiController?.SetSkisPatternTexture(skisTex);
         skiController?.SetPolesPatternTexture(polesTex);
 
         characterCustomizer?.SetHatPatternTexture(hatTex);
-        characterCustomizer?.SetCloakPatternTexture(jacketTex);
+        characterCustomizer?.SetJacketPatternTexture(jacketTex);
     }
 
     private string GetDefaultId(CustomizationOptionType type)
@@ -163,13 +266,18 @@ public class PlayerCustomizationApplier : MonoBehaviour
         switch (opt.type)
         {
             case CustomizationOptionType.EyeIcon:
-                characterCustomizer.SetEyeStyle(opt.customizerIndex);
+                if (opt.eyeSprite != null) characterCustomizer.SetEyeSprite(opt.eyeSprite);
+                else characterCustomizer.SetEyeStyle(opt.customizerIndex);
                 break;
+
             case CustomizationOptionType.Hat:
-                characterCustomizer.SetHat(opt.customizerIndex);
+                if (opt.hatPrefab != null) characterCustomizer.SetHatPrefab(opt.hatPrefab);
+                else characterCustomizer.SetHat(opt.customizerIndex);
                 break;
+
             case CustomizationOptionType.Jacket:
-                characterCustomizer.SetCloak(opt.customizerIndex);
+                if (opt.jacketPrefab != null) characterCustomizer.SetJacketPrefab(opt.jacketPrefab);
+                else characterCustomizer.SetJacket(opt.customizerIndex);
                 break;
         }
     }
@@ -184,4 +292,77 @@ public class PlayerCustomizationApplier : MonoBehaviour
         if (isSkis) gearLoadout.EquipSkis(opt.gearProfile);
         else gearLoadout.EquipPoles(opt.gearProfile);
     }
+
+    // ---------- Defaults & resolution helpers ----------
+    private static readonly Color DefaultSkin = Color.yellowNice;
+    private static readonly Color DefaultEyes = Color.black;
+
+    private static readonly Color DefaultGearFallback = new Color(0.12f, 0.12f, 0.12f, 1f);
+
+    private Color ResolveGearDefaultTint(string equippedGearId)
+    {
+        if (catalog == null || string.IsNullOrEmpty(equippedGearId))
+            return DefaultGearFallback;
+
+        var gearOpt = catalog.FindById(equippedGearId);
+        if (gearOpt == null)
+            return DefaultGearFallback;
+
+        // If the gear declares a default tint, use it. Otherwise fallback.
+        return gearOpt.HasTint ? gearOpt.DefaultTint : DefaultGearFallback;
+    }
+
+    private Color ResolveAppliedGearColor(Color savedCustomColor, bool useDefault, string equippedGearId)
+    {
+        return useDefault ? ResolveGearDefaultTint(equippedGearId) : savedCustomColor;
+    }
+
+    private string ResolveDefaultPatternIdForGear(string equippedGearId)
+    {
+        if (catalog == null || string.IsNullOrEmpty(equippedGearId))
+            return null;
+
+        var gearOpt = catalog.FindById(equippedGearId);
+        if (gearOpt == null)
+            return null;
+
+        // Preferred: concrete option reference
+        if (gearOpt.defaultPatternOption != null)
+            return gearOpt.defaultPatternOption.id;
+
+        // Back-compat: string id
+        if (!string.IsNullOrEmpty(gearOpt.defaultPatternId))
+            return gearOpt.defaultPatternId;
+
+        return null;
+    }
+
+    private string ResolveAppliedPatternId(string savedCustomPatternId, bool useDefault, string equippedGearId)
+    {
+        if (!useDefault && !string.IsNullOrEmpty(savedCustomPatternId))
+            return savedCustomPatternId;
+
+        return ResolveDefaultPatternIdForGear(equippedGearId);
+    }
+
+    private Texture2D ResolvePatternTextureById(string patternId)
+    {
+        if (string.IsNullOrEmpty(patternId) || catalog == null)
+            return null;
+
+        var opt = catalog.FindById(patternId);
+        if (opt == null || opt.type != CustomizationOptionType.SkinPattern)
+            return null;
+
+        // Preferred: direct payload
+        if (opt.skinPatternTexture is Texture2D direct)
+            return direct;
+
+        // Back-compat: CharacterCustomizer array lookup
+        if (characterCustomizer != null && opt.customizerIndex >= 0)
+            return characterCustomizer.GetSkinPatternTexture2D(opt.customizerIndex);
+
+        return null;
+    }
+
 }

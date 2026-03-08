@@ -18,5 +18,11 @@ MonoBehaviour:
   description: 
   icon: {fileID: 21300000, guid: 77873e2027730224db96dcd9ad86e67e, type: 3}
   cost: 20
+  skinPatternTexture: {fileID: 0}
+  eyeSprite: {fileID: 21300000, guid: 77873e2027730224db96dcd9ad86e67e, type: 3}
+  hatPrefab: {fileID: 0}
+  cloakPrefab: {fileID: 0}
   customizerIndex: 3
   gearProfile: {fileID: 0}
+  alwaysInStoreUntilOwned: 0
+  excludeFromDailyRotation: 0

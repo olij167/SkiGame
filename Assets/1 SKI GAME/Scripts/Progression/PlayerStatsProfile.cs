@@ -13,8 +13,7 @@ namespace SkiGame.Progression
     public sealed class PlayerStatsProfile : ISerializationCallbackReceiver
     {
         public int profileVersion = CurrentVersion;
-        public const int CurrentVersion = 7;  // v7: gear patterns (skis/poles) + legacy skin-pattern migration
-
+        public const int CurrentVersion = 8;
         public LifetimeStats lifetime = new LifetimeStats();
         public SessionStats session = new SessionStats();
         public PlaythroughState playthrough = new PlaythroughState();
@@ -52,7 +51,7 @@ namespace SkiGame.Progression
 
             public string equippedEyeIconId;
             public string equippedHatId;
-            public string equippedCloakId;
+            public string equippedJacketId;
 
             // ---- Equipped gear ----
             public string equippedSkisId;
@@ -77,6 +76,27 @@ namespace SkiGame.Progression
             public Color hatColor = Color.white;
             public Color jacketColor = Color.white;
 
+            public bool customizationInitialized;
+
+            // ---- Has user overridden defaults? ----
+            public bool hasSetSkinColor;
+            public bool hasSetEyeColor;
+            public bool hasSetSkisColor;
+            public bool hasSetPolesColor;
+            public bool hasSetHatColor;
+            public bool hasSetJacketColor;
+
+            // ---- Gear display mode toggles ----
+            // True = show equipped gear defaults; False = show saved custom selections.
+            public bool skisUseDefaultColor = true;
+            public bool polesUseDefaultColor = true;
+            public bool hatUseDefaultColor = true;
+            public bool jacketUseDefaultColor = true;
+
+            public bool skisUseDefaultPattern = true;
+            public bool polesUseDefaultPattern = true;
+            public bool hatUseDefaultPattern = true;
+            public bool jacketUseDefaultPattern = true;
 
 
             public bool IsUnlocked(string id)
@@ -110,6 +130,7 @@ namespace SkiGame.Progression
                 }
             }
         }
+
 
         // Recent task IDs to avoid repeating the same tasks over and over.
         public List<string> recentTaskIds = new List<string>();
@@ -145,14 +166,26 @@ namespace SkiGame.Progression
 
         public void EnsureUpToDate()
         {
-            // If a profile is missing/older, migrate it forward safely.
-            if (profileVersion < 7)
+            if (profileVersion < 8)
             {
                 if (customization != null)
-                    customization.MigrateLegacySkinPatternToGearPatterns();
+                {
+                    // If the player had previously set a gear colour, treat it as "custom mode"
+                    customization.skisUseDefaultColor = !customization.hasSetSkisColor;
+                    customization.polesUseDefaultColor = !customization.hasSetPolesColor;
+                    customization.hatUseDefaultColor = !customization.hasSetHatColor;
+                    customization.jacketUseDefaultColor = !customization.hasSetJacketColor;
 
-                profileVersion = 7;
+                    // If a pattern id is present, treat it as "custom pattern"
+                    customization.skisUseDefaultPattern = string.IsNullOrEmpty(customization.equippedSkisPatternId);
+                    customization.polesUseDefaultPattern = string.IsNullOrEmpty(customization.equippedPolesPatternId);
+                    customization.hatUseDefaultPattern = string.IsNullOrEmpty(customization.equippedHatPatternId);
+                    customization.jacketUseDefaultPattern = string.IsNullOrEmpty(customization.equippedJacketPatternId);
+                }
+
+                profileVersion = 8;
             }
+
         }
 
         [Serializable]

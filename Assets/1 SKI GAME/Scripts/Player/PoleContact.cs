@@ -100,6 +100,7 @@ public class PoleContact : MonoBehaviour
     public Vector3 ContactPoint { get; private set; }
     public Vector3 ContactNormal { get; private set; } = Vector3.up;
     public float ContactDistance { get; private set; }
+    public Transform PoleRoot => poleRoot != null ? poleRoot : transform;
 
     // Cached base rotation for the pole pivot
     private Quaternion _baseLocalRot;

@@ -37,13 +37,13 @@ public class CharacterCustomizer : MonoBehaviour
 
     [Header("Anchors for Wearables")]
     [SerializeField] private Transform headAnchor; // hats
-    [SerializeField] private Transform bodyAnchor; // cloaks
+    [SerializeField] private Transform bodyAnchor; // jackets
 
     [Header("Hat Options")]
     [SerializeField] private GameObject[] hatPrefabs;
 
-    [Header("Cloak Options")]
-    [SerializeField] private GameObject[] cloakPrefabs;
+    [Header("Jacket Options")]
+    [SerializeField] private GameObject[] jacketPrefabs;
 
     // Runtime state
     private Material _eyeMaterialInstance;
@@ -52,9 +52,9 @@ public class CharacterCustomizer : MonoBehaviour
     private int _skinColorPropertyId;
 
     private GameObject _currentHatInstance;
-    private GameObject _currentCloakInstance;
+    private GameObject _currentJacketInstance;
     private WearableAttachment _currentHatAttachment;
-    private WearableAttachment _currentCloakAttachment;
+    private WearableAttachment _currentJacketAttachment;
 
     private void Awake()
     {
@@ -316,43 +316,43 @@ public class CharacterCustomizer : MonoBehaviour
 
     #endregion
 
-    #region Cloaks
+    #region Jackets
 
-    public void SetCloak(int index)
+    public void SetJacket(int index)
     {
         AttachWearable(
-            cloakPrefabs,
+            jacketPrefabs,
             index,
             bodyAnchor,
-            ref _currentCloakInstance,
-            ref _currentCloakAttachment);
+            ref _currentJacketInstance,
+            ref _currentJacketAttachment);
     }
 
-    public void ClearCloak()
+    public void ClearJacket()
     {
-        if (_currentCloakInstance != null)
-            Destroy(_currentCloakInstance);
+        if (_currentJacketInstance != null)
+            Destroy(_currentJacketInstance);
 
-        _currentCloakInstance = null;
-        _currentCloakAttachment = null;
+        _currentJacketInstance = null;
+        _currentJacketAttachment = null;
     }
 
-    public void SetCloakColor(Color color)
+    public void SetJacketColor(Color color)
     {
-        if (_currentCloakAttachment == null) return;
-        _currentCloakAttachment.SetColor(color);
+        if (_currentJacketAttachment == null) return;
+        _currentJacketAttachment.SetColor(color);
     }
 
-    public void SetCloakMaterial(Material material)
+    public void SetJacketMaterial(Material material)
     {
-        if (_currentCloakAttachment == null || material == null) return;
-        _currentCloakAttachment.SetMaterial(material);
+        if (_currentJacketAttachment == null || material == null) return;
+        _currentJacketAttachment.SetMaterial(material);
     }
 
-    public void SetCloakPatternTexture(Texture tex)
+    public void SetJacketPatternTexture(Texture tex)
     {
-        if (_currentCloakAttachment == null) return;
-        _currentCloakAttachment.SetTexture(tex);
+        if (_currentJacketAttachment == null) return;
+        _currentJacketAttachment.SetTexture(tex);
     }
 
     #endregion
@@ -402,12 +402,89 @@ public class CharacterCustomizer : MonoBehaviour
         rootT.localPosition = rootLocalPos;
     }
 
+
     #endregion
 
     public Color GetSkinColor() => skinColor;
     public Color GetEyeColor() => eyeColour;
     public int GetSkinPatternIndex() => selectedTextureIndex;
     public int GetEyeOptionIndex() => selectedEyeOption;
+
+    public void SetEyeSprite(Sprite sprite)
+    {
+        if (sprite == null) return;
+        EnsureEyeMaterialInstance();
+        if (_eyeMaterialInstance == null) return;
+
+        if (_eyeBaseMapId == 0) ResolveEyePropertyIds();
+        if (_eyeBaseMapId != 0)
+            _eyeMaterialInstance.SetTexture(_eyeBaseMapId, sprite.texture);
+
+        ApplyEyeMaterialToProjectors();
+    }
+
+    public void SetSkinPatternTexture(Texture tex)
+    {
+        if (skinRenderers == null || tex == null) return;
+
+        foreach (var r in skinRenderers)
+        {
+            if (r == null) continue;
+            var m = r.material;
+            if (m == null) continue;
+            if (!string.IsNullOrEmpty(skinTexturePropertyName))
+                m.SetTexture(skinTexturePropertyName, tex);
+        }
+    }
+
+    public void SetHatPrefab(GameObject prefab)
+    {
+        AttachWearablePrefab(prefab, headAnchor, ref _currentHatInstance, ref _currentHatAttachment);
+    }
+
+    public void SetJacketPrefab(GameObject prefab)
+    {
+        AttachWearablePrefab(prefab, bodyAnchor, ref _currentJacketInstance, ref _currentJacketAttachment);
+    }
+
+    private void AttachWearablePrefab(
+        GameObject prefab,
+        Transform anchor,
+        ref GameObject currentInstance,
+        ref WearableAttachment currentAttachment)
+    {
+        // Clear if null => "None"
+        if (prefab == null)
+        {
+            if (currentInstance != null) Destroy(currentInstance);
+            currentInstance = null;
+            currentAttachment = null;
+            return;
+        }
+
+        if (anchor == null) return;
+
+        if (currentInstance != null)
+            Destroy(currentInstance);
+
+        currentInstance = Instantiate(prefab, anchor, worldPositionStays: false);
+        currentAttachment = currentInstance.GetComponent<WearableAttachment>();
+
+        if (currentAttachment == null) return;
+
+        var mount = currentAttachment.mount;
+        if (mount == null) return;
+
+        var rootT = currentInstance.transform;
+        Vector3 mountPosRoot = rootT.InverseTransformPoint(mount.position);
+        Quaternion mountRotRoot = Quaternion.Inverse(rootT.rotation) * mount.rotation;
+
+        Quaternion rootLocalRot = Quaternion.Inverse(mountRotRoot);
+        Vector3 rootLocalPos = -(rootLocalRot * mountPosRoot);
+
+        rootT.localRotation = rootLocalRot;
+        rootT.localPosition = rootLocalPos;
+    }
 
 }
 

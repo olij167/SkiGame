@@ -145,7 +145,7 @@ public class CustomizationSceneBootstrap : MonoBehaviour
             _entrySkinPatternId = s.equippedSkinPatternId;
             _entryEyeIconId = s.equippedEyeIconId;
             _entryHatId = s.equippedHatId;
-            _entryCloakId = s.equippedCloakId;
+            _entryCloakId = s.equippedJacketId;
             _entrySkisId = s.equippedSkisId;
             _entryPolesId = s.equippedPolesId;
         }
@@ -339,7 +339,7 @@ public class CustomizationSceneBootstrap : MonoBehaviour
             s.equippedSkinPatternId = _entrySkinPatternId;
             s.equippedEyeIconId = _entryEyeIconId;
             s.equippedHatId = _entryHatId;
-            s.equippedCloakId = _entryCloakId;
+            s.equippedJacketId = _entryCloakId;
             s.equippedSkisId = _entrySkisId;
             s.equippedPolesId = _entryPolesId;
         }

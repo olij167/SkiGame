@@ -1094,8 +1094,9 @@ public class SkiController : MonoBehaviour
             _poleMpb.SetTexture(_MainTexId, _polesPatternTex);
         }
 
-        if (leftPoleContact != null) ApplyMpbToRenderers(leftPoleContact.transform, _poleMpb);
-        if (rightPoleContact != null) ApplyMpbToRenderers(rightPoleContact.transform, _poleMpb);
+        if (leftPoleContact != null) ApplyMpbToRenderers(leftPoleContact.PoleRoot, _poleMpb);
+        if (rightPoleContact != null) ApplyMpbToRenderers(rightPoleContact.PoleRoot, _poleMpb);
+
     }
 
     private static void ApplyMpbToRenderers(Transform root, MaterialPropertyBlock mpb)
@@ -1106,6 +1107,10 @@ public class SkiController : MonoBehaviour
         {
             var r = rs[i];
             if (r == null) continue;
+
+            // Critical: don't tint snow/FX
+            if (r is ParticleSystemRenderer) continue;
+
             r.SetPropertyBlock(mpb);
         }
     }

@@ -58,7 +58,7 @@ namespace SkiGame.RunsEditor
         [SerializeField, Range(2f, 200f)] private float defaultRunWidthMeters = 20f;
         [SerializeField, Range(1f, 50f)] private float defaultFlagSpacingMeters = 8f;
 
-        [MenuItem("Tools/Ski Game/Ski Run Painter")]
+        [MenuItem("Ski Game/Ski Run Painter")]
         public static void Open() => GetWindow<SkiRunPainterWindow>("Ski Run Painter");
 
         public static void OpenAndSelect(SkiRunLine run, bool enablePaint = false)
@@ -395,8 +395,10 @@ namespace SkiGame.RunsEditor
             if (snapToTerrainOnAdd)
                 p = SnapToTerrain(p);
 
-            Undo.RecordObject(run, "Add Run Point");
-            run.AddPointWorld(p);
+            // Use the same insertion policy as the SkiRunLine inspector:
+            // insert on the closest segment, including start/end when you click beyond.
+            Undo.RecordObject(run, "Insert Run Point");
+            run.InsertPointWorldSmart(p);
 
             if (autoBakeOnEdit)
                 run.BakeMetrics();

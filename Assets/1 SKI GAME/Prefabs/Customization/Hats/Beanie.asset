@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fdbcba145e2b2044cb595c56dafb02f8, type: 3}
+  m_Name: Beanie
+  m_EditorClassIdentifier: Assembly-CSharp::CustomizationOptionSO
+  id: Beanie
+  type: 2
+  displayName: Beanie
+  description: 
+  icon: {fileID: 21300000, guid: 18c024d90cd372a4ebd9f43277dee37d, type: 3}
+  cost: 5
+  skinPatternTexture: {fileID: 0}
+  eyeSprite: {fileID: 0}
+  hatPrefab: {fileID: 3737022140319327465, guid: a5807574b199b9c4280a49de27399741, type: 3}
+  jacketPrefab: {fileID: 0}
+  customizerIndex: 1
+  gearProfile: {fileID: 0}
+  defaultPatternOption: {fileID: 0}
+  defaultPatternId: 
+  unlockPatternOptionsOnPurchase: []
+  unlockPatternIdsOnPurchase: []
+  defaultPatternTiling: {x: 1, y: 1}
+  defaultPatternOffset: {x: 0, y: 0}
+  defaultPatternRotation: 0
+  hasTint: 1
+  defaultTint: {r: 0.5176471, g: 0.4392157, b: 1, a: 1}
+  alwaysInStoreUntilOwned: 0
+  excludeFromDailyRotation: 0
