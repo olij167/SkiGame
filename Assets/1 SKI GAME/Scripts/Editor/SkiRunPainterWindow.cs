@@ -21,6 +21,8 @@ namespace SkiGame.RunsEditor
 
         // QoL: lightweight run browser
         private bool showRunBrowser = true;
+        private bool showUtilities = true;
+        private bool showDefaults = true;
         private string runSearch = "";
         private Vector2 runBrowserScroll;
 
@@ -58,7 +60,7 @@ namespace SkiGame.RunsEditor
         [SerializeField, Range(2f, 200f)] private float defaultRunWidthMeters = 20f;
         [SerializeField, Range(1f, 50f)] private float defaultFlagSpacingMeters = 8f;
 
-        [MenuItem("Ski Game/Ski Run Painter")]
+        [MenuItem("SkiGame/Ski Run Painter")]
         public static void Open() => GetWindow<SkiRunPainterWindow>("Ski Run Painter");
 
         public static void OpenAndSelect(SkiRunLine run, bool enablePaint = false)
@@ -116,24 +118,25 @@ namespace SkiGame.RunsEditor
         {
             EditorGUILayout.Space(6);
 
-            DrawSelectionBlock();
+            DrawActiveRunBlock();
             EditorGUILayout.Space(6);
-            DrawPaintBlock();
+            DrawPaintSessionBlock();
             EditorGUILayout.Space(6);
-            DrawRunToolsBlock();
+            DrawQuickCreateBlock();
             EditorGUILayout.Space(6);
             DrawDefaultsBlock();
             EditorGUILayout.Space(6);
-            DrawQuickCreateBlock();
+            DrawUtilitiesBlock();
         }
 
-        private void DrawSelectionBlock()
+        private void DrawActiveRunBlock()
         {
             using (new EditorGUILayout.VerticalScope("box"))
             {
-                EditorGUILayout.LabelField("Selection", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Active Run", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Use this window to browse, lock, and paint a specific run. Use the Scene overlay for live mode switching.", EditorStyles.wordWrappedMiniLabel);
+                EditorGUILayout.Space(4);
 
-                // Locking UI
                 var selectionRun = (Selection.activeGameObject != null) ? Selection.activeGameObject.GetComponent<SkiRunLine>() : null;
 
                 EditorGUI.BeginChangeCheck();
@@ -166,87 +169,85 @@ namespace SkiGame.RunsEditor
                             }
                         }
 
-                        if (GUILayout.Button("Ping"))
+                        using (new EditorGUI.DisabledScope(lockedRun == null))
                         {
-                            if (lockedRun != null)
+                            if (GUILayout.Button("Ping"))
                             {
                                 EditorGUIUtility.PingObject(lockedRun.gameObject);
                                 Selection.activeGameObject = lockedRun.gameObject;
                             }
                         }
                     }
-
-                    EditorGUILayout.Space(6);
-
-                    showRunBrowser = EditorGUILayout.Foldout(showRunBrowser, "Run Browser", true);
-                    if (showRunBrowser)
-                    {
-                        runSearch = EditorGUILayout.TextField("Search", runSearch);
-                        runBrowserScroll = EditorGUILayout.BeginScrollView(runBrowserScroll, GUILayout.Height(140));
-
-                        // Search term (lower once)
-                        string search = string.IsNullOrWhiteSpace(runSearch) ? null : runSearch.Trim().ToLowerInvariant();
-
-                        using (new EditorGUILayout.HorizontalScope())
-                        {
-                            EditorGUILayout.LabelField("Runs", GUILayout.Width(40));
-                            GUILayout.FlexibleSpace();
-
-                            if (GUILayout.Button("Refresh", GUILayout.Width(70)))
-                            {
-                                GetRunsCached(forceRefresh: true);
-                                Repaint();
-                                SceneView.RepaintAll();
-                            }
-                        }
-
-                        var runs = GetRunsCached();
-                        foreach (var r in runs)
-                        {
-                            if (r == null) continue;
-
-                            if (search != null && !r.name.ToLowerInvariant().Contains(search))
-                                continue;
-
-                            using (new EditorGUILayout.HorizontalScope())
-                            {
-                                if (GUILayout.Button(r.name, GUILayout.ExpandWidth(true)))
-                                {
-                                    lockedRun = r;
-                                    Selection.activeGameObject = r.gameObject;
-                                    EditorGUIUtility.PingObject(r.gameObject);
-                                    SceneView.lastActiveSceneView?.FrameSelected();
-                                    SavePrefs();
-                                    Repaint();
-                                    SceneView.RepaintAll();
-                                }
-                            }
-                        }
-
-                        EditorGUILayout.EndScrollView();
-                    }
                 }
 
                 var run = SelectedRun;
                 if (run == null)
                 {
-                    EditorGUILayout.HelpBox("Select a GameObject with a SkiRunLine component, or create one below.", MessageType.Info);
-
-                    if (GUILayout.Button("Create New Run"))
-                        CreateNewRun();
-
-                    return;
+                    EditorGUILayout.HelpBox("Select a GameObject with a SkiRunLine component, lock a run above, or create one below.", MessageType.Info);
+                }
+                else
+                {
+                    EditorGUILayout.ObjectField("Run Object", run.gameObject, typeof(GameObject), true);
                 }
 
-                EditorGUILayout.ObjectField("Run Object", run.gameObject, typeof(GameObject), true);
+                EditorGUILayout.Space(6);
+                showRunBrowser = EditorGUILayout.Foldout(showRunBrowser, "Run Browser", true);
+                if (showRunBrowser)
+                    DrawRunBrowser();
             }
         }
 
-        private void DrawPaintBlock()
+        private void DrawRunBrowser()
+        {
+            runSearch = EditorGUILayout.TextField("Search", runSearch);
+            runBrowserScroll = EditorGUILayout.BeginScrollView(runBrowserScroll, GUILayout.Height(140));
+
+            string search = string.IsNullOrWhiteSpace(runSearch) ? null : runSearch.Trim().ToLowerInvariant();
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField("Runs", GUILayout.Width(40));
+                GUILayout.FlexibleSpace();
+
+                if (GUILayout.Button("Refresh", GUILayout.Width(70)))
+                {
+                    GetRunsCached(forceRefresh: true);
+                    Repaint();
+                    SceneView.RepaintAll();
+                }
+            }
+
+            var runs = GetRunsCached();
+            foreach (var r in runs)
+            {
+                if (r == null) continue;
+                if (search != null && !r.name.ToLowerInvariant().Contains(search))
+                    continue;
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button(r.name, GUILayout.ExpandWidth(true)))
+                    {
+                        lockedRun = r;
+                        lockActiveRun = true;
+                        Selection.activeGameObject = r.gameObject;
+                        EditorGUIUtility.PingObject(r.gameObject);
+                        SceneView.lastActiveSceneView?.FrameSelected();
+                        SavePrefs();
+                        Repaint();
+                        SceneView.RepaintAll();
+                    }
+                }
+            }
+
+            EditorGUILayout.EndScrollView();
+        }
+
+        private void DrawPaintSessionBlock()
         {
             using (new EditorGUILayout.VerticalScope("box"))
             {
-                EditorGUILayout.LabelField("Paint Mode", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Paint Session", EditorStyles.boldLabel);
 
                 paintMode = EditorGUILayout.ToggleLeft("Enable Paint Mode (click terrain in Scene view)", paintMode);
                 snapToTerrainOnAdd = EditorGUILayout.ToggleLeft("Snap point to terrain on add", snapToTerrainOnAdd);
@@ -254,29 +255,40 @@ namespace SkiGame.RunsEditor
 
                 EditorGUILayout.HelpBox(
                     requireShiftToPaint
-                        ? "Scene: Shift + LMB to add a point. (Prevents accidental edits while navigating/Selecting.)"
+                        ? "Scene: Shift + LMB to add a point. This keeps painting from interfering with normal scene navigation."
                         : "Scene: LMB to add a point.",
                     MessageType.None);
 
                 EditorGUILayout.Space(4);
-
-                autoBakeOnEdit = EditorGUILayout.ToggleLeft("Auto Bake (update difficulty colour)", autoBakeOnEdit);
-                autoRebuildFlagsOnEdit = EditorGUILayout.ToggleLeft("Auto Rebuild Flags (slow)", autoRebuildFlagsOnEdit);
+                autoBakeOnEdit = EditorGUILayout.ToggleLeft("Auto Bake metrics/colour after edit", autoBakeOnEdit);
+                autoRebuildFlagsOnEdit = EditorGUILayout.ToggleLeft("Auto Rebuild Flags after edit (slower)", autoRebuildFlagsOnEdit);
 
                 var run = SelectedRun;
                 if (paintMode && run == null)
-                    EditorGUILayout.HelpBox("Select or create a run to paint points.", MessageType.None);
+                    EditorGUILayout.HelpBox("Select or create a run before painting points.", MessageType.Warning);
             }
         }
 
-        private void DrawRunToolsBlock()
+        private void DrawUtilitiesBlock()
         {
             var run = SelectedRun;
-            if (run == null) return;
-
             using (new EditorGUILayout.VerticalScope("box"))
             {
-                EditorGUILayout.LabelField("Run Tools", EditorStyles.boldLabel);
+                showUtilities = EditorGUILayout.Foldout(showUtilities, "Utilities", true);
+                if (!showUtilities) return;
+
+                if (run == null)
+                {
+                    EditorGUILayout.HelpBox("Utilities become available when a run is selected or locked.", MessageType.None);
+                    using (new EditorGUI.DisabledScope(true))
+                    {
+                        GUILayout.Button("Undo Last Point");
+                        GUILayout.Button("Clear Points");
+                        GUILayout.Button("Bake Metrics");
+                        GUILayout.Button("Rebuild Flags");
+                    }
+                    return;
+                }
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -285,7 +297,6 @@ namespace SkiGame.RunsEditor
                         Undo.RecordObject(run, "Undo Run Point");
                         run.RemoveLastPoint();
                         MarkAndRepaint(run);
-
                     }
 
                     if (GUILayout.Button("Clear Points"))
@@ -295,7 +306,6 @@ namespace SkiGame.RunsEditor
                             Undo.RecordObject(run, "Clear Run Points");
                             run.ClearPoints();
                             MarkAndRepaint(run);
-
                         }
                     }
                 }
@@ -323,9 +333,7 @@ namespace SkiGame.RunsEditor
                 EditorGUILayout.Space(6);
 
                 if (GUILayout.Button("Rebuild Flags (All Runs)"))
-                {
                     RebuildFlagsAllRuns();
-                }
             }
         }
 
@@ -333,11 +341,12 @@ namespace SkiGame.RunsEditor
         {
             using (new EditorGUILayout.VerticalScope("box"))
             {
-                EditorGUILayout.LabelField("Defaults (for new runs)", EditorStyles.boldLabel);
+                showDefaults = EditorGUILayout.Foldout(showDefaults, "Defaults For New Runs", true);
+                if (!showDefaults) return;
 
+                EditorGUILayout.LabelField("These values are applied when you create a new SkiRunLine from this window.", EditorStyles.wordWrappedMiniLabel);
                 defaultFlagPrefab = (GameObject)EditorGUILayout.ObjectField("Flag Prefab", defaultFlagPrefab, typeof(GameObject), false);
                 defaultDifficultyProfile = (RunDifficultyProfileSO)EditorGUILayout.ObjectField("Difficulty Profile", defaultDifficultyProfile, typeof(RunDifficultyProfileSO), false);
-
                 defaultRunWidthMeters = EditorGUILayout.Slider("Run Width (m)", defaultRunWidthMeters, 2f, 200f);
                 defaultFlagSpacingMeters = EditorGUILayout.Slider("Flag Spacing (m)", defaultFlagSpacingMeters, 1f, 50f);
             }
@@ -347,7 +356,8 @@ namespace SkiGame.RunsEditor
         {
             using (new EditorGUILayout.VerticalScope("box"))
             {
-                EditorGUILayout.LabelField("Quick Create", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Create", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Create a new run near the current Scene view camera and immediately select it for editing.", EditorStyles.wordWrappedMiniLabel);
 
                 if (GUILayout.Button("Create New Run (and select it)"))
                     CreateNewRun();

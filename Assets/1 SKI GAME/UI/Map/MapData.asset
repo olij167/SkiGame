@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Map.MapData
   schemaVersion: 1
   projection:
-    worldMinXZ: {x: -2000, y: -1000}
-    worldMaxXZ: {x: 2000, y: 1000}
+    worldMinXZ: {x: -2025, y: -2025}
+    worldMaxXZ: {x: 2025, y: 2025}
     useRotation: 0
     rotationYawDeg: 0
     worldOrigin: {x: 0, y: 0, z: 0}
@@ -24,23 +24,6 @@ MonoBehaviour:
   backgroundUvMin: {x: 0, y: 0}
   backgroundUvMax: {x: 1, y: 1}
   polylines:
-  - displayName: Valley Hook
-    id: 4569323761ef4ff493828efbfdf73d7b
-    lineType: 10
-    color: {r: 0.95, g: 0.2, b: 0.2, a: 1}
-    widthMeters: 30.4
-    pointsWorldXZ:
-    - {x: 641.8428, y: -610.2085}
-    - {x: 673.4423, y: -587.3684}
-    - {x: 689.99554, y: -563.35693}
-    - {x: 701.3489, y: -529.14856}
-    - {x: 711.22296, y: -494.16183}
-    - {x: 720.63684, y: -437.5782}
-    - {x: 752.6188, y: -411.4723}
-    - {x: 793.78186, y: -394.66803}
-    - {x: 812.7512, y: -388.64633}
-    - {x: 847.0643, y: -378.63208}
-    - {x: 909.725, y: -403.41534}
   - displayName: Lover's Bend
     id: 2d25c55cedd54bd281db5e06588c187b
     lineType: 10
@@ -68,23 +51,19 @@ MonoBehaviour:
     - {x: 587.3553, y: -449.98224}
     - {x: 609.98517, y: -484.41565}
     - {x: 623.6586, y: -590.9055}
-  - displayName: Crackpot
-    id: 64ed8230bfa441e3a2aa439fb2e79e75
+  - displayName: Hubris
+    id: 2f633ca88037441795a23fb72097670e
     lineType: 10
     color: {r: 0.1, g: 0.1, b: 0.1, a: 1}
-    widthMeters: 44.6
+    widthMeters: 30
     pointsWorldXZ:
-    - {x: 297.40808, y: -418.01974}
-    - {x: 356.77142, y: -393.54797}
-    - {x: 386.99707, y: -385.54102}
-    - {x: 437.9378, y: -372.64}
-    - {x: 467.60004, y: -360.3072}
-    - {x: 492.26935, y: -353.15295}
-    - {x: 522.45905, y: -352.36743}
-    - {x: 549.1448, y: -357.91956}
-    - {x: 570.0866, y: -366.5349}
-    - {x: 580.00745, y: -364.10846}
-    - {x: 594.03864, y: -363.40063}
+    - {x: 292.08487, y: -551.3517}
+    - {x: 342.1235, y: -519.3237}
+    - {x: 401.64755, y: -512.59033}
+    - {x: 462.35904, y: -527.45013}
+    - {x: 510.91696, y: -537.72034}
+    - {x: 527.1754, y: -553.615}
+    - {x: 538.7207, y: -571.18616}
   - displayName: Hawk's Dive
     id: b8c60781315847668b715e4d496e059e
     lineType: 10
@@ -123,6 +102,18 @@ MonoBehaviour:
     - {x: 321.81296, y: -595.40375}
     - {x: 290.20908, y: -597.38446}
     - {x: 230.73419, y: -613.6806}
+  - displayName: Crackshot
+    id: 98016aa657364f1394947b5bf71cec1e
+    lineType: 10
+    color: {r: 0.1, g: 0.1, b: 0.1, a: 1}
+    widthMeters: 37.2
+    pointsWorldXZ:
+    - {x: 407.48013, y: -364.8339}
+    - {x: 406.09726, y: -356.43378}
+    - {x: 427.31647, y: -323.68597}
+    - {x: 463.5661, y: -308.45184}
+    - {x: 490.3985, y: -290.23218}
+    - {x: 510.15747, y: -281.77805}
   - displayName: Boomerang
     id: 57aadd27228d497fac4ddd0a926fe6b8
     lineType: 10
@@ -138,19 +129,84 @@ MonoBehaviour:
     - {x: 525.17474, y: -271.16235}
     - {x: 482.93723, y: -249.06592}
     - {x: 453.3323, y: -232.07678}
-  - displayName: Hubris
-    id: 2f633ca88037441795a23fb72097670e
+  - displayName: Crackpot
+    id: 64ed8230bfa441e3a2aa439fb2e79e75
     lineType: 10
     color: {r: 0.1, g: 0.1, b: 0.1, a: 1}
-    widthMeters: 30
+    widthMeters: 44.6
     pointsWorldXZ:
-    - {x: 292.08487, y: -551.3517}
-    - {x: 342.1235, y: -519.3237}
-    - {x: 401.64755, y: -512.59033}
-    - {x: 462.35904, y: -527.45013}
-    - {x: 510.91696, y: -537.72034}
-    - {x: 527.1754, y: -553.615}
-    - {x: 538.7207, y: -571.18616}
+    - {x: 297.40808, y: -418.01974}
+    - {x: 356.77142, y: -393.54797}
+    - {x: 386.99707, y: -385.54102}
+    - {x: 437.9378, y: -372.64}
+    - {x: 467.60004, y: -360.3072}
+    - {x: 492.26935, y: -353.15295}
+    - {x: 522.45905, y: -352.36743}
+    - {x: 549.1448, y: -357.91956}
+    - {x: 570.0866, y: -366.5349}
+    - {x: 580.00745, y: -364.10846}
+    - {x: 594.03864, y: -363.40063}
+  - displayName: Valley Hook
+    id: 4569323761ef4ff493828efbfdf73d7b
+    lineType: 10
+    color: {r: 0.95, g: 0.2, b: 0.2, a: 1}
+    widthMeters: 30.4
+    pointsWorldXZ:
+    - {x: 641.8428, y: -610.2085}
+    - {x: 673.4423, y: -587.3684}
+    - {x: 689.99554, y: -563.35693}
+    - {x: 701.3489, y: -529.14856}
+    - {x: 711.22296, y: -494.16183}
+    - {x: 720.63684, y: -437.5782}
+    - {x: 752.6188, y: -411.4723}
+    - {x: 793.78186, y: -394.66803}
+    - {x: 812.7512, y: -388.64633}
+    - {x: 847.0643, y: -378.63208}
+    - {x: 909.725, y: -403.41534}
+  - displayName: Absolution
+    id: 8c5a5fc1231141af99a911eeb9d1db1c
+    lineType: 10
+    color: {r: 0.2, g: 0.4, b: 0.95, a: 1}
+    widthMeters: 40.2
+    pointsWorldXZ:
+    - {x: 649.02216, y: -783.3133}
+    - {x: 700.3416, y: -759.51337}
+    - {x: 737.35754, y: -721.7699}
+    - {x: 768.88617, y: -676.7176}
+    - {x: 781.0741, y: -642.4988}
+    - {x: 801.75616, y: -588.239}
+    - {x: 817.70935, y: -538.7577}
+    - {x: 819.6186, y: -484.90338}
+    - {x: 821.7308, y: -440.4074}
+  - displayName: New Run
+    id: 9724b036736745178e20ee2fff3a44b5
+    lineType: 10
+    color: {r: 0.1, g: 0.1, b: 0.1, a: 1}
+    widthMeters: 88
+    pointsWorldXZ:
+    - {x: -1287.5142, y: -242.15546}
+    - {x: -1153.7728, y: -172.97278}
+    - {x: -962.50287, y: -102.75806}
+    - {x: -825.6343, y: -62.769592}
+    - {x: -672.43427, y: -82.6413}
+    - {x: -498.07928, y: -128.42273}
+    - {x: -427.27557, y: -211.8935}
+    - {x: -387.18976, y: -292.78943}
+    - {x: -271.8128, y: -314.4417}
+    - {x: -148.94739, y: -273.05084}
+    - {x: -27.315857, y: -208.97058}
+    - {x: 26.218529, y: -160.15576}
+  - displayName: Retribuition
+    id: 31e8e8bb312d4668a150f928822b0be5
+    lineType: 10
+    color: {r: 0.1, g: 0.1, b: 0.1, a: 1}
+    widthMeters: 83.2
+    pointsWorldXZ:
+    - {x: 565.30927, y: -668.2937}
+    - {x: 567.3062, y: -732.0253}
+    - {x: 576.07806, y: -788.6267}
+    - {x: 608.2404, y: -794.4908}
+    - {x: 626.69666, y: -800.1476}
   - displayName: Breakneck
     id: f75d874d4ce94cb686e939e7d5d86933
     lineType: 10
@@ -168,95 +224,45 @@ MonoBehaviour:
     - {x: 846.746, y: -657.5658}
     - {x: 879.336, y: -585.9651}
     - {x: 955.14026, y: -422.65533}
-  - displayName: Retribuition
-    id: 31e8e8bb312d4668a150f928822b0be5
-    lineType: 10
-    color: {r: 0.1, g: 0.1, b: 0.1, a: 1}
-    widthMeters: 83.2
-    pointsWorldXZ:
-    - {x: 565.30927, y: -668.2937}
-    - {x: 567.3062, y: -732.0253}
-    - {x: 576.07806, y: -788.6267}
-    - {x: 608.2404, y: -794.4908}
-    - {x: 626.69666, y: -800.1476}
-  - displayName: Absolution
-    id: 8c5a5fc1231141af99a911eeb9d1db1c
-    lineType: 10
-    color: {r: 0.2, g: 0.4, b: 0.95, a: 1}
-    widthMeters: 40.2
-    pointsWorldXZ:
-    - {x: 649.02216, y: -783.3133}
-    - {x: 700.3416, y: -759.51337}
-    - {x: 737.35754, y: -721.7699}
-    - {x: 768.88617, y: -676.7176}
-    - {x: 781.0741, y: -642.4988}
-    - {x: 801.75616, y: -588.239}
-    - {x: 817.70935, y: -538.7577}
-    - {x: 819.6186, y: -484.90338}
-    - {x: 821.7308, y: -440.4074}
-  - displayName: Crackshot
-    id: 98016aa657364f1394947b5bf71cec1e
-    lineType: 10
-    color: {r: 0.1, g: 0.1, b: 0.1, a: 1}
-    widthMeters: 37.2
-    pointsWorldXZ:
-    - {x: 407.48013, y: -364.8339}
-    - {x: 406.09726, y: -356.43378}
-    - {x: 427.31647, y: -323.68597}
-    - {x: 463.5661, y: -308.45184}
-    - {x: 490.3985, y: -290.23218}
-    - {x: 510.15747, y: -281.77805}
-  - displayName: Ski Lift
-    id: 725ff84205664fee9ff2ccd1eaeff90c
-    lineType: 20
-    color: {r: 0, g: 1, b: 1, a: 1}
-    widthMeters: 2
-    pointsWorldXZ:
-    - {x: 1548.1642, y: -153.18872}
-    - {x: 996.4642, y: 165.2113}
   - displayName: Hawk's Lift
     id: 4f8c9477b2a14a64b67ced4b24f91b9a
     lineType: 20
     color: {r: 1, g: 0.4117647, b: 0.7058824, a: 1}
     widthMeters: 2
     pointsWorldXZ:
-    - {x: 1018.29974, y: -173.60646}
-    - {x: 295.58975, y: -504.95648}
+    - {x: 903.49976, y: -143.95645}
+    - {x: 284.14975, y: -507.28644}
+  - displayName: Ski Lift
+    id: 3cfaea5fc1d3428fb9155942af696c7a
+    lineType: 20
+    color: {r: 0, g: 1, b: 1, a: 1}
+    widthMeters: 2
+    pointsWorldXZ:
+    - {x: 1393.9069, y: -1360.357}
+    - {x: 1617.7068, y: -1706.1571}
+  - displayName: Base Lift
+    id: 725ff84205664fee9ff2ccd1eaeff90c
+    lineType: 20
+    color: {r: 0, g: 1, b: 1, a: 1}
+    widthMeters: 2
+    pointsWorldXZ:
+    - {x: 1635.2742, y: 390.98132}
+    - {x: 1084.0642, y: 158.12132}
+  - displayName: Ski Lift (1)
+    id: 81ce71476e7741f1a356f67c9099e82f
+    lineType: 20
+    color: {r: 0, g: 1, b: 1, a: 1}
+    widthMeters: 2
+    pointsWorldXZ:
+    - {x: 1643.4197, y: 361.7035}
+    - {x: 1508.4797, y: -1347.1465}
   markers:
-  - displayName: Valley Hook
-    id: 4569323761ef4ff493828efbfdf73d7b__top
-    type: 10
-    color: {r: 0.95, g: 0.2, b: 0.2, a: 1}
-    meta: Red
-    worldPosition: {x: 641.8428, y: 532.2465, z: -610.2085}
-    source: {fileID: 0}
   - displayName: Lover's Bend
     id: 2d25c55cedd54bd281db5e06588c187b__top
     type: 10
     color: {r: 0.95, g: 0.2, b: 0.2, a: 1}
     meta: Red
     worldPosition: {x: 206.67758, y: 936.0445, z: -597.8694}
-    source: {fileID: 0}
-  - displayName: Crackpot
-    id: 64ed8230bfa441e3a2aa439fb2e79e75__top
-    type: 10
-    color: {r: 0.1, g: 0.1, b: 0.1, a: 1}
-    meta: Black
-    worldPosition: {x: 297.40808, y: 746.8765, z: -418.01974}
-    source: {fileID: 0}
-  - displayName: Hawk's Dive
-    id: b8c60781315847668b715e4d496e059e__top
-    type: 10
-    color: {r: 0.95, g: 0.2, b: 0.2, a: 1}
-    meta: Red
-    worldPosition: {x: 230.73419, y: 941.33154, z: -613.6806}
-    source: {fileID: 0}
-  - displayName: Boomerang
-    id: 57aadd27228d497fac4ddd0a926fe6b8__top
-    type: 10
-    color: {r: 0.95, g: 0.2, b: 0.2, a: 1}
-    meta: Red
-    worldPosition: {x: 583.6722, y: 599.03436, z: -421.25223}
     source: {fileID: 0}
   - displayName: Hubris
     id: 2f633ca88037441795a23fb72097670e__top
@@ -265,26 +271,12 @@ MonoBehaviour:
     meta: Black
     worldPosition: {x: 292.08487, y: 950.2095, z: -551.3517}
     source: {fileID: 0}
-  - displayName: Breakneck
-    id: f75d874d4ce94cb686e939e7d5d86933__top
+  - displayName: Hawk's Dive
+    id: b8c60781315847668b715e4d496e059e__top
     type: 10
     color: {r: 0.95, g: 0.2, b: 0.2, a: 1}
     meta: Red
-    worldPosition: {x: 306.22754, y: 799.27606, z: -719.3393}
-    source: {fileID: 0}
-  - displayName: Retribuition
-    id: 31e8e8bb312d4668a150f928822b0be5__top
-    type: 10
-    color: {r: 0.1, g: 0.1, b: 0.1, a: 1}
-    meta: Black
-    worldPosition: {x: 565.30927, y: 716.515, z: -668.2937}
-    source: {fileID: 0}
-  - displayName: Absolution
-    id: 8c5a5fc1231141af99a911eeb9d1db1c__top
-    type: 10
-    color: {r: 0.2, g: 0.4, b: 0.95, a: 1}
-    meta: Blue
-    worldPosition: {x: 649.02216, y: 545.59485, z: -783.3133}
+    worldPosition: {x: 230.73419, y: 941.33154, z: -613.6806}
     source: {fileID: 0}
   - displayName: Crackshot
     id: 98016aa657364f1394947b5bf71cec1e__top
@@ -293,33 +285,110 @@ MonoBehaviour:
     meta: Black
     worldPosition: {x: 407.48013, y: 638.5892, z: -364.8339}
     source: {fileID: 0}
-  - displayName: Ski Lift (Bottom)
-    id: 725ff84205664fee9ff2ccd1eaeff90c__bottom
-    type: 20
-    color: {r: 0, g: 1, b: 1, a: 1}
-    meta: 'Carriers: 30, Speed: 30'
-    worldPosition: {x: 1548.1642, y: 189.4, z: -153.18872}
+  - displayName: Boomerang
+    id: 57aadd27228d497fac4ddd0a926fe6b8__top
+    type: 10
+    color: {r: 0.95, g: 0.2, b: 0.2, a: 1}
+    meta: Red
+    worldPosition: {x: 583.6722, y: 599.03436, z: -421.25223}
     source: {fileID: 0}
-  - displayName: Ski Lift (Top)
-    id: 725ff84205664fee9ff2ccd1eaeff90c__top
-    type: 20
-    color: {r: 0, g: 1, b: 1, a: 1}
-    meta: 'Carriers: 30, Speed: 30'
-    worldPosition: {x: 996.4642, y: 468.36002, z: 165.2113}
+  - displayName: Crackpot
+    id: 64ed8230bfa441e3a2aa439fb2e79e75__top
+    type: 10
+    color: {r: 0.1, g: 0.1, b: 0.1, a: 1}
+    meta: Black
+    worldPosition: {x: 297.40808, y: 746.8765, z: -418.01974}
+    source: {fileID: 0}
+  - displayName: Valley Hook
+    id: 4569323761ef4ff493828efbfdf73d7b__top
+    type: 10
+    color: {r: 0.95, g: 0.2, b: 0.2, a: 1}
+    meta: Red
+    worldPosition: {x: 641.8428, y: 532.2465, z: -610.2085}
+    source: {fileID: 0}
+  - displayName: Absolution
+    id: 8c5a5fc1231141af99a911eeb9d1db1c__top
+    type: 10
+    color: {r: 0.2, g: 0.4, b: 0.95, a: 1}
+    meta: Blue
+    worldPosition: {x: 649.02216, y: 545.59485, z: -783.3133}
+    source: {fileID: 0}
+  - displayName: New Run
+    id: 9724b036736745178e20ee2fff3a44b5__top
+    type: 10
+    color: {r: 0.1, g: 0.1, b: 0.1, a: 1}
+    meta: Black
+    worldPosition: {x: -1287.5142, y: 1466.5636, z: -242.15546}
+    source: {fileID: 0}
+  - displayName: Retribuition
+    id: 31e8e8bb312d4668a150f928822b0be5__top
+    type: 10
+    color: {r: 0.1, g: 0.1, b: 0.1, a: 1}
+    meta: Black
+    worldPosition: {x: 565.30927, y: 716.515, z: -668.2937}
+    source: {fileID: 0}
+  - displayName: Breakneck
+    id: f75d874d4ce94cb686e939e7d5d86933__top
+    type: 10
+    color: {r: 0.95, g: 0.2, b: 0.2, a: 1}
+    meta: Red
+    worldPosition: {x: 306.22754, y: 799.27606, z: -719.3393}
     source: {fileID: 0}
   - displayName: Hawk's Lift (Bottom)
     id: 4f8c9477b2a14a64b67ced4b24f91b9a__bottom
     type: 20
     color: {r: 1, g: 0.4117647, b: 0.7058824, a: 1}
-    meta: 'Carriers: 30, Speed: 30'
-    worldPosition: {x: 1018.29974, y: 356.45496, z: -173.60646}
+    meta: 'Carriers: 50, Speed: 30'
+    worldPosition: {x: 903.49976, y: 354.615, z: -143.95645}
     source: {fileID: 0}
   - displayName: Hawk's Lift (Top)
     id: 4f8c9477b2a14a64b67ced4b24f91b9a__top
     type: 20
     color: {r: 1, g: 0.4117647, b: 0.7058824, a: 1}
+    meta: 'Carriers: 50, Speed: 30'
+    worldPosition: {x: 284.14975, y: 986.425, z: -507.28644}
+    source: {fileID: 0}
+  - displayName: Ski Lift (Bottom)
+    id: 3cfaea5fc1d3428fb9155942af696c7a__bottom
+    type: 20
+    color: {r: 0, g: 1, b: 1, a: 1}
     meta: 'Carriers: 30, Speed: 30'
-    worldPosition: {x: 295.58975, y: 985.125, z: -504.95648}
+    worldPosition: {x: 1393.9069, y: 794.4467, z: -1360.357}
+    source: {fileID: 0}
+  - displayName: Ski Lift (Top)
+    id: 3cfaea5fc1d3428fb9155942af696c7a__top
+    type: 20
+    color: {r: 0, g: 1, b: 1, a: 1}
+    meta: 'Carriers: 30, Speed: 30'
+    worldPosition: {x: 1617.7068, y: 1168.1467, z: -1706.1571}
+    source: {fileID: 0}
+  - displayName: Base Lift (Bottom)
+    id: 725ff84205664fee9ff2ccd1eaeff90c__bottom
+    type: 20
+    color: {r: 0, g: 1, b: 1, a: 1}
+    meta: 'Carriers: 30, Speed: 30'
+    worldPosition: {x: 1635.2742, y: 162.88, z: 390.98132}
+    source: {fileID: 0}
+  - displayName: Base Lift (Top)
+    id: 725ff84205664fee9ff2ccd1eaeff90c__top
+    type: 20
+    color: {r: 0, g: 1, b: 1, a: 1}
+    meta: 'Carriers: 30, Speed: 30'
+    worldPosition: {x: 1084.0642, y: 470.16, z: 158.12132}
+    source: {fileID: 0}
+  - displayName: Ski Lift (1) (Bottom)
+    id: 81ce71476e7741f1a356f67c9099e82f__bottom
+    type: 20
+    color: {r: 0, g: 1, b: 1, a: 1}
+    meta: 'Carriers: 30, Speed: 30'
+    worldPosition: {x: 1643.4197, y: 164.29498, z: 361.7035}
+    source: {fileID: 0}
+  - displayName: Ski Lift (1) (Top)
+    id: 81ce71476e7741f1a356f67c9099e82f__top
+    type: 20
+    color: {r: 0, g: 1, b: 1, a: 1}
+    meta: 'Carriers: 30, Speed: 30'
+    worldPosition: {x: 1508.4797, y: 805.725, z: -1347.1465}
     source: {fileID: 0}
   - displayName: Hawk's Nest
     id: f488b732921f45e3bcecb61ad9e738f3

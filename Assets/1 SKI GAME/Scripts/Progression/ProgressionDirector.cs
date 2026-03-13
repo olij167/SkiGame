@@ -627,6 +627,19 @@ namespace SkiGame.Progression
 
             return total;
         }
+        [SerializeField] private int currencyToAdd = 10;
+        
+        [ContextMenu("Add Currency")]
+        public void AddCurrency()
+        {
+            var mgr = PlayerStatsManager.Instance;
+            if (mgr == null) return;
+
+            var profile = mgr.Profile;
+            if (profile == null) return;
+
+            profile.currency += currencyToAdd;
+        }
 
         /// <summary>
         /// Total currency currently claimable from completed-but-unclaimed daily tiers, plus any

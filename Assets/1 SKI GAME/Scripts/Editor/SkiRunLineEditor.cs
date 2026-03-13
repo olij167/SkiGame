@@ -464,19 +464,48 @@ namespace SkiGame.RunsEditor
         {
             using (new EditorGUILayout.VerticalScope("box"))
             {
-                EditorGUILayout.LabelField("Authoring", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Scene Workflow", EditorStyles.boldLabel);
+                EditorGUILayout.HelpBox(GetAuthoringModeInspectorHelp(), MessageType.None);
 
-                // Single, cohesive scene interaction mode (also accessible via 1/2/3 hotkeys).
-                var newMode = (AuthoringMode)EditorGUILayout.EnumPopup(
-                    new GUIContent("Scene Editing Mode", "Controls which scene handles/interactions are active.\nHotkeys: 1=Path, 2=Flags, 3=Fences"),
-                    _authoringMode);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    DrawModeButton("Path (1)", AuthoringMode.Path, run);
+                    DrawModeButton("Flags (2)", AuthoringMode.Flags, run);
+                    DrawModeButton("Fences (3)", AuthoringMode.Fences, run);
+                }
 
-                if (newMode != _authoringMode)
-                    SetAuthoringMode(newMode, run);
+                EditorGUILayout.Space(2);
+                EditorGUILayout.LabelField("Use the Scene overlay for live editing controls. Use this inspector for run settings and deeper authoring options.", EditorStyles.miniLabel);
 
                 showHotkeyOverlay = EditorGUILayout.ToggleLeft(
-                    new GUIContent("Show hotkey overlay (H)", "Shows a small scene overlay listing useful hotkeys."),
+                    new GUIContent("Show hotkey overlay (H)", "Shows a compact scene overlay listing useful hotkeys."),
                     showHotkeyOverlay);
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Open Painter"))
+                        SkiRunPainterWindow.OpenAndSelect(run, enablePaint: _authoringMode == AuthoringMode.Path);
+
+                    if (GUILayout.Button("Frame In Scene"))
+                    {
+                        Selection.activeGameObject = run.gameObject;
+                        EditorGUIUtility.PingObject(run.gameObject);
+                        SceneView.lastActiveSceneView?.FrameSelected();
+                    }
+
+                    using (new EditorGUI.DisabledScope(_authoringMode != AuthoringMode.Flags))
+                    {
+                        if (GUILayout.Button("Rebuild Flags"))
+                        {
+                            Undo.RecordObject(run, "Rebuild Run Flags");
+                            run.RebuildFlags();
+                            run.ApplyColorToGeneratedFlags();
+                            EditorUtility.SetDirty(run);
+                            _previewDirty = true;
+                            SceneView.RepaintAll();
+                        }
+                    }
+                }
 
                 _foldAuthoringAdvanced = EditorGUILayout.Foldout(_foldAuthoringAdvanced, "Advanced", true);
                 if (_foldAuthoringAdvanced)
@@ -488,7 +517,7 @@ namespace SkiGame.RunsEditor
                         sceneVisualYOffset, 0f, 2f);
 
                     previewMaxPairs = EditorGUILayout.IntSlider(
-                        new GUIContent("Preview Max Pairs", "Limits how many sampled pairs/boundary points are drawn in the scene for performance."),
+                        new GUIContent("Preview Density Limit", "Limits how many sampled preview elements are drawn in the scene for performance."),
                         previewMaxPairs, 20, 5000);
 
                     previewIncludeOverlapAvoidance = EditorGUILayout.ToggleLeft(
@@ -497,6 +526,29 @@ namespace SkiGame.RunsEditor
 
                     EditorGUI.indentLevel--;
                 }
+            }
+        }
+
+        private void DrawModeButton(string label, AuthoringMode mode, SkiRunLine run)
+        {
+            bool isActive = _authoringMode == mode;
+            using (new EditorGUI.DisabledScope(isActive))
+            {
+                if (GUILayout.Button(label, GUILayout.Height(24f)))
+                    SetAuthoringMode(mode, run);
+            }
+        }
+
+        private string GetAuthoringModeInspectorHelp()
+        {
+            switch (_authoringMode)
+            {
+                case AuthoringMode.Flags:
+                    return "Flags mode: tune gate placement and preview corridor behaviour. Use the Scene overlay for gate editing and visibility toggles.";
+                case AuthoringMode.Fences:
+                    return "Fences mode: preview run edges and edit fence gaps. Use the Scene overlay to control fence editing affordances.";
+                default:
+                    return "Path mode: shape the run by selecting, moving, inserting, and deleting points. Open the painter when you want fast terrain-click authoring.";
             }
         }
 
@@ -976,7 +1028,7 @@ namespace SkiGame.RunsEditor
             // Hotkeys + overlay (runs even if we early-return later)
             HandleSceneHotkeys(run);
 
-           
+
             // Escape clears BOTH point + gate selections
             if (e != null && e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape)
             {
@@ -3207,6 +3259,44 @@ namespace SkiGame.RunsEditor
             Handles.EndGUI();
         }
 
+        private string GetOverlayModeLabel()
+        {
+            switch (_authoringMode)
+            {
+                case AuthoringMode.Flags: return "Flags";
+                case AuthoringMode.Fences: return "Fences";
+                default: return "Path";
+            }
+        }
+
+        private string GetOverlayInstruction()
+        {
+            switch (_authoringMode)
+            {
+                case AuthoringMode.Flags:
+                    return gateEditMode
+                        ? "Edit Gates is active. Drag gate sides in the Scene view."
+                        : "Flags mode is active. Enable Edit Gates to adjust gate placement.";
+                case AuthoringMode.Fences:
+                    return fenceHoleEditMode
+                        ? "Edit Gaps is active. Select a gap and press Delete to remove it."
+                        : "Fences mode is active. Enable Edit Gaps to add or modify fence holes.";
+                default:
+                    return showPointGizmos
+                        ? "Edit Points is active. Select, move, insert, and delete run points in the Scene view."
+                        : "Path mode is active. Enable Edit Points to work with point handles.";
+            }
+        }
+
+        private string GetOverlayVisibilitySummary()
+        {
+            var parts = new List<string>(3);
+            if (showBoundaryPreview) parts.Add("Corridor");
+            if (showPairPreview) parts.Add("Gates");
+            if (showIntersectionOverlay) parts.Add("Intersections");
+            return parts.Count > 0 ? string.Join(" • ", parts) : "Preview hidden";
+        }
+
         private static SkiRunLineEditor _activeEditorInstance;
 
         // ------------------------------------------------------------
@@ -3219,6 +3309,36 @@ namespace SkiGame.RunsEditor
         {
             if (_active == null) return false;
             return _active.target is SkiRunLine;
+        }
+
+        internal static string OverlayGetRunName()
+        {
+            if (_active == null) return "No active run";
+            var run = _active.target as SkiRunLine;
+            return run != null ? run.name : "No active run";
+        }
+
+        internal static string OverlayGetModeLabel() => _active != null ? _active.GetOverlayModeLabel() : "Path";
+        internal static string OverlayGetInstruction() => _active != null ? _active.GetOverlayInstruction() : "Select a SkiRunLine to begin.";
+        internal static string OverlayGetVisibilitySummary() => _active != null ? _active.GetOverlayVisibilitySummary() : "";
+
+        internal static void OverlayFrameActiveRun()
+        {
+            if (_active == null) return;
+            var run = _active.target as SkiRunLine;
+            if (run == null) return;
+
+            Selection.activeGameObject = run.gameObject;
+            EditorGUIUtility.PingObject(run.gameObject);
+            SceneView.lastActiveSceneView?.FrameSelected();
+        }
+
+        internal static void OverlayOpenPainter(bool enablePaint)
+        {
+            if (_active == null) return;
+            var run = _active.target as SkiRunLine;
+            if (run == null) return;
+            SkiRunPainterWindow.OpenAndSelect(run, enablePaint);
         }
 
         internal static int OverlayGetMode() => _active != null ? (int)_active._authoringMode : 0;
@@ -3316,7 +3436,7 @@ namespace SkiGame.RunsEditor
             SceneView.RepaintAll();
             _activeEditorInstance.Repaint();
         }
-        
+
         internal void LoadEditorPrefs()
         {
             showBoundaryPreview = EditorPrefs.GetBool(PrefKey + "showBoundaryPreview", showBoundaryPreview);
