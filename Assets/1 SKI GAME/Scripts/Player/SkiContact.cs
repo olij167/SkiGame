@@ -627,10 +627,38 @@ public class SkiContact : MonoBehaviour
     {
         IsGrounded = false;
         HasTipContact = false;
+
+        ContactNormal = Vector3.up;
+        ContactPoint = default;
+        LastContactTime = 0f;
+
+        EndContactSign = 0;
+        EndContactLocalZ = 0f;
+        BaseContactAlignment = 0f;
+
+        _probeBaseHit = false;
+        _probeTipHit = false;
+        _probeTailHit = false;
+        _probeBasePoint = default;
+        _probeTipPoint = default;
+        _probeTailPoint = default;
+        _probeBaseNormal = Vector3.up;
+        _probeTipNormal = Vector3.up;
+        _probeTailNormal = Vector3.up;
+
+        _hasCollisionContact = false;
+        _collisionContactPoint = default;
+        _collisionContactNormal = Vector3.up;
         _collisionOtherCollider = null;
 
-    }
+        _hasWallContact = false;
+        _wallContactPoint = default;
+        _wallContactNormal = Vector3.up;
+        _wallOtherCollider = null;
 
+        _hasAnyCollisionContact = false;
+        _anyCollisionOtherCollider = null;
+    }
     public void NotifySkiModelChanged()
     {
         _geometryInitialized = false;

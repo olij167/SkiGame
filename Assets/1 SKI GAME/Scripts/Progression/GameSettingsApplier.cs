@@ -288,28 +288,33 @@ namespace SkiGame.Progression
 
         private void ApplyUiScale(float uiScale)
         {
-            float scale = Mathf.Clamp(uiScale, 0.8f, 1.3f);
+            float scale = Mathf.Clamp(uiScale, 0.85f, 1.15f);
 
             // Always refresh list: menus often spawn their UIDocument after this applier.
             ResolveUiDocuments(force: true);
 
-            if (uiDocuments == null || uiDocuments.Length == 0) return;
+            if (uiDocuments == null || uiDocuments.Length == 0)
+                return;
 
             for (int i = 0; i < uiDocuments.Length; i++)
             {
                 var doc = uiDocuments[i];
-                if (doc == null) continue;
+                if (doc == null)
+                    continue;
 
-                // Preferred: panel scale (keeps layout stable)
+                // Preferred and layout-safe path.
                 if (doc.panelSettings != null)
                     doc.panelSettings.scale = scale;
 
-                // Robust fallback: root scale (forces visible change even if panel scale is ignored)
                 var root = doc.rootVisualElement;
-                if (root == null) continue;
+                if (root == null)
+                    continue;
 
-                root.style.transformOrigin = new TransformOrigin(0f, 0f, 0f);
-                root.transform.scale = new Vector3(scale, scale, 1f);
+                // Important: do NOT also apply transform scale to the root.
+                // That compounds with panel scaling and is what causes UI to drift,
+                // clip, or exceed the screen bounds.
+                root.transform.scale = Vector3.one;
+                root.style.translate = new Translate(0, 0, 0);
             }
         }
 

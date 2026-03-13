@@ -930,6 +930,75 @@ public class SkiController : MonoBehaviour
     // PUBLIC API
     // ----------------------------------------------------------------------
 
+    public void TeleportToSpawn(Vector3 worldPosition, Quaternion worldRotation, bool snapToGround = true)
+    {
+        if (_rb == null)
+            _rb = GetComponent<Rigidbody>();
+
+        // Clear transient movement / grounding state.
+        _stacked = false;
+        _grindActive = false;
+        _grindTime = 0f;
+        _grindStrengthSmoothed = 0f;
+        _grindReattachCooldownUntil = 0f;
+
+        _isGrounded = false;
+        _wasGrounded = false;
+        _wasControlsGrounded = false;
+        _nearGroundForJump = false;
+
+        _wallContactUntil = 0f;
+        _wallScrapeNormal = Vector3.zero;
+
+        _groundNormal = Vector3.up;
+        _alignNormal = Vector3.up;
+        _skiForward = Vector3.ProjectOnPlane(worldRotation * Vector3.forward, Vector3.up).normalized;
+        if (_skiForward.sqrMagnitude < 0.0001f)
+            _skiForward = Vector3.forward;
+
+        _airAngularVelocity = Vector3.zero;
+        _movementMode = MovementMode.Airborne;
+
+        _antiClipStableFrames = 0;
+        _antiClipLastCheckedFrame = -999;
+        _antiClipLastLiftNeeded = 0f;
+
+        _tipContactAccumTime = 0f;
+        _hasNonSkiGroundContact = false;
+
+        _lastGroundedTime = -999f;
+        _lastJumpTime = -999f;
+        _airborneStartTime = Time.time;
+        _airbornePeakY = worldPosition.y;
+
+        if (leftSkiContact != null) leftSkiContact.NotifySkiModelChanged();
+        if (rightSkiContact != null) rightSkiContact.NotifySkiModelChanged();
+
+        _rb.linearVelocity = Vector3.zero;
+        _rb.angularVelocity = Vector3.zero;
+
+        _rb.position = worldPosition;
+        _rb.rotation = worldRotation;
+
+        Physics.SyncTransforms();
+
+        if (leftSkiContact != null) leftSkiContact.ManualSampleGround();
+        if (rightSkiContact != null) rightSkiContact.ManualSampleGround();
+
+        CheckGround();
+
+        if (snapToGround && preventSkiTerrainClipping)
+        {
+            SnapToGroundClearance(resetDownwardVelocity: true, iterations: 3);
+
+            if (leftSkiContact != null) leftSkiContact.ManualSampleGround();
+            if (rightSkiContact != null) rightSkiContact.ManualSampleGround();
+
+            CheckGround();
+        }
+
+        _wasControlsGrounded = IsGroundedForControls;
+    }
     public void RecoverFromStack(Vector3 forwardHint)
     {
         if (!_stacked) return;
@@ -1033,16 +1102,52 @@ public class SkiController : MonoBehaviour
         _cachedSkisProfile = skisProfile;
         if (skisProfile == null) return;
 
-        // Swap only sides that have prefabs assigned; if null, keep the existing visual.
-        if (skisProfile.skiPrefab != null)
-            leftSkiVisual = SwapSkiVisual(leftSki, ref _leftSkiVisual, skisProfile.skiPrefab);
+        bool swappedAny = false;
 
         if (skisProfile.skiPrefab != null)
+        {
+            leftSkiVisual = SwapSkiVisual(leftSki, ref _leftSkiVisual, skisProfile.skiPrefab);
+            swappedAny = true;
+        }
+
+        if (skisProfile.skiPrefab != null)
+        {
             rightSkiVisual = SwapSkiVisual(rightSki, ref _rightSkiVisual, skisProfile.skiPrefab);
+            swappedAny = true;
+        }
 
         CacheSkiColliders();
-    }
 
+        if (swappedAny)
+        {
+            if (leftSkiContact != null)
+                leftSkiContact.NotifySkiModelChanged();
+
+            if (rightSkiContact != null)
+                rightSkiContact.NotifySkiModelChanged();
+
+            // Force an immediate re-sample so grounding is valid on the same frame.
+            if (leftSkiContact != null)
+                leftSkiContact.ManualSampleGround();
+
+            if (rightSkiContact != null)
+                rightSkiContact.ManualSampleGround();
+
+            CheckGround();
+
+            if (preventSkiTerrainClipping)
+                SnapToGroundClearance(resetDownwardVelocity: true, iterations: 2);
+
+            if (leftSkiContact != null)
+                leftSkiContact.ManualSampleGround();
+
+            if (rightSkiContact != null)
+                rightSkiContact.ManualSampleGround();
+
+            CheckGround();
+            _wasControlsGrounded = IsGroundedForControls;
+        }
+    }
     private void ApplySkiVisualStyle()
     {
         if (gearLoadout == null) return;

@@ -483,7 +483,8 @@ namespace SkiGame.Progression
                     "Right Ski" => 4,
                     "Poles" => 5,
                     "Jump" => 6,
-                    "Shop Orbit" => 7,
+                    "Equip Skis" => 7,
+                    "Shop Orbit" => 8,
                     _ => 100
                 };
             }
@@ -610,6 +611,11 @@ namespace SkiGame.Progression
                 case "leftSkiAction": return "Left Ski";
                 case "rightSkiAction": return "Right Ski";
 
+                case "equipSkisAction":
+                case "equipSkiAction":
+                case "equipSkisPressAction":
+                    return "Equip Skis";
+
                 case "interactAction":
                 case "exitHoldAction":
                 case "resortAction":
@@ -623,9 +629,15 @@ namespace SkiGame.Progression
                     return "Lean";
             }
 
+            if (!string.IsNullOrEmpty(fallbackActionName))
+            {
+                string normalized = fallbackActionName.Replace(" ", "").Replace("_", "").ToLowerInvariant();
+                if (normalized.Contains("equipskis") || normalized.Contains("equipski"))
+                    return "Equip Skis";
+            }
+
             return string.IsNullOrEmpty(fallbackActionName) ? fieldName : fallbackActionName;
         }
-
         private void StartRebind(InputAction action, int bindingIndex, Label bindingLabel, VisualElement rowElement)
         {
             CancelActiveRebind();

@@ -103,26 +103,24 @@ namespace SkiGame.Progression
             }
 
             if (PendingNewGame)
-                DoNewGame(statsMgr);
+                DoNewGame(statsMgr, gameplayScene);
             else
-                DoLoadGame(statsMgr);
+                DoLoadGame(statsMgr, gameplayScene);
 
-            // ✅ Profile is now loaded/applied. Enable pause menu gating.
             NotifyPauseMenuProfileLoaded();
 
             PendingNewGame = false;
             HasPendingRequest = false;
         }
 
-        private void DoNewGame(PlayerStatsManager statsMgr)
+        private void DoNewGame(PlayerStatsManager statsMgr, Scene gameplayScene)
         {
             GameSaveSystem.DeleteSlot(GameSaveSystem.ActiveSlotId);
 
-            statsMgr.Load();   // LoadOrCreate
+            statsMgr.Load();
             statsMgr.ResetAll();
 
             PlayerPrefs.DeleteKey("skigame.runs.calendarBaseDay");
-
             RunProgressTracker.ClearAllPersistentDataForSlot(GameSaveSystem.ActiveSlotId);
 
             var tc = TimeController.instance != null ? TimeController.instance : FindObjectOfType<TimeController>();
@@ -138,21 +136,15 @@ namespace SkiGame.Progression
                 };
 
                 TimeStateStorage.Apply(tc, ts);
-
-                // ✅ Ensure tc.dayCount is correct for the applied month/day (and sets currentDay)
                 tc.SyncDayCountFromDate();
 
                 statsMgr.Profile.playthrough ??= new PlaythroughState();
                 statsMgr.Profile.playthrough.playthroughId += 1;
                 statsMgr.Profile.playthrough.startedUtc = DateTimeUtc.Now();
-
-                // ✅ Baseline should be the *applied* start dayCount (after sync)
                 statsMgr.Profile.playthrough.calendarStartDayOfYear = tc.dayCount;
                 statsMgr.Profile.playthrough.calendarStartYear = tc.currentYear;
 
                 TimeStateStorage.Save(TimeStateStorage.Capture(tc), GameSaveSystem.GetTimePath(GameSaveSystem.ActiveSlotId));
-
-                // ✅ Force UI baseline refresh
                 PostApplyTimeAndUIRefresh(tc);
             }
 
@@ -161,10 +153,10 @@ namespace SkiGame.Progression
             statsMgr.Save();
             GameSaveSystem.MarkSlotPlayed(GameSaveSystem.ActiveSlotId);
 
-            TryMovePlayerToResortSpawn();
+            TryMovePlayerToResortSpawn(gameplayScene);
         }
 
-        private void DoLoadGame(PlayerStatsManager statsMgr)
+        private void DoLoadGame(PlayerStatsManager statsMgr, Scene gameplayScene)
         {
             statsMgr.Load();
 
@@ -178,14 +170,55 @@ namespace SkiGame.Progression
                     tc.SyncDayCountFromDate();
                 }
 
-                // ✅ Force UI baseline refresh
                 PostApplyTimeAndUIRefresh(tc);
             }
 
             GameSaveSystem.MarkSlotPlayed(GameSaveSystem.ActiveSlotId);
 
-            TryMovePlayerToResortSpawn();
+            TryMovePlayerToResortSpawn(gameplayScene);
+        }
 
+        private void TryMovePlayerToResortSpawn(Scene gameplayScene)
+        {
+            if (!gameplayScene.IsValid() || !gameplayScene.isLoaded)
+                return;
+
+            Transform spawn = FindTaggedTransformInScene(gameplayScene, resortSpawnTag);
+            if (spawn == null)
+                return;
+
+            SkiController player = FindComponentInScene<SkiController>(gameplayScene);
+            if (player == null)
+                return;
+
+            player.TeleportToSpawn(spawn.position, spawn.rotation, snapToGround: true);
+        }
+
+        private static T FindComponentInScene<T>(Scene scene) where T : Component
+        {
+            var roots = scene.GetRootGameObjects();
+            for (int i = 0; i < roots.Length; i++)
+            {
+                var c = roots[i].GetComponentInChildren<T>(true);
+                if (c != null)
+                    return c;
+            }
+            return null;
+        }
+
+        private static Transform FindTaggedTransformInScene(Scene scene, string tag)
+        {
+            var roots = scene.GetRootGameObjects();
+            for (int i = 0; i < roots.Length; i++)
+            {
+                var all = roots[i].GetComponentsInChildren<Transform>(true);
+                for (int j = 0; j < all.Length; j++)
+                {
+                    if (all[j].CompareTag(tag))
+                        return all[j];
+                }
+            }
+            return null;
         }
 
         private void ApplyDefaultCustomization(PlayerStatsProfile profile)
@@ -224,18 +257,6 @@ namespace SkiGame.Progression
                     break;
                 }
             }
-        }
-
-        private void TryMovePlayerToResortSpawn()
-        {
-            var spawn = GameObject.FindWithTag(resortSpawnTag);
-            if (spawn == null) return;
-
-            var player = GameObject.FindObjectOfType<SkiController>();
-            if (player == null) return;
-
-            player.transform.position = spawn.transform.position;
-            player.transform.rotation = spawn.transform.rotation;
         }
 
         private void PostApplyTimeAndUIRefresh(TimeController tc)

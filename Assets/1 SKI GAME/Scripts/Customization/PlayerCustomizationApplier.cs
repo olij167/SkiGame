@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using SkiGame.Progression;
 
 public class PlayerCustomizationApplier : MonoBehaviour
@@ -13,14 +14,16 @@ public class PlayerCustomizationApplier : MonoBehaviour
     [SerializeField] private CustomizationCatalogSO catalog;
 
     [Header("Runtime Apply")]
-    [Tooltip("If enabled, applies the saved profile customization automatically when runtime starts (and when the profile loads).")]
+    [Tooltip("If enabled, applies the saved profile customization automatically when runtime starts.")]
     [SerializeField] private bool autoApplyOnRuntimeStart = true;
 
-    [Tooltip("If enabled, re-applies whenever PlayerStatsManager loads a profile (useful if load order varies).")]
+    [Tooltip("If enabled, re-applies whenever PlayerStatsManager loads a profile.")]
     [SerializeField] private bool applyOnProfileLoadedEvent = true;
 
     private PlayerStatsManager _statsMgr;
     private bool _subscribed;
+    private Coroutine _applyRoutine;
+    private bool _hasAppliedInitialProfile;
 
     private void Awake()
     {
@@ -33,12 +36,28 @@ public class PlayerCustomizationApplier : MonoBehaviour
     {
         TryHookStatsManager();
 
-        if (autoApplyOnRuntimeStart)
-            StartCoroutine(ApplyFromCurrentProfileDeferred());
+        // Only auto-apply on startup if this object belongs to the ACTIVE scene.
+        // This prevents the gameplay scene loaded as a menu background from
+        // prematurely applying a profile during menu mode.
+        if (autoApplyOnRuntimeStart &&
+            !_hasAppliedInitialProfile &&
+            gameObject.scene == SceneManager.GetActiveScene())
+        {
+            if (_applyRoutine != null)
+                StopCoroutine(_applyRoutine);
+
+            _applyRoutine = StartCoroutine(ApplyCurrentProfileDeferred());
+        }
     }
 
     private void OnDisable()
     {
+        if (_applyRoutine != null)
+        {
+            StopCoroutine(_applyRoutine);
+            _applyRoutine = null;
+        }
+
         UnhookStatsManager();
     }
 
@@ -60,37 +79,73 @@ public class PlayerCustomizationApplier : MonoBehaviour
     private void UnhookStatsManager()
     {
         if (!_subscribed) return;
-        if (_statsMgr != null) _statsMgr.OnProfileLoaded -= OnProfileLoaded;
+
+        if (_statsMgr != null)
+            _statsMgr.OnProfileLoaded -= OnProfileLoaded;
+
         _subscribed = false;
     }
 
     private void OnProfileLoaded(PlayerStatsProfile profile)
     {
         if (!isActiveAndEnabled) return;
-        if (!autoApplyOnRuntimeStart) return;
+        if (!applyOnProfileLoadedEvent) return;
+        if (profile == null) return;
 
-        StartCoroutine(ApplyDeferred(profile));
+        if (_applyRoutine != null)
+            StopCoroutine(_applyRoutine);
+
+        _applyRoutine = StartCoroutine(ApplySpecificProfileDeferred(profile));
     }
 
-    private IEnumerator ApplyFromCurrentProfileDeferred()
+    private IEnumerator ApplyCurrentProfileDeferred()
     {
-        // Wait a tick so PlayerStatsManager.Awake has run + profile is loaded.
+        // Wait one frame so PlayerStatsManager initialization/load has completed.
         yield return null;
 
         if (_statsMgr == null)
-            _statsMgr = PlayerStatsManager.Instance != null ? PlayerStatsManager.Instance : FindObjectOfType<PlayerStatsManager>();
+        {
+            _statsMgr = PlayerStatsManager.Instance != null
+                ? PlayerStatsManager.Instance
+                : FindObjectOfType<PlayerStatsManager>();
+        }
 
         var profile = _statsMgr != null ? _statsMgr.Profile : null;
-        if (profile == null) yield break;
+        if (profile == null)
+        {
+            _applyRoutine = null;
+            yield break;
+        }
 
-        yield return ApplyDeferred(profile);
+        yield return ApplySpecificProfileDeferred(profile);
     }
 
-    private IEnumerator ApplyDeferred(PlayerStatsProfile profile)
+    private IEnumerator ApplySpecificProfileDeferred(PlayerStatsProfile profile)
     {
-        // Ensure SkiController/loadout visuals are initialized.
+        // Wait until end of frame so controller visuals / gear swaps / scene enable flow settle first.
         yield return new WaitForEndOfFrame();
+
+        if (!isActiveAndEnabled || profile == null)
+        {
+            _applyRoutine = null;
+            yield break;
+        }
+
         ApplyFromProfile(profile);
+
+        // Rebuild the skier's grounded state AFTER late profile/customization application.
+        // This is the important load-from-menu fix.
+        if (skiController != null)
+        {
+            skiController.TeleportToSpawn(
+                skiController.transform.position,
+                skiController.transform.rotation,
+                snapToGround: true
+            );
+        }
+
+        _hasAppliedInitialProfile = true;
+        _applyRoutine = null;
     }
 
     public void ApplyFromProfile(PlayerStatsProfile profile)
@@ -136,7 +191,7 @@ public class PlayerCustomizationApplier : MonoBehaviour
             if (string.IsNullOrEmpty(state.equippedHatId)) characterCustomizer.ClearHat();
             else ApplyCosmetic(state.equippedHatId);
 
-            // Jacket/Jacket: empty = none
+            // Jacket: empty = none
             if (string.IsNullOrEmpty(state.equippedJacketId)) characterCustomizer.ClearJacket();
             else ApplyCosmetic(state.equippedJacketId);
 
@@ -364,5 +419,4 @@ public class PlayerCustomizationApplier : MonoBehaviour
 
         return null;
     }
-
 }
