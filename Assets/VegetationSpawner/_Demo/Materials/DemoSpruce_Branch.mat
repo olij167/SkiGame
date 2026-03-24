@@ -26,7 +26,6 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - _ALPHATEST_ON
-  - _COVERAGE_ON
   - _DISPLACEMENT_ON
   - _NORMALMAP
   - _SPARKLE_ON
@@ -169,7 +168,7 @@ Material:
     - _Cov2SmoothnessOverride: 0
     - _CovTriBlendContrast: 12
     - _CovTriBlendContrastOverride: 0
-    - _Coverage: 1
+    - _Coverage: 0
     - _CoverageAmount: 0.75
     - _CoverageAmountOverride: 0
     - _CoverageAreaBias: 0.05

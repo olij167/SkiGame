@@ -318,7 +318,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LiftCarrierHanger
   cableAnchor: {fileID: 0}
   hanger: {fileID: 7633566988692405381}
-  hangLength: 8
+  hangLength: 14
   localOffset: {x: 0, y: 0, z: -3}
   positionSmoothTime: 0.2
   rotationSmoothTime: 0.12
