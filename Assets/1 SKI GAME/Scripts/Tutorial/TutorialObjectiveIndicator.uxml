@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="TutorialOverlay.uss" />
+    <ui:VisualElement name="TutorialObjectiveIndicator" class="tutorial-objective-indicator">
+        <ui:Label name="Lbl_TutorialObjective" text="Objective" class="tutorial-objective-label" />
+    </ui:VisualElement>
+</ui:UXML>

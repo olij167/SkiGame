@@ -15,9 +15,16 @@ MonoBehaviour:
   id: 50m/sTopSpeed
   title: 50m/s Speed
   description: Ski at 50m/s speed
+  mountainHudCategory: 10
+  mountainHudGlyph: 
   requirementKind: 0
   metric: 12
   target: 50
+  runId: 
   poiGroup: {fileID: 0}
   poiVisitScope: 10
   autoTargetFromPOIGroup: 1
+  runGroup: {fileID: 0}
+  runVisitScope: 10
+  runGroupMeasure: 10
+  autoTargetFromRunGroup: 1

@@ -418,15 +418,49 @@ namespace SkiGame.Map.UI
             _polyHost = root.Q<VisualElement>("MapPolylines");
             _markerHost = root.Q<VisualElement>("MapMarkers");
 
-            // Critical: our pan/zoom math assumes scaling is about the top-left of MapContent.
-            // If transformOrigin remains at default (center), scaling causes visual drift.
+            // Reassert the same runtime invariants that the old PhoneHUD embedded maps used.
+            if (_viewport != null)
+            {
+                _viewport.style.overflow = Overflow.Hidden;
+            }
+
             if (_content != null)
+            {
+                _content.style.position = Position.Absolute;
+                _content.style.left = 0;
+                _content.style.top = 0;
+                _content.style.right = StyleKeyword.Auto;
+                _content.style.bottom = StyleKeyword.Auto;
                 _content.style.transformOrigin = new TransformOrigin(0f, 0f, 0f);
+            }
 
             // Ensure absolute positioning for map layers.
-            if (_bg != null) _bg.style.position = Position.Absolute;
-            if (_polyHost != null) _polyHost.style.position = Position.Absolute;
-            if (_markerHost != null) _markerHost.style.position = Position.Absolute;
+            if (_bg != null)
+            {
+                _bg.style.position = Position.Absolute;
+                _bg.style.left = 0;
+                _bg.style.top = 0;
+                _bg.style.right = StyleKeyword.Auto;
+                _bg.style.bottom = StyleKeyword.Auto;
+            }
+
+            if (_polyHost != null)
+            {
+                _polyHost.style.position = Position.Absolute;
+                _polyHost.style.left = 0;
+                _polyHost.style.top = 0;
+                _polyHost.style.right = StyleKeyword.Auto;
+                _polyHost.style.bottom = StyleKeyword.Auto;
+            }
+
+            if (_markerHost != null)
+            {
+                _markerHost.style.position = Position.Absolute;
+                _markerHost.style.left = 0;
+                _markerHost.style.top = 0;
+                _markerHost.style.right = StyleKeyword.Auto;
+                _markerHost.style.bottom = StyleKeyword.Auto;
+            }
 
             // Enforce draw order by hierarchy (works across UI Toolkit versions).
             // Background at the back, then polylines, then markers on top.
@@ -671,14 +705,17 @@ namespace SkiGame.Map.UI
             if (_missingLabel != null)
                 _missingLabel.style.display = hasData ? DisplayStyle.None : DisplayStyle.Flex;
 
+            Camera activeProjectionCamera = (_mapData != null && _mapData.PreferCameraProjection && _mapCamera != null) ? _mapCamera : null;
+
             if (!hasData)
             {
                 // Clear visuals when missing
                 _bg.style.backgroundImage = StyleKeyword.None;
                 _markerHost.Clear();
-                _polyLayer?.SetData(_mapData, _contentSize, (_mapData != null && _mapData.PreferCameraProjection) ? _mapCamera : null);
 
-                _trailLayer?.SetData(_mapData, _contentSize, (_mapData != null && _mapData.PreferCameraProjection) ? _mapCamera : null);
+
+                _polyLayer?.SetData(_mapData, _contentSize, activeProjectionCamera);
+                _trailLayer?.SetData(_mapData, _contentSize, activeProjectionCamera);
 
                 _polyLayer?.SetZoom(_zoom);
                 _trailLayer?.SetZoom(_zoom);
@@ -732,11 +769,8 @@ namespace SkiGame.Map.UI
                 _bg.style.backgroundImage = StyleKeyword.None;
             }
 
-            // Polylines
-            _polyLayer?.SetData(_mapData, _contentSize, (_mapData != null && _mapData.PreferCameraProjection) ? _mapCamera : null);
-
-            // Player trail (must be initialized with same projection inputs as polylines)
-            _trailLayer?.SetData(_mapData, _contentSize, (_mapData != null && _mapData.PreferCameraProjection) ? _mapCamera : null);
+            _polyLayer?.SetData(_mapData, _contentSize, activeProjectionCamera);
+            _trailLayer?.SetData(_mapData, _contentSize, activeProjectionCamera);
 
             // Markers
             RebuildMarkers();
@@ -891,14 +925,57 @@ namespace SkiGame.Map.UI
             _pendingSelectionMinZoom = minZoom;
         }
 
+        private Vector3 ResolveEffectiveMarkerWorldPosition(SkiGame.Map.MapMarker marker)
+        {
+            Vector3 baked = marker.worldPosition;
+
+            switch (marker.type)
+            {
+                case SkiGame.POI.POIType.SkiRun:
+                    {
+                        // For runs, prefer an anchor derived from the actual baked run polyline.
+                        // This keeps the marker visually attached to the line the player sees on the map.
+                        if (TryResolveRunAnchorFromPolyline(marker, out var runAnchor))
+                            return runAnchor;
+
+                        if (IsWorldMarkerPositionUsable(baked))
+                            return baked;
+
+                        return ResolveSourceAnchor(marker, baked);
+                    }
+
+                case SkiGame.POI.POIType.SkiLift:
+                    {
+                        // Lift station markers are usually already accurate from baked/world positions.
+                        if (IsWorldMarkerPositionUsable(baked))
+                            return baked;
+
+                        if (TryResolveLiftAnchorFromPolyline(marker, out var liftAnchor))
+                            return liftAnchor;
+
+                        return ResolveSourceAnchor(marker, baked);
+                    }
+
+                default:
+                    {
+                        // General/custom POIs benefit most from smarter scene anchors.
+                        Vector3 sourceAnchor = ResolveSourceAnchor(marker, baked);
+                        if (IsWorldMarkerPositionUsable(sourceAnchor))
+                            return sourceAnchor;
+
+                        return baked;
+                    }
+            }
+        }
+
+
         private bool TryProjectWorldToUV(Vector3 worldPos, out Vector2 uv)
         {
             // Use camera projection ONLY when the map asset explicitly says so.
             if (_mapCamera != null && _mapData != null && _mapData.PreferCameraProjection)
             {
-                // Always project on the XZ plane so terrain height doesn't skew the viewport mapping.
-                Vector3 flat = new Vector3(worldPos.x, 0f, worldPos.z);
-                Vector3 vp = _mapCamera.WorldToViewportPoint(flat);
+                // IMPORTANT: use the real 3D world position.
+                Vector3 vp = _mapCamera.WorldToViewportPoint(worldPos);
 
                 if (vp.z >= 0f)
                 {
@@ -1277,15 +1354,30 @@ namespace SkiGame.Map.UI
 
                     _markerById[m.id] = m;
 
-                    // Run markers link to run polyline by ID when available.
+                    // Run markers usually have ids like "{runId}__top", while the polyline id is "{runId}".
+                    // Link them explicitly so labels can anchor beside the visible run marker.
                     if (m.type == SkiGame.POI.POIType.SkiRun)
                     {
-                        if (TryGetPolylineById(m.id, out var p) && p.lineType == SkiGame.Map.MapLineType.SkiRun)
+                        string runPolyId = null;
+
+                        if (!string.IsNullOrWhiteSpace(m.id))
+                        {
+                            int idx = m.id.LastIndexOf("__", StringComparison.Ordinal);
+                            runPolyId = idx > 0 ? m.id.Substring(0, idx) : m.id;
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(runPolyId) &&
+                            TryGetPolylineById(runPolyId, out var p) &&
+                            p.lineType == SkiGame.Map.MapLineType.SkiRun)
                         {
                             _markerToPolyline[m.id] = p.id;
-                            _polylineToMarker[p.id] = m.id;
+
+                            // Prefer the first linked run marker we encounter for label anchoring.
+                            if (!_polylineToMarker.ContainsKey(p.id))
+                                _polylineToMarker[p.id] = m.id;
                         }
                     }
+
                     // Lift station markers: link to lift polyline via LiftLine or heuristics.
                     else if (m.type == SkiGame.POI.POIType.SkiLift)
                     {
@@ -1308,18 +1400,19 @@ namespace SkiGame.Map.UI
                 var m = list[i];
                 if (!m.IsValid) continue;
 
+                Vector3 markerWorldPos = ResolveEffectiveMarkerWorldPosition(m);
+
                 // Compute both UV solutions for validation:
                 // - PROJ: MapProjection (bounds-based)
                 // - CAM:  reference camera viewport mapping (if available)
-                Vector2 uvProj = (_mapData != null) ? _mapData.WorldToMapUV(m.worldPosition) : default;
+                Vector2 uvProj = (_mapData != null) ? _mapData.WorldToMapUV(markerWorldPos) : default;
 
                 bool camValid = false;
                 Vector2 uvCam = default;
 
                 if (_mapCamera != null)
                 {
-                    Vector3 flat = new Vector3(m.worldPosition.x, 0f, m.worldPosition.z);
-                    Vector3 vp = _mapCamera.WorldToViewportPoint(flat);
+                    Vector3 vp = _mapCamera.WorldToViewportPoint(markerWorldPos);
 
                     // vp.z < 0 means behind camera
                     if (vp.z >= 0f)
@@ -1330,7 +1423,7 @@ namespace SkiGame.Map.UI
                 }
 
                 // Your actual placement UV remains whatever TryProjectWorldToUV decides (based on PreferCameraProjection).
-                if (!TryProjectWorldToUV(m.worldPosition, out Vector2 uv))
+                if (!TryProjectWorldToUV(markerWorldPos, out Vector2 uv))
                     continue;
 
                 Vector2 uvRaw = uv;
@@ -1693,12 +1786,24 @@ namespace SkiGame.Map.UI
 
         }
 
+        private bool TryProjectWorldToLocal(Vector3 worldPos, out Vector2 local)
+        {
+            local = default;
+
+            if (!TryProjectWorldToUV(worldPos, out var uv))
+                return false;
+
+            Vector2 uvInset = ApplyBackgroundInset(uv);
+            local = new Vector2(uvInset.x * _contentSize.x, (1f - uvInset.y) * _contentSize.y);
+            return true;
+        }
+
         private bool TryProjectWorldXZToLocal(Vector2 worldXZ, out Vector2 local)
         {
             local = default;
             if (_mapData == null) return false;
 
-            // Convert XZ -> UV, apply inset, then to content local.
+            // Fallback projection for legacy XZ-only data.
             Vector2 uv = _mapData.WorldXZToMapUV(worldXZ);
             Vector2 uvInset = ApplyBackgroundInset(uv);
             local = new Vector2(uvInset.x * _contentSize.x, (1f - uvInset.y) * _contentSize.y);
@@ -1938,11 +2043,12 @@ namespace SkiGame.Map.UI
             EnsureLabelOverlay();
             if (_labelOverlay == null) return;
 
-            // Now builds overlay labels for BOTH runs + lifts (single label per polyline).
+            // Builds overlay labels for runs + lifts.
+            // Prefer anchoring each label beside its linked marker when one exists,
+            // otherwise anchor to the nearest point on the polyline itself.
             _polyAnchorLocal.Clear();
             _polyNormalLocal.Clear();
 
-            // Remove existing labels
             foreach (var kv in _polylineLabelVisuals)
                 kv.Value?.RemoveFromHierarchy();
             _polylineLabelVisuals.Clear();
@@ -1955,59 +2061,34 @@ namespace SkiGame.Map.UI
                 var p = lines[i];
                 if (!p.IsValid) continue;
                 if (p.lineType != MapLineType.SkiRun && p.lineType != MapLineType.SkiLift) continue;
-                if (p.pointsWorldXZ == null || p.pointsWorldXZ.Count < 2) continue;
+                var pts = new List<Vector2>();
 
-                // Project points into content-local.
-                var pts = new List<Vector2>(p.pointsWorldXZ.Count);
-                for (int k = 0; k < p.pointsWorldXZ.Count; k++)
+                if (p.Has3DPoints)
                 {
-                    if (TryProjectWorldXZToLocal(p.pointsWorldXZ[k], out var loc))
-                        pts.Add(loc);
+                    pts.Capacity = p.pointsWorld.Count;
+                    for (int k = 0; k < p.pointsWorld.Count; k++)
+                    {
+                        if (TryProjectWorldToLocal(p.pointsWorld[k], out var loc))
+                            pts.Add(loc);
+                    }
                 }
+                else if (p.HasXZPoints)
+                {
+                    pts.Capacity = p.pointsWorldXZ.Count;
+                    for (int k = 0; k < p.pointsWorldXZ.Count; k++)
+                    {
+                        if (TryProjectWorldXZToLocal(p.pointsWorldXZ[k], out var loc))
+                            pts.Add(loc);
+                    }
+                }
+
                 if (pts.Count < 2) continue;
 
-                // Find midpoint by length in local space and direction at midpoint.
-                float total = 0f;
-                for (int k = 1; k < pts.Count; k++)
-                    total += Vector2.Distance(pts[k - 1], pts[k]);
-                if (total <= 0.001f) continue;
+                Vector2 anchor;
+                Vector2 n;
 
-                float half = total * 0.5f;
-                float acc = 0f;
-
-                Vector2 mid = pts[0];
-                Vector2 dirAtMid = (pts[1] - pts[0]);
-                if (dirAtMid.sqrMagnitude > 0.0001f) dirAtMid.Normalize();
-                else dirAtMid = Vector2.right;
-
-                for (int k = 1; k < pts.Count; k++)
-                {
-                    float seg = Vector2.Distance(pts[k - 1], pts[k]);
-                    if (acc + seg >= half)
-                    {
-                        float t = (half - acc) / Mathf.Max(0.0001f, seg);
-                        Vector2 a = pts[k - 1];
-                        Vector2 b = pts[k];
-                        mid = Vector2.Lerp(a, b, t);
-
-                        Vector2 d = (b - a);
-                        if (d.sqrMagnitude > 0.0001f)
-                        {
-                            d.Normalize();
-                            dirAtMid = d;
-                        }
-                        break;
-                    }
-                    acc += seg;
-                }
-
-                // Perpendicular normal (UI space is y-down).
-                Vector2 n = new Vector2(-dirAtMid.y, dirAtMid.x);
-                if (n.sqrMagnitude < 0.0001f) n = Vector2.up;
-                n.Normalize();
-
-                // Prefer placing on screen-up side (negative y).
-                if (n.y > 0f) n = -n;
+                if (!TryGetPreferredPolylineLabelAnchor(p, pts, out anchor, out n))
+                    continue;
 
                 string labelText = ResolvePolylineDisplayName(p);
 
@@ -2015,8 +2096,7 @@ namespace SkiGame.Map.UI
                 label.AddToClassList("map-polyline-label");
                 label.style.position = Position.Absolute;
 
-                // Make labels selectable (same behavior as clicking the polyline itself).
-                string polyId = p.id; // capture
+                string polyId = p.id;
                 MakeOverlayLabelInteractive(label, () =>
                 {
                     if (TryGetPolylineById(polyId, out var poly))
@@ -2028,7 +2108,7 @@ namespace SkiGame.Map.UI
                 });
 
                 _polylineLabelVisuals[p.id] = label;
-                _polyAnchorLocal[p.id] = mid;
+                _polyAnchorLocal[p.id] = anchor;
                 _polyNormalLocal[p.id] = n;
 
                 _polylineLabelAccent[p.id] = GetPolylineDisplayColor(p);
@@ -2038,6 +2118,121 @@ namespace SkiGame.Map.UI
             }
 
             LayoutOverlayLabels();
+        }
+
+        private bool TryGetPreferredPolylineLabelAnchor(SkiGame.Map.MapPolyline p, List<Vector2> pts, out Vector2 anchor, out Vector2 normal)
+        {
+            anchor = default;
+            normal = Vector2.down; // UI y is down, so Vector2.down places label above the anchor.
+
+            if (pts == null || pts.Count < 2)
+                return false;
+
+            anchor = ComputePolylineMidpoint(pts, out _);
+            normal = Vector2.down;
+            return true;
+        }
+
+        private static Vector2 ComputePolylineMidpoint(List<Vector2> pts, out Vector2 dirAtMid)
+        {
+            dirAtMid = Vector2.right;
+            if (pts == null || pts.Count < 2)
+                return default;
+
+            float total = 0f;
+            for (int i = 1; i < pts.Count; i++)
+                total += Vector2.Distance(pts[i - 1], pts[i]);
+
+            if (total <= 0.001f)
+            {
+                dirAtMid = (pts[1] - pts[0]).normalized;
+                if (dirAtMid.sqrMagnitude < 0.0001f)
+                    dirAtMid = Vector2.right;
+                return pts[0];
+            }
+
+            float half = total * 0.5f;
+            float acc = 0f;
+
+            for (int i = 1; i < pts.Count; i++)
+            {
+                Vector2 a = pts[i - 1];
+                Vector2 b = pts[i];
+                float seg = Vector2.Distance(a, b);
+                if (acc + seg >= half)
+                {
+                    float t = (half - acc) / Mathf.Max(0.0001f, seg);
+                    dirAtMid = (b - a).normalized;
+                    if (dirAtMid.sqrMagnitude < 0.0001f)
+                        dirAtMid = Vector2.right;
+                    return Vector2.Lerp(a, b, t);
+                }
+                acc += seg;
+            }
+
+            dirAtMid = (pts[pts.Count - 1] - pts[pts.Count - 2]).normalized;
+            if (dirAtMid.sqrMagnitude < 0.0001f)
+                dirAtMid = Vector2.right;
+            return pts[pts.Count - 1];
+        }
+
+        private bool TryFindNearestPolylineAnchorAndNormal(List<Vector2> pts, Vector2 target, out Vector2 anchor, out Vector2 normal)
+        {
+            anchor = default;
+            normal = Vector2.up;
+            if (pts == null || pts.Count < 2)
+                return false;
+
+            float bestDist = float.PositiveInfinity;
+            Vector2 bestPoint = default;
+            Vector2 bestDir = Vector2.right;
+            bool found = false;
+
+            for (int i = 1; i < pts.Count; i++)
+            {
+                Vector2 a = pts[i - 1];
+                Vector2 b = pts[i];
+                Vector2 ab = b - a;
+                float lenSq = ab.sqrMagnitude;
+                if (lenSq <= 0.0001f)
+                    continue;
+
+                float t = Mathf.Clamp01(Vector2.Dot(target - a, ab) / lenSq);
+                Vector2 point = a + ab * t;
+                float dist = (target - point).sqrMagnitude;
+                if (dist >= bestDist)
+                    continue;
+
+                bestDist = dist;
+                bestPoint = point;
+                bestDir = ab.normalized;
+                found = true;
+            }
+
+            if (!found)
+                return false;
+
+            anchor = bestPoint;
+            normal = ComputePreferredLabelNormal(bestDir);
+            return true;
+        }
+
+        private static Vector2 ComputePreferredLabelNormal(Vector2 dir)
+        {
+            if (dir.sqrMagnitude < 0.0001f)
+                dir = Vector2.right;
+
+            dir.Normalize();
+            Vector2 n = new Vector2(-dir.y, dir.x);
+            if (n.sqrMagnitude < 0.0001f)
+                n = Vector2.up;
+            n.Normalize();
+
+            // UI space is y-down. Prefer the screen-up side so labels visually hug the feature.
+            if (n.y > 0f)
+                n = -n;
+
+            return n;
         }
 
         private void RebuildPOIOverlayLabels()
@@ -2137,6 +2332,58 @@ namespace SkiGame.Map.UI
 
             int CellKey(int cx, int cy) => (cy << 16) ^ (cx & 0xFFFF);
 
+            const float MarkerAvoidRadiusPx = 14f;
+            const float PolylineAvoidInsetPx = 4f;
+            const float PolylineLabelSlotStepPenalty = 24f;
+            const float MarkerOverlapPenalty = 3000f;
+            const float PolylineOverlapPenalty = 2200f;
+            const float OffAxisPenalty = 120f;
+
+            Rect ExpandRect(Rect r, float pad)
+            {
+                return new Rect(r.xMin - pad, r.yMin - pad, r.width + pad * 2f, r.height + pad * 2f);
+            }
+
+            bool RectContainsPoint(Rect r, Vector2 p)
+            {
+                return p.x >= r.xMin && p.x <= r.xMax && p.y >= r.yMin && p.y <= r.yMax;
+            }
+
+            bool SegmentsIntersect(Vector2 a1, Vector2 a2, Vector2 b1, Vector2 b2)
+            {
+                float Cross(Vector2 u, Vector2 v) => u.x * v.y - u.y * v.x;
+
+                Vector2 r = a2 - a1;
+                Vector2 s = b2 - b1;
+                float denom = Cross(r, s);
+
+                if (Mathf.Abs(denom) < 0.0001f)
+                    return false;
+
+                Vector2 diff = b1 - a1;
+                float t = Cross(diff, s) / denom;
+                float uVal = Cross(diff, r) / denom;
+
+                return t >= 0f && t <= 1f && uVal >= 0f && uVal <= 1f;
+            }
+
+            bool SegmentIntersectsRect(Vector2 a, Vector2 b, Rect r)
+            {
+                if (RectContainsPoint(r, a) || RectContainsPoint(r, b))
+                    return true;
+
+                Vector2 tl = new Vector2(r.xMin, r.yMin);
+                Vector2 tr = new Vector2(r.xMax, r.yMin);
+                Vector2 br = new Vector2(r.xMax, r.yMax);
+                Vector2 bl = new Vector2(r.xMin, r.yMax);
+
+                return
+                    SegmentsIntersect(a, b, tl, tr) ||
+                    SegmentsIntersect(a, b, tr, br) ||
+                    SegmentsIntersect(a, b, br, bl) ||
+                    SegmentsIntersect(a, b, bl, tl);
+            }
+
             void AddRectToGrid(Dictionary<int, List<Rect>> grid, Rect r)
             {
                 int x0 = Mathf.FloorToInt(r.xMin / LabelCellSizePx);
@@ -2175,6 +2422,112 @@ namespace SkiGame.Map.UI
                                 return true;
                     }
                 return false;
+            }
+
+            var visibleMarkerAvoidRects = new List<Rect>(128);
+            foreach (var kv in _markerAnchorLocal)
+            {
+                string markerId = kv.Key;
+
+                if (!_markerTypes.TryGetValue(markerId, out var markerType))
+                    continue;
+
+                if (!IsMarkerTypeVisible(markerType))
+                    continue;
+
+                Vector2 anchorVp = _pan + kv.Value * _zoom;
+
+                // Skip obviously offscreen markers.
+                if (anchorVp.x < -32f || anchorVp.x > vw + 32f || anchorVp.y < -32f || anchorVp.y > vh + 32f)
+                    continue;
+
+                visibleMarkerAvoidRects.Add(new Rect(
+                    anchorVp.x - MarkerAvoidRadiusPx,
+                    anchorVp.y - MarkerAvoidRadiusPx,
+                    MarkerAvoidRadiusPx * 2f,
+                    MarkerAvoidRadiusPx * 2f));
+            }
+
+            var visiblePolylineSegments = new Dictionary<string, List<(Vector2 a, Vector2 b)>>(64);
+
+            if (_mapData != null && _mapData.Polylines != null)
+            {
+                for (int i = 0; i < _mapData.Polylines.Count; i++)
+                {
+                    var poly = _mapData.Polylines[i];
+                    if (!poly.IsValid) continue;
+                    if (poly.lineType != MapLineType.SkiRun && poly.lineType != MapLineType.SkiLift) continue;
+                    int estimatedCount = poly.Has3DPoints ? poly.pointsWorld.Count : (poly.HasXZPoints ? poly.pointsWorldXZ.Count : 0);
+                    if (estimatedCount < 2) continue;
+
+                    var segs = new List<(Vector2 a, Vector2 b)>(Mathf.Max(1, estimatedCount - 1));
+                    bool havePrev = false;
+                    Vector2 prev = default;
+
+                    if (poly.Has3DPoints)
+                    {
+                        for (int k = 0; k < poly.pointsWorld.Count; k++)
+                        {
+                            if (!TryProjectWorldToLocal(poly.pointsWorld[k], out var local))
+                                continue;
+
+                            Vector2 vp = _pan + local * _zoom;
+
+                            if (havePrev)
+                                segs.Add((prev, vp));
+
+                            prev = vp;
+                            havePrev = true;
+                        }
+                    }
+                    else if (poly.HasXZPoints)
+                    {
+                        for (int k = 0; k < poly.pointsWorldXZ.Count; k++)
+                        {
+                            if (!TryProjectWorldXZToLocal(poly.pointsWorldXZ[k], out var local))
+                                continue;
+
+                            Vector2 vp = _pan + local * _zoom;
+
+                            if (havePrev)
+                                segs.Add((prev, vp));
+
+                            prev = vp;
+                            havePrev = true;
+                        }
+                    }
+
+                    if (segs.Count > 0)
+                        visiblePolylineSegments[poly.id] = segs;
+                }
+            }
+
+            float ComputePolylineGeometryPenalty(string polyId, Rect candidateRect)
+            {
+                float penalty = 0f;
+
+                Rect expanded = ExpandRect(candidateRect, PolylineAvoidInsetPx);
+
+                for (int i = 0; i < visibleMarkerAvoidRects.Count; i++)
+                {
+                    if (expanded.Overlaps(visibleMarkerAvoidRects[i]))
+                        penalty += MarkerOverlapPenalty;
+                }
+
+                foreach (var kv in visiblePolylineSegments)
+                {
+                    bool isOwnPolyline = string.Equals(kv.Key, polyId, StringComparison.Ordinal);
+                    float polyPenalty = isOwnPolyline ? (PolylineOverlapPenalty * 0.35f) : PolylineOverlapPenalty;
+
+                    var segs = kv.Value;
+                    for (int i = 0; i < segs.Count; i++)
+                    {
+                        if (SegmentIntersectsRect(segs[i].a, segs[i].b, expanded))
+                            penalty += polyPenalty;
+                    }
+                }
+
+                return penalty;
             }
 
             // ---- Build a prioritized list of labels to place ----
@@ -2486,21 +2839,64 @@ namespace SkiGame.Map.UI
 
                 // Candidate directions (in viewport space)
                 Vector2 dir = item.preferDir;
-                if (dir.sqrMagnitude < 0.001f) dir = Vector2.up;
+                if (dir.sqrMagnitude < 0.001f) dir = Vector2.down;
                 dir.Normalize();
 
-                // Deterministic slot list
-                Vector2[] dirs =
+                bool isPolylineLabel = _polylineLabelVisuals.ContainsKey(item.id);
+
+                Vector2 dirRight = new Vector2(dir.y, -dir.x).normalized;
+                Vector2 dirLeft = -dirRight;
+
+                Vector2[] dirs;
+
+                if (isPolylineLabel)
                 {
-        dir,
-        -dir,
-        Vector2.up,
-        Vector2.down,
-        Vector2.right,
-        Vector2.left,
-        (dir + Vector2.right).normalized,
-        (dir + Vector2.left).normalized,
-    };
+                    // Strongly prefer "above midpoint" placements first.
+                    dirs = item.mustShow
+                        ? new Vector2[]
+                        {
+            Vector2.down,
+            (Vector2.down + Vector2.right * 0.35f).normalized,
+            (Vector2.down + Vector2.left * 0.35f).normalized,
+            Vector2.right,
+            Vector2.left,
+            dir,
+            (dir + dirRight * 0.5f).normalized,
+            (dir + dirLeft * 0.5f).normalized,
+            -dir,
+                        }
+                        : new Vector2[]
+                        {
+            Vector2.down,
+            (Vector2.down + Vector2.right * 0.35f).normalized,
+            (Vector2.down + Vector2.left * 0.35f).normalized,
+            Vector2.right,
+            Vector2.left,
+                        };
+                }
+                else
+                {
+                    dirs = item.mustShow
+                        ? new Vector2[]
+                        {
+            dir,
+            (dir + dirRight * 0.5f).normalized,
+            (dir + dirLeft * 0.5f).normalized,
+            -dir,
+            Vector2.up,
+            Vector2.down,
+            Vector2.right,
+            Vector2.left,
+                        }
+                        : new Vector2[]
+                        {
+            dir,
+            (dir + dirRight * 0.5f).normalized,
+            (dir + dirLeft * 0.5f).normalized,
+            dirRight,
+            dirLeft,
+                        };
+                }
 
                 int startSlot = 0;
                 if (_labelSlotCache.TryGetValue(item.id, out var cached))
@@ -2509,6 +2905,8 @@ namespace SkiGame.Map.UI
                 bool placed = false;
                 Rect placedRect = default;
                 Vector2 placedPos = default;
+                int placedSlot = -1;
+                float bestScore = float.PositiveInfinity;
 
                 for (int attempt = 0; attempt < dirs.Length; attempt++)
                 {
@@ -2516,11 +2914,8 @@ namespace SkiGame.Map.UI
 
                     Vector2 pos = anchorVp + dirs[slot] * LabelBaseOffsetPx;
 
-                    // Top-left placement (no translate needed)
                     Vector2 tlDesired = new Vector2(pos.x - size.x * 0.5f, pos.y - size.y * 0.5f);
 
-                    // Prefer a slot that is naturally in-bounds.
-                    // Only selected labels are allowed to clamp as a last resort.
                     bool inBounds =
                         (tlDesired.x >= 2f && tlDesired.x <= (vw - size.x - 2f)) &&
                         (tlDesired.y >= 2f && tlDesired.y <= (vh - size.y - 2f));
@@ -2537,13 +2932,33 @@ namespace SkiGame.Map.UI
 
                     Rect r = MakeRect(tl, size);
 
-                    if (!Overlaps(grid, r) || item.mustShow)
+                    bool overlapsPlacedLabel = Overlaps(grid, r);
+                    if (overlapsPlacedLabel && !item.mustShow)
+                        continue;
+
+                    float score = attempt * PolylineLabelSlotStepPenalty;
+
+                    if (isPolylineLabel)
                     {
+                        score += ComputePolylineGeometryPenalty(item.id, r);
+
+                        // Mildly prefer placements that remain "above" rather than drifting sideways.
+                        Vector2 slotDir = dirs[slot];
+                        score += Mathf.Abs(slotDir.x) * OffAxisPenalty;
+                        if (slotDir.y > -0.25f)
+                            score += OffAxisPenalty;
+                    }
+
+                    if (score < bestScore)
+                    {
+                        bestScore = score;
                         placed = true;
                         placedRect = r;
                         placedPos = tl;
-                        _labelSlotCache[item.id] = slot;
-                        break;
+                        placedSlot = slot;
+
+                        if (score <= 0.001f)
+                            break;
                     }
                 }
 
@@ -2557,7 +2972,9 @@ namespace SkiGame.Map.UI
                 item.label.style.left = placedPos.x;
                 item.label.style.top = placedPos.y;
 
-                // Add to collision grid (even if mustShow, so later labels avoid it)
+                _labelSlotCache[item.id] = Mathf.Max(0, placedSlot);
+
+                // Add to collision grid
                 AddRectToGrid(grid, placedRect);
             }
 
@@ -3204,11 +3621,19 @@ namespace SkiGame.Map.UI
                 if (!p.IsValid) continue;
                 if (p.id != polylineId) continue;
 
-                if (center && p.pointsWorldXZ != null && p.pointsWorldXZ.Count > 0)
+                if (center)
                 {
-                    int mid = p.pointsWorldXZ.Count / 2;
-                    var w = p.pointsWorldXZ[mid];
-                    CenterOnWorldPosition(new Vector3(w.x, 0f, w.y), minZoom);
+                    if (p.Has3DPoints && p.pointsWorld.Count > 0)
+                    {
+                        int mid = p.pointsWorld.Count / 2;
+                        CenterOnWorldPosition(p.pointsWorld[mid], minZoom);
+                    }
+                    else if (p.HasXZPoints && p.pointsWorldXZ.Count > 0)
+                    {
+                        int mid = p.pointsWorldXZ.Count / 2;
+                        var w = p.pointsWorldXZ[mid];
+                        CenterOnWorldPosition(new Vector3(w.x, 0f, w.y), minZoom);
+                    }
                 }
 
                 SelectPolylineInternal(polylineId, p, fireEvent: true);
@@ -3216,6 +3641,118 @@ namespace SkiGame.Map.UI
             }
 
             return false;
+        }
+
+        public bool SelectMarkerById(string markerId, bool center = true, float minZoom = 1.25f)
+        {
+            if (!_bound) return false;
+            if (_mapData == null || string.IsNullOrWhiteSpace(markerId)) return false;
+
+            var list = _mapData.Markers;
+            if (list == null) return false;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                var m = list[i];
+                if (!m.IsValid) continue;
+                if (!string.Equals(m.id, markerId, StringComparison.Ordinal)) continue;
+
+                _selectedLiftStationSuffix = null;
+
+                // Runs: selecting the marker should behave like selecting the linked polyline.
+                if (m.type == SkiGame.POI.POIType.SkiRun)
+                {
+                    string runPolyId = markerId;
+                    if (_markerToPolyline.TryGetValue(markerId, out var linked))
+                        runPolyId = linked;
+
+                    if (TryGetPolylineById(runPolyId, out var runPoly))
+                    {
+                        _selectedMarkerId = markerId;
+                        _selectedPolylineId = runPolyId;
+
+                        UpdateSelectionVisuals();
+                        _polyLayer?.SetSelected(runPolyId);
+
+                        if (center)
+                            CenterOnWorldPosition(ResolveEffectiveMarkerWorldPosition(m), minZoom);
+
+                        PolylineSelected?.Invoke(runPoly);
+                        return true;
+                    }
+                }
+
+                // Lifts: selecting the station marker should behave like selecting the lift polyline.
+                if (m.type == SkiGame.POI.POIType.SkiLift)
+                {
+                    string liftPolyId = markerId;
+                    if (!_liftMarkerToPolyline.TryGetValue(markerId, out liftPolyId))
+                    {
+                        int idx = markerId.LastIndexOf("__", StringComparison.Ordinal);
+                        liftPolyId = idx > 0 ? markerId.Substring(0, idx) : markerId;
+                    }
+
+                    if (TryGetPolylineById(liftPolyId, out var liftPoly))
+                    {
+                        _selectedMarkerId = markerId;
+                        _selectedPolylineId = liftPolyId;
+
+                        if (_liftMarkerRole.TryGetValue(markerId, out var role) && role != LiftStationRole.None)
+                            _selectedLiftStationSuffix = role == LiftStationRole.Top ? " (Top)" : " (Bottom)";
+
+                        UpdateSelectionVisuals();
+                        _polyLayer?.SetSelected(liftPolyId);
+
+                        if (center)
+                            CenterOnWorldPosition(ResolveEffectiveMarkerWorldPosition(m), minZoom);
+
+                        PolylineSelected?.Invoke(liftPoly);
+                        return true;
+                    }
+                }
+
+                // General POIs stay as marker selection.
+                _selectedMarkerId = markerId;
+                _selectedPolylineId = null;
+
+                UpdateSelectionVisuals();
+                _polyLayer?.SetSelected(null);
+
+                if (center)
+                    CenterOnWorldPosition(ResolveEffectiveMarkerWorldPosition(m), minZoom);
+
+                MarkerSelected?.Invoke(m);
+                return true;
+            }
+
+            return false;
+        }
+
+        public void PreviewLiftAccessForPassLevel(int passLevel)
+        {
+            if (!_bound)
+                return;
+
+            passLevel = Mathf.Max(0, passLevel);
+
+            // Reapply only lift overrides for preview.
+            foreach (var kvp in _liftRequiredLevelByPolyline)
+            {
+                string polyId = kvp.Key;
+                int required = kvp.Value;
+
+                Color baseColor = new Color(0.75f, 0.85f, 1f, 0.70f);
+                if (_liftRequiredColorByPolyline.TryGetValue(polyId, out var c))
+                    baseColor = c;
+
+                bool accessible = passLevel >= required;
+                _polylineColorOverrides[polyId] = accessible
+                    ? new Color(baseColor.r, baseColor.g, baseColor.b, 0.95f)
+                    : new Color(0.28f, 0.32f, 0.38f, 0.22f);
+            }
+
+            _polyLayer?.SetColorOverrides(_polylineColorOverrides);
+            _polyHost?.MarkDirtyRepaint();
         }
 
         /// <summary>
@@ -3413,28 +3950,58 @@ namespace SkiGame.Map.UI
                     var line = lines[i];
                     if (!line.IsValid) continue;
 
-                    var localPts = new List<Vector2>(line.pointsWorldXZ.Count);
+                    int estimatedCount = line.Has3DPoints ? line.pointsWorld.Count : (line.HasXZPoints ? line.pointsWorldXZ.Count : 0);
+                    if (estimatedCount < 2) continue;
+
+                    var localPts = new List<Vector2>(estimatedCount);
                     Rect bounds = new Rect(float.PositiveInfinity, float.PositiveInfinity, 0, 0);
 
-                    for (int k = 0; k < line.pointsWorldXZ.Count; k++)
+                    if (line.Has3DPoints)
                     {
-                        if (!TryProjectWorldXZToUV(line.pointsWorldXZ[k], out Vector2 uv))
-                            continue;
-
-                        uv = ApplyInset(uv, _data.BackgroundUvMin, _data.BackgroundUvMax);
-                        Vector2 local = new Vector2(uv.x * _contentSize.x, (1f - uv.y) * _contentSize.y);
-                        localPts.Add(local);
-
-                        if (bounds.xMin == float.PositiveInfinity)
+                        for (int k = 0; k < line.pointsWorld.Count; k++)
                         {
-                            bounds = new Rect(local.x, local.y, 0, 0);
+                            if (!TryProjectWorldToUV(line.pointsWorld[k], out Vector2 uv))
+                                continue;
+
+                            uv = ApplyInset(uv, _data.BackgroundUvMin, _data.BackgroundUvMax);
+                            Vector2 local = new Vector2(uv.x * _contentSize.x, (1f - uv.y) * _contentSize.y);
+                            localPts.Add(local);
+
+                            if (bounds.xMin == float.PositiveInfinity)
+                            {
+                                bounds = new Rect(local.x, local.y, 0, 0);
+                            }
+                            else
+                            {
+                                bounds.xMin = Mathf.Min(bounds.xMin, local.x);
+                                bounds.yMin = Mathf.Min(bounds.yMin, local.y);
+                                bounds.xMax = Mathf.Max(bounds.xMax, local.x);
+                                bounds.yMax = Mathf.Max(bounds.yMax, local.y);
+                            }
                         }
-                        else
+                    }
+                    else
+                    {
+                        for (int k = 0; k < line.pointsWorldXZ.Count; k++)
                         {
-                            bounds.xMin = Mathf.Min(bounds.xMin, local.x);
-                            bounds.yMin = Mathf.Min(bounds.yMin, local.y);
-                            bounds.xMax = Mathf.Max(bounds.xMax, local.x);
-                            bounds.yMax = Mathf.Max(bounds.yMax, local.y);
+                            if (!TryProjectWorldXZToUV(line.pointsWorldXZ[k], out Vector2 uv))
+                                continue;
+
+                            uv = ApplyInset(uv, _data.BackgroundUvMin, _data.BackgroundUvMax);
+                            Vector2 local = new Vector2(uv.x * _contentSize.x, (1f - uv.y) * _contentSize.y);
+                            localPts.Add(local);
+
+                            if (bounds.xMin == float.PositiveInfinity)
+                            {
+                                bounds = new Rect(local.x, local.y, 0, 0);
+                            }
+                            else
+                            {
+                                bounds.xMin = Mathf.Min(bounds.xMin, local.x);
+                                bounds.yMin = Mathf.Min(bounds.yMin, local.y);
+                                bounds.xMax = Mathf.Max(bounds.xMax, local.x);
+                                bounds.yMax = Mathf.Max(bounds.yMax, local.y);
+                            }
                         }
                     }
 
@@ -3443,6 +4010,33 @@ namespace SkiGame.Map.UI
 
                     _cache.Add(new CachedLine { src = line, localPts = localPts, bounds = bounds });
                 }
+            }
+
+            private bool TryProjectWorldToUV(Vector3 worldPos, out Vector2 uv)
+            {
+                if (_cam != null && _data != null && _data.PreferCameraProjection)
+                {
+                    Vector3 vp = _cam.WorldToViewportPoint(worldPos);
+                    if (vp.z >= 0f)
+                    {
+                        Vector2 camUV = new Vector2(vp.x, vp.y);
+                        const float tol = 0.05f;
+                        if (camUV.x >= -tol && camUV.x <= 1f + tol && camUV.y >= -tol && camUV.y <= 1f + tol)
+                        {
+                            uv = camUV;
+                            return true;
+                        }
+                    }
+                }
+
+                if (_data != null)
+                {
+                    uv = _data.WorldToMapUV(worldPos);
+                    return true;
+                }
+
+                uv = default;
+                return false;
             }
 
             private bool TryProjectWorldXZToUV(Vector2 worldXZ, out Vector2 uv)
@@ -3588,7 +4182,7 @@ namespace SkiGame.Map.UI
 
                 for (int i = 0; i < _worldTrail.Count; i++)
                 {
-                    if (!TryProjectWorldXZToUV(_worldTrail[i], out Vector2 uv))
+                    if (!TryProjectWorldToUV(new Vector3(_worldTrail[i].x, 0f, _worldTrail[i].y), out Vector2 uv))
                         continue;
 
                     uv = ApplyInset(uv, _data.BackgroundUvMin, _data.BackgroundUvMax);
@@ -3618,6 +4212,33 @@ namespace SkiGame.Map.UI
                 p.strokeColor = Color.mediumSlateBlue;
                 p.lineWidth = w;
                 Stroke(p, _localPts);
+            }
+
+            private bool TryProjectWorldToUV(Vector3 worldPos, out Vector2 uv)
+            {
+                if (_cam != null && _data != null && _data.PreferCameraProjection)
+                {
+                    Vector3 vp = _cam.WorldToViewportPoint(worldPos);
+                    if (vp.z >= 0f)
+                    {
+                        Vector2 camUV = new Vector2(vp.x, vp.y);
+                        const float tol = 0.05f;
+                        if (camUV.x >= -tol && camUV.x <= 1f + tol && camUV.y >= -tol && camUV.y <= 1f + tol)
+                        {
+                            uv = camUV;
+                            return true;
+                        }
+                    }
+                }
+
+                if (_data != null)
+                {
+                    uv = _data.WorldToMapUV(worldPos);
+                    return true;
+                }
+
+                uv = default;
+                return false;
             }
 
             private bool TryProjectWorldXZToUV(Vector2 worldXZ, out Vector2 uv)
@@ -3862,5 +4483,121 @@ namespace SkiGame.Map.UI
             LayoutOverlayLabels();
         }
 
+        private bool IsWorldMarkerPositionUsable(Vector3 p)
+        {
+            if (!float.IsFinite(p.x) || !float.IsFinite(p.y) || !float.IsFinite(p.z))
+                return false;
+
+            if (_mapData != null)
+            {
+                Vector2 uv = _mapData.WorldToMapUV(p);
+                // allow a little margin outside bounds, but reject extreme nonsense
+                if (uv.x < -0.25f || uv.x > 1.25f || uv.y < -0.25f || uv.y > 1.25f)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private bool TryResolveRunAnchorFromPolyline(SkiGame.Map.MapMarker marker, out Vector3 world)
+        {
+            world = default;
+
+            string polyId = null;
+
+            // Run marker IDs are typically "{runId}__top", while the polyline ID is the runId.
+            if (!string.IsNullOrWhiteSpace(marker.id))
+            {
+                int idx = marker.id.LastIndexOf("__", StringComparison.Ordinal);
+                polyId = idx > 0 ? marker.id.Substring(0, idx) : marker.id;
+            }
+
+            if (string.IsNullOrWhiteSpace(polyId) || !TryGetPolylineById(polyId, out var poly) || !poly.IsValid)
+                return false;
+
+            if (poly.Has3DPoints && poly.pointsWorld.Count > 0)
+            {
+                world = poly.pointsWorld[0];
+                return true;
+            }
+
+            var pts = poly.pointsWorldXZ;
+            if (pts == null || pts.Count == 0)
+                return false;
+
+            Vector2 p = pts[0];
+            world = new Vector3(p.x, marker.worldPosition.y, p.y);
+            return true;
+        }
+
+        private bool TryResolveLiftAnchorFromPolyline(SkiGame.Map.MapMarker marker, out Vector3 world)
+        {
+            world = default;
+
+            string polyId = null;
+
+            if (_liftMarkerToPolyline.TryGetValue(marker.id, out var linked))
+                polyId = linked;
+            else if (!string.IsNullOrWhiteSpace(marker.id))
+            {
+                int idx = marker.id.LastIndexOf("__", StringComparison.Ordinal);
+                polyId = idx > 0 ? marker.id.Substring(0, idx) : marker.id;
+            }
+
+            if (string.IsNullOrWhiteSpace(polyId) || !TryGetPolylineById(polyId, out var poly) || !poly.IsValid)
+                return false;
+
+            if (poly.Has3DPoints && poly.pointsWorld.Count >= 2)
+            {
+                if (_liftMarkerRole.TryGetValue(marker.id, out var role))
+                {
+                    world = role == LiftStationRole.Top ? poly.pointsWorld[poly.pointsWorld.Count - 1] : poly.pointsWorld[0];
+                    return true;
+                }
+
+                Vector3 a3 = poly.pointsWorld[0];
+                Vector3 b3 = poly.pointsWorld[poly.pointsWorld.Count - 1];
+                world = (a3 + b3) * 0.5f;
+                return true;
+            }
+
+            var pts = poly.pointsWorldXZ;
+            if (pts == null || pts.Count < 2)
+                return false;
+
+            if (_liftMarkerRole.TryGetValue(marker.id, out var role2))
+            {
+                Vector2 p = role2 == LiftStationRole.Top ? pts[pts.Count - 1] : pts[0];
+                world = new Vector3(p.x, marker.worldPosition.y, p.y);
+                return true;
+            }
+
+            Vector2 a = pts[0];
+            Vector2 b = pts[pts.Count - 1];
+            Vector2 mid = (a + b) * 0.5f;
+            world = new Vector3(mid.x, marker.worldPosition.y, mid.y);
+            return true;
+        }
+
+        private Vector3 ResolveSourceAnchor(SkiGame.Map.MapMarker marker, Vector3 fallback)
+        {
+            if (_poiRegistry != null && _poiRegistry.TryGetById(marker.id, out var liveInfo))
+            {
+                if (liveInfo.source is Component src && src != null)
+                {
+                    var renderer = src.GetComponentInChildren<Renderer>();
+                    if (renderer != null)
+                        return renderer.bounds.center;
+
+                    var collider = src.GetComponentInChildren<Collider>();
+                    if (collider != null)
+                        return collider.bounds.center;
+                }
+
+                return liveInfo.position;
+            }
+
+            return fallback;
+        }
     }
 }

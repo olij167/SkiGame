@@ -1,0 +1,149 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/UI/MainMenu.uss?fileID=7433441132597879392&amp;guid=5eda19afd96ffa44a900c7c338707bda&amp;type=3#MainMenu" />
+    <ui:VisualElement name="PauseRoot" class="pause-root" style="align-items: stretch; justify-content: center; align-self: stretch; align-content: auto; padding-top: 50px; padding-right: 50px; padding-bottom: 50px; padding-left: 50px; flex-grow: 1;">
+        <ui:VisualElement class="pause-shell" style="align-items: center; align-self: stretch; display: flex;">
+            <ui:VisualElement name="Panel_PauseMain" class="pause-screen" style="justify-content: flex-start; align-self: center; align-items: center; align-content: stretch; display: flex;">
+                <ui:VisualElement class="hero-card">
+                    <ui:Label text="Paused" class="hero-title" />
+                    <ui:VisualElement class="hero-actions">
+                        <ui:Button name="Btn_PauseResume" text="Resume [ESC]" class="menu-button menu-button-primary" />
+                        <ui:Button name="Btn_PauseOpenSettings" text="Settings" class="menu-button" />
+                        <ui:Button name="Btn_PauseOpenControls" text="Controls" class="menu-button" />
+                        <ui:Button name="Btn_PauseQuitToMenu" text="Quit to Menu" class="menu-button" />
+                        <ui:Button name="Btn_PauseQuitToDesktop" text="Quit to Desktop" class="menu-button menu-button-danger" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="Panel_PauseSettings" class="pause-screen" style="display: none; align-self: stretch;">
+                <ui:VisualElement class="pause-card page-card">
+                    <ui:VisualElement class="page-header">
+                        <ui:Label text="Settings" class="page-title" />
+                        <ui:Button name="Btn_PauseBackFromSettings" text="Back" class="small-button" />
+                    </ui:VisualElement>
+                    <ui:ScrollView class="settings-scroll">
+                        <ui:VisualElement class="settings-group">
+                            <ui:Label text="Display" class="group-title" />
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="Quality" class="setting-label" />
+                                <ui:DropdownField name="Dropdown_SettingsQuality" class="setting-dropdown" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="VSync" class="setting-label" />
+                                <ui:Toggle name="Toggle_SettingsVSync" value="true" class="setting-toggle" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="FPS Cap" class="setting-label" />
+                                <ui:DropdownField name="Dropdown_SettingsFpsCap" class="setting-dropdown" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="Resolution" class="setting-label" />
+                                <ui:DropdownField name="Dropdown_SettingsResolution" class="setting-dropdown" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="Window Mode" class="setting-label" />
+                                <ui:DropdownField name="Dropdown_SettingsWindowMode" class="setting-dropdown" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="Display" class="setting-label" />
+                                <ui:DropdownField name="Dropdown_SettingsDisplay" class="setting-dropdown" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="settings-group">
+                            <ui:Label text="UI&#10;" class="group-title" />
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="UI Scale" class="setting-label" />
+                                <ui:Slider name="Slider_SettingsUiScale" low-value="0.85" high-value="1.15" value="1" class="setting-slider" />
+                                <ui:Label name="Lbl_SettingsUiScale" text="100%" class="setting-value" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="Show Tutorial Overlay" class="setting-label" />
+                                <ui:Toggle name="Toggle_SettingsShowTutorialOverlay" value="true" class="setting-toggle" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="Show Movement Input UI" class="setting-label" />
+                                <ui:Toggle name="Toggle_SettingsShowMovementInputs" value="true" class="setting-toggle" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="setting-row" style="display: none;">
+                                <ui:Label text="Show World Interaction Prompts" class="setting-label" />
+                                <ui:Toggle name="Toggle_SettingsShowWorldPrompts" value="true" class="setting-toggle" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="settings-group">
+                            <ui:Label text="Audio" class="group-title" />
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="Master Volume" class="setting-label" />
+                                <ui:Slider name="Slider_SettingsMaster" low-value="0" high-value="1" value="1" class="setting-slider" />
+                                <ui:Label name="Lbl_SettingsMaster" text="100%" class="setting-value" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="Music Volume" class="setting-label" />
+                                <ui:Slider name="Slider_SettingsMusic" low-value="0" high-value="1" value="1" class="setting-slider" />
+                                <ui:Label name="Lbl_SettingsMusic" text="100%" class="setting-value" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="SFX Volume" class="setting-label" />
+                                <ui:Slider name="Slider_SettingsSfx" low-value="0" high-value="1" value="1" class="setting-slider" />
+                                <ui:Label name="Lbl_SettingsSfx" text="100%" class="setting-value" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="settings-group">
+                            <ui:Label text="Controls" class="group-title" />
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="Invert Look Y" class="setting-label" />
+                                <ui:Toggle name="Toggle_SettingsInvertY" value="false" class="setting-toggle" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="Look Sensitivity" class="setting-label" />
+                                <ui:Slider name="Slider_SettingsLookSensitivity" low-value="0.25" high-value="3" value="1" class="setting-slider" />
+                                <ui:Label name="Lbl_SettingsLookSensitivity" text="1.00x" class="setting-value" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="settings-group">
+                            <ui:Label text="Gameplay" class="group-title" />
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="Camera FOV" class="setting-label" />
+                                <ui:Slider name="Slider_SettingsFov" low-value="60" high-value="110" value="85" class="setting-slider" />
+                                <ui:Label name="Lbl_SettingsFov" text="85" class="setting-value" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="Speed Units" class="setting-label" />
+                                <ui:DropdownField name="Dropdown_SettingsUnits" class="setting-dropdown" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="settings-group" style="display: none;">
+                            <ui:Label text="Accessibility" class="group-title" />
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="Reduce Motion" class="setting-label" />
+                                <ui:Toggle name="Toggle_SettingsReduceMotion" value="false" class="setting-toggle" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="setting-row">
+                                <ui:Label text="Colour Mode" class="setting-label" />
+                                <ui:DropdownField name="Dropdown_SettingsColourMode" class="setting-dropdown" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="settings-actions">
+                            <ui:Button name="Btn_SettingsReset" text="Reset Defaults" class="menu-button" />
+                        </ui:VisualElement>
+                        <ui:Label name="Lbl_SettingsNote" class="settings-note" />
+                    </ui:ScrollView>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="Panel_PauseControls" class="pause-screen" style="display: none; align-self: stretch;">
+                <ui:VisualElement class="pause-card page-card">
+                    <ui:VisualElement class="page-header">
+                        <ui:Label text="Controls" class="page-title" />
+                        <ui:Button name="Btn_PauseBackFromControls" text="Back" class="small-button" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="controls-toolbar">
+                        <ui:Label name="Lbl_ControlsStatus" text="Select an action to rebind." class="controls-status" />
+                        <ui:Button name="Btn_ControlsResetBindings" text="Reset Bindings" class="small-button" />
+                    </ui:VisualElement>
+                    <ui:Label name="Lbl_ControlsNote" text="Changes are saved automatically." class="controls-note" />
+                    <ui:ScrollView class="settings-scroll">
+                        <ui:VisualElement name="ControlsRebindList" class="controls-rebind-list" />
+                    </ui:ScrollView>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

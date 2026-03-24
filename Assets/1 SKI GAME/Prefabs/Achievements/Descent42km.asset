@@ -15,9 +15,16 @@ MonoBehaviour:
   id: 42kmDescent
   title: Descend 42km
   description: Descend a full marathon (42km) down the slopes in your lifetime
+  mountainHudCategory: 20
+  mountainHudGlyph: 
   requirementKind: 0
   metric: 15
   target: 42000
+  runId: 
   poiGroup: {fileID: 0}
   poiVisitScope: 10
   autoTargetFromPOIGroup: 1
+  runGroup: {fileID: 0}
+  runVisitScope: 10
+  runGroupMeasure: 10
+  autoTargetFromRunGroup: 1

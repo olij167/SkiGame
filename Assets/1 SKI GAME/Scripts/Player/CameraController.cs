@@ -53,15 +53,18 @@ public class CameraController : MonoBehaviour
     [Tooltip("When following travel direction, ignore tiny planar velocity to avoid jitter.")]
     public float travelDirMinPlanarSpeed = 1.5f;
 
-    [Header("UI Lock (Phone)")]
+    [Header("UI Lock (Phone / Overlay)")]
     [Tooltip("When the phone UI is open, camera look input is ignored and the camera locks behind the player.")]
     public bool lockBehindWhenPhoneOpen = true;
 
-    [Tooltip("Pitch to use while phone is open (degrees).")]
+    [Tooltip("Pitch to use while a UI overlay lock is active (degrees).")]
     public float phoneLockPitch = 12f;
 
-    [Tooltip("How quickly the camera snaps behind while phone is open (deg/sec).")]
+    [Tooltip("How quickly the camera snaps behind while a UI overlay lock is active (deg/sec).")]
     public float phoneLockYawSpeed = 360f;
+
+    [Tooltip("Set externally by full-screen overlays like the Mountain HUD to suppress look input.")]
+    [SerializeField] private bool externalUiLookLock;
 
     [Header("Collision")]
     public LayerMask collisionLayers = ~0;
@@ -117,6 +120,13 @@ public class CameraController : MonoBehaviour
         if (target != null)
             _yaw = target.eulerAngles.y;
     }
+
+    public void SetExternalUiLookLock(bool locked)
+    {
+        externalUiLookLock = locked;
+    }
+
+    public bool IsExternalUiLookLocked => externalUiLookLock;
 
     private void OnEnable()
     {
@@ -216,9 +226,10 @@ public class CameraController : MonoBehaviour
             _phoneHUD = FindObjectOfType<PhoneHUDController>();
 
         bool phoneOpen = (_phoneHUD != null) && _phoneHUD.IsPhoneOpen;
+        bool uiLookLocked = (phoneOpen || externalUiLookLock) && lockBehindWhenPhoneOpen;
 
-        // While phone is open, suppress manual look and keep the camera stable.
-        if (phoneOpen && lockBehindWhenPhoneOpen)
+        // While a UI overlay is open, suppress manual look and keep the camera stable.
+        if (uiLookLocked)
         {
             float targetYaw = (target != null) ? target.eulerAngles.y : _yaw;
             _yaw = Mathf.MoveTowardsAngle(_yaw, targetYaw, phoneLockYawSpeed * dt);

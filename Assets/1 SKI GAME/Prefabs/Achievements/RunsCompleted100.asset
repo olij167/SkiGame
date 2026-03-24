@@ -15,6 +15,8 @@ MonoBehaviour:
   id: Complete100Runs
   title: Complete 100 Runs
   description: Complete any 100 Ski Runs
+  mountainHudCategory: 30
+  mountainHudGlyph: 
   requirementKind: 0
   metric: 17
   target: 100
@@ -22,3 +24,7 @@ MonoBehaviour:
   poiGroup: {fileID: 0}
   poiVisitScope: 10
   autoTargetFromPOIGroup: 0
+  runGroup: {fileID: 0}
+  runVisitScope: 10
+  runGroupMeasure: 10
+  autoTargetFromRunGroup: 1

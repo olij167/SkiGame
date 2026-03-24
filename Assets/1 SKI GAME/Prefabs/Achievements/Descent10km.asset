@@ -15,9 +15,16 @@ MonoBehaviour:
   id: 10kmDescent
   title: Descend 10km
   description: Descend 10km down the slopes in your lifetime
+  mountainHudCategory: 20
+  mountainHudGlyph: 
   requirementKind: 0
   metric: 15
   target: 10000
+  runId: 
   poiGroup: {fileID: 0}
   poiVisitScope: 10
   autoTargetFromPOIGroup: 1
+  runGroup: {fileID: 0}
+  runVisitScope: 10
+  runGroupMeasure: 10
+  autoTargetFromRunGroup: 1

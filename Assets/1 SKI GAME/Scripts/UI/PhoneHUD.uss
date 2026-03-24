@@ -1,0 +1,4946 @@
+/* Root placement: bottom-right, always on-screen */
+.phonehud-root {
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    width: 360px;
+    height: 560px;
+    justify-content: flex-end;
+    align-items: flex-end;
+}
+
+/* ---------- WATCH (collapsed) ---------- */
+.watch-collapsed {
+    width: 200px;
+    height: 200px;
+    display: flex;
+}
+
+.watch-frame {
+    width: 200px;
+    height: 200px;
+    border-radius: 18px;
+    padding: 10px;
+    background-color: rgba(18, 18, 18, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+    position: relative;
+    overflow: hidden;                     /* CRITICAL: clip overlay to rounded corners */
+    -unity-overflow-clip-box: padding-box;/* optional: clip to inner rounded shape */
+}
+
+.watch-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.watch-title {
+    font-size: 12px;
+    color: rgba(255,255,255,0.80);
+    unity-font-style: bold;
+}
+
+.watch-dots {
+    flex-direction: row;
+    align-items: center;
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    margin-left: 3px;
+    background-color: rgba(255,255,255,0.20);
+}
+
+.dot.is-on {
+    background-color: rgba(255,255,255,0.85);
+}
+
+.watch-pages {
+    flex-grow: 1;
+}
+
+.watch-page {
+    flex-grow: 1;
+    display: none;
+    padding-right: 2px;
+}
+
+.watch-page.is-active {
+    display: flex;
+}
+
+/* ---------- Tasks (cards) ---------- */
+
+.task-list,
+.tasks-list {
+    margin-top: 8px;
+    gap: 8px;
+    flex-direction: column;
+}
+
+
+.task-card {
+    padding: 10px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.05);
+    border-left-width: 3px;
+    border-left-color: rgba(255,255,255,0.12);
+}
+
+.task-card.is-complete {
+    background-color: rgba(255,255,255,0.07);
+    border-left-color: rgba(255,255,255,0.45);
+}
+
+.task-row-top {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.task-title {
+    font-size: 13px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    flex-grow: 1;
+    margin-right: 8px;
+}
+
+.task-badge {
+    font-size: 10px;
+    color: rgba(255,255,255,0.65);
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    border-radius: 999px;
+    background-color: rgba(255,255,255,0.07);
+}
+
+.task-card.is-complete .task-badge {
+    color: rgba(255,255,255,0.90);
+    background-color: rgba(255,255,255,0.12);
+}
+
+.task-progress-bar {
+    height: 6px;
+    border-radius: 999px;
+    background-color: rgba(255,255,255,0.06);
+    overflow: hidden;
+}
+
+.task-progress-fill {
+    height: 100%;
+    width: 0%;
+    background-color: rgba(255,255,255,0.55);
+}
+
+.task-card.is-complete .task-progress-fill {
+    background-color: rgba(255,255,255,0.85);
+}
+
+.task-row-bottom {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.task-progress-text {
+    font-size: 11px;
+    color: rgba(255,255,255,0.70);
+}
+
+.task-hint {
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+}
+
+/* --- Speed watch layout --- */
+.watch-speed-topbar {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2px;
+    margin-bottom: 4px;
+}
+
+/* Notification bar look: minimal, no outlines */
+.watch-speed-time {
+    font-size: 11px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.88);
+}
+
+.watch-speed-weather {
+    font-size: 10px;
+    color: rgba(255,255,255,0.70);
+}
+
+/* Fills vertical space so bottom row anchors cleanly */
+.watch-speed-spacer {
+    flex-grow: 1;
+}
+
+/* Bottom row: airtime left, speed gauge right */
+.watch-speed-bottom {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+/* Airtime box (smaller than speed) */
+.watch-air {
+    width: 62px;
+    border-radius: 12px;
+    padding: 6px;
+    background-color: rgba(255,255,255,0.04);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.08);
+    border-right-color: rgba(255,255,255,0.08);
+    border-top-color: rgba(255,255,255,0.08);
+    border-bottom-color: rgba(255,255,255,0.08);
+}
+
+.watch-air-label {
+    font-size: 9px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.40);
+}
+
+.watch-air-value {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.40);
+    margin-top: 2px;
+}
+
+.watch-air-sub {
+    font-size: 9px;
+    color: rgba(255,255,255,0.32);
+    margin-top: 2px;
+}
+
+/* Minimal airtime (Home watch) */
+.watch-air-min {
+    width: 62px;
+    padding: 0px;
+    background-color: rgba(0,0,0,0); /* no box */
+    border-width: 0px;
+    justify-content: flex-end;
+    align-items: flex-start;
+}
+
+.watch-air-time {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.35);
+}
+
+.watch-air-tag {
+    font-size: 9px;
+    unity-font-style: bold;
+    letter-spacing: 0.5px;
+    color: rgba(255,255,255,0.25);
+    margin-top: 2px;
+}
+
+/* When airborne, brighten */
+.watch-air-min.is-active-air .watch-air-time,
+.watch-air-min.is-active-air .watch-air-tag {
+    color: rgba(255,255,255,0.92);
+}
+
+/* Active airtime: turns white */
+.watch-air.is-active .watch-air-label,
+.watch-air.is-active .watch-air-value,
+.watch-air.is-active .watch-air-sub {
+    color: rgba(255,255,255,0.92);
+}
+
+/* Right side container: keeps your existing watch-big size but anchors it bottom-right */
+.watch-speed-gauge {
+    justify-content: flex-end;
+    align-items: flex-end;
+}
+
+.watch-big {
+    font-size: 34px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-top: 6px;
+}
+
+.watch-unit {
+    font-size: 12px;
+    color: rgba(255,255,255,0.65);
+    margin-top: -4px;
+    margin-bottom: 6px;
+}
+
+.watch-sub {
+    font-size: 12px;
+    color: rgba(255,255,255,0.70);
+}
+
+.watch-section {
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.88);
+    margin-bottom: 6px;
+}
+
+.watch-kv {
+    font-size: 12px;
+    color: rgba(255,255,255,0.75);
+    margin-bottom: 2px;
+
+    /* subtle “tracker row” styling */
+    padding-left: 6px;
+    border-left-width: 2px;
+    border-left-color: rgba(255,255,255,0.14);
+}
+
+.watch-divider {
+    height: 1px;
+    background-color: rgba(255,255,255,0.10);
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+.watch-hint {
+    font-size: 10px;
+    color: rgba(255,255,255,0.45);
+    margin-top: 6px;
+}
+
+.watch-action {
+    height: 46px;
+    border-radius: 12px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255,255,255,0.10);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.10);
+    border-right-color: rgba(255,255,255,0.10);
+    border-top-color: rgba(255,255,255,0.10);
+    border-bottom-color: rgba(255,255,255,0.10);
+}
+
+.watch-action:hover {
+    background-color: rgba(255,255,255,0.16);
+}
+
+.watch-action-text {
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.90);
+}
+
+/* ---------- Achievements (minimal, matches phone pages) ---------- */
+
+.ach-summary {
+    margin-top: 2px;
+    margin-bottom: 8px;
+}
+
+.ach-summary-text {
+    font-size: 12px;
+    color: rgba(255,255,255,0.72);
+}
+
+.ach-info {
+    margin-top: 6px;
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 16px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+}
+
+.ach-info-top {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 6px;
+}
+
+.ach-info-title {
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+}
+
+.ach-info-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.70);
+}
+
+.ach-info-body {
+    font-size: 12px;
+    color: rgba(255,255,255,0.78);
+    white-space: normal;
+    margin-bottom: 8px;
+}
+
+.ach-info-bar {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    overflow: hidden;
+}
+
+.ach-info-barfill {
+    height: 100%;
+    width: 0%;
+    background-color: rgba(255,255,255,0.45);
+}
+
+.ach-info-bartext {
+    margin-top: 6px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.70);
+}
+
+.ach-content {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ach-section {
+    margin-top: 2px;
+}
+
+.ach-section-title {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.70);
+    margin-bottom: 4px;
+}
+
+.ach-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.ach-row-card {
+    padding: 8px;
+    border-radius: 14px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.06);
+    gap: 6px;
+}
+
+.ach-row-label {
+    width: 150px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.85);
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ach-cell {
+    width: 32px;
+    height: 28px;
+    padding: 0px;
+    border-radius: 12px;
+    background-color: rgba(0,0,0,0.10);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+}
+
+.ach-cell.is-empty {
+    opacity: 0.25;
+}
+
+.ach-cell.is-selected {
+    background-color: rgba(255,255,255,0.10);
+    border-color: rgba(255,255,255,0.22);
+}
+
+.ach-cell-icon {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: auto;
+    margin-bottom: auto;
+    background-color: rgba(255,255,255,0.70);
+}
+
+.ach-cell.is-locked .ach-cell-icon  { background-color: rgba(255,255,255,0.55); }
+.ach-cell.is-unlocked .ach-cell-icon { background-color: rgba(255,255,255,0.95); }
+
+/* tiny check overlay (no sprite required) */
+.ach-cell-check {
+    position: absolute;
+    right: 6px;
+    top: 6px;
+    width: 6px;
+    height: 10px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-right-color: rgba(255,255,255,0.0);
+    border-bottom-color: rgba(255,255,255,0.0);
+    rotate: 45deg;
+    opacity: 0.0;
+}
+
+.ach-cell.is-unlocked .ach-cell-check {
+    border-right-color: rgba(255,255,255,0.92);
+    border-bottom-color: rgba(255,255,255,0.92);
+    opacity: 0.9;
+}
+
+/* Difficulty ladder: same palette, distinct silhouettes */
+.ach-tier-icon-0 { width: 8px; height: 8px; opacity: 0.85; }
+
+.ach-tier-icon-1 {
+    background-color: rgba(255,255,255,0.06);
+    border-width: 2px;
+    border-color: rgba(255,255,255,0.70);
+}
+
+.ach-tier-icon-2 {
+    border-width: 2px;
+    border-color: rgba(255,255,255,0.80);
+}
+
+.ach-tier-icon-3 {
+    border-width: 2px;
+    border-color: rgba(255,255,255,0.90);
+}
+
+.ach-tier-icon-4 {
+    width: 12px;
+    height: 12px;
+    border-width: 2px;
+    border-color: rgba(255,255,255,0.95);
+}
+
+/* ---------- Category cards (replaces pill chips) ---------- */
+
+.ach-cat-row {
+    flex-direction: row;
+    gap: 8px;
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+.ach-cat-title {
+    font-size: 11px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0,0,0,0.55);
+}
+
+.ach-cat-sub {
+    font-size: 10px;
+    color: rgba(255,255,255,0.70);
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0,0,0,0.55);
+}
+
+/* ---------- Achievements: text readability override ---------- */
+/* Force clean, un-stroked light text (prevents the unreadable bordered look) */
+.ach-summary-text,
+.ach-section-title,
+.ach-row-label,
+.ach-info-title,
+.ach-info-sub,
+.ach-info-body,
+.ach-info-bartext,
+.ach-cat-title,
+.ach-cat-sub,
+.ach-grid-htier {
+    color: rgba(255,255,255,0.85);
+    -unity-text-outline-width: 0px;
+    -unity-text-outline-color: rgba(0,0,0,0);
+}
+
+.ach-info-title {
+    color: rgba(255,255,255,0.95);
+}
+
+/* ---------- Achievements: readable text override ---------- */
+.ach-summary-text,
+.ach-section-title,
+.ach-row-label,
+.ach-info-title,
+.ach-info-sub,
+.ach-info-body,
+.ach-info-bartext,
+.ach-cat-title,
+.ach-cat-sub,
+.ach-grid-htier,
+.ach-matrix-coltitle,
+.ach-matrix-rowtitle,
+.ach-matrix-celltext,
+.ach-slice-title,
+.ach-card-title,
+.ach-card-sub,
+.ach-card-meta {
+    color: rgba(255,255,255,0.86);
+    -unity-text-outline-width: 0px;
+    -unity-text-outline-color: rgba(0,0,0,0);
+}
+
+.ach-info-title { color: rgba(255,255,255,0.95); }
+.ach-card-title { color: rgba(255,255,255,0.92); }
+
+/* ---------- Achievements: matrix ---------- */
+.ach-matrix {
+    margin-top: 8px;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.ach-matrix-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.ach-matrix-headerrow {
+    margin-top: 2px;
+    margin-bottom: 4px;
+    opacity: 0.9;
+}
+
+.ach-matrix-corner {
+    width: 34px;
+    margin-right: 6px;
+    opacity: 0.6;
+}
+
+.ach-matrix-coltitle {
+    flex-grow: 1;
+    text-align: center;
+    font-size: 11px;
+    opacity: 0.85;
+}
+
+.ach-matrix-rowtitle {
+    width: 34px;
+    margin-right: 6px;
+    text-align: center;
+    font-size: 12px;
+    opacity: 0.85;
+}
+
+.ach-matrix-cell {
+    flex-grow: 1;
+    min-height: 44px;
+    margin-left: 4px;
+    margin-right: 4px;
+
+    padding: 6px;
+    border-radius: 10px;
+
+    background-color: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.10);
+    border-width: 1px;
+}
+
+.ach-matrix-cell.is-empty {
+    background-color: rgba(255,255,255,0.03);
+    border-color: rgba(255,255,255,0.05);
+}
+
+.ach-matrix-cell.is-selected {
+    background-color: rgba(255,255,255,0.10);
+    border-color: rgba(255,255,255,0.18);
+}
+
+.ach-matrix-celltext {
+    font-size: 12px;
+    unity-font-style: normal;
+    margin-bottom: 4px;
+    text-align: center;
+    opacity: 0.9;
+}
+
+.ach-matrix-cellbar {
+    height: 4px;
+    border-radius: 4px;
+    background-color: rgba(255,255,255,0.07);
+}
+
+.ach-matrix-cellbarfill {
+    height: 4px;
+    border-radius: 4px;
+    background-color: rgba(255,255,255,0.25);
+    width: 0%;
+}
+
+/* ---------- Achievements: slice (drill-in) ---------- */
+.ach-slice {
+    margin-top: 10px;
+    padding: 8px;
+    border-radius: 12px;
+
+    background-color: rgba(0,0,0,0.12);
+    border-color: rgba(255,255,255,0.08);
+    border-width: 1px;
+}
+
+.ach-slice-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.ach-slice-back {
+    min-width: 72px;
+    height: 28px;
+
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.10);
+    border-width: 1px;
+
+    color: rgba(255,255,255,0.85);
+}
+
+.ach-slice-title {
+    margin-left: 8px;
+    font-size: 13px;
+    opacity: 0.95;
+}
+
+.ach-slice-list {
+    flex-direction: column;
+}
+
+/* ---------- Achievements: cards in slice ---------- */
+.ach-card {
+    margin-top: 6px;
+    padding: 10px;
+    border-radius: 12px;
+
+    background-color: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.08);
+    border-width: 1px;
+}
+
+.ach-card.is-unlocked {
+    background-color: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.12);
+}
+
+.ach-card.is-selected {
+    background-color: rgba(255,255,255,0.10);
+    border-color: rgba(255,255,255,0.18);
+}
+
+.ach-card-title {
+    font-size: 13px;
+    margin-bottom: 2px;
+}
+
+.ach-card-sub {
+    font-size: 11px;
+    opacity: 0.75;
+    margin-bottom: 6px;
+}
+
+.ach-card-bar {
+    height: 4px;
+    border-radius: 4px;
+    background-color: rgba(255,255,255,0.07);
+}
+
+.ach-card-barfill {
+    height: 4px;
+    border-radius: 4px;
+    background-color: rgba(255,255,255,0.25);
+    width: 0%;
+}
+
+.ach-card-meta {
+    margin-top: 6px;
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+/* ---------- Achievements (Metric × Tier blocks) ---------- */
+
+.ach-matrix2 {
+    margin-top: 2px;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.ach-metric-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.ach-metric-label {
+    width: 120px;            /* fixed label column so the tier blocks align visually */
+    margin-right: 8px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.70);
+    -unity-text-outline-width: 0px;
+    -unity-text-outline-color: rgba(0,0,0,0);
+}
+
+.ach-tier-row {
+    flex-direction: row;
+    flex-grow: 1;
+    min-width: 0px;          /* critical so the row can shrink without forcing horizontal scroll */
+}
+
+.ach-tier-cell {
+    flex-grow: 1;            /* makes the cells cumulatively fill the full row width */
+    min-width: 0px;          /* prevents overflow */
+    height: 18px;
+    margin-left: 3px;
+    margin-right: 3px;
+
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.10);
+
+    background-color: rgba(255,255,255,0.08);
+}
+
+.ach-tier-cell.is-selected {
+    border-color: rgba(255,255,255,0.28);
+}
+
+/* ---------- Single detail panel (beneath matrix) ---------- */
+
+.ach-detail {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 12px;
+
+    background-color: rgba(0,0,0,0.12);
+    border-color: rgba(255,255,255,0.08);
+    border-width: 1px;
+}
+
+.ach-detail-top {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.ach-detail-title {
+    font-size: 13px;
+    color: rgba(255,255,255,0.92);
+    -unity-text-outline-width: 0px;
+    -unity-text-outline-color: rgba(0,0,0,0);
+}
+
+.ach-detail-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.70);
+    -unity-text-outline-width: 0px;
+    -unity-text-outline-color: rgba(0,0,0,0);
+}
+
+.ach-detail-body {
+    font-size: 11px;
+    color: rgba(255,255,255,0.80);
+    -unity-text-outline-width: 0px;
+    -unity-text-outline-color: rgba(0,0,0,0);
+    margin-bottom: 8px;
+}
+
+.ach-detail-bar {
+    height: 4px;
+    border-radius: 4px;
+    background-color: rgba(255,255,255,0.07);
+}
+
+.ach-detail-barfill {
+    height: 4px;
+    border-radius: 4px;
+    background-color: rgba(255,255,255,0.25);
+    width: 0%;
+}
+
+.ach-detail-bartext {
+    margin-top: 6px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.75);
+    -unity-text-outline-width: 0px;
+    -unity-text-outline-color: rgba(0,0,0,0);
+}
+
+/* ---------- PHONE (expanded) ---------- */
+.phone-expanded {
+    width: 360px;
+    height: 560px;
+    display: none;
+}
+
+.phone-expanded.is-open {
+    display: flex;
+}
+
+.phone-shell {
+    width: 360px;
+    height: 560px;
+    border-radius: 22px;
+    background-color: rgba(14, 14, 14, 0.94);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+    padding: 10px;
+}
+
+.phone-topbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    height: 36px;
+    margin-bottom: 6px;
+}
+
+.icon-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255,255,255,0.10);
+}
+
+.icon-btn:hover {
+    background-color: rgba(255,255,255,0.16);
+}
+
+.icon-btn-text {
+    font-size: 18px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-top: -2px;
+}
+
+.phone-title {
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.88);
+}
+
+.phone-navbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    height: 32px;
+    margin-bottom: 8px;
+}
+
+.nav-spacer {
+    flex-grow: 1;
+}
+
+.nav-currency {
+    font-size: 12px;
+    color: rgba(255,255,255,0.85);
+    background-color: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+.nav-btn {
+    height: 28px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 10px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255,255,255,0.08);
+}
+
+.nav-btn:hover {
+    background-color: rgba(255,255,255,0.14);
+}
+
+.nav-btn-text {
+    font-size: 12px;
+    color: rgba(255,255,255,0.85);
+}
+
+.nav-title {
+    font-size: 12px;
+    color: rgba(255,255,255,0.70);
+}
+
+.phone-spacer {
+    width: 34px;
+    height: 34px;
+}
+
+.phone-pages {
+    flex-grow: 1;
+}
+
+.phone-page {
+    flex-grow: 1;
+    display: none;
+    padding-right: 2px;
+}
+
+.phone-page.is-active {
+    display: flex;
+}
+
+/* Time & Weather page: force “no vertical scrolling” and allow inner regions to flex */
+#Page_TimeWeather {
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#Page_TimeWeather .unity-scroll-view__content-viewport {
+    overflow: hidden;
+}
+
+#Page_TimeWeather .unity-scroll-view__content-container {
+    flex-direction: column;
+    flex-grow: 1;
+    min-height: 0;
+    padding-bottom: 0px;
+}
+
+/* Hide the vertical scroller explicitly (belt + braces with UXML visibility setting) */
+#Page_TimeWeather .unity-scroll-view__vertical-scroller {
+    display: none;
+}
+
+.page-h1 {
+    font-size: 18px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-bottom: 6px;
+}
+
+.page-h2 {
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.80);
+    margin-top: 10px;
+    margin-bottom: 6px;
+}
+
+.page-body {
+    font-size: 12px;
+    color: rgba(255,255,255,0.72);
+    white-space: normal;
+}
+
+.page-divider {
+    height: 1px;
+    background-color: rgba(255,255,255,0.10);
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+/* Segmented tabs (Session / Lifetime) */
+.seg-tabs {
+    flex-direction: row;
+    background-color: rgba(255,255,255,0.06);
+    border-radius: 14px;
+    padding: 3px;
+    margin-bottom: 10px;
+}
+
+.seg-tab {
+    flex-grow: 1;
+    height: 28px;
+    border-radius: 12px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255,255,255,0.00);
+}
+
+.seg-tab.is-on {
+    background-color: rgba(255,255,255,0.14);
+}
+
+.seg-tab:hover {
+    background-color: rgba(255,255,255,0.10);
+}
+
+.seg-tab-text {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.80);
+}
+
+/* Panels */
+.stats-panel {
+    display: none;
+}
+
+.stats-panel.is-active {
+    display: flex;
+}
+
+/* -------------------- STATS DASHBOARD (SLEEK) -------------------- */
+
+.stats-page {
+    /* Keep it feeling like a dashboard: tight + consistent */
+    padding-bottom: 6px;
+}
+
+.stats-headerbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.stats-title {
+    margin-bottom: 0px;
+}
+
+.stats-tabs {
+    width: 160px;
+    margin-top: 2px;
+}
+
+/* Dashboard container */
+.stats-dashboard {
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Section */
+.stats-section {
+    background-color: rgba(255,255,255,0.05);
+    border-radius: 14px;
+    padding: 10px;
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.08);
+    border-right-color: rgba(255,255,255,0.08);
+    border-top-color: rgba(255,255,255,0.08);
+    border-bottom-color: rgba(255,255,255,0.08);
+}
+
+.stats-section-title {
+    font-size: 11px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-bottom: 8px;
+}
+
+.stats-cards {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Card */
+.stat-card {
+    width: 48%;
+    border-radius: 14px;
+    padding: 10px;
+
+    background-color: rgba(255,255,255,0.10);
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.10);
+    border-right-color: rgba(255,255,255,0.10);
+    border-top-color: rgba(255,255,255,0.10);
+    border-bottom-color: rgba(255,255,255,0.10);
+}
+
+.stat-card:hover {
+    background-color: rgba(255,255,255,0.13);
+}
+
+/* Card text */
+.stat-card-label {
+    font-size: 10px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.75);
+    margin-bottom: 3px;
+}
+
+.stat-card-value {
+    font-size: 15px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,1.0);
+}
+
+/* -------------------- STATS (COMPACT LIST) -------------------- */
+
+.stats-dashboard {
+    flex-direction: column;
+    gap: 0px;              /* dense */
+}
+
+/* One dense row per stat */
+.stat-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255,255,255,0.06);
+}
+
+/* Zebra for quick scanning */
+.stat-row.is-even {
+    background-color: rgba(255,255,255,0.04);
+}
+
+/* Text */
+.stat-row-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.78);
+    unity-font-style: normal;
+}
+
+.stat-row-value {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.98);
+    -unity-text-align: middle-right;
+}
+
+/* Optional: slightly stronger first rows if you want “top KPIs” without extra UI */
+.stat-row.is-kpi .stat-row-label {
+    color: rgba(255,255,255,0.86);
+}
+
+.stat-row.is-kpi .stat-row-value {
+    font-size: 13px;
+}
+
+/* Metric grid */
+.metric-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.metric-card {
+    width: 48%;
+    border-radius: 14px;
+    padding: 8px;
+
+    /* Brighter card */
+    background-color: rgba(255,255,255,0.12);
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+}
+
+.metric-key {
+    font-size: 10px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-bottom: 2px;
+}
+
+.metric-val {
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,1.0);
+}
+
+/* Secondary metric grid (smaller tiles under the primary row) */
+.metric-grid-secondary {
+    margin-top: 6px;
+}
+
+.metric-card-secondary {
+    padding: 6px;
+    background-color: rgba(255,255,255,0.10);
+}
+
+.metric-val-secondary {
+    font-size: 12px;
+}
+
+/* Details section (smaller, less "wall of text") */
+.stats-details-h2 {
+    margin-top: 2px;
+    margin-bottom: 4px;
+}
+
+.stats-details {
+    font-size: 11px;
+    color: rgba(255,255,255,0.90);
+}
+
+/* Home grid / tiles */
+.home-grid {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.home-row {
+    flex-direction: row;
+    gap: 8px;
+}
+
+/* These totals are tuned to fit the available viewport without forcing a scroll bar. */
+.row-small { height: 78px; }
+.row-tall { height: 132px; }
+.row-medium { height: 104px; }
+.row-mini { height: 60px; }
+.row-mini3 { height: 60px; }
+
+.tile {
+    flex-grow: 1;
+    border-radius: 16px;
+    padding: 8px;
+    overflow: hidden; /* prevents text from spilling out of the tile */
+    background-color: rgba(255,255,255,0.08);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.08);
+    border-right-color: rgba(255,255,255,0.08);
+    border-top-color: rgba(255,255,255,0.08);
+    border-bottom-color: rgba(255,255,255,0.08);
+}
+.tile-head {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.tile-badge {
+    font-size: 10px;
+    color: rgba(255,255,255,0.85);
+    background-color: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+.tile-value {
+    font-size: 17px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-top: 2px;
+    margin-bottom: 6px;
+}
+
+.tile-minirow {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tile-progress {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    margin-bottom: 6px;
+}
+
+.tile-progress-fill {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.40);
+    width: 0%;
+}
+
+.tile:hover {
+    background-color: rgba(255,255,255,0.12);
+}
+
+.tile-title {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 2px;
+}
+
+.tile-sub {
+    font-size: 10px;
+    color: rgba(255,255,255,0.70);
+    margin-top: 1px;
+}
+
+/* Make a tile span the whole row when it's the only tile */
+.tile-wide {
+    flex-grow: 1;
+}
+
+.status-body {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.status-left {
+    flex-grow: 1;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+
+.status-right {
+    width: 128px;
+    justify-content: flex-start;
+    align-items: flex-end;
+}
+
+/* Left stack */
+.status-time {
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-bottom: 2px;
+}
+
+.status-date {
+    font-size: 11px;
+    color: rgba(255,255,255,0.70);
+    margin-bottom: 2px;
+}
+
+.status-sun {
+    font-size: 10px;
+    color: rgba(255,255,255,0.55);
+}
+
+/* Right stack */
+.status-temp {
+    font-size: 16px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-bottom: 2px;
+}
+
+.status-cond {
+    font-size: 11px;
+    color: rgba(255,255,255,0.78);
+    margin-bottom: 2px;
+}
+
+.status-rain {
+    font-size: 10px;
+    color: rgba(255,255,255,0.55);
+}
+
+.big-action {
+    height: 54px;
+    border-radius: 16px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255,255,255,0.10);
+    margin-top: 12px;
+}
+
+.big-action:hover {
+    background-color: rgba(255,255,255,0.16);
+}
+
+.big-action-text {
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+}
+
+    /* ---------- Minimal scrollbars ---------- */
+.watch-page .unity-scroll-view__vertical-scroller,
+.phone-page .unity-scroll-view__vertical-scroller {
+    width: 4px;
+    min-width: 4px;
+    background-color: rgba(255,255,255,0.00);
+}
+
+.watch-page .unity-scroll-view__vertical-scroller .unity-scroller__track,
+.phone-page .unity-scroll-view__vertical-scroller .unity-scroller__track {
+    background-color: rgba(255,255,255,0.05);
+    border-radius: 6px;
+}
+
+.watch-page .unity-scroll-view__vertical-scroller .unity-scroller__thumb,
+.phone-page .unity-scroll-view__vertical-scroller .unity-scroller__thumb {
+    background-color: rgba(255,255,255,0.26);
+    border-radius: 6px;
+}
+
+.watch-page .unity-scroll-view__vertical-scroller:hover .unity-scroller__thumb,
+.phone-page .unity-scroll-view__vertical-scroller:hover .unity-scroller__thumb {
+    background-color: rgba(255,255,255,0.40);
+}
+
+    /* --- Tasks header (currency + claim all) --- */
+.tasks-headerbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background-color: rgba(0,0,0,0.25);
+}
+
+.tasks-currency {
+    unity-font-style: bold;
+    font-size: 13px;
+    color: rgba(255,255,255,0.95);
+}
+
+/* --- Task card claim button --- */
+.task-row-right {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+
+.task-claim {
+    font-size: 12px;
+    width: 54px;
+    height: 22px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.16);
+    color: rgba(255,255,255,0.95);
+}
+
+/* Optional state tinting (subtle) */
+.task-card.is-claimable {
+    background-color: rgba(255,255,255,0.06);
+}
+.task-card.is-claimed {
+    opacity: 0.6;
+}
+
+    /* --- Time & Weather page --- */
+.tw-timeheader {
+    margin-bottom: 6px;
+}
+
+.tw-time {
+    font-size: 28px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.95);
+    margin-bottom: 0px;
+}
+
+.tw-time-subrow {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.tw-day,
+.tw-date {
+    font-size: 13px;
+    color: rgba(255,255,255,0.78);
+}
+
+.tw-nowcard {
+    border-radius: 16px;
+    padding: 10px;
+    background-color: rgba(255,255,255,0.06);
+    margin-bottom: 8px;
+}
+
+.tw-now-top {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tw-now-cond {
+    font-size: 16px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.93);
+}
+
+.tw-now-temp {
+    font-size: 26px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.96);
+}
+
+.tw-now-meta {
+    margin-top: 4px;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.tw-meta {
+    font-size: 13px;
+    color: rgba(255,255,255,0.78);
+}
+
+.tw-sunrow {
+    margin-top: 6px;
+    flex-direction: row;
+    gap: 8px;
+}
+
+.tw-sun-chip {
+    flex-grow: 1;
+    border-radius: 12px;
+    padding: 6px;
+    background-color: rgba(255,255,255,0.05);
+}
+
+.tw-chip-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.60);
+    margin-bottom: 0px;
+}
+
+.tw-chip-value {
+    font-size: 13px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+}
+
+.tw-hourly-title {
+    margin-top: 6px;
+    margin-bottom: 4px;
+}
+
+.tw-hourly-region {
+    flex-grow: 0;
+    min-height: 112px; /* was 104 */
+}
+
+.tw-hourly-scroll {
+    flex-grow: 0;
+    height: 112px;     /* was 104 */
+    min-height: 112px;
+    max-height: 112px;
+
+    margin-top: 0px;
+    margin-bottom: 0px;
+    align-self: stretch;
+}
+
+/* Prevent the internal viewport from collapsing (can happen inside nested ScrollViews). */
+.tw-hourly-scroll .unity-scroll-view__viewport {
+    min-height: 0;
+    flex-grow: 1;
+}
+
+/* Stretch cards vertically; reserve only a tiny amount for the scrollbar */
+.tw-hourly-scroll .unity-scroll-view__content-container {
+    flex-direction: row;
+    padding-bottom: 0px;
+    flex-wrap: nowrap;
+}
+
+/* Default Unity scrollbar look, just shorter. */
+.tw-hourly-scroll .unity-scroll-view__horizontal-scroller {
+    height: 6px;          /* shorter than default but still readable */
+    min-height: 6px;
+    max-height: 6px;
+
+    margin-top: 6px;      /* puts it directly under the cards row */
+    margin-bottom: 0px;
+    padding: 0px;
+}
+
+/* Remove arrow buttons (if present in your Unity version) */
+.tw-hourly-scroll .unity-scroll-view__horizontal-scroller .unity-scroller__low-button,
+.tw-hourly-scroll .unity-scroll-view__horizontal-scroller .unity-scroller__high-button {
+    display: none;
+    width: 0px;
+    min-width: 0px;
+    max-width: 0px;
+    height: 0px;
+    min-height: 0px;
+    max-height: 0px;
+    margin: 0px;
+    padding: 0px;
+}
+
+/* IMPORTANT:
+   Do NOT set colors/radius for tracker/dragger.
+   Only constrain their height so they inherit the default theme visuals. */
+.tw-hourly-scroll .unity-scroll-view__horizontal-scroller .unity-base-slider__tracker,
+.tw-hourly-scroll .unity-scroll-view__horizontal-scroller .unity-base-slider__dragger {
+    height: 100%;
+    min-height: 0px;
+    margin: 0px;
+}
+
+/* Row container */
+.tw-hourly-row {
+    flex-direction: row;
+    gap: 6px;
+    align-items: stretch;
+
+    /* Critical: do not wrap or shrink the row */
+    flex-wrap: nowrap;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+/* Hour cards: wider, slightly tighter padding, vertical stack */
+.tw-hour {
+    background-color: rgba(255,255,255,0.06);
+
+    /* Critical: fixed, non-shrinking cards so horizontal overflow happens */
+    width: 118px;
+    min-width: 118px;
+    max-width: 118px;
+    flex-grow: 0;
+    flex-shrink: 0;
+    flex-basis: 118px;
+
+    border-radius: 10px;
+    padding: 7px;
+
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+/* Current hour emphasis */
+.tw-hour.is-now {
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.35);
+}
+
+/* Top row: time (left) + sunrise/sunset tag (right) */
+.tw-hour-top {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1px;
+}
+
+/* Text stack: tighten spacing to avoid height pressure */
+.tw-hour-time {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-bottom: 0px; /* was 1px */
+}
+
+.tw-hour-cond {
+    font-size: 10px;
+    color: rgba(255,255,255,0.90);
+
+    /* Critical: keep within card width */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Bottom row: rain chance on the left, anchored to the bottom */
+.tw-hour-bottom {
+    flex-grow: 1;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: flex-end;
+}
+
+.tw-hour-sun {
+    font-size: 9px;
+    color: rgba(255,255,255,0.78);
+    unity-text-align: upper-right;
+
+    /* Keep it compact in the top-right corner */
+    flex-grow: 0;
+    flex-shrink: 0;
+    max-width: 56px;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-left: 6px;
+}
+
+.tw-hour-rain {
+    font-size: 9px;
+    color: rgba(255,255,255,0.78);
+    unity-text-align: lower-left;
+
+    flex-grow: 0;
+    flex-shrink: 0;
+    min-width: 58px;
+}
+
+/* =====================
+   Stats (row list + expandable achievements)
+   ===================== */
+
+.stats-achievements-btn {
+    margin-top: 6px;
+    margin-bottom: 10px;
+    height: 26px;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-size: 12px;
+
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.08);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.92);
+}
+
+.stats-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 9px;
+    padding-bottom: 9px;
+
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.10);
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+}
+
+.stats-row-left {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.stats-row-label {
+    font-size: 12px;
+    color: rgba(255,255,255,0.94);
+
+    unity-text-outline-width: 1px;
+    unity-text-outline-color: rgba(0,0,0,0.55);
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex-grow: 1;
+}
+
+.stats-row-right {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.stats-row-value {
+    font-size: 13px;
+    color: rgba(255,255,255,0.98);
+    unity-font-style: bold;
+
+    unity-text-outline-width: 1px;
+    unity-text-outline-color: rgba(0,0,0,0.55);
+}
+
+.stats-row-chevron {
+    width: 14px;
+    height: 14px;
+    opacity: 0.65;
+}
+
+.stats-ach-expand {
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+
+    border-radius: 12px;
+    background-color: rgba(0,0,0,0.18);
+}
+
+.stats-ach-badges {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Category accent variations (subtle) */
+.stats-row.cat-speed  .stats-row-accent { background-color: rgba(0.30, 0.75, 1.00, 0.60); }
+.stats-row.cat-distance .stats-row-accent { background-color: rgba(0.35, 1.00, 0.55, 0.60); }
+.stats-row.cat-air    .stats-row-accent { background-color: rgba(0.85, 0.55, 1.00, 0.60); }
+.stats-row.cat-grind  .stats-row-accent { background-color: rgba(1.00, 0.75, 0.30, 0.60); }
+.stats-row.cat-runs   .stats-row-accent { background-color: rgba(0.95, 0.95, 0.95, 0.35); }
+.stats-row.cat-stability .stats-row-accent { background-color: rgba(1.00, 0.35, 0.35, 0.55); }
+
+/* -------------------- Stats (grouped rows + chips) -------------------- */
+
+.stats-cat-row {
+    margin-top: 6px;
+    padding: 6px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.03);
+}
+
+.stats-cat-chips {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.stat-chip {
+    flex-grow: 1;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background-color: rgba(0,0,0,0.25);
+}
+
+.stat-chip-top {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.stat-chip-label {
+    font-size: 11px;
+    opacity: 0.85;
+}
+
+.stat-chip-value {
+    margin-top: 2px;
+    font-size: 14px;
+    unity-font-style: bold;
+}
+
+.stat-chip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background-color: rgba(255,255,255,0.75);
+}
+
+/* subtle row tints */
+.cat-speed   { background-color: rgba(120,180,255,0.06); }
+.cat-distance{ background-color: rgba(120,255,180,0.06); }
+.cat-air     { background-color: rgba(255,220,120,0.06); }
+.cat-grind   { background-color: rgba(255,140,220,0.06); }
+.cat-explore { background-color: rgba(200,200,255,0.06); }
+.cat-tasks   { background-color: rgba(255,255,255,0.04); }
+
+/* -------------------- Achievements panel under stats -------------------- */
+
+.stats-ach-panel {
+    margin-top: 6px;
+    padding: 8px;
+    border-radius: 12px;
+    background-color: rgba(0,0,0,0.22);
+    gap: 8px;
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.10);
+    border-right-color: rgba(255,255,255,0.10);
+    border-top-color: rgba(255,255,255,0.10);
+    border-bottom-color: rgba(255,255,255,0.10);
+}
+
+.stats-ach-row {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+.stats-ach-item {
+    width: 132px;
+    min-height: 152px;
+
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 8px;
+    padding-right: 8px;
+
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.08);
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+
+    flex-direction: column;
+    gap: 6px;
+}
+
+.stats-ach-item.is-locked { opacity: 0.60; }
+.stats-ach-item.is-unlocked { opacity: 1.0; }
+
+.stats-ach-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 2px;
+
+    background-color: rgba(255,255,255,0.12);
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.14);
+    border-right-color: rgba(255,255,255,0.14);
+    border-top-color: rgba(255,255,255,0.14);
+    border-bottom-color: rgba(255,255,255,0.14);
+}
+
+.stats-ach-info {
+    padding: 6px;
+    border-radius: 10px;
+    background-color: rgba(0,0,0,0.22);
+    align-self: stretch;
+}
+
+.stats-ach-title {
+    font-size: 11px;
+    color: rgba(255,255,255,0.95);
+    unity-font-style: bold;
+    unity-text-align: middle-center;
+
+    unity-text-outline-width: 1px;
+    unity-text-outline-color: rgba(0,0,0,0.55);
+
+    white-space: normal;   /* allow wrapping */
+    overflow: visible;     /* avoid clipping */
+    text-overflow: clip;
+}
+
+.stats-ach-req {
+    font-size: 10px;
+    color: rgba(255,255,255,0.82);
+    unity-text-align: middle-center;
+
+    unity-text-outline-width: 1px;
+    unity-text-outline-color: rgba(0,0,0,0.55);
+
+    white-space: normal;   /* allow wrapping */
+    overflow: visible;     /* avoid clipping */
+    text-overflow: clip;
+}
+
+.stats-ach-meta {
+    margin-top: 2px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.78);
+    unity-text-align: middle-center;
+
+    unity-text-outline-width: 1px;
+    unity-text-outline-color: rgba(0,0,0,0.55);
+
+    white-space: nowrap;   /* keep meta concise */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+    /* =========================
+   Stats (chip rows + expand)
+   ========================= */
+
+.stats-topbar {
+    margin-top: 6px;
+    margin-bottom: 6px;
+    flex-direction: row;
+    justify-content: flex-end;
+}
+
+.btn-mini {
+    height: 24px;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-size: 11px;
+    unity-font-style: bold;
+    opacity: 0.95;
+}
+
+.stats-list {
+    margin-top: 8px;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-cat-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.04);
+}
+
+.stat-chip {
+    min-width: 86px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background-color: rgba(0,0,0,0.25);
+}
+
+.stat-chip:hover {
+    background-color: rgba(0,0,0,0.32);
+}
+
+.stat-chip-btn {
+    flex-direction: column;
+}
+
+.stat-chip-k {
+    font-size: 10px;
+    opacity: 0.75;
+}
+
+.stat-chip-v {
+    margin-top: 2px;
+    font-size: 12px;
+    unity-font-style: bold;
+}
+
+.stat-ach-dot {
+    position: absolute;
+    top: 6px;
+    right: 7px;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background-color: rgba(255,255,255,0.35);
+}
+
+.stat-expand {
+    margin-top: 6px;
+    padding: 8px;
+    border-radius: 12px;
+    background-color: rgba(0,0,0,0.22);
+}
+
+.stat-ach-rows {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-ach-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.stat-ach-item {
+    width: 64px;
+    align-items: center;
+}
+
+.stat-ach-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    background-color: rgba(255,255,255,0.10);
+}
+
+.stat-ach-badge.is-complete {
+    background-color: rgba(255,255,255,0.60);
+}
+
+.stat-ach-title {
+    margin-top: 4px;
+    font-size: 9px;
+    opacity: 0.85;
+    unity-text-align: middle-center;
+}
+
+.stat-ach-sub {
+    margin-top: 2px;
+    font-size: 8px;
+    opacity: 0.65;
+    unity-text-align: middle-center;
+}
+
+/* ---------- Tasks (matrix) ---------- */
+
+.flex-spacer {
+    flex-grow: 1;
+}
+
+.tasks-info-top {
+    flex-direction: row;
+    align-items: center;
+}
+
+.tasks-info-text {
+    font-size: 11px;
+    color: rgba(255,255,255,0.85);
+    white-space: normal;
+}
+
+/* =========================
+   TASKS PAGE (FIT ON SCREEN)
+   ========================= */
+
+.tasks-page {
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+/* Compact info panel at top */
+.tasks-info-panel {
+    position: relative;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.10);
+    background-color: rgba(255,255,255,0.05);
+}
+
+.tasks-info-title {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: rgb(255,255,255);
+    margin-bottom: 1px;
+}
+
+.tasks-info-body {
+    font-size: 10px;
+    color: rgba(255,255,255,0.85);
+
+    /* Keep compact and prevent info panel from expanding vertically */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 102px; /* leave room for claim-all */
+}
+
+/* Claim all pinned top-right (slightly smaller) */
+.tasks-claimall {
+    position: absolute;
+    right: 8px;
+    top: 6px;
+
+    flex-direction: row;
+    align-items: center;
+}
+
+.tasks-claimall-btn {
+    height: 22px;
+    padding-left: 9px;
+    padding-right: 9px;
+    border-radius: 10px;
+    -unity-font-style: bold;
+    font-size: 10px;
+}
+
+.tasks-claimall-value {
+    margin-left: 6px;
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: rgb(255,255,255);
+}
+
+/* Matrix container */
+.tasks-matrix {
+    flex-direction: column;
+}
+
+/* Metric row becomes a vertical stack: label ABOVE the tier cells */
+.tasks-metric-row {
+    flex-direction: column;
+    align-items: stretch;
+
+    margin-bottom: 4px; /* reduced vertical spacing */
+}
+
+/* Label above row */
+.tasks-metric-label {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+
+    margin-left: 2px;
+    margin-bottom: 3px;
+}
+
+/* Tier cells row now spans full width */
+.tasks-tier-row {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Smaller, denser cells */
+.task-cell {
+    flex-grow: 1;
+    height: 34px;
+
+    margin-left: 4px; /* keep, but compact */
+    border-radius: 10px;
+
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgba(255,255,255,0.10);
+
+    justify-content: center;
+    align-items: center;
+}
+
+/* Remove left margin on the first cell so we don't waste width */
+.tasks-tier-row > .task-cell:first-child {
+    margin-left: 0px;
+}
+
+.task-cell-label {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: rgba(255,255,255,0.95);
+}
+
+/* Optional state polish (controller also sets backgroundColor directly) */
+
+/* Completed: thicker + more confident border, dim text slightly */
+.task-cell.is-complete {
+    border-width: 2px;
+    border-color: rgba(120,255,160,0.70);
+}
+
+.task-cell.is-complete .task-cell-label {
+    color: rgba(255,255,255,0.72);
+}
+
+/* Ready to claim: blinking yellow outline */
+.task-cell.is-ready {
+    border-width: 2px;
+    border-color: rgba(255, 230, 80, 0.95);
+    animation-name: taskReadyPulse;
+    animation-duration: 0.9s;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+}
+
+@keyframes taskReadyPulse {
+    0%   { border-color: rgba(255, 230, 80, 0.15); }
+    50%  { border-color: rgba(255, 230, 80, 0.95); }
+    100% { border-color: rgba(255, 230, 80, 0.15); }
+}
+
+/* Claimed: keep green fill (handled in code) but show a faded yellow border */
+.task-cell.is-claimed {
+    border-width: 2px;
+    border-color: rgba(255, 230, 80, 0.35);
+    opacity: 1;
+}
+
+.task-cell.is-claimed .task-cell-label {
+    color: rgba(255,255,255,0.72);
+}
+
+/* Selected should still be obvious, but not override ready pulse too aggressively */
+.task-cell.is-selected {
+    border-width: 2px;
+    border-color: rgba(255,255,255,0.90);
+}
+
+/* If selected + ready, let pulse win (more important feedback) */
+.task-cell.is-selected.is-ready {
+    border-width: 2px;
+}
+
+/* Brief pulse when a reward is successfully claimed */
+@keyframes taskClaimFlash {
+    0%   { border-color: rgba(255, 240, 120, 0.95); border-width: 3px; }
+    55%  { border-color: rgba(255, 240, 120, 0.55); border-width: 3px; }
+    100% { border-color: rgba(255, 230, 80, 0.35);  border-width: 2px; }
+}
+
+.task-cell.is-claim-flash {
+    animation-name: taskClaimFlash;
+    animation-duration: 0.35s;
+    animation-iteration-count: 1;
+    animation-timing-function: ease-out;
+}
+
+/* When hovering Claim All, punch up claimable cells */
+.claimall-hover .task-cell.is-ready {
+    outline-width: 2px;
+    outline-style: solid;
+    outline-color: rgba(255, 230, 90, 0.95);
+    outline-offset: 1px;
+}
+
+.watch-tasks-list {
+    flex-direction: column;
+    row-gap: 2px;
+}
+
+.tile-tasks-list {
+    flex-direction: column;
+    row-gap: 2px;
+    margin-top: 4px;
+}
+
+    /* ----------------------------- */
+/* Map Page */
+/* ----------------------------- */
+
+#Page_Map {
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Hide ScrollView vertical scroller for the map page */
+#Page_Map .unity-scroll-view__vertical-scroller {
+    display: none;
+}
+/* Map Page: force no vertical scrolling and allow inner regions to flex */
+#Page_Map .unity-scroll-view__content-viewport {
+    overflow: hidden;
+}
+
+#Page_Map .unity-scroll-view__content-container {
+    flex-direction: column;
+    flex-grow: 1;
+    min-height: 0;
+    padding-bottom: 0px;
+}
+
+.map-page {
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 8px;
+    padding-bottom: 10px;
+}
+
+.map-toolbar {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.map-title {
+    font-size: 16px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+}
+
+.map-toolbar-spacer {
+    flex-grow: 1;
+}
+
+.map-toolbtn {
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.08);
+}
+
+.map-toolbtn:hover {
+    background-color: rgba(255,255,255,0.12);
+}
+
+.map-toolbtn-text {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.90);
+}
+
+.map-toolbtn-icon {
+    width: 34px;
+    height: 28px;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
+.map-missing {
+    font-size: 12px;
+    color: rgba(255,255,255,0.70);
+    margin-bottom: 8px;
+    display: none; /* shown only when MapData is missing */
+}
+
+.map-viewport {
+    flex-grow: 1;
+    min-height: 0;
+    border-radius: 14px;
+    background-color: rgba(0,0,0,0.18);
+    overflow: hidden;
+        z-index: 0;
+}
+
+.map-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.map-background {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.map-polylines {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.map-markers {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.map-marker {
+    position: absolute;
+    flex-direction: column;
+    align-items: center;
+}
+
+.map-marker-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 8px;
+    background-color: rgba(255,255,255,0.95);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(0,0,0,0.35);
+    border-right-color: rgba(0,0,0,0.35);
+    border-top-color: rgba(0,0,0,0.35);
+    border-bottom-color: rgba(0,0,0,0.35);
+    display: flex;
+align-items: center;
+justify-content: center;
+position: relative;
+}
+
+.map-marker-label {
+    margin-top: 3px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.92);
+    background-color: rgba(0,0,0,0.35);
+     padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    border-radius: 4px;
+    max-width: 160px;
+    white-space: nowrap;
+}
+
+.map-marker-lift-station {
+    /* no-op hook (useful if you want station markers tinted later) */
+}
+
+.map-marker-station-glyph {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -55%;
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.95);
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0,0,0,0.55);
+    pointer-events: none;
+}
+.map-legend {
+    left: 10px;
+    top: 10px;
+
+    flex-direction: column;
+    gap: 6px;
+
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+
+    border-radius: 12px;
+    background-color: rgba(0,0,0,0.85);
+}
+
+.map-legend-item {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+}
+
+.map-legend-item:hover {
+    background-color: rgba(255,255,255,0.10);
+}
+
+.map-legend-item.is-off {
+    opacity: 0.45;
+}
+
+.map-legend-text {
+    font-size: 11px;
+    color: rgba(255,255,255,0.88);
+    unity-font-style: bold;
+}
+
+.legend-swatch {
+    width: 16px;
+    height: 10px;
+    border-radius: 10px;
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+
+    border-left-color: rgba(0,0,0,0.35);
+    border-right-color: rgba(0,0,0,0.35);
+    border-top-color: rgba(0,0,0,0.35);
+    border-bottom-color: rgba(0,0,0,0.35);
+}
+
+.legend-swatch-line {
+    height: 4px;
+    border-radius: 6px;
+}
+
+.legend-swatch-run   { background-color: rgba(90,200,255,0.90); }
+.legend-swatch-lift  { background-color: rgba(255,214,10,0.90); }
+.legend-swatch-poi   { background-color: rgba(255,255,255,0.90); }
+
+
+.map-layerbar {
+    flex-direction: row;
+    gap: 8px;
+        z-index: 50;
+    margin-top: 4px;
+
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+
+    border-radius: 14px;
+    background-color: rgba(0,0,0,0.2);
+}
+
+.map-layerbtn {
+    flex-grow: 1;
+    flex-shrink: 1;
+    height: 14px;
+
+    flex-direction: row;
+     /* ensure the row content is vertically centered */
+    align-items: center;
+    justify-content: center;
+
+    /* remove any vertical padding that can bias centering */
+    padding-top: 0px;
+    padding-bottom: 0px;
+    gap: 7px;
+
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.2);
+}
+
+.map-layerbtn:hover {
+    background-color: rgba(255,255,255,0.10);
+}
+
+.map-layerbtn.is-on {
+    background-color: rgba(255,255,255,0.14);
+}
+
+.map-layerdot {
+    width: 8px;
+    height: 8px;
+    border-radius: 8px;
+
+    background-color: rgba(255,255,255,0.22);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(0,0,0,0.35);
+    border-right-color: rgba(0,0,0,0.35);
+    border-top-color: rgba(0,0,0,0.35);
+    border-bottom-color: rgba(0,0,0,0.35);
+}
+
+.map-layerbtn.is-on .map-layerdot {
+    background-color: rgba(255,255,255,0.90);
+}
+
+.map-layertext {
+    font-size: 10px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.84);
+
+    height: 100%;
+    margin-top: -1px;
+    unity-text-align: middle-center;
+
+    margin-bottom: 5px;
+}
+
+    /* Watch Map page: no padding, clean clip for injected minimap */
+#WatchPage_Map {
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+}
+
+/* Phone home Map tile: clip injected minimap */
+#Tile_Map {
+    overflow: hidden;
+}
+
+    #MapInfoPanel Label {
+    color: white;
+}
+
+    /* =========================
+   Map Info Panel - Buttons
+   ========================= */
+
+/* Base style for any Button inside the MapInfoPanel */
+#MapInfoPanel Button {
+    height: 26px;
+
+    padding-left: 10px;
+    padding-right: 10px;
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+
+    border-left-color: rgba(255,255,255,0.14);
+    border-right-color: rgba(255,255,255,0.14);
+    border-top-color: rgba(255,255,255,0.14);
+    border-bottom-color: rgba(255,255,255,0.14);
+
+    border-radius: 12px;
+
+    background-color: rgba(255,255,255,0.08);
+
+    /* UI Toolkit text alignment */
+    unity-text-align: middle-center;
+
+    color: rgba(255,255,255,0.90);
+    -unity-font-style: bold;
+    font-size: 11px;
+}
+
+#MapInfoPanel Button:hover {
+    background-color: rgba(255,255,255,0.12);
+    border-left-color: rgba(255,255,255,0.20);
+    border-right-color: rgba(255,255,255,0.20);
+    border-top-color: rgba(255,255,255,0.20);
+    border-bottom-color: rgba(255,255,255,0.20);
+}
+
+#MapInfoPanel Button:active {
+    background-color: rgba(255,255,255,0.16);
+}
+
+/* Optional: smaller, icon-like close button (only if you add the class in code below) */
+#MapInfoPanel .map-info-close {
+    width: 26px;
+    min-width: 26px;
+
+    padding-left: 0px;
+    padding-right: 0px;
+
+    background-color: rgba(255,255,255,0.05);
+}
+#MapInfoPanel .map-info-close:hover {
+    background-color: rgba(255,255,255,0.10);
+}
+
+    #MapBottomDock {
+    /* purely visual; layout is handled in code */
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+}
+
+/* --- Home layout v2 --- */
+.row-notif { height: 38px; }
+.row-run { height: 92px; }
+.row-map { height: 210px; }
+.row-statsbar { height: 52px; }
+.row-work { height: 132px; }
+.row-bottom4 { height: 60px; }
+
+/* Notification bar tile */
+.tile-notif {
+    padding: 4px;
+    background-color: rgba(255,255,255,0.04);
+}
+
+.notif-body {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.notif-left, .notif-right {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.notif-time {
+    font-size: 13px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+}
+
+.notif-day {
+    font-size: 11px;
+    color: rgba(255,255,255,0.75);
+}
+
+.notif-cond {
+    font-size: 11px;
+    color: rgba(255,255,255,0.78);
+}
+
+.notif-temp {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.90);
+}
+
+.is-hidden {
+    display: none;
+}
+
+/* Run tracker */
+.tile-run { }
+.run-subrow {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+.run-line1 { margin-bottom: 4px; }
+
+/* Map tile: let the embedded minimap own the space */
+.tile-map-large {
+    padding: 0px;
+    position: relative;
+}
+.tile-title-overlay {
+    position: absolute;
+    left: 10px;
+    top: 8px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    border-radius: 10px;
+    background-color: rgba(0,0,0,0.35);
+    color: rgba(255,255,255,0.90);
+    font-size: 11px;
+}
+
+/* Stats bar */
+.tile-statsbar {
+    padding: 8px;
+}
+.statsbar-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+.statsbar-kv {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.90);
+}
+
+/* Tasks + Achievements sizing */
+.tile-taskswide {
+    flex-grow: 1;
+}
+.tile-ach-compact {
+    flex-grow: 0;
+    width: 132px;
+}
+.ach-compact-main {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-top: 6px;
+    margin-bottom: 2px;
+}
+.ach-compact-sub {
+    font-size: 10px;
+    color: rgba(255,255,255,0.72);
+}
+
+    /* --- Home layout compact pass --- */
+.v2-home { padding-top: 4px; padding-bottom: 4px; }
+
+.row-notif { height: 34px; }
+.row-run { height: 72px; }
+.row-map { height: 190px; }
+.row-statsbar { height: 40px; }
+.row-work { height: 112px; }
+.row-bottom4 { height: 54px; }
+
+.tight-head { margin-bottom: 4px; }
+.tight-text { margin-top: 0px; margin-bottom: 0px; }
+.tight-row { gap: 6px; }
+.tight-list { gap: 2px; }
+
+.home-grid .tile { padding: 4px; }
+.home-grid .tile-title { font-size: 11px; }
+.home-grid .tile-badge { font-size: 10px; padding-top: 1px; padding-bottom: 1px; }
+.home-grid .tile-sub { font-size: 10px; }
+.home-grid .tile-value { font-size: 12px; margin-top: 2px; margin-bottom: 2px; }
+
+/* Notification bar tile */
+.tile-notif { padding: 2px; background-color: rgba(255,255,255,0.035); }
+.notif-body { flex-direction: row; justify-content: space-between; align-items: Top; }
+.notif-left, .notif-right { flex-direction: row; align-items: baseline; gap: 6px; }
+
+.notif-time { font-size: 12px; unity-font-style: bold; color: rgba(255,255,255,0.92); }
+.notif-day { font-size: 12px; color: rgba(255,255,255,0.75); }
+.notif-cond { font-size: 12px; color: rgba(255,255,255,0.78); }
+.notif-temp { font-size: 12px; unity-font-style: bold; color: rgba(255,255,255,0.90); }
+
+.is-hidden { display: none; }
+
+/* Map tile */
+.tile-map-large { padding: 0px; position: relative; overflow: hidden; }
+.tile-title-overlay {
+    position: absolute;
+    left: 8px;
+    top: 6px;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    border-radius: 10px;
+    background-color: rgba(0,0,0,0.35);
+    color: rgba(255,255,255,0.90);
+    font-size: 10px;
+}
+
+/* Stats bar */
+.tile-statsbar { padding: 2px; }
+.statsbar-row { flex-direction: row; justify-content: space-between; align-items: center; }
+.statsbar-kv { font-size: 11px; unity-font-style: bold; color: rgba(255,255,255,0.90); }
+
+/* Tasks list: dense lines */
+.tile-tasks-list { flex-direction: column; flex-grow: 1; overflow: hidden; }
+.tile-taskline { font-size: 10px; margin-top: 1px; margin-bottom: 1px; }
+
+/* Achievements: smaller, claim-only */
+.tile-ach-compact { width: 96px; padding: 6px; }
+.ach-compact-main {
+    font-size: 8px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    margin-top: 6px;
+}
+
+/* -----------------------------
+   Home v2 density improvements
+------------------------------ */
+
+/* Row height tweak (run tile gets much shorter now) */
+.row-run { height: 44px; }
+
+/* RUN TILE: single-row layout */
+.run-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+.run-left {
+    flex-direction: column;
+    justify-content: center;
+    min-width: 56px;
+}
+
+.run-main {
+    flex-grow: 1;
+    font-size: 12px;
+    unity-font-style: bold;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    color: rgba(255,255,255,0.92);
+}
+
+.run-right {
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    min-width: 92px;
+}
+
+.run-mini {
+    font-size: 10px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    color: rgba(255,255,255,0.78);
+}
+
+/* TASKS TILE: stacked bars, no gaps */
+.tile-tasks-bars {
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 0px;           /* no spacing between bars */
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+
+/* Each bar row */
+.taskbar {
+    height: 18px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    padding-left: 0px;
+    padding-right: 0px;
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 0px;
+    border-bottom-width: 0px;
+
+    border-left-color: rgba(255,255,255,0.10);
+    border-right-color: rgba(255,255,255,0.10);
+
+    background-color: rgba(255,255,255,0.06);
+    overflow: hidden;
+}
+
+/* optional: a subtle separator line between bars */
+/* .taskbar + .taskbar {
+    border-top-width: 1px;
+    border-top-color: rgba(0,0,0,0.25);
+} */
+
+/* Fill */
+.taskbar-fill {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    bottom: 0px;
+    width: 0%;
+    background-color: rgba(255,210,60,0.60);
+}
+
+/* Centered overlay text */
+.taskbar-label {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    top: 0px;
+    bottom: 0px;
+
+    font-size: 10px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.90);
+    -unity-text-align: middle-center;
+}
+
+/* Claimable state: yellow border around entire bar */
+.taskbar.is-claimable {
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgba(255,220,70,0.95);
+    border-right-color: rgba(255,220,70,0.95);
+    border-top-color: rgba(255,220,70,0.95);
+    border-bottom-color: rgba(255,220,70,0.95);
+}
+
+/* ACHIEVEMENTS TILE: ratio centered + bigger */
+.tile-ach-compact .ach-compact-main {
+    width: 100%;
+    margin-top: 10px;
+    margin-bottom: 0px;
+    font-size: 12px;
+    -unity-text-align: middle-center;
+}
+
+    /* Tighten RUN tile padding to reduce vertical height */
+.tile-run {
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+
+/* Run row: tighter spacing */
+.run-row {
+    gap: 6px;
+    align-items: center;
+}
+
+/* Remove top/bottom padding bloat on notif + stats tiles */
+.tile-notif {
+    padding-top: 1px;
+    padding-bottom: 1px;
+}
+
+.tile-statsbar {
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+.map-marker-label,
+.map-polyline-label {
+    position: absolute;
+
+    /* runtime font size is set in code (zoom-compensated) */
+    -unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+
+    background-color: rgba(0,0,0,0.38);
+    border-radius: 6px;
+
+    /* accent stripe: width/color set from code */
+    border-left-width: 3px;
+    border-left-color: rgba(255,255,255,0.90);
+
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0,0,0,0.80);
+
+    max-width: 180px;
+    white-space: nowrap;
+}
+
+/* ---------------- Runs Page ---------------- */
+
+.runs-panel {
+    margin-top: 6px;
+}
+
+.runs-cal-toolbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-top: 6px;
+    margin-bottom: 8px;
+    gap: 10px;
+}
+
+.runs-cal-title {
+    unity-font-style: bold;
+    font-size: 14px;
+    color: rgba(255,255,255,0.92);
+}
+
+.runs-cal-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.runs-cal-day {
+    width: 38px;
+    height: 32px;
+    border-radius: 8px;
+    background-color: rgba(255,255,255,0.07);
+    justify-content: center;
+    align-items: center;
+}
+
+.runs-cal-day.has-runs {
+    background-color: rgba(0, 180, 255, 0.14);
+}
+
+.runs-cal-day.is-selected {
+    background-color: rgba(255,255,255,0.18);
+}
+
+.runs-cal-day-label {
+    color: rgba(255,255,255,0.92);
+    font-size: 12px;
+}
+
+.runs-daylist,
+.runs-runlist {
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 18px;
+}
+
+.runs-card {
+    background-color: rgba(0,0,0,0.55);
+    border-radius: 12px;
+    padding: 10px;
+    gap: 6px;
+}
+
+.runs-card-title {
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    font-size: 14px;
+}
+
+.runs-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.runs-row-left {
+    color: rgba(255,255,255,0.88);
+    font-size: 12px;
+    flex-grow: 1;
+}
+
+.runs-row-right {
+    color: rgba(255,255,255,0.78);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+    /* ---------------- Runs Page ---------------- */
+
+.runs-panel {
+    margin-top: 6px;
+}
+
+.runs-cal-toolbar {
+    flex-direction: row;
+    align-items: left;
+    justify-content: top;
+    margin-top: 6px;
+    margin-bottom: 8px;
+    gap: 10px;
+}
+
+.runs-cal-title {
+    unity-font-style: bold;
+    font-size: 14px;
+    color: rgba(255,255,255,0.92);
+}
+
+.runs-cal-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.runs-cal-day {
+    width: 38px;
+    height: 32px;
+    border-radius: 8px;
+    background-color: rgba(255,255,255,0.07);
+    justify-content: center;
+    align-items: center;
+}
+
+.runs-cal-day.has-runs {
+    background-color: rgba(0, 180, 255, 0.14);
+}
+
+.runs-cal-day.is-selected {
+    background-color: rgba(255,255,255,0.18);
+}
+
+.runs-cal-day-label {
+    color: rgba(255,255,255,0.92);
+    font-size: 12px;
+}
+
+.runs-daypanel {
+    margin-top: 4px;
+}
+
+.runs-day-toolbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+    margin-bottom: 8px;
+    gap: 10px;
+}
+
+.runs-day-title {
+    unity-font-style: bold;
+    font-size: 14px;
+    color: rgba(255,255,255,0.92);
+}
+
+/* lists */
+.runs-daylist,
+.runs-runlist {
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 18px;
+}
+
+/* card + rows */
+.runs-card {
+    background-color: rgba(0,0,0,0.55);
+    border-radius: 12px;
+    padding: 10px;
+    gap: 6px;
+}
+
+.runs-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.runs-row-left {
+    color: rgba(255,255,255,0.88);
+    font-size: 12px;
+    flex-grow: 1;
+}
+
+.runs-row-right {
+    color: rgba(255,255,255,0.78);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+/* expandable run headers */
+.runs-runheader {
+    background-color: rgba(0,0,0,0.55);
+    border-radius: 12px;
+    padding: 10px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.runs-runheader-left {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+.runs-chevron {
+    color: rgba(255,255,255,0.85);
+    font-size: 14px;
+    unity-font-style: bold;
+    width: 18px;
+}
+
+.runs-runname {
+    color: rgba(255,255,255,0.92);
+    font-size: 14px;
+    unity-font-style: bold;
+}
+
+.runs-runcount {
+    color: rgba(255,255,255,0.75);
+    font-size: 12px;
+}
+
+.runs-runbody {
+    margin-left: 10px;
+    margin-right: 2px;
+    padding-top: 6px;
+    padding-bottom: 2px;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.runs-divider {
+    height: 1px;
+    background-color: rgba(255,255,255,0.10);
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+    /* Weekday header row */
+.runs-cal-weekdays {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+.runs-cal-weekday {
+    width: 38px;
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255,255,255,0.70);
+}
+
+/* Day badge (completion count) */
+.runs-cal-badge {
+    position: absolute;
+    right: 5px;
+    top: 4px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.92);
+    background-color: rgba(0, 180, 255, 0.25);
+    border-radius: 8px;
+    padding-left: 6px;
+    padding-right: 6px;
+    height: 16px;
+    unity-text-align: middle-center;
+}
+
+    /* -----------------------------
+   Runs Page
+------------------------------ */
+
+.runs-page .page-h1 { margin-bottom: 8px; }
+
+.runs-tabs {
+    flex-direction: row;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.runs-tab {
+    flex-grow: 1;
+    border-radius: 10px;
+    padding: 8px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+    justify-content: center;
+    align-items: center;
+}
+
+.runs-tab.is-selected {
+    background-color: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.18);
+}
+
+.runs-tab-text {
+    unity-font-style: bold;
+    font-size: 12px;
+    color: rgba(255,255,255,0.92);
+}
+
+.runs-panel { margin-top: 2px; }
+.is-hidden { display: none; }
+
+/* Weeks list */
+.runs-weeklist { flex-direction: column; gap: 10px; }
+
+.runs-week {
+    border-radius: 12px;
+    padding: 8px;
+    background-color: rgba(0,0,0,0.22);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+}
+
+.runs-week-header {
+    unity-font-style: bold;
+    font-size: 12px;
+    color: rgba(255,255,255,0.92);
+    background-color: rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 8px;
+    margin-bottom: 8px;
+}
+
+.runs-week-days {
+    flex-direction: row;
+    gap: 6px;
+    justify-content: space-between;
+}
+
+.runs-day {
+    flex-grow: 1;
+    min-width: 0px;
+    height: 44px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+    unity-text-align: middle-center;
+    font-size: 11px;
+    color: rgba(255,255,255,0.88);
+    padding: 4px;
+}
+
+.runs-day.has-runs {
+    background-color: rgba(120, 200, 255, 0.10);
+    border-color: rgba(120, 200, 255, 0.25);
+}
+
+.runs-dayhdr {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.runs-daytitle {
+    flex-grow: 1;
+    unity-font-style: bold;
+    font-size: 12px;
+    color: rgba(255,255,255,0.92);
+    unity-text-align: middle-center;
+}
+
+.runs-navbtn {
+    width: 34px;
+    height: 28px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.10);
+    unity-text-align: middle-center;
+}
+
+.runs-smallbtn {
+    height: 28px;
+    border-radius: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.10);
+    unity-text-align: middle-center;
+    font-size: 11px;
+    color: rgba(255,255,255,0.90);
+}
+
+/* Day detail list */
+.runs-daylist { flex-direction: column; gap: 8px; }
+.runs-empty { color: rgba(255,255,255,0.65); font-size: 11px; margin-top: 6px; }
+
+/* Runs list */
+.runs-runlist { flex-direction: column; gap: 10px; }
+
+.runs-run {
+    border-radius: 12px;
+    padding: 8px;
+    background-color: rgba(0,0,0,0.22);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+}
+
+.runs-runhdr {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.runs-runhdr-left { flex-direction: column; flex-grow: 1; }
+.runs-runname { unity-font-style: bold; font-size: 12px; color: rgba(255,255,255,0.92); }
+.runs-runcount { font-size: 11px; color: rgba(255,255,255,0.70); margin-top: 2px; }
+
+.runs-runhdr-right { flex-direction: row; gap: 6px; align-items: center; }
+
+.runs-expandbtn {
+    width: 34px;
+    height: 28px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.10);
+    unity-text-align: middle-center;
+}
+
+.runs-summary {
+    flex-direction: row;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.runs-statchip {
+    flex-grow: 1;
+    border-radius: 10px;
+    padding: 6px;
+    background-color: rgba(255,255,255,0.05);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.06);
+    font-size: 11px;
+    color: rgba(255,255,255,0.88);
+    unity-text-align: middle-center;
+}
+
+.runs-history { flex-direction: column; gap: 8px; margin-top: 10px; }
+
+.runs-attempt {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.04);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.06);
+}
+
+.runs-attempt-left { flex-direction: column; }
+.runs-attempt-run { unity-font-style: bold; font-size: 11px; color: rgba(255,255,255,0.92); }
+.runs-attempt-when { font-size: 11px; color: rgba(255,255,255,0.72); margin-top: 2px; }
+
+.runs-attempt-right { flex-direction: row; gap: 8px; align-items: center; }
+
+.runs-mini { flex-direction: column; align-items: flex-end; }
+.runs-mini-k { font-size: 10px; color: rgba(255,255,255,0.60); }
+.runs-mini-v { font-size: 11px; color: rgba(255,255,255,0.90); unity-font-style: bold; }
+
+/* -------------------------
+   Runs Page – Weeks + Runs
+------------------------- */
+
+.runs-week-card {
+    margin-top: 8px;
+    padding: 10px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+}
+
+.runs-week-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.runs-week-title {
+    font-size: 14px;
+    color: rgba(255,255,255,0.92);
+    unity-font-style: bold;
+}
+
+.runs-week-badge {
+    min-width: 26px;
+    height: 22px;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-radius: 999px;
+    text-align: center;
+    unity-text-align: middle-center;
+    background-color: rgba(255,255,255,0.10);
+    color: rgba(255,255,255,0.90);
+    font-size: 12px;
+}
+
+.runs-week-days {
+    margin-top: 10px;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.runs-day-tile {
+    width: 44px;
+    height: 54px;
+    border-radius: 10px;
+    background-color: rgba(0,0,0,0.20);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+    align-items: center;
+    justify-content: center;
+}
+
+.runs-day-tile.has-runs {
+    background-color: rgba(255,255,255,0.10);
+    border-color: rgba(255,255,255,0.16);
+}
+
+.runs-day-dow {
+    font-size: 10px;
+    color: rgba(255,255,255,0.70);
+}
+
+.runs-day-dom {
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.95);
+}
+
+.runs-run-card {
+    margin-top: 8px;
+    padding: 10px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+}
+
+.runs-run-header {
+    flex-direction: row;
+    align-items: center;
+}
+
+.runs-run-name {
+    /* Leave room for the per-run progress bar in the header row. */
+    flex-grow: 0;
+    flex-shrink: 1;
+    min-width: 0;
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+}
+
+.runs-run-progress {
+    flex-grow: 1;
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    margin-left: 10px;
+    margin-right: 10px;
+    overflow: hidden;
+}
+
+.runs-run-progress-fill {
+    height: 100%;
+    width: 0%;
+    background-color: rgba(255,255,255,0.75);
+}
+
+.runs-run-count {
+    margin-left: 8px;
+    margin-right: 10px;
+    color: rgba(255,255,255,0.70);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.runs-run-mapbtn {
+    padding-left: 10px;
+    padding-right: 10px;
+    height: 24px;
+    border-radius: 8px;
+    background-color: rgba(255,255,255,0.10);
+    align-items: center;
+    justify-content: center;
+}
+
+.runs-run-summary {
+    margin-top: 6px;
+    color: rgba(255,255,255,0.70);
+    font-size: 12px;
+}
+
+.runs-run-detail {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top-width: 1px;
+    border-top-color: rgba(255,255,255,0.08);
+}
+
+.runs-attempt-row {
+    margin-top: 6px;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.runs-attempt-title {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.90);
+
+    /* prevent long run names from overflowing */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.runs-attempt-meta {
+    font-size: 12px;
+    color: rgba(255,255,255,0.70);
+
+    /* allow wrapping / hard line breaks; never exceed container */
+    white-space: normal;
+    overflow: hidden;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.runs-empty {
+    margin-top: 8px;
+    color: rgba(255,255,255,0.60);
+    font-size: 12px;
+}
+
+    /* Runs weeks container (RunsCalendarGrid) */
+.runs-cal-grid {
+    flex-direction: column;   /* was: row */
+    flex-wrap: nowrap;        /* was: wrap */
+    gap: 6px;
+    margin-bottom: 10px;
+    align-items: stretch;
+}
+
+.runs-run-mapbtn > Label {
+    color: rgba(255,255,255,0.95);
+    unity-text-align: middle-center;
+}
+
+
+.runs-active {
+    margin: 10px 12px 8px 12px;
+    padding: 12px;
+    border-radius: 14px;
+    background-color: rgba(0,0,0,0.25);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.08);
+}
+
+.runs-active-title {
+    color: rgba(255,255,255,0.95);
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.runs-active-meta {
+    color: rgba(255,255,255,0.75);
+    font-size: 11px;
+}
+
+.runs-active-bar {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.runs-active-fill {
+    height: 100%;
+    width: 0%;
+    background-color: rgba(255,255,255,0.80);
+}
+
+.map-label {
+    position: absolute;
+    -unity-font-style: bold;
+    font-size: 12px;
+    color: white;
+    background-color: rgba(0,0,0,0.55);
+    padding: 2px 6px;
+    border-radius: 8px;
+    white-space: nowrap;
+    pointer-events: none; /* critical: don't block hover */
+}
+
+.map-label.is-hidden {
+    display: none;
+}
+
+.map-label--run {
+    /* optional: subtle distinction for run labels */
+    background-color: rgba(0,0,0,0.65);
+}
+
+.runs-week-header { min-width: 0; }
+.runs-week-days { min-width: 0; }
+
+.runs-day-tile {
+    min-width: 0;
+}
+
+.runs-attempt-row {
+    min-width: 0;
+}
+
+.runs-attempt-title {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.runs-attempt-meta {
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow: hidden;
+}
+
+    .map-marker-label.is-hovered,
+.map-polyline-label.is-hovered {
+    opacity: 1;
+    unity-font-style: bold;
+}
+
+.runs-day-tile.is-future {
+    opacity: 0.35;
+    background-color: rgba(0,0,0,0.10);
+    border-color: rgba(255,255,255,0.05);
+}
+
+/* Generic disabled visual used by SetEnabledAndVisual() */
+.is-disabled {
+    opacity: 0.35;
+}
+
+    /* ---------- Watch: Run Tracker page ---------- */
+
+.watch-run-card {
+    padding: 10px;
+    border-radius: 14px;
+    background-color: rgba(255,255,255,0.05);
+    border-left-width: 3px;
+    border-left-color: rgba(255,255,255,0.12);
+    gap: 8px;
+}
+
+.watch-run-head {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.watch-run-name {
+    flex-grow: 1;
+    color: rgba(255,255,255,0.95);
+    unity-font-style: bold;
+    font-size: 13px;
+    min-width: 0;
+}
+
+.watch-run-pct {
+    color: rgba(255,255,255,0.80);
+    font-size: 12px;
+    unity-text-align: middle-right;
+}
+
+.watch-run-bar {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    overflow: hidden;
+    position: relative;
+}
+
+.watch-run-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    background-color: rgba(255,255,255,0.80);
+}
+
+.watch-run-kv {
+    color: rgba(255,255,255,0.75);
+    font-size: 12px;
+}
+
+/* Updated Run Tracker tile layout (run-tile) */
+.tile-run .run-tile {
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tile-run .run-top {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.tile-run .run-pct {
+    flex-shrink: 0;
+    color: rgba(255,255,255,0.75);
+    unity-text-align: middle-right;
+}
+
+.tile-run .run-meta {
+    color: rgba(255,255,255,0.75);
+}
+
+.tile-run .run-bar {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    overflow: hidden;
+    position: relative;
+}
+
+.tile-run .run-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    background-color: rgba(255,255,255,0.80);
+}
+
+.runs-active-bar {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    margin-top: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.runs-active-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    background-color: rgba(255,255,255,0.80);
+}
+
+.runs-attempt-progress {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    margin-top: 6px;
+    overflow: hidden;
+    position: relative;
+}
+
+.runs-attempt-progress-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    background-color: rgba(255,255,255,0.80);
+}
+
+/* Final override: run row must be tall enough for bar + 2 lines */
+.row-run {
+    height: 72px;
+}
+
+    /* ---------- Runs page: attempt cards ---------- */
+
+.runs-attempt-card {
+    padding: 10px 12px;
+    border-radius: 14px;
+    background-color: rgba(255,255,255,0.05);
+    border-left-width: 3px;
+    border-left-color: rgba(255,255,255,0.10);
+}
+
+.runs-attempt-head {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.runs-attempt-spacer {
+    flex-grow: 1;
+}
+
+.runs-attempt-badge {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.85);
+    background-color: rgba(255,255,255,0.08);
+}
+
+.runs-attempt-badge.is-complete {
+    background-color: rgba(255,255,255,0.18);
+    color: rgba(255,255,255,0.95);
+}
+
+.runs-attempt-metrics {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.runs-attempt-chip {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.78);
+    background-color: rgba(0,0,0,0.18);
+}
+
+/* Segment fill (start->end) inside the attempt progress bar */
+.runs-attempt-progress-seg {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(255,255,255,0.80);
+    border-radius: 6px;
+}
+
+/* ---- Runs: compact attempt entry (no chips) ---- */
+
+.runs-attempt-item {
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.04);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.06);
+}
+
+.runs-attempt-runname {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.runs-attempt-head {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.runs-attempt-time {
+    font-size: 11px;
+    color: rgba(255,255,255,0.72);
+}
+
+.runs-attempt-status {
+    font-size: 11px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.90);
+}
+
+.runs-attempt-bar {
+    height: 6px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.10);
+    overflow: hidden;
+    position: relative;
+}
+
+.runs-attempt-seg {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 0%;
+    background-color: rgba(255,255,255,0.80);
+}
+
+.runs-attempt-marker {
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 2px;
+    border-radius: 1px;
+    background-color: rgba(255,255,255,0.85);
+}
+
+.runs-attempt-marker.is-end {
+    background-color: rgba(255,255,255,0.55);
+}
+
+.runs-attempt-metrics {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.runs-attempt-metric {
+    font-size: 11px;
+    color: rgba(255,255,255,0.88);
+    white-space: nowrap;
+}
+
+.runs-attempt-metric.is-muted {
+    color: rgba(255,255,255,0.70);
+}
+
+/* Day detail back button */
+.runs-day-backbtn {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+/* ---------- Watch: Tasks page wrapper ---------- */
+.watch-tasks-card {
+    padding: 10px;
+    border-radius: 14px;
+    background-color: rgba(255,255,255,0.05);
+    border-left-width: 3px;
+    border-left-color: rgba(255,255,255,0.12);
+    gap: 8px;
+}
+
+    .runs-attempt-card {
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.04);
+    border-width: 1px;
+    border-color: rgba(255,255,255,0.06);
+}
+
+.runs-attempt-head {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.runs-attempt-head-left {
+    flex-direction: column;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.runs-attempt-runname {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.runs-attempt-when {
+    font-size: 11px;
+    color: rgba(255,255,255,0.72);
+}
+
+.runs-attempt-head-right {
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.runs-attempt-status {
+    font-size: 10px;
+    color: rgba(255,255,255,0.60);
+}
+
+.runs-attempt-dur {
+    margin-top: 2px;
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.92);
+}
+
+/* Uses your existing .runs-attempt-progress styling */
+.runs-attempt-progress-seg {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.80);
+}
+
+.runs-attempt-range {
+    margin-top: -2px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.55);
+}
+
+.runs-attempt-stats {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.runs-attempt-kv {
+    font-size: 11px;
+    color: rgba(255,255,255,0.75);
+}
+
+/* Day page: run groups feel like collapsible headers */
+.runs-day-run-card {
+    margin-top: 8px;
+}
+
+.runs-day-run-header {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.runs-run-count.is-complete {
+    color: rgba(255,255,255,0.92);
+    unity-font-style: bold;
+}
+
+    /* =========================
+   Map Bottom Dock + Info Panel (Clean Sheet)
+   ========================= */
+
+#MapBottomDock {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+
+    padding: 10px;
+    gap: 10px;
+
+    background-color: rgba(0,0,0,0.55);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+
+    border-left-color: rgba(255,255,255,0.10);
+    border-right-color: rgba(255,255,255,0.10);
+    border-top-color: rgba(255,255,255,0.10);
+    border-bottom-color: rgba(255,255,255,0.10);
+
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+}
+
+#MapInfoPanel {
+    flex-direction: column;
+    gap: 8px;
+
+    /* Keep it from swallowing the map */
+    max-height: 190px;
+
+    padding: 10px;
+
+    background-color: rgba(255,255,255,0.05);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+
+    border-left-color: rgba(255,255,255,0.10);
+    border-right-color: rgba(255,255,255,0.10);
+    border-top-color: rgba(255,255,255,0.10);
+    border-bottom-color: rgba(255,255,255,0.10);
+
+    border-radius: 14px;
+
+    overflow: hidden; /* Important: contain internal content */
+}
+
+#MapInfoPanel .map-info-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+#MapInfoPanel .map-info-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: rgba(255,255,255,0.95);
+}
+
+#MapInfoPanel .map-info-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.70);
+}
+
+/* If your info body is long, put it in a dedicated scroll container (recommended) */
+#MapInfoPanel .map-info-scroll {
+    flex-grow: 1;
+    overflow-y: scroll;
+    padding-right: 4px;
+}
+
+    .tile-row--split {
+    flex-direction: row;
+    align-items: stretch;
+}
+
+/* -----------------------------
+   Home: 2-column work row layout
+------------------------------ */
+
+.row-work2col {
+    height: 152px;              /* = old row-statsbar (40) + old row-work (112) */
+    flex-direction: row;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.work-col {
+    flex-direction: column;
+    height: 100%;
+    gap: 8px;
+}
+
+.work-col-wide {
+    flex-grow: 1;
+}
+
+.work-col-narrow {
+    flex-grow: 0;
+    width: 96px;                /* matches .tile-ach-compact (in your compact section) */
+}
+
+/* LEFT column sizing */
+.tile-statsmini {
+    flex-grow: 0;
+    height: 34px;               /* "just tall enough" for 1 line */
+    padding: 6px;
+    justify-content: center;
+}
+
+.statsbar-kv-single {
+    font-size: 11px;
+    unity-font-style: bold;
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+/* Ensure tasks fills remaining height in the left column */
+.work-col-wide .tile-taskswide {
+    flex-grow: 1;
+}
+
+/* RIGHT column: both tiles split evenly */
+.work-col-narrow .tile {
+    flex-grow: 1;
+}
+
+/* Ski Pass tile minor tweaks */
+.tile-skipass .tile-sub {
+    margin-top: 6px;
+    margin-bottom: 0px;
+}
+
+/* Ski Pass page lift list rows */
+.skipass-liftlist {
+    flex-direction: column;
+    gap: 6px;
+}
+
+.skipass-liftrow.is-locked {
+    color: rgba(255,255,255,0.55);
+}
+
+/* =========================
+   Ski Pass page
+========================= */
+
+.skipass-page { }
+
+/* Force Ski Pass page text to white */
+.skipass-page,
+.skipass-page Label,
+.skipass-page Button {
+    color: rgba(255,255,255,1);
+}
+
+/* UI Toolkit button text sometimes lives on nested label */
+.skipass-page Button > Label {
+    color: rgba(255,255,255,1);
+}
+
+.skipass-card {
+    background-color: rgba(0,0,0,0.20);
+    border-radius: 14px;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.10);
+    border-right-color: rgba(255,255,255,0.10);
+    border-top-color: rgba(255,255,255,0.10);
+    border-bottom-color: rgba(255,255,255,0.10);
+}
+
+.skipass-current-row {
+    flex-direction: row;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.skipass-current-left {
+    flex-grow: 1;
+}
+
+.skipass-current-right {
+    width: 44%;
+    flex-shrink: 0;
+}
+
+.skipass-current-name {
+    unity-font-style: bold;
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.skipass-meta {
+    opacity: 0.85;
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+.skipass-bar {
+    height: 8px;
+    border-radius: 6px;
+    background-color: rgba(255,255,255,0.12);
+    margin-top: 8px;
+    overflow: hidden;
+}
+
+.skipass-fill {
+    height: 100%;
+    width: 100%;
+    background-color: rgba(255,255,255,0.75);
+}
+
+.skipass-liftlist {
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.skipass-liftrow.is-locked {
+    color: rgba(255,255,255,0.55);
+    opacity: 1;
+}
+
+
+.skipass-cardgrid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.skipass-passcard {
+    width: 92px;
+    padding: 8px;
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.06);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+}
+
+.skipass-passcard.is-selected {
+    background-color: rgba(255,255,255,0.12);
+    border-left-color: rgba(255,255,255,0.35);
+    border-right-color: rgba(255,255,255,0.35);
+    border-top-color: rgba(255,255,255,0.35);
+    border-bottom-color: rgba(255,255,255,0.35);
+}
+
+.skipass-passcard-title {
+    unity-font-style: bold;
+    font-size: 12px;
+}
+
+.skipass-passcard-sub {
+    font-size: 10px;
+    opacity: 0.85;
+    margin-top: 4px;
+}
+
+.skipass-duration-row {
+    flex-direction: row;
+    gap: 8px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.skipass-duration-btn {
+    flex-grow: 1;
+    height: 28px;
+}
+.skipass-duration-btn.is-on {
+    background-color: rgba(255,255,255,0.16);
+}
+
+/* Home tile (compact) */
+.tile-skipass-compact { }
+
+.watch-passflash {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+
+    border-radius: 18px;  /* match .watch-frame radius */
+    z-index: 999;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    opacity: 0;
+}
+
+.watch-passflash.is-on {
+    opacity: 1;
+}
+
+.watch-passflash.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.watch-passflash.allow {
+    background-color: rgba(0, 200, 90, 1);
+    opacity: 1;
+}
+
+.watch-passflash.deny {
+    background-color: rgba(220, 60, 60, 1);
+    opacity: 1;
+}
+
+.watch-passflash-icon {
+    font-size: 30px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,1);
+    margin-bottom: 6px;
+}
+
+.watch-passflash-text {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,1);
+    unity-text-align: middle-center;
+    max-width: 90%;
+    white-space: normal;
+}
+
+/* ---------- SETTINGS PAGE (matches existing PhoneHUD page styling) ---------- */
+
+#Page_Settings .settings-section {
+    margin-top: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    border-top-width: 1px;
+    border-top-color: rgba(255,255,255,0.10);
+}
+
+#Page_Settings .settings-h2 {
+    font-size: 14px;                 /* aligns with .page-h2 */
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.80);
+    margin-top: 0px;
+    margin-bottom: 6px;
+}
+
+#Page_Settings .settings-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 6px;
+}
+
+/* Labels / values: enforce readable white */
+#Page_Settings .settings-label {
+    width: 42%;
+    font-size: 11px;
+    color: rgba(255,255,255,0.85);
+}
+
+#Page_Settings .settings-value {
+    width: 14%;
+    text-align: right;
+    font-size: 11px;
+    color: rgba(255,255,255,0.80);
+}
+
+#Page_Settings .settings-note {
+    margin-top: 8px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.55);
+    white-space: normal;
+}
+
+/* Control sizing */
+#Page_Settings .settings-slider {
+    width: 44%;
+    margin-left: 6px;
+    margin-right: 6px;
+}
+
+#Page_Settings .settings-toggle {
+    width: 44%;
+    margin-left: 6px;
+}
+
+#Page_Settings .settings-dropdown {
+    width: 44%;
+    margin-left: 6px;
+}
+
+/* Buttons */
+#Page_Settings .settings-buttonrow {
+    margin-top: 14px;
+    flex-direction: row;
+    justify-content: flex-end;
+}
+
+#Page_Settings .settings-btn {
+    height: 28px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.90);
+}
+
+#Page_Settings .settings-btn:hover {
+    background-color: rgba(255,255,255,0.12);
+}
+
+/* --- UI Toolkit internals (Slider / Toggle / Dropdown visuals) --- */
+
+/* Slider */
+#Page_Settings .settings-slider .unity-base-slider__tracker {
+    background-color: rgba(255,255,255,0.10);
+    height: 6px;
+    border-radius: 999px;
+}
+
+#Page_Settings .settings-slider .unity-base-slider__dragger {
+    background-color: rgba(255,255,255,0.80);
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+}
+
+/* Toggle */
+#Page_Settings .settings-toggle .unity-toggle__text {
+    color: rgba(255,255,255,0.85);
+}
+
+#Page_Settings .settings-toggle .unity-toggle__input {
+    background-color: rgba(255,255,255,0.08);
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+}
+
+/* DropdownField */
+#Page_Settings .settings-dropdown .unity-base-field__label {
+    color: rgba(255,255,255,0.85);
+}
+
+#Page_Settings .settings-dropdown .unity-base-field__input {
+    background-color: rgba(255,255,255,0.08);
+    border-left-color: rgba(255,255,255,0.12);
+    border-right-color: rgba(255,255,255,0.12);
+    border-top-color: rgba(255,255,255,0.12);
+    border-bottom-color: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.90);
+}
+
+#Page_Settings .settings-dropdown .unity-popup-field__text {
+    color: rgba(255,255,255,0.90);
+}
+
+#Page_Settings .settings-dropdown .unity-popup-field__arrow {
+    -unity-background-image-tint-color: rgba(255,255,255,0.85);
+}
+
+.controls-rebind-list {
+    flex-direction: column;
+    margin-top: 8px;
+}
+
+.controls-rebind-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    margin-bottom: 6px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+}
+
+.controls-rebind-action {
+    unity-font-style: bold;
+    font-size: 12px;
+    color: #FFFFFF;
+    width: 38%;
+}
+
+.controls-rebind-binding {
+    font-size: 12px;
+    color: rgba(255,255,255,0.75);
+    width: 42%;
+    unity-text-align: middle-left;
+}
+
+.controls-rebind-btn {
+    width: 20%;
+}
+
+    /* Controls status banner */
+.controls-status {
+    margin-top: 6px;
+    margin-bottom: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.85);
+    font-size: 12px;
+}
+
+.controls-status.is-listening {
+    background-color: rgba(255, 214, 0, 0.10);
+    color: rgba(255, 214, 0, 0.95);
+}
+
+/* Rebind row emphasis */
+.controls-rebind-row.is-listening {
+    background-color: rgba(255, 214, 0, 0.10);
+    border-left-width: 3px;
+    border-left-color: rgba(255, 214, 0, 0.9);
+}
+
+/* Binding label when waiting */
+.controls-rebind-binding.is-listening {
+    color: rgba(255, 214, 0, 0.95);
+    unity-font-style: bold;
+}
+
+.tile-sub-overlay {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 8px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-radius: 10px;
+    background-color: rgba(0,0,0,0.35);
+    color: rgba(255,255,255,0.92);
+    font-size: 11px;
+    unity-text-align: middle-left;
+}
+
+.tile-sub-overlay {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 6px;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    border-radius: 10px;
+    background-color: rgba(0,0,0,0.35);
+    color: rgba(255,255,255,0.92);
+    font-size: 10px;
+    unity-text-align: middle-left;
+}

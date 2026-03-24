@@ -1426,11 +1426,11 @@ namespace SkiGame.RunsEditor
 
                     Vector3 hitPos = hit.point;
 
-                    int insertAfter = FindClosestSegmentIndex(pointsProp, hitPos);
-                    if (insertAfter >= 0)
+                    if (pointsProp.arraySize >= 0)
                     {
-                        // Unify insertion behaviour with the painter window:
-                        // insert on the closest segment, including start/end when clicking beyond.
+                        // Use the same append-biased smart insertion behaviour as the painter:
+                        // extending the run should usually append, while intentional clicks
+                        // inside the run can still insert between existing points.
                         Undo.RecordObject(run, "Insert Run Point");
                         int insertedIndex = run.InsertPointWorldSmart(hitPos);
                         selectedPointIndex = insertedIndex;

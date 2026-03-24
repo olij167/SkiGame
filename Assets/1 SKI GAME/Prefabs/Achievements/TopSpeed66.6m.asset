@@ -15,9 +15,16 @@ MonoBehaviour:
   id: 66.6m/sTopSpeed
   title: 66.6m/s Speed
   description: Ski at 66.6m/s speed - an absolute demon on the slopes!
+  mountainHudCategory: 10
+  mountainHudGlyph: 
   requirementKind: 0
   metric: 12
   target: 66.6
+  runId: 
   poiGroup: {fileID: 0}
   poiVisitScope: 10
   autoTargetFromPOIGroup: 1
+  runGroup: {fileID: 0}
+  runVisitScope: 10
+  runGroupMeasure: 10
+  autoTargetFromRunGroup: 1

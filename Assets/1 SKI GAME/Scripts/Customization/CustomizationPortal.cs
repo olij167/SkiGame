@@ -1,8 +1,9 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.InputSystem;
+using SkiGame.UI;
 
-public class CustomizationPortal : MonoBehaviour
+public class CustomizationPortal : MonoBehaviour, IWorldInteractionPromptSource
 {
     [Header("Scene")]
     [SerializeField] private string customizationSceneName = "CharacterCustomization";
@@ -14,8 +15,6 @@ public class CustomizationPortal : MonoBehaviour
     [SerializeField] private bool requireHold = true;
     [SerializeField] private float holdSeconds = 0.15f;
 
-    [Header("UI Prompt (optional)")]
-    [SerializeField] private GameObject promptObject;
 
     private GameObject _playerRootInTrigger;
     private bool _busy;
@@ -124,7 +123,6 @@ public class CustomizationPortal : MonoBehaviour
         _enterArmed = false; // require release before allowing enter again
 
         _playerRootInTrigger = root;
-        if (promptObject != null) promptObject.SetActive(true);
     }
 
     private void OnTriggerExit(Collider other)
@@ -135,7 +133,6 @@ public class CustomizationPortal : MonoBehaviour
         if (_playerRootInTrigger == root)
         {
             _playerRootInTrigger = null;
-            if (promptObject != null) promptObject.SetActive(false);
         }
     }
 
@@ -163,4 +160,27 @@ public class CustomizationPortal : MonoBehaviour
 
         return null;
     }
+
+    public bool IsPromptAvailable => _playerRootInTrigger != null && !_busy;
+
+    public string PromptActionText => "Interact";
+
+    public string PromptDescriptionText
+    {
+        get
+        {
+            if (CustomizationShopRuntime.IsOpen)
+                return "Close Shop";
+
+            return "Open Shop";
+        }
+    }
+
+    public bool PromptUsesHold => requireHold;
+
+    public float PromptHoldDuration => holdSeconds;
+
+    public Vector3 PromptWorldPosition => transform.position;
+
+    public int PromptPriority => 50;
 }

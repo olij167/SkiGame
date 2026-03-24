@@ -63,6 +63,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c85bf622bb0ca604dab73cf34b9c034f, type: 2}
   - {fileID: 11400000, guid: 19371af58ae763e458407de1bf5a5e3c, type: 2}
   dailyTaskLadders:
+  - {fileID: 11400000, guid: 100474d034e14724883e90c785c4df62, type: 2}
   - {fileID: 11400000, guid: 553b9cfcf5e8fdd4cbc81695c74b76e3, type: 2}
   - {fileID: 11400000, guid: 9322a15158e5f6b4fa93003ec13e8cfc, type: 2}
   - {fileID: 11400000, guid: 99f37ed7de1081d45bb5b2456bb34dda, type: 2}

@@ -1,0 +1,32 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/UI/MiniMountainHud.uss?fileID=7433441132597879392&amp;guid=34f320af78033a44ea14cfe00fa27725&amp;type=3#MiniMountainHud" />
+    <ui:VisualElement name="MiniHudRoot" class="mini-root" style="top: 21px; left: 20px; right: 20px; bottom: 20px; position: absolute; align-content: flex-start; align-self: auto; justify-content: flex-end;">
+        <ui:VisualElement name="MiniHudShell" class="mini-shell" style="position: relative; justify-content: flex-end; top: auto; left: auto; align-content: auto; align-items: auto; align-self: flex-end;">
+            <ui:VisualElement name="MiniMapColumn" class="mini-map-column" style="width: auto;">
+                <ui:VisualElement name="MiniHeader" class="mini-panel mini-header" style="margin-bottom: 0; border-top-left-radius: 6px; border-top-right-radius: 6px; border-bottom-right-radius: 6px; border-bottom-left-radius: 6px; border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0;">
+                    <ui:Label name="Lbl_MiniTime" text="--:--" class="mini-time" />
+                    <ui:Label name="Lbl_MiniWeather" text="Weather" class="mini-weather" style="-unity-text-align: upper-right;" />
+                    <ui:Button name="Btn_OpenOverlay" text="Map" class="mini-open-button" style="display: none;" />
+                </ui:VisualElement>
+                <ui:VisualElement name="MiniInfoColumn" class="mini-info-column" style="width: auto; flex-direction: row; flex-grow: 1; align-self: stretch; align-content: stretch; justify-content: space-around; align-items: stretch;">
+                    <ui:VisualElement name="MiniMapHost" class="mini-map-host" style="background-color: rgba(8, 12, 18, 0.78); flex-grow: 1;" />
+                </ui:VisualElement>
+                <ui:VisualElement name="MiniRunPanel" class="mini-panel mini-run-panel" style="position: relative; justify-content: space-around; align-content: flex-end; align-self: stretch; align-items: stretch; border-left-color: rgba(255, 255, 255, 0); border-right-color: rgba(255, 255, 255, 0); border-top-color: rgba(255, 255, 255, 0); border-bottom-color: rgba(255, 255, 255, 0); border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; border-top-left-radius: 6px; border-top-right-radius: 6px; border-bottom-right-radius: 0; border-bottom-left-radius: 0;">
+                    <ui:Label name="Lbl_MiniRunTitle" text="No Active Run" class="mini-run-title" />
+                    <ui:Label name="Lbl_MiniRunBody" text="Explore the mountain" class="mini-run-body" />
+                </ui:VisualElement>
+                <ui:VisualElement name="MiniStatsPanel" class="mini-panel mini-stats-panel" style="align-self: stretch; align-items: flex-start; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 6px; border-bottom-left-radius: 6px; border-left-color: rgba(255, 255, 255, 0); border-right-color: rgba(255, 255, 255, 0); border-top-color: rgba(255, 255, 255, 0); border-bottom-color: rgba(255, 255, 255, 0); border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; flex-direction: column; min-height: auto;">
+                    <ui:Label text="Today" class="mini-stats-title" style="flex-shrink: 1; white-space: normal; display: none;" />
+                    <ui:VisualElement class="mini-stat-grid" style="flex-direction: row; align-items: stretch; justify-content: center; align-self: stretch; flex-wrap: nowrap;">
+                        <ui:Label name="Lbl_MiniStatSpeed" text="Speed&#10;0 km/h" class="mini-stat-chip" />
+                        <ui:Label name="Lbl_MiniStatDistance" text="Distance&#10;0 m" class="mini-stat-chip" />
+                        <ui:Label name="Lbl_MiniStatRuns" text="Runs&#10;0" class="mini-stat-chip" />
+                        <ui:Label name="Lbl_MiniStatVertical" text="Vertical&#10;0 m" class="mini-stat-chip" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="MapBottomDock" class="is-hidden" />
+        <ui:VisualElement name="MapInfoPanel" class="is-hidden" />
+    </ui:VisualElement>
+</ui:UXML>

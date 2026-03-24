@@ -15,9 +15,16 @@ MonoBehaviour:
   id: 60mAirTime
   title: An Hour of Air
   description: Spend a full hour (3600s) in the air throughout your lifetime
+  mountainHudCategory: 10
+  mountainHudGlyph: 
   requirementKind: 0
   metric: 2
   target: 3600
+  runId: 
   poiGroup: {fileID: 0}
   poiVisitScope: 10
   autoTargetFromPOIGroup: 1
+  runGroup: {fileID: 0}
+  runVisitScope: 10
+  runGroupMeasure: 10
+  autoTargetFromRunGroup: 1

@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/UI/TutorialOverlay.uss?fileID=7433441132597879392&amp;guid=4b4be19541f68404293e995635741330&amp;type=3#TutorialOverlay" />
+    <ui:VisualElement name="WorldPromptPanel" class="world-prompt-panel">
+        <ui:Label name="Lbl_WorldPromptAction" text="Press E" class="world-prompt-action" />
+        <ui:Label name="Lbl_WorldPromptDescription" text="Interact" class="world-prompt-description" />
+    </ui:VisualElement>
+</ui:UXML>

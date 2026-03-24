@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 using static SkiGame.Progression.ProgressionDirector;
+using SkiGame.UI;
 using SkiGame.Map;
 using SkiGame.Map.UI;
 using SkiGame.Runs;
@@ -165,6 +166,11 @@ namespace SkiGame.Progression
         private Label _tileAch1;
         private Label _tileAch2;
         private Label _tileSunTimes;
+
+        private Label _tileMapTitle;
+        private Label _tileMapSubtitle;
+
+        private PhoneHUDRecommendation _cachedHomeRecommendation = PhoneHUDRecommendation.None;
 
         // --- Settings page ---
         private Slider _sMaster;
@@ -534,6 +540,20 @@ namespace SkiGame.Progression
         private int _skiPassSelectedDurationIndex = 0;
         private bool _skiPassCardsBuilt = false;
 
+        private bool _pendingInitializeAfterPreview;
+
+        public string ActivePhonePageName => GetActivePhonePage();
+
+        public void OpenPhoneToPage(string pageName = "Page_Home")
+        {
+            SetPhoneOpen(true);
+
+            if (string.IsNullOrEmpty(pageName))
+                pageName = "Page_Home";
+
+            NavigateTo(pageName, clearStack: true);
+        }
+
         [Serializable]
         private sealed class SkiPassCardMeta
         {
@@ -553,6 +573,13 @@ namespace SkiGame.Progression
 
         private void OnEnable()
         {
+            if (RuntimeSceneLoadContext.IsMenuBackgroundPreview)
+            {
+                _pendingInitializeAfterPreview = true;
+                RuntimeSceneLoadContext.MenuBackgroundPreviewEnded += HandleMenuPreviewEnded;
+                return;
+            }
+
             if (hideWhenCustomizationShopOpen)
             {
                 CustomizationShopRuntime.OnOpenChanged += OnCustomizationShopOpenChanged;
@@ -572,6 +599,20 @@ namespace SkiGame.Progression
             // UIDocument may not have cloned the UXML yet when THIS component's OnEnable runs.
             // So we schedule binding for the next UI tick, and retry a few times if needed.
             ScheduleUiBind();
+        }
+
+        private void HandleMenuPreviewEnded()
+        {
+            RuntimeSceneLoadContext.MenuBackgroundPreviewEnded -= HandleMenuPreviewEnded;
+
+            if (!this || !isActiveAndEnabled)
+                return;
+
+            if (!_pendingInitializeAfterPreview)
+                return;
+
+            _pendingInitializeAfterPreview = false;
+            OnEnable();
         }
 
         private void ScheduleUiBind()
@@ -645,7 +686,10 @@ namespace SkiGame.Progression
                 PersistLiveDayToArchive();
 
             GameSettingsService.OnChanged -= RefreshSettingsUIFromProfile;
+            GameCursorService.Release(this);
 
+            RuntimeSceneLoadContext.MenuBackgroundPreviewEnded -= HandleMenuPreviewEnded;
+            _pendingInitializeAfterPreview = false;
         }
 
         private void OnCustomizationShopOpenChanged(bool isOpen)
@@ -924,7 +968,7 @@ namespace SkiGame.Progression
             WireTile(_tileStats, () => NavigateTo("Page_Stats"));
             WireTile(_tileTasks, () => NavigateTo("Page_Tasks"));
             WireTile(_tileAchievements, () => NavigateTo("Page_Achievements"));
-            WireTile(_tileMap, () => NavigateTo("Page_Map"));
+            WireTile(_tileMap, OnClickMapTile);
             // Watch minimap: embed inside WatchPage_Map (dedicated map watch screen)
             if (_watchPageMap != null && mapData != null)
             {
@@ -988,7 +1032,7 @@ namespace SkiGame.Progression
                 _homeTileMiniMapUI.SetTrailSamplingEnabled(false);
                 _homeTileMiniMapUI.SetMinimapMode(enabled: true, followPlayer: true, lockPan: true, allowZoom: false, suppressSelection: true, hideMarkerLabels: true);
 
-                // Hide the "(placeholder)" / tile subtext so the minimap reads cleanly
+                // Hide only the legacy placeholder subtext; keep the overlay recommendation labels visible.
                 _tileMap.Query<Label>(className: "tile-sub").ForEach(l => l.style.display = DisplayStyle.None);
 
                 // Ensure the background + lines are actually built for the tile minimap.
@@ -1030,6 +1074,9 @@ namespace SkiGame.Progression
 
             _tileAch1 = Q<Label>("Lbl_TileAch1");
             _tileAch2 = Q<Label>("Lbl_TileAch2");
+
+            _tileMapTitle = Q<Label>("Lbl_TileMapTitle");
+            _tileMapSubtitle = Q<Label>("Lbl_TileMapSubtitle");
 
             // Phone bodies
             _statsSessionBody = Q<Label>("Lbl_StatsSession");
@@ -1296,8 +1343,14 @@ namespace SkiGame.Progression
             // Trigger once per hold.
             _tabHeld = false;
 
+            bool nextOpen = !_phoneOpen;
+            if (nextOpen)
+                GameCursorService.Request(this, GameCursorMode.VisibleUnlocked, priority: 700);
+            else
+                GameCursorService.Release(this);
+
             // Toggle phone state on hold.
-            SetPhoneOpen(!_phoneOpen);
+            SetPhoneOpen(nextOpen);
         }
 
         private void HandleWatchScroll()
@@ -1890,6 +1943,8 @@ namespace SkiGame.Progression
 
             HookSkiPassManager();
             RefreshSkiPassTile();
+            RefreshHomeOverviewTiles();
+            RefreshHomeMapRecommendation();
 
             if (_phoneOpen && GetActivePhonePage() == "Page_SkiPass")
                 RefreshSkiPassPage(false);
@@ -1907,6 +1962,96 @@ namespace SkiGame.Progression
         {
             if (_wHomeTime != null) _wHomeTime.text = timeStr;
             if (_wHomeWeather != null) _wHomeWeather.text = weatherStr;
+        }
+
+        private PhoneHUDRecommendation BuildHomeRecommendation()
+        {
+            Transform playerT = _skiController != null ? _skiController.transform : null;
+
+            return PhoneHUDRecommendationEngine.Build(
+                _profile,
+                PointOfInterestRegistry.Instance,
+                _skiPassMgr,
+                playerT);
+        }
+
+        private void RefreshHomeMapRecommendation()
+        {
+            _cachedHomeRecommendation = BuildHomeRecommendation();
+
+            if (_tileMapTitle != null)
+                _tileMapTitle.text = !string.IsNullOrWhiteSpace(_cachedHomeRecommendation.title)
+                    ? _cachedHomeRecommendation.title
+                    : "Map";
+
+            if (_tileMapSubtitle != null)
+                _tileMapSubtitle.text = !string.IsNullOrWhiteSpace(_cachedHomeRecommendation.subtitle)
+                    ? _cachedHomeRecommendation.subtitle
+                    : "Explore the mountain";
+        }
+
+        private void OnClickMapTile()
+        {
+            if (!TryOpenHomeRecommendationOnMap())
+                NavigateTo("Page_Map");
+        }
+
+        private bool TryOpenHomeRecommendationOnMap()
+        {
+            if (!_cachedHomeRecommendation.isValid)
+                return false;
+
+            NavigateTo("Page_Map");
+
+            switch (_cachedHomeRecommendation.type)
+            {
+                case PhoneHUDRecommendationType.Run:
+                    return _mapPageUI != null && _mapPageUI.SelectPolylineById(
+                        _cachedHomeRecommendation.targetId,
+                        center: true,
+                        minZoom: 1.25f);
+
+                case PhoneHUDRecommendationType.Lift:
+                case PhoneHUDRecommendationType.POI:
+                    return _mapPageUI != null && _mapPageUI.SelectMarkerById(
+                        _cachedHomeRecommendation.targetId,
+                        center: true,
+                        minZoom: 1.25f);
+            }
+
+            return false;
+        }
+        private PhoneHUDHomeSummary BuildHomeSummary()
+        {
+            return PhoneHUDMountainSummaryBuilder.BuildHomeSummary(
+                _profile,
+                _progression,
+                PointOfInterestRegistry.Instance,
+                _skiPassMgr,
+                _time,
+                _weather);
+        }
+
+        private void RefreshHomeOverviewTiles()
+        {
+            var summary = BuildHomeSummary();
+
+            if (_tileStats1 != null && !string.IsNullOrWhiteSpace(summary.statsLine))
+                _tileStats1.text = summary.statsLine;
+
+            if (_tileAch1 != null && !string.IsNullOrWhiteSpace(summary.achievementLine1))
+                _tileAch1.text = summary.achievementLine1;
+
+            if (_tileAch2 != null)
+            {
+                bool hasSecond = !string.IsNullOrWhiteSpace(summary.achievementLine2);
+                _tileAch2.text = hasSecond ? summary.achievementLine2 : string.Empty;
+                _tileAch2.EnableInClassList("is-hidden", !hasSecond);
+                _tileAch2.style.display = hasSecond ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            if (_lblTileSkiPassLevel != null && !string.IsNullOrWhiteSpace(summary.skiPassLine))
+                _lblTileSkiPassLevel.text = summary.skiPassLine;
         }
 
         private void RefreshWatchSpeedGauge()
@@ -2260,7 +2405,13 @@ namespace SkiGame.Progression
 
             // 3) Nothing
             if (_runTrackerLine1 != null) _runTrackerLine1.text = "Not on a run";
-            if (_runTrackerLine2 != null) _runTrackerLine2.text = $"Completed today: {GetRunsCompletedTodayCount()}";
+            if (_runTrackerLine2 != null)
+            {
+                var summary = BuildHomeSummary();
+                _runTrackerLine2.text = !string.IsNullOrWhiteSpace(summary.runIdleLine)
+                    ? summary.runIdleLine
+                    : $"Completed today: {GetRunsCompletedTodayCount()}";
+            }
             if (_runTrackerLine3 != null) _runTrackerLine3.text = "--%";
 
             SetRangeFill(_runTrackerFill, 0f, 0f, minVisiblePercent: 0f);
@@ -4038,9 +4189,6 @@ namespace SkiGame.Progression
                 return;
             }
 
-            var record = FindRunRecord(_profile, runId);
-            int completions = record != null ? record.timesCompleted : 0;
-
             string difficulty = TryGetRunDifficultyLabel(runId, out var diffLabel) ? diffLabel : "--";
 
             _mapInfoActiveRunId = runId;
@@ -4048,9 +4196,8 @@ namespace SkiGame.Progression
             if (_mapAttemptBox != null) _mapAttemptBox.style.display = DisplayStyle.None;
             if (_mapInfoRunNavRow != null) _mapInfoRunNavRow.style.display = DisplayStyle.None;
 
-            string body =
-                $"Difficulty: {difficulty}\n" +
-                $"Completions: {completions}";
+            var runSummary = PhoneHUDMountainSummaryBuilder.BuildRunMapSummary(_profile, runId, displayName, difficulty);
+            string body = runSummary.body;
 
             if (_mapInfoActionsRow != null)
                 _mapInfoActionsRow.style.display = DisplayStyle.Flex;
@@ -4076,7 +4223,11 @@ namespace SkiGame.Progression
             if (_mapInfoActionsRow != null)
                 _mapInfoActionsRow.style.display = DisplayStyle.None;
 
-            ShowMapInfo(displayName, $"Rides: {ridesLife}");
+            string body = liftId != null && FindLiftById(liftId) is LiftLine lift
+                ? PhoneHUDMountainSummaryBuilder.BuildLiftMapSummary(_profile, lift, displayName, _skiPassMgr)
+                : $"Rides: {ridesLife}";
+
+            ShowMapInfo(displayName, body);
         }
 
         private void EnforceMapLayerBarAboveViewport(ScrollView mapPage)
@@ -4208,9 +4359,12 @@ namespace SkiGame.Progression
                 }
             }
 
-            // Custom / general POI: minimal name + description (meta)
+            // Custom / general POI: minimal name + discovery-aware description
             string title = string.IsNullOrWhiteSpace(m.displayName) ? "Point" : m.displayName;
-            string body = string.IsNullOrWhiteSpace(m.meta) ? "" : m.meta.Trim();
+            string body = PhoneHUDMountainSummaryBuilder.BuildPoiMapSummary(
+                _profile,
+                m.id,
+                string.IsNullOrWhiteSpace(m.meta) ? string.Empty : m.meta.Trim());
 
             _mapInfoActiveRunId = null;
             _mapInfoActiveAttemptIndex = -1;
@@ -4255,6 +4409,22 @@ namespace SkiGame.Progression
                     ShowMapInfo(name, "");
                     break;
             }
+        }
+
+        private static LiftLine FindLiftById(string liftId)
+        {
+            if (string.IsNullOrWhiteSpace(liftId)) return null;
+
+            var lifts = FindObjectsOfType<LiftLine>();
+            for (int i = 0; i < lifts.Length; i++)
+            {
+                var lift = lifts[i];
+                if (lift == null) continue;
+                if (string.Equals(lift.gameObject.name, liftId, StringComparison.Ordinal))
+                    return lift;
+            }
+
+            return null;
         }
 
         private int GetIdCount(List<PlayerStatsProfile.IdCountEntry> list, string id)
@@ -4398,7 +4568,10 @@ namespace SkiGame.Progression
             }
 
             NavigateTo("Page_Map");
-            _mapPageUI?.SelectPolylineById(runId, center: true, minZoom: 1.25f);
+
+            bool selected = _mapPageUI != null && _mapPageUI.SelectPolylineById(runId, center: true, minZoom: 1.25f);
+            if (!selected)
+                _mapPageUI?.RequestCenterOnPlayer(keepZoom: true, minZoom: 1.0f);
         }
 
         private static SkiRunLine FindRunById(string runId)
@@ -4654,7 +4827,10 @@ namespace SkiGame.Progression
                 return;
             }
 
-            _lblTileSkiPassLevel.text = _skiPassMgr.GetCurrentPassDisplayName();
+            var summary = BuildHomeSummary();
+            _lblTileSkiPassLevel.text = !string.IsNullOrWhiteSpace(summary.skiPassLine)
+                ? summary.skiPassLine
+                : _skiPassMgr.GetCurrentPassDisplayName();
 
             // Tint the tile based on the player’s ACTIVE pass level.
             var cfg = _skiPassMgr.Config;

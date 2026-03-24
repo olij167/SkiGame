@@ -15,9 +15,16 @@ MonoBehaviour:
   id: 126kmDistance
   title: Ski 3 Marathons
   description: Ski three full marathon, 126km, over your lifetime
+  mountainHudCategory: 20
+  mountainHudGlyph: 
   requirementKind: 0
   metric: 11
   target: 1260000
+  runId: 
   poiGroup: {fileID: 0}
   poiVisitScope: 10
   autoTargetFromPOIGroup: 1
+  runGroup: {fileID: 0}
+  runVisitScope: 10
+  runGroupMeasure: 10
+  autoTargetFromRunGroup: 1

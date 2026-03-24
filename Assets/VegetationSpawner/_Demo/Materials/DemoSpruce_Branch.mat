@@ -348,7 +348,7 @@ Material:
     - _TracesOverride: 0
     - _UVSec: 0
     - _UseAveragedNormals: 1
-    - _UseAveragedNormalsOverride: 0
+    - _UseAveragedNormalsOverride: 1
     - _UseCoverageDetail: 1
     - _UseCoverageDetailOverride: 0
     - _WindQuality: 0

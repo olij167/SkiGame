@@ -21,6 +21,7 @@ TagManager:
   - SkyMasterTree
   - water
   - Resort
+  - TutorialSpawn
   layers:
   - Default
   - TransparentFX

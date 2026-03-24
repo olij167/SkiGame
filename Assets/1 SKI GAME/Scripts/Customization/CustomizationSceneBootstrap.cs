@@ -4,6 +4,7 @@ using UnityEngine.InputSystem;
 using SkiGame.Progression;
 using UnityEngine.EventSystems;
 using UnityEngine.UIElements;
+using SkiGame.UI;
 
 public class CustomizationSceneBootstrap : MonoBehaviour
 {
@@ -94,6 +95,7 @@ public class CustomizationSceneBootstrap : MonoBehaviour
     private void Start()
     {
         CustomizationShopRuntime.Register(this);
+        GameCursorService.Request(this, GameCursorMode.VisibleUnlocked, priority: 950);
 
         _player = GameObject.FindGameObjectWithTag("Player");
         if (_player == null)
@@ -372,6 +374,7 @@ public class CustomizationSceneBootstrap : MonoBehaviour
 
         // 5) IMPORTANT: clear runtime state before unloading
         CustomizationShopRuntime.Unregister(this);
+        GameCursorService.Release(this);
 
         // 6) IMPORTANT: unload the additive shop scene so it can be entered again
         Scene shopScene = gameObject.scene;
@@ -388,6 +391,8 @@ public class CustomizationSceneBootstrap : MonoBehaviour
     {
         // Safety: if scene unload order destroys objects unexpectedly,
         // ensure runtime state never stays stuck open.
+
+        GameCursorService.Release(this);
         CustomizationShopRuntime.Unregister(this);
     }
 }

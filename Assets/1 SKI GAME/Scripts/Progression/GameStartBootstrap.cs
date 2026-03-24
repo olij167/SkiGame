@@ -42,6 +42,8 @@ namespace SkiGame.Progression
         [SerializeField] private Color defaultSkinColor = Color.yellowNice;
         [SerializeField] private Color defaultEyeColor = Color.black;
 
+        [SerializeField] private string tutorialSpawnTag = "TutorialSpawn";
+
         public static void RequestNewGame(int slotId)
         {
             GameSaveSystem.ActiveSlotId = slotId;
@@ -149,11 +151,12 @@ namespace SkiGame.Progression
             }
 
             ApplyDefaultCustomization(statsMgr.Profile);
+            statsMgr.Profile.tutorial?.ResetForNewGame();
 
             statsMgr.Save();
             GameSaveSystem.MarkSlotPlayed(GameSaveSystem.ActiveSlotId);
 
-            TryMovePlayerToResortSpawn(gameplayScene);
+            TryMovePlayerToStartSpawn(gameplayScene, preferTutorialSpawn: true);
         }
 
         private void DoLoadGame(PlayerStatsManager statsMgr, Scene gameplayScene)
@@ -175,15 +178,22 @@ namespace SkiGame.Progression
 
             GameSaveSystem.MarkSlotPlayed(GameSaveSystem.ActiveSlotId);
 
-            TryMovePlayerToResortSpawn(gameplayScene);
+            TryMovePlayerToStartSpawn(gameplayScene, preferTutorialSpawn: false);
         }
 
-        private void TryMovePlayerToResortSpawn(Scene gameplayScene)
+        private void TryMovePlayerToStartSpawn(Scene gameplayScene, bool preferTutorialSpawn)
         {
             if (!gameplayScene.IsValid() || !gameplayScene.isLoaded)
                 return;
 
-            Transform spawn = FindTaggedTransformInScene(gameplayScene, resortSpawnTag);
+            Transform spawn = null;
+
+            if (preferTutorialSpawn && !string.IsNullOrWhiteSpace(tutorialSpawnTag))
+                spawn = FindTaggedTransformInScene(gameplayScene, tutorialSpawnTag);
+
+            if (spawn == null)
+                spawn = FindTaggedTransformInScene(gameplayScene, resortSpawnTag);
+
             if (spawn == null)
                 return;
 
@@ -192,6 +202,10 @@ namespace SkiGame.Progression
                 return;
 
             player.TeleportToSpawn(spawn.position, spawn.rotation, snapToGround: true);
+
+            var soreness = player.GetComponent<SorenessMeter>();
+            if (soreness != null)
+                soreness.ResetSoreness();
         }
 
         private static T FindComponentInScene<T>(Scene scene) where T : Component

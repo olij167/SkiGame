@@ -1,0 +1,672 @@
+﻿<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/UI/PhoneHUD.uss?fileID=7433441132597879392&amp;guid=da161d3ed5064d84b9b72ddb153dfb63&amp;type=3#PhoneHUD" />
+    <ui:VisualElement name="PhoneHUDRoot" class="phonehud-root">
+        <ui:VisualElement name="WatchCollapsed" class="watch-collapsed">
+            <ui:VisualElement class="watch-frame">
+
+                <ui:VisualElement class="watch-header">
+                    <ui:Label name="Lbl_WatchTitle" text="Speed" class="watch-title" />
+                    <ui:VisualElement name="WatchDots" class="watch-dots">
+                        <ui:VisualElement class="dot is-on" />
+                        <ui:VisualElement class="dot" />
+                        <ui:VisualElement class="dot" />
+                        <ui:VisualElement class="dot" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="WatchPages" class="watch-pages">
+                   <ui:ScrollView name="WatchPage_Speed" class="watch-page">
+                        <!-- Notification bar (no outline) -->
+                        <ui:VisualElement class="watch-speed-topbar">
+                            <ui:Label name="Lbl_WatchSpeedTime" text="--:--" class="watch-speed-time" />
+                            <ui:Label name="Lbl_WatchSpeedWeather" text="---  --C" class="watch-speed-weather" />
+                        </ui:VisualElement>
+
+                        <!-- Spacer (keeps layout stable, no scrolling needed) -->
+                        <ui:VisualElement class="watch-speed-spacer" />
+
+                        <!-- Bottom row: Airtime (left) + Speed gauge (right) -->
+                        <ui:VisualElement class="watch-speed-bottom">
+                           <ui:VisualElement name="WatchAirBox" class="watch-air-min">
+                                <ui:Label name="Lbl_WatchRunName" text="Not on a run" class="watch-air-tag" />                               
+                                <ui:Label name="Lbl_WatchRunTime" text="--:--" class="watch-air-time" />
+                            </ui:VisualElement>
+
+
+                            <ui:VisualElement class="watch-speed-gauge">
+                                <ui:Label name="Lbl_WatchSpeed" text="0.0" class="watch-big" />
+                                <ui:Label text="m/s" class="watch-unit" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:ScrollView>
+
+                    <ui:ScrollView name="WatchPage_Map" class="watch-page watch-page-map">
+    <!-- Minimap is injected at runtime -->
+</ui:ScrollView>
+
+   <!--  Dedicated Run Tracker page (after Map) -->
+<ui:ScrollView name="WatchPage_RunTracker" class="watch-page">
+    <ui:VisualElement name="WatchRunTrackerCard" class="watch-run-card">
+
+        <ui:VisualElement class="watch-run-head">
+            <ui:Label name="Lbl_WatchRunPageName" text="Not on a run" class="watch-run-name" />
+            <ui:Label name="Lbl_WatchRunPageProgress" text="--%" class="watch-run-pct" />
+        </ui:VisualElement>
+
+        <ui:VisualElement class="watch-run-bar">
+            <ui:VisualElement name="WatchRunPageFill" class="watch-run-fill" />
+        </ui:VisualElement>
+
+        <ui:Label name="Lbl_WatchRunPageTime" text="Time --:--" class="watch-run-kv" />
+        <ui:Label name="Lbl_WatchRunPageTopSpeed" text="Top --.- m/s" class="watch-run-kv" />
+        <ui:Label name="Lbl_WatchRunPageStacks" text="Stacks 0" class="watch-run-kv" />
+
+    </ui:VisualElement>
+</ui:ScrollView>
+
+<ui:ScrollView name="WatchPage_Tasks" class="watch-page">
+    <ui:VisualElement class="watch-tasks-card">
+        <ui:VisualElement name="WatchTasksList" class="tile-tasks-bars" />
+    </ui:VisualElement>
+</ui:ScrollView>
+
+ <!-- Ski Pass flash overlay -->
+<ui:VisualElement name="WatchPassFlash" class="watch-passflash is-hidden">
+    <ui:Label name="WatchPassFlashIcon" text="✓" class="watch-passflash-icon" />
+    <ui:Label name="WatchPassFlashText" text="Basic (L0)" class="watch-passflash-text" />
+</ui:VisualElement>
+
+
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="PhoneExpanded" class="phone-expanded">
+            <ui:VisualElement class="phone-shell">
+                <ui:VisualElement class="phone-topbar">
+                    <ui:VisualElement name="Btn_ClosePhone" class="icon-btn">
+                        <ui:Label text="x" class="icon-btn-text" />
+                    </ui:VisualElement>
+                    <ui:Label name="Lbl_PhoneHeader" text="Mountain Tracker" class="phone-title" />
+                    <ui:VisualElement class="phone-spacer" />
+                </ui:VisualElement>
+               <ui:VisualElement class="phone-navbar">
+    <ui:VisualElement name="Btn_Back" class="nav-btn">
+        <ui:Label text="Back" class="nav-btn-text" />
+    </ui:VisualElement>
+
+    <ui:Label name="Lbl_PageTitle" text="Home" class="nav-title" />
+
+    <ui:VisualElement class="nav-spacer" />
+    <ui:Label name="Lbl_Currency" text="$0" class="nav-currency" />
+</ui:VisualElement>
+
+                <ui:VisualElement name="PhonePages" class="phone-pages">
+                   <ui:ScrollView name="Page_Home" class="phone-page">
+    <ui:VisualElement class="home-grid v2-home">
+
+        <!-- Notification bar: time (left) + weather (right) -->
+        <ui:VisualElement class="home-row row-notif">
+            <ui:VisualElement name="Tile_Status" class="tile tile-notif tile-wide">
+                <ui:VisualElement class="notif-body">
+                    <ui:VisualElement class="notif-left">
+                        <ui:Label name="Lbl_TileTime" text="--:-- AM" class="notif-time" />
+                        <ui:Label name="Lbl_TileDate" text="---" class="notif-day" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="notif-right">
+                        <ui:Label name="Lbl_TileWeather" text="---" class="notif-cond" />
+                        <ui:Label name="Lbl_TileTemp" text="--" class="notif-temp" />
+                    </ui:VisualElement>
+
+                    <!-- Legacy labels kept for code safety (hidden via USS) -->
+                    <ui:Label name="Lbl_TileRain" text="Rain: --%" class="status-rain is-hidden" />
+                    <ui:Label name="Lbl_TileSunTimes" text="Sunrise: --:-- AM | Sunset: --:-- PM" class="status-sun is-hidden" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+<!-- Run tracker -->
+<ui:VisualElement class="home-row row-run">
+    <ui:VisualElement name="Tile_RunTracker" class="tile tile-run tile-wide">
+        <ui:VisualElement class="run-tile">
+
+            <ui:VisualElement class="run-top">
+                <ui:Label name="Lbl_RunTrackerLine1" text="Not on a run" class="run-main" />
+                <ui:Label name="Lbl_RunTrackerLine3" text="--%" class="run-mini run-pct" />
+            </ui:VisualElement>
+
+            <ui:VisualElement class="run-bar">
+                <ui:VisualElement name="RunTrackerFill" class="run-fill" />
+            </ui:VisualElement>
+
+            <ui:Label name="Lbl_RunTrackerLine2" text="Completed today 0" class="run-mini run-meta" />
+
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:VisualElement>
+
+            <!-- Map (full-width, tall) -->
+            <ui:VisualElement class="home-row row-map">
+                <ui:VisualElement name="Tile_Map" class="tile tile-map-large tile-wide">
+                    <ui:Label name="Lbl_TileMapTitle" text="Map" class="tile-title tile-title-overlay" />
+                    <ui:Label name="Lbl_TileMapSubtitle" text="Explore the mountain" class="tile-sub-overlay" />
+                    <ui:Label text="(placeholder)" class="tile-sub is-hidden" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+<!-- Work row (2 columns): LEFT = Stats (short) over Tasks (tall); RIGHT = Ski Pass over Achievements (equal halves) -->
+<ui:VisualElement class="home-row row-work2col">
+
+    <!-- LEFT column -->
+    <ui:VisualElement class="work-col work-col-wide">
+
+        <!-- Stats (short, 1 line) -->
+        <ui:VisualElement name="Tile_Stats" class="tile tile-statsbar tile-statsmini">
+            <ui:Label name="Lbl_TileStatsLine1" text="Speed: --   Dist: --   Stacks: --" class="statsbar-kv statsbar-kv-single" />
+        </ui:VisualElement>
+
+        <!-- Tasks (fills remaining height) -->
+        <ui:VisualElement name="Tile_Tasks" class="tile tile-tasks tile-taskswide">
+            <ui:VisualElement name="TileTasksList" class="tile-tasks-bars" />
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+
+    <!-- RIGHT column -->
+    <ui:VisualElement class="work-col work-col-narrow">
+
+        <ui:VisualElement name="Tile_SkiPass" class="tile tile-skipass tile-ach-compact">
+            <ui:Label text="Ski Pass" class="tile-title" />
+            <ui:Label name="Lbl_TileSkiPassLevel" text="Basic Pass (L0)" class="tile-sub" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="Tile_Achievements" class="tile tile-ach-compact">
+            <ui:Label text="Achievements" class="tile-title" />
+            <ui:Label name="Lbl_TileAch1" text="Ready to Claim" class="ach-compact-main" />
+            <ui:Label name="Lbl_TileAch2" text="" class="tile-sub is-hidden" />
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+
+</ui:VisualElement>
+
+        <!-- Bottom controls (Camera moved down here) -->
+        <ui:VisualElement class="home-row row-bottom4">
+            <ui:VisualElement name="Tile_Camera" class="tile tile-mini">
+                <ui:Label text="Camera" class="tile-title" />
+            </ui:VisualElement>
+
+            <ui:VisualElement name="Tile_Save" class="tile tile-mini">
+                <ui:Label text="Save" class="tile-title" />
+            </ui:VisualElement>
+
+           <!--  <ui:VisualElement name="Tile_Settings" class="tile tile-mini">
+                <ui:Label text="Settings" class="tile-title" />
+            </ui:VisualElement> -->
+
+            <ui:VisualElement name="Tile_SOS" class="tile tile-mini">
+                <ui:Label text="SOS" class="tile-title" />
+                <ui:Label text="Respawn" class="tile-sub tight-text" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:ScrollView>
+
+<ui:ScrollView name="Page_Stats" class="phone-page stats-page">
+    <!-- Header row: title + compact segmented tabs -->
+    <ui:VisualElement class="stats-headerbar">
+        <ui:Label text="Stats" class="page-h1 stats-title" />
+
+        <ui:VisualElement class="seg-tabs stats-tabs">
+            <ui:VisualElement name="Btn_StatsTabSession" class="seg-tab is-on">
+                <ui:Label text="Day" class="seg-tab-text" />
+            </ui:VisualElement>
+            <ui:VisualElement name="Btn_StatsTabLifetime" class="seg-tab">
+                <ui:Label text="Lifetime" class="seg-tab-text" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- DAY (Weeks list -> Day detail) -->
+    <ui:VisualElement name="Panel_StatsSession" class="stats-panel is-active">
+
+        <!-- Weeks header toolbar (matches Runs calendar layout) -->
+        <ui:VisualElement name="StatsWeeksToolbar" class="runs-cal-toolbar is-hidden">
+            <ui:VisualElement name="Btn_StatsWeeksBack" class="map-toolbtn is-hidden">
+                <ui:Label text="‹" class="map-toolbtn-text" />
+            </ui:VisualElement>
+
+            <ui:Label name="Lbl_StatsWeeksTitle" text="Weeks" class="runs-cal-title" />
+
+            <ui:VisualElement name="Btn_StatsWeeksUnused" class="map-toolbtn">
+                <ui:Label text="›" class="map-toolbtn-text" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Weeks list -->
+        <ui:VisualElement name="StatsCalendarGrid" class="runs-cal-grid" />
+
+        <!-- Day detail panel -->
+        <ui:VisualElement name="Panel_StatsDayDetail" class="runs-daypanel is-hidden">
+            <ui:VisualElement class="runs-day-toolbar">
+                <ui:VisualElement name="Btn_StatsPrevDay" class="map-toolbtn">
+                    <ui:Label text="‹" class="map-toolbtn-text" />
+                </ui:VisualElement>
+
+                <ui:Label name="Lbl_StatsDayTitle" text="Day" class="runs-day-title" />
+
+                <ui:VisualElement name="Btn_StatsNextDay" class="map-toolbtn">
+                    <ui:Label text="›" class="map-toolbtn-text" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:VisualElement name="StatsDash_Day" class="stats-dashboard" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- Lifetime -->
+    <ui:VisualElement name="Panel_StatsLifetime" class="stats-panel">
+        <ui:VisualElement name="StatsDash_Lifetime" class="stats-dashboard" />
+    </ui:VisualElement>
+</ui:ScrollView>
+
+<ui:ScrollView name="Page_Tasks" class="phone-page tasks-page"
+               vertical-scroller-visibility="Hidden"
+               horizontal-scroller-visibility="Hidden">
+
+    <!-- Compact info/claim panel (fixed height, no scrolling) -->
+    <ui:VisualElement name="TasksInfoPanel" class="tasks-info-panel">
+        <ui:Label name="Lbl_TasksInfoTitle" text="Daily Tasks" class="tasks-info-title" />
+        <ui:Label name="Lbl_TasksInfoBody" text="--" class="tasks-info-body" />
+
+        <!-- Top-right claim all -->
+        <ui:VisualElement class="tasks-claimall">
+            <ui:Button name="Btn_TasksClaimAll" text="Claim All" class="tasks-claimall-btn" />
+            <ui:Label name="Lbl_TasksClaimAllValue" text="0" class="tasks-claimall-value" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- Matrix container (rows + cells created in PhoneHUDController.RefreshTasksMatrix) -->
+    <ui:VisualElement name="TasksMatrix" class="tasks-matrix" />
+</ui:ScrollView>
+
+
+
+                   <ui:ScrollView name="Page_Achievements" class="phone-page">
+    <ui:Label text="Achievements" class="page-h1" />
+
+    <ui:ScrollView name="Ach_CategoryScroll"
+                   class="ach-cat-scroll"
+                   mode="Horizontal"
+                   vertical-scroller-visibility="Hidden"
+                   horizontal-scroller-visibility="Auto">
+        <ui:VisualElement name="Ach_CategoryRow" class="ach-cat-row" />
+    </ui:ScrollView>
+
+    <ui:VisualElement class="ach-summary">
+        <ui:Label name="Lbl_AchSummary" text="--" class="ach-summary-text" />
+    </ui:VisualElement>
+
+    <ui:VisualElement name="AchievementsList" class="ach-list" />
+</ui:ScrollView>
+
+<ui:ScrollView name="Page_SkiPass" class="phone-page skipass-page">
+
+    <ui:Label text="Ski Pass" class="page-h1" />
+
+    <!-- Current pass card: left info + progress, right available lifts -->
+    <ui:VisualElement class="skipass-card">
+        <ui:VisualElement class="skipass-current-row">
+
+            <ui:VisualElement class="skipass-current-left">
+                <ui:Label text="Current Pass" class="page-h2" />
+                <ui:Label name="Lbl_SkiPassCurrentName" text="Basic (L0)" class="skipass-current-name" />
+                <ui:Label name="Lbl_SkiPassCurrentExpiry" text="No expiry" class="skipass-meta" />
+
+                <ui:VisualElement class="skipass-bar">
+                    <ui:VisualElement name="SkiPassTimeFill" class="skipass-fill" />
+                </ui:VisualElement>
+                <ui:Label name="Lbl_SkiPassTimeRemaining" text="" class="skipass-meta" />
+            </ui:VisualElement>
+
+            <ui:VisualElement class="skipass-current-right">
+                <ui:Label text="Available Lifts" class="page-h2" />
+                <ui:VisualElement name="List_SkiPassAvailableLifts" class="skipass-liftlist" />
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- Pass cards grid -->
+    <ui:VisualElement class="skipass-card">
+        <ui:Label text="Pass Levels" class="page-h2" />
+        <ui:VisualElement name="Grid_SkiPassCards" class="skipass-cardgrid" />
+    </ui:VisualElement>
+
+    <!-- Purchase panel -->
+    <ui:VisualElement class="skipass-card">
+        <ui:Label text="Purchase / Upgrade" class="page-h2" />
+
+        <ui:Label name="Lbl_SkiPassSelectedName" text="Select a pass" class="skipass-current-name" />
+        <ui:Label name="Lbl_SkiPassPrice" text="" class="skipass-meta" />
+
+        <ui:VisualElement name="Row_SkiPassDurations" class="skipass-duration-row" />
+
+        <ui:Label text="Lifts unlocked" class="skipass-meta" />
+        <ui:VisualElement name="List_SkiPassSelectedLifts" class="skipass-liftlist" />
+
+        <ui:Button name="Btn_SkiPassPurchase" text="Purchase" class="tasks-claimall-btn" />
+        <ui:Label name="Lbl_SkiPassResult" text="" class="skipass-meta" />
+    </ui:VisualElement>
+
+</ui:ScrollView>
+
+<ui:ScrollView name="Page_TimeWeather" class="phone-page" vertical-scroller-visibility="Hidden" horizontal-scroller-visibility="Hidden">
+    <ui:VisualElement class="tw-timeheader">
+        <ui:Label name="Lbl_TW_Time" text="--:-- AM" class="tw-time" />
+        <ui:VisualElement class="tw-time-subrow">
+            <ui:Label name="Lbl_TW_Day" text="---" class="tw-day" />
+            <ui:Label name="Lbl_TW_Date" text="---" class="tw-date" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement class="tw-nowcard">
+        <ui:VisualElement class="tw-now-top">
+            <ui:Label name="Lbl_TW_CurrentCond" text="---" class="tw-now-cond" />
+            <ui:Label name="Lbl_TW_CurrentTemp" text="-- C" class="tw-now-temp" />
+        </ui:VisualElement>
+
+        <ui:VisualElement class="tw-now-meta">
+            <ui:Label name="Lbl_TW_CurrentRain" text="Rain chance: --%" class="tw-meta" />
+            <ui:Label name="Lbl_TW_CurrentWind" text="Wind: --" class="tw-meta" />
+        </ui:VisualElement>
+
+        <ui:VisualElement class="tw-sunrow">
+            <ui:VisualElement class="tw-sun-chip">
+                <ui:Label text="Sunrise" class="tw-chip-label" />
+                <ui:Label name="Lbl_TW_Sunrise" text="--:--" class="tw-chip-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="tw-sun-chip">
+                <ui:Label text="Sunset" class="tw-chip-label" />
+                <ui:Label name="Lbl_TW_Sunset" text="--:--" class="tw-chip-value" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:Label text="Hourly Forecast" class="page-h2 tw-hourly-title" />
+
+<ui:VisualElement name="TW_HourlyRegion" class="tw-hourly-region">
+   <ui:ScrollView name="TW_HourlyScroll"
+               class="tw-hourly-scroll"
+               mode="Horizontal"
+               vertical-scroller-visibility="Hidden"
+               horizontal-scroller-visibility="Auto">
+    <ui:VisualElement name="TW_HourlyRow" class="tw-hourly-row" />
+</ui:ScrollView>
+
+</ui:VisualElement>
+</ui:ScrollView>
+
+<ui:ScrollView name="Page_Map" class="phone-page map-page">
+    <ui:VisualElement class="map-toolbar">
+        <ui:Label text="Trail Map" class="map-title" />
+        <ui:VisualElement class="map-toolbar-spacer" />
+        <ui:VisualElement name="Btn_MapCenterPlayer" class="map-toolbtn map-toolbtn-icon">
+            <ui:Label text="⦿" class="map-toolbtn-text" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="MapLayerBar" class="map-layerbar">
+        <ui:VisualElement name="Btn_MapLayerRuns" class="map-layerbtn is-on">
+            <ui:VisualElement class="map-layerdot" />
+            <ui:Label text="Runs" class="map-layertext" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="Btn_MapLayerLifts" class="map-layerbtn is-on">
+            <ui:VisualElement class="map-layerdot" />
+            <ui:Label text="Lifts" class="map-layertext" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="Btn_MapLayerPOIs" class="map-layerbtn is-on">
+            <ui:VisualElement class="map-layerdot" />
+            <ui:Label text="Landmarks" class="map-layertext" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:Label
+        name="Lbl_MapMissing"
+        text="No MapData assigned. Bake one via SkiGame/Map/Bake Map Data."
+        class="map-missing"
+    />
+
+    <ui:VisualElement name="MapViewport" class="map-viewport">
+        <ui:VisualElement name="MapContent" class="map-content">
+            <ui:VisualElement name="MapBackground" class="map-background" />
+            <ui:VisualElement name="MapPolylines" class="map-polylines" />
+            <ui:VisualElement name="MapMarkers" class="map-markers" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:ScrollView>
+
+<ui:ScrollView name="Page_Runs" class="phone-page runs-page">
+<ui:VisualElement name="RunsActivePanel" class="runs-active is-hidden">
+    <ui:Label name="Lbl_RunsActiveName" text="Not on a run" class="runs-active-title" />
+    <ui:VisualElement class="runs-active-row">
+        <ui:Label name="Lbl_RunsActiveMeta" text="Progress: --%  |  Time --:--  |  Max --  |  Stacks --" class="runs-active-meta" />
+    </ui:VisualElement>
+
+    <ui:VisualElement class="runs-active-bar">
+        <ui:VisualElement name="RunsActiveFill" class="runs-active-fill" />
+    </ui:VisualElement>
+</ui:VisualElement>
+
+
+    <ui:VisualElement class="stats-headerbar">
+        <ui:Label text="Runs" class="page-h1 stats-title" />
+
+        <ui:VisualElement class="seg-tabs stats-tabs">
+            <ui:VisualElement name="Btn_RunsTabCalendar" class="seg-tab is-on">
+                <ui:Label text="Calendar" class="seg-tab-text" />
+            </ui:VisualElement>
+            <ui:VisualElement name="Btn_RunsTabByRun" class="seg-tab">
+                <ui:Label text="Runs" class="seg-tab-text" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- Calendar (month grid) -->
+    <ui:VisualElement name="Panel_RunsCalendar" class="runs-panel">
+<!--         <ui:VisualElement name="RunsMonthToolbar" class="runs-cal-toolbar">
+            <ui:VisualElement name="Btn_RunsPrevMonth" class="map-toolbtn map-toolbtn-icon">
+                <ui:Label text="‹" class="map-toolbtn-text" />
+            </ui:VisualElement>
+
+            <ui:Label name="Lbl_RunsMonth" text="Month" class="runs-cal-title" />
+
+            <ui:VisualElement name="Btn_RunsNextMonth" class="map-toolbtn map-toolbtn-icon">
+                <ui:Label text="›" class="map-toolbtn-text" />
+            </ui:VisualElement>
+        </ui:VisualElement> -->
+
+        <ui:VisualElement name="RunsCalendarGrid" class="runs-cal-grid" />
+
+        <!-- Day detail panel (replaces calendar when a day is clicked) -->
+        <ui:VisualElement name="Panel_RunsDayDetail" class="runs-daypanel is-hidden">
+            <ui:VisualElement class="runs-day-toolbar">
+                <ui:VisualElement name="Btn_RunsPrevDay" class="map-toolbtn map-toolbtn-icon">
+                    <ui:Label text="‹" class="map-toolbtn-text" />
+                </ui:VisualElement>
+
+                <ui:Label name="Lbl_RunsDay" text="Day" class="runs-day-title" />
+
+                <ui:VisualElement name="Btn_RunsNextDay" class="map-toolbtn map-toolbtn-icon">
+                    <ui:Label text="›" class="map-toolbtn-text" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:VisualElement name="RunsDayDetailList" class="runs-daylist" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- Runs (expandable per run) -->
+    <ui:VisualElement name="Panel_RunsByRun" class="runs-panel is-hidden">
+        <ui:VisualElement name="RunsByRunList" class="runs-runlist" />
+    </ui:VisualElement>
+</ui:ScrollView>
+
+                    <ui:ScrollView name="Page_Save" class="phone-page">
+                        <ui:Label text="Save &amp; Load" class="page-h1" />
+                        <ui:Label text="(placeholder) Your stats save automatically; manual saves can come later." class="page-body" />
+                    </ui:ScrollView>
+                    <ui:ScrollView name="Page_Settings" class="phone-page">
+                        <ui:Label text="Settings" class="page-h1" />
+
+                        <!-- DISPLAY -->
+                        <ui:VisualElement class="settings-section">
+                            <ui:Label text="Display" class="settings-h2" />
+
+                            <ui:VisualElement class="settings-row">
+                                <ui:Label text="Quality" class="settings-label" />
+                                <ui:DropdownField name="Dropdown_SettingsQuality" class="settings-dropdown" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement class="settings-row">
+                                <ui:Label text="VSync" class="settings-label" />
+                                <ui:Toggle name="Toggle_SettingsVSync" value="true" class="settings-toggle" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement class="settings-row">
+                                <ui:Label text="FPS Cap" class="settings-label" />
+                                <ui:DropdownField name="Dropdown_SettingsFpsCap" class="settings-dropdown" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement class="settings-row">
+                                <ui:Label text="Resolution" class="settings-label" />
+                                <ui:DropdownField name="Dropdown_SettingsResolution" class="settings-dropdown" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement class="settings-row">
+                                <ui:Label text="Window mode" class="settings-label" />
+                                <ui:DropdownField name="Dropdown_SettingsWindowMode" class="settings-dropdown" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement class="settings-row">
+                                <ui:Label text="Display" class="settings-label" />
+                                <ui:DropdownField name="Dropdown_SettingsDisplay" class="settings-dropdown" />
+                            </ui:VisualElement>
+
+                        </ui:VisualElement>
+
+                        <!-- SOUND -->
+                        <ui:VisualElement class="settings-section">
+                            <ui:Label text="Sound" class="settings-h2" />
+
+                            <ui:VisualElement class="settings-row">
+                                <ui:Label text="Master" class="settings-label" />
+                                <ui:Slider name="Slider_SettingsMaster" low-value="0" high-value="1" value="1" class="settings-slider" />
+                                <ui:Label name="Lbl_SettingsMaster" text="100%" class="settings-value" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement class="settings-row">
+                                <ui:Label text="Music" class="settings-label" />
+                                <ui:Slider name="Slider_SettingsMusic" low-value="0" high-value="1" value="1" class="settings-slider" />
+                                <ui:Label name="Lbl_SettingsMusic" text="100%" class="settings-value" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement class="settings-row">
+                                <ui:Label text="SFX" class="settings-label" />
+                                <ui:Slider name="Slider_SettingsSfx" low-value="0" high-value="1" value="1" class="settings-slider" />
+                                <ui:Label name="Lbl_SettingsSfx" text="100%" class="settings-value" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+
+                        <!-- CONTROLS -->
+                        <ui:VisualElement class="settings-section">
+                            <ui:Label text="Controls" class="settings-h2" />
+
+                            <ui:VisualElement class="settings-row">
+                                <ui:Label text="Invert look Y" class="settings-label" />
+                                <ui:Toggle name="Toggle_SettingsInvertY" value="false" class="settings-toggle" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement class="settings-row">
+                                <ui:Label text="Look sensitivity" class="settings-label" />
+                                <ui:Slider name="Slider_SettingsLookSensitivity" low-value="0.25" high-value="3" value="1" class="settings-slider" />
+                                <ui:Label name="Lbl_SettingsLookSensitivity" text="1.00x" class="settings-value" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement class="settings-buttonrow">
+                                <ui:Button name="Btn_SettingsConfigureControls" text="Configure Controls..." class="settings-btn" />
+                            </ui:VisualElement>
+
+                        </ui:VisualElement>
+
+                        <!-- GAMEPLAY -->
+                        <ui:VisualElement class="settings-section">
+                            <ui:Label text="Gameplay" class="settings-h2" />
+
+                            <ui:VisualElement class="settings-row">
+                                <ui:Label text="Camera FOV" class="settings-label" />
+                                <ui:Slider name="Slider_SettingsFov" low-value="60" high-value="110" value="85" class="settings-slider" />
+                                <ui:Label name="Lbl_SettingsFov" text="85" class="settings-value" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement class="settings-row">
+                                <ui:Label text="Speed units" class="settings-label" />
+                                <ui:DropdownField name="Dropdown_SettingsUnits" class="settings-dropdown" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+
+                        <!-- ACCESSIBILITY -->
+                        <ui:VisualElement class="settings-section">
+                            <ui:Label text="Accessibility" class="settings-h2" />
+
+                            <ui:VisualElement class="settings-row">
+                                <ui:Label text="UI scale" class="settings-label" />
+                                <ui:Slider name="Slider_SettingsUiScale" low-value="0.8" high-value="1.3" value="1" class="settings-slider" />
+                                <ui:Label name="Lbl_SettingsUiScale" text="100%" class="settings-value" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement class="settings-row">
+                                <ui:Label text="Reduce motion" class="settings-label" />
+                                <ui:Toggle name="Toggle_SettingsReduceMotion" value="false" class="settings-toggle" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement class="settings-row">
+                                <ui:Label text="Colour mode" class="settings-label" />
+                                <ui:DropdownField name="Dropdown_SettingsColourMode" class="settings-dropdown" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+
+                        <ui:VisualElement class="settings-buttonrow">
+                            <ui:Button name="Btn_SettingsReset" text="Reset to defaults" class="settings-btn" />
+                        </ui:VisualElement>
+
+                        <ui:Label name="Lbl_SettingsNote" text="" class="settings-note" />
+                    </ui:ScrollView>
+
+                    <ui:ScrollView name="Page_Controls" class="phone-page">
+                        <ui:Label text="Controls" class="page-h1" />
+                        <ui:Label name="Lbl_ControlsStatus" text="Select an action to rebind." class="controls-status" />
+
+                        <ui:VisualElement name="ControlsRebindList" class="controls-rebind-list" />
+
+                        <ui:VisualElement class="settings-buttonrow">
+                            <ui:Button name="Btn_ControlsResetBindings" text="Reset bindings" class="settings-btn" />
+                        </ui:VisualElement>
+
+                        <ui:Label name="Lbl_ControlsNote" text="" class="settings-note" />
+                    </ui:ScrollView>
+
+                    <ui:ScrollView name="Page_SOS" class="phone-page">
+                        <ui:Label text="SOS" class="page-h1" />
+                        <ui:Label text="Respawn to last safe point." class="page-body" />
+                        <ui:VisualElement name="Btn_SOSRespawn" class="big-action">
+                            <ui:Label text="RESPAWN" class="big-action-text" />
+                        </ui:VisualElement>
+                    </ui:ScrollView>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -15,9 +15,16 @@ MonoBehaviour:
   id: 84kmDistance
   title: Ski 2 Marathons
   description: Ski two full marathon, 84km, over your lifetime
+  mountainHudCategory: 20
+  mountainHudGlyph: 
   requirementKind: 0
   metric: 11
   target: 84000
+  runId: 
   poiGroup: {fileID: 0}
   poiVisitScope: 10
   autoTargetFromPOIGroup: 1
+  runGroup: {fileID: 0}
+  runVisitScope: 10
+  runGroupMeasure: 10
+  autoTargetFromRunGroup: 1

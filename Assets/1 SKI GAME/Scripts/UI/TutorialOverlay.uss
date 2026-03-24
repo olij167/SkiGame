@@ -1,0 +1,277 @@
+.tutorial-panel {
+    position: absolute;
+    left: 50%;
+    top: 32px;
+    translate: -50% 0;
+    width: 680px;
+    min-height: 210px;
+    background-color: rgba(8, 12, 18, 0.95);
+    border-radius: 22px;
+    padding: 18px;
+    color: rgb(245, 245, 245);
+    border-top-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-left-width: 2px;
+    border-top-color: rgba(255, 255, 255, 0.1);
+    border-right-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+    border-left-color: rgba(255, 255, 255, 0.1);
+}
+
+.tutorial-panel-complete {
+    background-color: rgba(26, 96, 46, 0.96);
+}
+
+.tutorial-header-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.tutorial-progress {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.tutorial-check {
+    display: none;
+    font-size: 34px;
+    -unity-font-style: bold;
+    color: rgb(219, 255, 219);
+}
+
+.tutorial-title {
+    font-size: 30px;
+    -unity-font-style: bold;
+    margin-bottom: 8px;
+}
+
+.tutorial-instruction {
+    white-space: normal;
+    font-size: 18px;
+    margin-bottom: 6px;
+}
+
+.tutorial-hint {
+    white-space: normal;
+    color: rgba(255, 255, 255, 0.76);
+    font-size: 15px;
+    margin-bottom: 14px;
+}
+
+.tutorial-progress-bar {
+    width: 100%;
+    height: 14px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    margin-bottom: 8px;
+}
+
+.tutorial-progress-fill {
+    height: 100%;
+    width: 0%;
+    background-color: rgb(93, 190, 255);
+    border-radius: 999px;
+}
+
+.tutorial-progress-text {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.tutorial-modal {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    width: 600px;
+    background-color: rgba(7, 12, 18, 0.97);
+    border-radius: 24px;
+    padding: 24px;
+    color: rgb(245, 245, 245);
+    border-top-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-left-width: 2px;
+    border-top-color: rgba(255, 255, 255, 0.1);
+    border-right-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+    border-left-color: rgba(255, 255, 255, 0.1);
+}
+
+.tutorial-modal-title {
+    font-size: 30px;
+    -unity-font-style: bold;
+    margin-bottom: 10px;
+}
+
+.tutorial-modal-body {
+    white-space: normal;
+    font-size: 16px;
+    margin-bottom: 16px;
+    color: rgba(255, 255, 255, 0.86);
+}
+
+.tutorial-modal-hint {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: rgb(255, 238, 160);
+    margin-bottom: 6px;
+}
+
+.tutorial-modal-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.tutorial-primary-button {
+    min-width: 150px;
+    min-height: 40px;
+    color: rgb(27, 27, 27);
+    -unity-font-style: bold;
+}
+
+.tutorial-secondary-button {
+    min-width: 140px;
+    min-height: 40px;
+    color: rgb(27, 27, 27);
+    -unity-font-style: bold;
+}
+
+.tutorial-modal-blocker {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.42);
+}
+
+.tutorial-modal-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.tutorial-primary-button {
+    min-width: 150px;
+    min-height: 40px;
+}
+
+.tutorial-secondary-button {
+    min-width: 140px;
+    min-height: 40px;
+}
+
+.movement-panel {
+    position: absolute;
+    right: 24px;
+    bottom: 24px;
+    width: 320px;
+    background-color: rgba(8, 12, 18, 0.88);
+    border-radius: 16px;
+    padding: 12px;
+    color: rgb(245, 245, 245);
+}
+
+.movement-title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    margin-bottom: 8px;
+}
+
+.movement-list {
+    gap: 4px;
+}
+
+.input-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    min-height: 26px;
+    margin-bottom: 4px;
+}
+
+.input-row-name {
+    color: rgba(255, 255, 255, 0.9);
+    width: 44%;
+    white-space: normal;
+}
+
+.input-row-binding {
+    color: rgba(255, 255, 255, 0.7);
+    -unity-font-style: bold;
+    width: 54%;
+    white-space: normal;
+    unity-text-align: upper-right;
+}
+
+.world-prompt-panel {
+    position: absolute;
+    left: 50%;
+    bottom: 100px;
+    translate: -50% 0;
+    min-width: 220px;
+    background-color: rgba(0, 0, 0, 0.82);
+    border-radius: 14px;
+    padding: 10px 14px;
+    align-items: center;
+    color: white;
+}
+
+.world-prompt-action {
+    -unity-font-style: bold;
+    font-size: 16px;
+}
+
+.world-prompt-description {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.input-row-active {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+}
+
+.input-row-name-active {
+    color: rgb(255, 238, 160);
+}
+
+.input-row-binding-active {
+    color: rgb(255, 238, 160);
+}
+
+.input-row {
+    transition-duration: 0.08s;
+}
+
+.input-row-name {
+    transition-duration: 0.08s;
+}
+
+.input-row-binding {
+    transition-duration: 0.08s;
+}
+
+.tutorial-objective-indicator {
+    position: absolute;
+    min-width: 160px;
+    background-color: rgba(0,0,0,0.82);
+    border-radius: 14px;
+    padding: 8px 12px;
+}
+
+.tutorial-objective-label {
+    color: white;
+    -unity-font-style: bold;
+    font-size: 14px;
+}

@@ -114,6 +114,17 @@ public class SkiController : MonoBehaviour
     [Tooltip("Optional button action for jump / hop (hold to charge, release to jump).")]
     [SerializeField] private InputActionReference jumpAction;
 
+    [Header("External Input")]
+    [Tooltip("Optional component implementing ISkiInputSource. When assigned and active, it overrides player input and can drive this skier as an NPC.")]
+    [SerializeField] private MonoBehaviour externalInputSourceBehaviour;
+
+    private ISkiInputSource _externalInputSource;
+
+    private bool HasExternalInputSource =>
+        externalInputSourceBehaviour != null &&
+        externalInputSourceBehaviour.isActiveAndEnabled &&
+        _externalInputSource != null &&
+        _externalInputSource.HasInput();
 
     // ----------------------------------------------------------------------
     // INTERNAL STATE
@@ -835,17 +846,21 @@ public class SkiController : MonoBehaviour
     // ----------------------------------------------------------------------
 
     private bool HasLegInputs =>
-     leftSkiAction != null && leftSkiAction.action != null &&
-     rightSkiAction != null && rightSkiAction.action != null;
+        HasExternalInputSource ||
+        (leftSkiAction != null && leftSkiAction.action != null &&
+         rightSkiAction != null && rightSkiAction.action != null);
 
     private bool HasLeanInput =>
-        leanAction != null && leanAction.action != null;
+        HasExternalInputSource ||
+        (leanAction != null && leanAction.action != null);
 
     private bool HasPolesInput =>
-        polesAction != null && polesAction.action != null;
+        HasExternalInputSource ||
+        (polesAction != null && polesAction.action != null);
 
     private bool HasJumpInput =>
-        jumpAction != null && jumpAction.action != null;
+        HasExternalInputSource ||
+        (jumpAction != null && jumpAction.action != null);
 
     public bool IsStacked => _stacked;
 
@@ -881,6 +896,12 @@ public class SkiController : MonoBehaviour
     public Vector3 Velocity => _rb.linearVelocity;
     public Vector3 SkiForwardOnPlane => _skiForward;
     public bool IsRiderGrounded => _isGrounded;
+
+    public float RawLeanInput => _rawLeanInput;
+    public float ForwardLeanInput => _forwardLean;
+    public float LeftLegInput => _rawLeftLegInput;
+    public float RightLegInput => _rawRightLegInput;
+    public bool IsAirborne => !_isGrounded && !_grindActive && !_stacked;
 
     public bool IsGrinding => _grindActive;
     public float GrindStrength01 => Mathf.Clamp01(_grindStrengthSmoothed);
@@ -999,6 +1020,41 @@ public class SkiController : MonoBehaviour
 
         _wasControlsGrounded = IsGroundedForControls;
     }
+
+    public void TriggerImpactStack(Vector3 impactDirectionWorld, float severity01 = 1f, string reason = "SkierCollision")
+    {
+        if (_stacked)
+            return;
+
+        _dbgLastStackReason = string.IsNullOrWhiteSpace(reason) ? "SkierCollision" : reason;
+
+        Vector3 torqueAxis = Vector3.Cross(Vector3.up, impactDirectionWorld);
+        if (torqueAxis.sqrMagnitude < 0.0001f)
+            torqueAxis = ComputeStackTorqueAxisFromContacts();
+
+        if (torqueAxis.sqrMagnitude < 0.0001f)
+            torqueAxis = transform.right;
+
+        TriggerStack(Mathf.Clamp01(severity01), torqueAxis.normalized);
+    }
+
+    public void TriggerImpactStackFromPoint(Vector3 impactPointWorld, Vector3 incomingVelocityWorld, float severity01 = 1f, string reason = "SkierCollision")
+    {
+        if (_stacked)
+            return;
+
+        Vector3 away = transform.position - impactPointWorld;
+        away.y = 0f;
+
+        if (away.sqrMagnitude < 0.0001f)
+            away = -Vector3.ProjectOnPlane(incomingVelocityWorld, Vector3.up);
+
+        if (away.sqrMagnitude < 0.0001f)
+            away = transform.forward;
+
+        TriggerImpactStack(away.normalized, severity01, reason);
+    }
+
     public void RecoverFromStack(Vector3 forwardHint)
     {
         if (!_stacked) return;
@@ -1013,13 +1069,56 @@ public class SkiController : MonoBehaviour
         transform.rotation = Quaternion.LookRotation(f.normalized, up);
     }
 
+    public void SetExternalInputSource(MonoBehaviour source)
+    {
+        externalInputSourceBehaviour = source;
+        CacheExternalInputSource();
+    }
+
+    public void ClearExternalInputSource()
+    {
+        externalInputSourceBehaviour = null;
+        _externalInputSource = null;
+    }
+
+    private void CacheExternalInputSource()
+    {
+        _externalInputSource = externalInputSourceBehaviour as ISkiInputSource;
+
+        if (externalInputSourceBehaviour != null && _externalInputSource == null)
+        {
+            Debug.LogError(
+                $"[{nameof(SkiController)}] External input source on '{name}' does not implement ISkiInputSource.",
+                this);
+        }
+    }
+
+    private bool TryGetExternalInput(out SkiInputFrame input)
+    {
+        if (HasExternalInputSource)
+        {
+            input = _externalInputSource.GetSkiInput();
+            return true;
+        }
+
+        input = SkiInputFrame.Neutral;
+        return false;
+    }
+
     // ----------------------------------------------------------------------
     // UNITY LIFECYCLE
     // ----------------------------------------------------------------------
 
+    private void OnValidate()
+    {
+        CacheExternalInputSource();
+    }
+
     private void Awake()
     {
         _rb = GetComponent<Rigidbody>();
+        CacheExternalInputSource();
+
         _rb.freezeRotation = true;
         _rb.useGravity = false;
 
@@ -1335,19 +1434,20 @@ public class SkiController : MonoBehaviour
 
     private void OnDisable()
     {
-        if (HasLegInputs)
-        {
+        // Important: external NPC input should not imply InputAction references exist.
+        if (leftSkiAction != null && leftSkiAction.action != null)
             leftSkiAction.action.Disable();
-            rightSkiAction.action.Disable();
-        }
 
-        if (HasLeanInput)
+        if (rightSkiAction != null && rightSkiAction.action != null)
+            rightSkiAction.action.Disable();
+
+        if (leanAction != null && leanAction.action != null)
             leanAction.action.Disable();
 
-        if (HasPolesInput)
+        if (polesAction != null && polesAction.action != null)
             polesAction.action.Disable();
 
-        if (HasJumpInput)
+        if (jumpAction != null && jumpAction.action != null)
             jumpAction.action.Disable();
 
         // IMPORTANT:
@@ -1652,7 +1752,23 @@ public class SkiController : MonoBehaviour
     // ----------------------------------------------------------------------
     private void ReadInputs()
     {
-        if (HasLegInputs)
+        if (TryGetExternalInput(out SkiInputFrame externalInput))
+        {
+            _rawLeftLegInput = Mathf.Clamp01(externalInput.leftLeg01);
+            _rawRightLegInput = Mathf.Clamp01(externalInput.rightLeg01);
+            _rawLeanInput = Mathf.Clamp(externalInput.lean01, -1f, 1f);
+            _rawPolesPressed = externalInput.polesHeld;
+
+            HandleJumpInput(
+                externalInput.jumpPressedThisFrame,
+                externalInput.jumpReleasedThisFrame,
+                externalInput.jumpHeld);
+
+            return;
+        }
+
+        if (leftSkiAction != null && leftSkiAction.action != null &&
+            rightSkiAction != null && rightSkiAction.action != null)
         {
             _rawLeftLegInput = Mathf.Clamp01(leftSkiAction.action.ReadValue<float>());
             _rawRightLegInput = Mathf.Clamp01(rightSkiAction.action.ReadValue<float>());
@@ -1663,7 +1779,7 @@ public class SkiController : MonoBehaviour
             _rawRightLegInput = 0f;
         }
 
-        if (HasLeanInput)
+        if (leanAction != null && leanAction.action != null)
         {
             _rawLeanInput = Mathf.Clamp(leanAction.action.ReadValue<float>(), -1f, 1f);
         }
@@ -1672,7 +1788,7 @@ public class SkiController : MonoBehaviour
             _rawLeanInput = 0f;
         }
 
-        if (HasPolesInput)
+        if (polesAction != null && polesAction.action != null)
         {
             _rawPolesPressed = polesAction.action.ReadValue<float>() > 0.5f;
         }
@@ -1681,7 +1797,14 @@ public class SkiController : MonoBehaviour
             _rawPolesPressed = false;
         }
 
-        HandleJumpInput();
+        if (jumpAction != null && jumpAction.action != null)
+        {
+            var action = jumpAction.action;
+            HandleJumpInput(
+                action.WasPressedThisFrame(),
+                action.WasReleasedThisFrame(),
+                action.IsPressed());
+        }
     }
 
     private void UpdatePoleState()
@@ -1780,21 +1903,10 @@ public class SkiController : MonoBehaviour
         }
     }
 
-    private void HandleJumpInput()
+    private void HandleJumpInput(bool pressedThisFrame, bool releasedThisFrame, bool isHeld)
     {
-        if (jumpAction == null || jumpAction.action == null)
-            return;
-
-        var action = jumpAction.action;
-
-        // IMPORTANT: do NOT use else-if here.
-        // The Input System can report pressed+released in the same Update for quick taps.
-        bool pressedThisFrame = action.WasPressedThisFrame();
-        bool releasedThisFrame = action.WasReleasedThisFrame();
-
         if (pressedThisFrame)
         {
-            // Arm a charged jump (fires on release)
             _jumpQueued = true;
             _jumpHeld = true;
             _jumpReleaseQueued = false;
@@ -1804,16 +1916,16 @@ public class SkiController : MonoBehaviour
             _jumpMustFireWhileGrinding = _grindActive;
         }
 
+        _jumpHeld = isHeld;
+
         if (releasedThisFrame)
         {
             _jumpHeld = false;
 
-            // If we have a queued jump, release will trigger it (or buffer it briefly).
             if (_jumpQueued)
                 _jumpReleaseQueued = true;
         }
 
-        // Drop stale queued jump if not held and not released for too long.
         if (_jumpQueued &&
             !_jumpHeld &&
             !_jumpReleaseQueued &&
@@ -1824,6 +1936,18 @@ public class SkiController : MonoBehaviour
         }
     }
 
+    private void HandleJumpInput()
+    {
+        if (jumpAction == null || jumpAction.action == null)
+            return;
+
+        var action = jumpAction.action;
+
+        HandleJumpInput(
+            action.WasPressedThisFrame(),
+            action.WasReleasedThisFrame(),
+            action.IsPressed());
+    }
     /// <summary>
     /// Updates the high-level locomotion mode based on grounded state,
     /// jump timing, and stacking.
@@ -2744,12 +2868,17 @@ public class SkiController : MonoBehaviour
         // Only stack when the body contact happens while we're meaningfully past
         // the safe tilt envelope (prevents false stacks from harmless capsule scrapes).
         float tilt = Vector3.Angle(transform.up, n);
-        if (tilt > maxLandingTiltAngle)
-        {
-            // Use the contact normal for the stack impulse so we don't cancel velocity
-            // against a stale ground normal from a prior frame.
-            _groundNormal = n;
 
+        float stackTiltThreshold = maxLandingTiltAngle;
+        if (HasExternalInputSource)
+            stackTiltThreshold += 18f; // NPCs need a wider tolerance before body graze = wipeout
+
+        float planarSpeed = Vector3.ProjectOnPlane(_rb.linearVelocity, n).magnitude;
+        bool meaningfulImpact = planarSpeed > 2.0f || _nonSkiGroundContactUpDot > 0.55f;
+
+        if (tilt > stackTiltThreshold && meaningfulImpact)
+        {
+            _groundNormal = n;
             TriggerStack(ComputeStackTorqueAxisFromPoint(_nonSkiGroundContactPoint));
         }
 
@@ -2932,8 +3061,23 @@ public class SkiController : MonoBehaviour
         // Stack immediately.
         if (!anyStableBase)
         {
-            TriggerStack(ComputeStackTorqueAxisFromContacts());
-            _tipContactAccumTime = 0f;
+            if (HasExternalInputSource)
+            {
+                _tipContactAccumTime += Time.fixedDeltaTime;
+
+                float npcGrace = TipContactStackTime * 1.75f;
+                if (_tipContactAccumTime >= npcGrace)
+                {
+                    TriggerStack(ComputeStackTorqueAxisFromContacts());
+                    _tipContactAccumTime = 0f;
+                }
+            }
+            else
+            {
+                TriggerStack(ComputeStackTorqueAxisFromContacts());
+                _tipContactAccumTime = 0f;
+            }
+
             return;
         }
 
@@ -2944,7 +3088,9 @@ public class SkiController : MonoBehaviour
             if (leftGrounded) worstBase = Mathf.Min(worstBase, leftBaseAlign);
             if (rightGrounded) worstBase = Mathf.Min(worstBase, rightBaseAlign);
 
-            if (worstBase < 0.5f)
+            float lowSpeedThreshold = HasExternalInputSource ? 0.28f : 0.5f;
+
+            if (worstBase < lowSpeedThreshold)
             {
                 TriggerStack(ComputeStackTorqueAxisFromContacts());
                 _tipContactAccumTime = 0f;

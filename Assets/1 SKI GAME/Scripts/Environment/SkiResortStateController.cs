@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using TimeWeather;
 using UnityEngine.LowLevel;
@@ -29,6 +30,14 @@ public class SkiResortStateController : MonoBehaviour
     [Tooltip("How fast the auto-walk drives the player to the entrance (0..1 move input).")]
     [Range(0.1f, 1f)]
     [SerializeField] private float autoWalkMoveStrength = 0.8f;
+
+    [SerializeField] private bool autoWalkUsesSprint = true;
+
+    [Tooltip("When farther than this from the entrance, push the auto-walk at full strength.")]
+    [SerializeField] private float farApproachDistance = 8f;
+
+    [Tooltip("Once within this distance, snap directly to the inside point to avoid a slow final shuffle.")]
+    [SerializeField] private float nearEntranceSnapDistance = 2.25f;
 
     [Tooltip("If player provides move input above this magnitude, auto-walk cancels.")]
     [SerializeField] private float cancelMoveThreshold = 0.15f;
@@ -83,6 +92,29 @@ public class SkiResortStateController : MonoBehaviour
     public ResortState State => _state;
     public bool IsInResort => _state == ResortState.InResort;
 
+    public enum ResortAutoExitMode
+    {
+        None,
+        WhenRecovered,
+        AtAbsoluteGameMinute
+    }
+
+    [Header("Auto Exit")]
+    [SerializeField] private float recoveredThreshold01 = 0.02f;
+
+    private SkiResortZone _activeZone;
+    private ResortAutoExitMode _autoExitMode = ResortAutoExitMode.None;
+    private int _autoExitAbsoluteGameMinute = -1;
+
+    public SkiResortZone ActiveZone => _activeZone;
+    public bool HasScheduledExit => _autoExitMode != ResortAutoExitMode.None;
+    public ResortAutoExitMode ScheduledExitMode => _autoExitMode;
+
+    public SorenessMeter PlayerSoreness => playerSoreness;
+    public TimeController TimeControllerRef => timeController;
+    public float RecoveredThreshold01 => recoveredThreshold01;
+    public int ScheduledExitAbsoluteGameMinute => _autoExitAbsoluteGameMinute;
+
     private bool _prevRecoveryEnabled;
     private bool _prevResting;
 
@@ -100,6 +132,23 @@ public class SkiResortStateController : MonoBehaviour
     [SerializeField] private float approachLookLerpSpeed = 10f;
 
     private bool _trackPlayerDuringApproach;
+    private bool _resortFastTimeActive;
+    private float _currentTimeMultiplier = 1f;
+
+    [Header("Visible World Fast Forward")]
+    [SerializeField] private bool accelerateVisibleNpcSkiers = true;
+    [SerializeField] private bool accelerateVisibleLiftLines = true;
+    [SerializeField] private float visibleWorldRefreshInterval = 0.2f;
+    [SerializeField] private float maxVisibleWorldSpeedMultiplier = 8f;
+
+    private float _nextVisibleWorldRefreshTime;
+    private Plane[] _resortCameraPlanes = new Plane[6];
+
+    private readonly List<NpcSkierBrain> _cachedNpcBrains = new List<NpcSkierBrain>(64);
+    private readonly List<LiftLine> _cachedLiftLines = new List<LiftLine>(32);
+
+    private readonly HashSet<NpcSkierBrain> _boostedNpcBrains = new HashSet<NpcSkierBrain>();
+    private readonly HashSet<LiftLine> _boostedLiftLines = new HashSet<LiftLine>();
 
     private void Awake()
     {
@@ -146,11 +195,31 @@ public class SkiResortStateController : MonoBehaviour
         }
 
         SetPlayerFrozen(false);
+        _activeZone = null;
+        _autoExitMode = ResortAutoExitMode.None;
+        _autoExitAbsoluteGameMinute = -1;
+        _resortFastTimeActive = false;
+        _currentTimeMultiplier = 1f;
         _state = ResortState.Outside;
+    }
+
+    private void OnDisable()
+    {
+        ClearVisibleWorldFastForward();
     }
 
     private void Update()
     {
+        if (_state == ResortState.InResort)
+        {
+            UpdateInResortTimeMode();
+            TickAutoExit();
+            TickVisibleWorldFastForward();
+            return;
+        }
+
+        ClearVisibleWorldFastForward();
+
         if (_state != ResortState.ApproachingEnter)
             return;
 
@@ -160,7 +229,6 @@ public class SkiResortStateController : MonoBehaviour
         if (gameplayCamera == null)
             return;
 
-        // Track the *current* player position every frame while approaching.
         Transform target = walkingController != null ? walkingController.transform
                         : (playerRb != null ? playerRb.transform : null);
 
@@ -175,19 +243,430 @@ public class SkiResortStateController : MonoBehaviour
 
         Quaternion lookRot = Quaternion.LookRotation(dir.normalized, Vector3.up);
 
-        // Exponential smoothing (stable across frame rates)
         float k = 1f - Mathf.Exp(-approachLookLerpSpeed * Time.deltaTime);
         gameplayCamera.transform.rotation = Quaternion.Slerp(gameplayCamera.transform.rotation, lookRot, k);
     }
 
+    private void TickAutoExit()
+    {
+        if (_activeZone == null || _state != ResortState.InResort)
+            return;
+
+        switch (_autoExitMode)
+        {
+            case ResortAutoExitMode.WhenRecovered:
+                {
+                    if (playerSoreness != null && playerSoreness.Soreness01 <= recoveredThreshold01)
+                    {
+                        StartExitFlow(GetPlayerRoot(), _activeZone);
+                    }
+                    break;
+                }
+
+            case ResortAutoExitMode.AtAbsoluteGameMinute:
+                {
+                    int now = GetCurrentAbsoluteGameMinute();
+                    if (now >= 0 && _autoExitAbsoluteGameMinute >= 0 && now >= _autoExitAbsoluteGameMinute)
+                    {
+                        StartExitFlow(GetPlayerRoot(), _activeZone);
+                    }
+                    break;
+                }
+        }
+    }
+
+    private void UpdateInResortTimeMode()
+    {
+        if (_state != ResortState.InResort)
+            return;
+
+        bool fullyRecovered = IsPlayerRecovered();
+        bool hasSchedule = _autoExitMode != ResortAutoExitMode.None;
+
+        // Desired behavior:
+        // - Recovering with no schedule: fast time.
+        // - Fully recovered with no schedule: normal time.
+        // - Time-based scheduled exit: fast time, even if already recovered.
+        // - Leave-when-recovered schedule: fast time until the exit triggers.
+        bool wantsFastTime =
+            _autoExitMode == ResortAutoExitMode.AtAbsoluteGameMinute ||
+            _autoExitMode == ResortAutoExitMode.WhenRecovered ||
+            !fullyRecovered;
+
+        SetResortFastTimeActive(wantsFastTime);
+    }
+
+    private float GetVisibleWorldSpeedMultiplier()
+    {
+        if (!_resortFastTimeActive)
+            return 1f;
+
+        float denom = Mathf.Max(0.0001f, _currentTimeMultiplier);
+        float speedUp = 1f / denom;
+
+        return Mathf.Clamp(speedUp, 1f, Mathf.Max(1f, maxVisibleWorldSpeedMultiplier));
+    }
+
+    private Camera GetActiveResortViewCamera()
+    {
+        if (useSingleCameraBlend)
+            return gameplayCamera != null && gameplayCamera.isActiveAndEnabled ? gameplayCamera : null;
+
+        return resortCamera != null && resortCamera.isActiveAndEnabled ? resortCamera : null;
+    }
+
+    private void TickVisibleWorldFastForward()
+    {
+        if (!accelerateVisibleNpcSkiers && !accelerateVisibleLiftLines)
+        {
+            ClearVisibleWorldFastForward();
+            return;
+        }
+
+        if (!_resortFastTimeActive)
+        {
+            ClearVisibleWorldFastForward();
+            return;
+        }
+
+        Camera activeResortViewCamera = GetActiveResortViewCamera();
+        if (activeResortViewCamera == null)
+        {
+            ClearVisibleWorldFastForward();
+            return;
+        }
+
+        if (Time.unscaledTime < _nextVisibleWorldRefreshTime)
+            return;
+
+        _nextVisibleWorldRefreshTime = Time.unscaledTime + Mathf.Max(0.05f, visibleWorldRefreshInterval);
+
+        float worldSpeedMultiplier = GetVisibleWorldSpeedMultiplier();
+
+        GeometryUtility.CalculateFrustumPlanes(activeResortViewCamera, _resortCameraPlanes);
+
+        if (accelerateVisibleNpcSkiers)
+            RefreshVisibleNpcBoosts(worldSpeedMultiplier);
+
+        if (accelerateVisibleLiftLines)
+            RefreshVisibleLiftBoosts(worldSpeedMultiplier);
+    }
+
+    private void RefreshVisibleNpcBoosts(float multiplier)
+    {
+        _cachedNpcBrains.Clear();
+        _cachedNpcBrains.AddRange(FindObjectsOfType<NpcSkierBrain>(includeInactive: false));
+
+        var stillVisible = new HashSet<NpcSkierBrain>();
+
+        for (int i = 0; i < _cachedNpcBrains.Count; i++)
+        {
+            NpcSkierBrain npc = _cachedNpcBrains[i];
+            if (npc == null || !npc.isActiveAndEnabled)
+                continue;
+
+            if (!npc.TryGetVisibilityBounds(out Bounds bounds))
+                continue;
+
+            if (!GeometryUtility.TestPlanesAABB(_resortCameraPlanes, bounds))
+                continue;
+
+            npc.SetVisibleFastForwardMultiplier(multiplier);
+            Debug.Log($"[ResortFF] Boosting NPC '{npc.name}' to x{multiplier:0.00}");
+            _boostedNpcBrains.Add(npc);
+            stillVisible.Add(npc);
+        }
+
+        if (_boostedNpcBrains.Count == 0)
+            return;
+
+        var toClear = ListPool<NpcSkierBrain>.Get();
+
+        foreach (NpcSkierBrain npc in _boostedNpcBrains)
+        {
+            if (npc == null || stillVisible.Contains(npc))
+                continue;
+
+            toClear.Add(npc);
+        }
+
+        for (int i = 0; i < toClear.Count; i++)
+        {
+            NpcSkierBrain npc = toClear[i];
+            if (npc != null)
+                npc.SetVisibleFastForwardMultiplier(1f);
+
+            _boostedNpcBrains.Remove(npc);
+        }
+
+        ListPool<NpcSkierBrain>.Release(toClear);
+    }
+
+    private void RefreshVisibleLiftBoosts(float multiplier)
+    {
+        _cachedLiftLines.Clear();
+        _cachedLiftLines.AddRange(FindObjectsOfType<LiftLine>(includeInactive: false));
+
+        var stillVisible = new HashSet<LiftLine>();
+
+        for (int i = 0; i < _cachedLiftLines.Count; i++)
+        {
+            LiftLine lift = _cachedLiftLines[i];
+            if (lift == null || !lift.isActiveAndEnabled)
+                continue;
+
+            if (!lift.TryGetVisibilityBounds(out Bounds bounds))
+                continue;
+
+            if (!GeometryUtility.TestPlanesAABB(_resortCameraPlanes, bounds))
+                continue;
+
+            lift.SetVisibleFastForwardMultiplier(multiplier);
+            Debug.Log($"[ResortFF] Boosting lift '{lift.name}' to x{multiplier:0.00}");
+            _boostedLiftLines.Add(lift);
+            stillVisible.Add(lift);
+        }
+
+        if (_boostedLiftLines.Count == 0)
+            return;
+
+        var toClear = ListPool<LiftLine>.Get();
+
+        foreach (LiftLine lift in _boostedLiftLines)
+        {
+            if (lift == null || stillVisible.Contains(lift))
+                continue;
+
+            toClear.Add(lift);
+        }
+
+        for (int i = 0; i < toClear.Count; i++)
+        {
+            LiftLine lift = toClear[i];
+            if (lift != null)
+                lift.SetVisibleFastForwardMultiplier(1f);
+
+            _boostedLiftLines.Remove(lift);
+        }
+
+        ListPool<LiftLine>.Release(toClear);
+    }
+
+    private void ClearVisibleWorldFastForward()
+    {
+        if (_boostedNpcBrains.Count > 0)
+        {
+            foreach (NpcSkierBrain npc in _boostedNpcBrains)
+            {
+                if (npc != null)
+                    npc.SetVisibleFastForwardMultiplier(1f);
+            }
+
+            _boostedNpcBrains.Clear();
+        }
+
+        if (_boostedLiftLines.Count > 0)
+        {
+            foreach (LiftLine lift in _boostedLiftLines)
+            {
+                if (lift != null)
+                    lift.SetVisibleFastForwardMultiplier(1f);
+            }
+
+            _boostedLiftLines.Clear();
+        }
+    }
+
+    private static class ListPool<T>
+    {
+        private static readonly Stack<List<T>> Pool = new Stack<List<T>>(8);
+
+        public static List<T> Get()
+        {
+            return Pool.Count > 0 ? Pool.Pop() : new List<T>(16);
+        }
+
+        public static void Release(List<T> list)
+        {
+            if (list == null)
+                return;
+
+            list.Clear();
+            Pool.Push(list);
+        }
+    }
+
+    private bool IsPlayerRecovered()
+    {
+        if (playerSoreness == null)
+            return true;
+
+        return playerSoreness.Soreness01 <= recoveredThreshold01;
+    }
+
+    private void SetResortFastTimeActive(bool active)
+    {
+        if (_resortFastTimeActive == active)
+            return;
+
+        _resortFastTimeActive = active;
+
+        if (active)
+        {
+            StartTimeRamp(_currentTimeMultiplier, resortSecondsPerMinuteMultiplier, timeRampSeconds, clearOverrideAtEnd: false);
+        }
+        else
+        {
+            StartTimeRamp(_currentTimeMultiplier, 1f, timeRampSeconds, clearOverrideAtEnd: true);
+        }
+    }
+
+    private GameObject GetPlayerRoot()
+    {
+        if (walkingController != null)
+            return walkingController.transform.root.gameObject;
+
+        if (playerRb != null)
+            return playerRb.transform.root.gameObject;
+
+        if (skiController != null)
+            return skiController.transform.root.gameObject;
+
+        return null;
+    }
+
+    private int GetCurrentAbsoluteGameMinute()
+    {
+        if (timeController == null)
+            timeController = TimeController.instance;
+
+        if (timeController == null)
+            return -1;
+
+        int day = Mathf.Max(0, timeController.dayCount);
+        int hour = Mathf.Clamp(timeController.timeHours, 0, 23);
+        int minute = Mathf.Clamp(Mathf.RoundToInt((float)timeController.timeMinutes), 0, 59);
+
+        return day * 1440 + hour * 60 + minute;
+    }
+
+    public void ScheduleExitWhenRecovered()
+    {
+        _autoExitMode = ResortAutoExitMode.WhenRecovered;
+        _autoExitAbsoluteGameMinute = -1;
+    }
+
+    public void ScheduleExitAtNextOccurrence(int hour24, int minute = 0)
+    {
+        int now = GetCurrentAbsoluteGameMinute();
+        if (now < 0)
+            return;
+
+        hour24 = Mathf.Clamp(hour24, 0, 23);
+        minute = Mathf.Clamp(minute, 0, 59);
+
+        int currentTimeOfDay = now % 1440;
+        int targetTimeOfDay = hour24 * 60 + minute;
+
+        int delta = targetTimeOfDay - currentTimeOfDay;
+        if (delta <= 0)
+            delta += 1440;
+
+        _autoExitAbsoluteGameMinute = now + delta;
+        _autoExitMode = ResortAutoExitMode.AtAbsoluteGameMinute;
+
+        if (_state == ResortState.InResort)
+            SetResortFastTimeActive(true);
+    }
+
+    public void CancelScheduledExit()
+    {
+        _autoExitMode = ResortAutoExitMode.None;
+        _autoExitAbsoluteGameMinute = -1;
+
+        if (_state == ResortState.InResort)
+            UpdateInResortTimeMode();
+    }
+
+    public void LeaveResortNow()
+    {
+        if (_state == ResortState.InResort && _activeZone != null)
+            StartExitFlow(GetPlayerRoot(), _activeZone);
+    }
+
+    public string GetCurrentClockText()
+    {
+        if (timeController == null)
+            timeController = TimeController.instance;
+
+        if (timeController == null)
+            return "--:--";
+
+        return $"{Mathf.Clamp(timeController.timeHours, 0, 23):00}:{Mathf.Clamp((int)timeController.timeMinutes, 0, 59):00}";
+    }
+
+    public string GetCurrentDayText()
+    {
+        if (timeController == null)
+            timeController = TimeController.instance;
+
+        if (timeController == null)
+            return "Day -";
+
+        int day = Mathf.Max(1, timeController.dayCount + 1);
+        int week = Mathf.Max(1, ((day - 1) / 7) + 1);
+        int dayOfWeek = ((day - 1) % 7) + 1;
+
+        return $"Week {week} - Day {dayOfWeek}";
+    }
+
+    public int GetMinutesUntilScheduledExit()
+    {
+        if (_autoExitMode != ResortAutoExitMode.AtAbsoluteGameMinute || _autoExitAbsoluteGameMinute < 0)
+            return -1;
+
+        int now = GetCurrentAbsoluteGameMinute();
+        if (now < 0)
+            return -1;
+
+        return Mathf.Max(0, _autoExitAbsoluteGameMinute - now);
+    }
+
+    public string GetScheduledExitSummary()
+    {
+        switch (_autoExitMode)
+        {
+            case ResortAutoExitMode.WhenRecovered:
+                return "Leaving when fully recovered";
+
+            case ResortAutoExitMode.AtAbsoluteGameMinute:
+                {
+                    int mins = GetMinutesUntilScheduledExit();
+                    if (mins < 0)
+                        return "Scheduled exit";
+
+                    int hours = mins / 60;
+                    int minutes = mins % 60;
+
+                    if (hours > 0)
+                        return $"Leaving in {hours}h {minutes:00}m";
+
+                    return $"Leaving in {minutes}m";
+                }
+
+            default:
+                return "No scheduled exit";
+        }
+    }
 
     // Called by hold interactor
     public void RequestToggleResort(GameObject playerRoot, SkiResortZone zone)
     {
-        if (zone == null) return;
-
         if (_state == ResortState.Outside)
         {
+            if (zone == null)
+                return;
+
             if (zone.entrancePoint == null || resortCamera == null)
                 return;
 
@@ -195,10 +674,13 @@ public class SkiResortStateController : MonoBehaviour
         }
         else if (_state == ResortState.InResort)
         {
-            if (zone.exitPoint == null)
+            if (zone == null)
+                zone = _activeZone;
+
+            if (zone == null || zone.exitPoint == null)
                 return;
 
-            StartExitFlow(playerRoot, zone);
+            StartExitFlow(playerRoot != null ? playerRoot : GetPlayerRoot(), zone);
         }
     }
 
@@ -206,9 +688,11 @@ public class SkiResortStateController : MonoBehaviour
     {
         StopAllFlows();
 
+        _activeZone = zone;
+        CancelScheduledExit();
+
         CachePlayerRefs(playerRoot);
 
-        // Reset any prior auto-drive / drift before starting a fresh approach.
         walkingController?.ClearExternalMove();
 
         if (playerRb != null)
@@ -219,26 +703,29 @@ public class SkiResortStateController : MonoBehaviour
             playerRb.angularVelocity = Vector3.zero;
         }
 
-        // Ensure walking mode.
         walkingController?.ForceEnterWalkMode();
 
-        // Save gameplay camera pose for blending back later.
         if (gameplayCamera != null)
         {
             _savedGameplayCamPos = gameplayCamera.transform.position;
             _savedGameplayCamRot = gameplayCamera.transform.rotation;
         }
-        _trackPlayerDuringApproach = true;
 
+        _trackPlayerDuringApproach = true;
         _flowCo = StartCoroutine(CoEnterResort(playerRoot, zone));
     }
 
     private void StartExitFlow(GameObject playerRoot, SkiResortZone zone)
     {
         StopAllFlows();
+
+        if (zone != null)
+            _activeZone = zone;
+
+        CancelScheduledExit();
         CachePlayerRefs(playerRoot);
 
-        _flowCo = StartCoroutine(CoExitResort(playerRoot, zone));
+        _flowCo = StartCoroutine(CoExitResort(playerRoot, _activeZone));
     }
 
     private IEnumerator CoEnterResort(GameObject playerRoot, SkiResortZone zone)
@@ -264,31 +751,34 @@ public class SkiResortStateController : MonoBehaviour
                 yield break;
             }
 
-            // Cancel if player provides movement input
-            // (we detect it by reading the walking controller's own input via its internal actions,
-            // so we use the hold interactor's move input instead — see interactor updates below).
-            // Here, we simply keep applying external move; cancellation happens before we get called again.
             Vector3 to = zone.entrancePoint.position - walkingController.transform.position;
             to.y = 0f;
 
-            if (to.sqrMagnitude <= arriveDistance * arriveDistance)
+            float distance = to.magnitude;
+
+            // If we're close enough, skip the slow last few steps and complete the entry cleanly.
+            if (distance <= nearEntranceSnapDistance)
                 break;
 
-            Vector3 dir = to.normalized;
+            if (distance <= arriveDistance)
+                break;
 
-            // Convert world direction into the SAME movement basis WalkingController uses (camera-relative).
+            Vector3 dir = to / Mathf.Max(0.001f, distance);
+
             walkingController.GetMoveBasis(out Vector3 fwd, out Vector3 right);
 
             float x = Vector3.Dot(dir, right);
             float y = Vector3.Dot(dir, fwd);
 
-            // Stronger forward bias helps convergence + reduces orbiting.
             Vector2 auto = new Vector2(x, y);
             auto = Vector2.ClampMagnitude(auto, 1f);
 
-            auto *= autoWalkMoveStrength;
+            float distanceT = Mathf.InverseLerp(arriveDistance, farApproachDistance, distance);
+            float strength = Mathf.Lerp(autoWalkMoveStrength, 1f, distanceT);
 
-            walkingController.SetExternalMove(auto, sprint: false);
+            auto *= strength;
+
+            walkingController.SetExternalMove(auto, sprint: autoWalkUsesSprint);
 
             yield return null;
         }
@@ -299,11 +789,18 @@ public class SkiResortStateController : MonoBehaviour
         // Freeze player and snap/hold position optionally.
         SetPlayerFrozen(true);
 
-        if (zone.insidePoint != null && playerRb != null)
+        if (zone.insidePoint != null)
         {
-            playerRb.position = zone.insidePoint.position;
-            playerRb.linearVelocity = Vector3.zero;
-            playerRb.angularVelocity = Vector3.zero;
+            if (playerRb != null)
+            {
+                playerRb.position = zone.insidePoint.position;
+                playerRb.linearVelocity = Vector3.zero;
+                playerRb.angularVelocity = Vector3.zero;
+            }
+            else if (walkingController != null)
+            {
+                walkingController.transform.position = zone.insidePoint.position;
+            }
         }
 
         // Now we are "in resort": apply recovery/time + switch camera fully.
@@ -445,8 +942,9 @@ public class SkiResortStateController : MonoBehaviour
         StopAllFlows();
 
         _trackPlayerDuringApproach = false;
+        _activeZone = null;
+        CancelScheduledExit();
 
-        // Clear external movement + restore camera.
         walkingController?.ClearExternalMove();
 
         if (playerRb != null)
@@ -457,10 +955,11 @@ public class SkiResortStateController : MonoBehaviour
             playerRb.angularVelocity = Vector3.zero;
         }
 
-        // Blend back quickly.
         StartCameraBlendBackToGameplayPose(quick: true);
 
         SetPlayerFrozen(false);
+        _activeZone = null;
+        CancelScheduledExit();
         _state = ResortState.Outside;
     }
 
@@ -512,13 +1011,17 @@ public class SkiResortStateController : MonoBehaviour
         if (timeController == null)
             timeController = TimeController.instance;
 
-        // Smoothly ramp time into resort speed.
-        // 1.0 = default; resortSecondsPerMinuteMultiplier < 1 = faster time.
-        StartTimeRamp(1f, resortSecondsPerMinuteMultiplier, timeRampSeconds, clearOverrideAtEnd: false);
+        _resortFastTimeActive = false;
+        _currentTimeMultiplier = 1f;
+
+        // On entry, start with fast recovery time.
+        SetResortFastTimeActive(true);
     }
 
     private void ClearResortState(GameObject playerRoot)
     {
+        ClearVisibleWorldFastForward();
+
         if (playerSoreness == null && playerRoot != null)
             playerSoreness = playerRoot.GetComponentInChildren<SorenessMeter>();
 
@@ -534,8 +1037,10 @@ public class SkiResortStateController : MonoBehaviour
         if (timeController == null)
             timeController = TimeController.instance;
 
+        _resortFastTimeActive = false;
+
         // Smoothly ramp back to default, then clear override to restore exact baseline.
-        StartTimeRamp(resortSecondsPerMinuteMultiplier, 1f, timeRampSeconds, clearOverrideAtEnd: true);
+        StartTimeRamp(_currentTimeMultiplier, 1f, timeRampSeconds, clearOverrideAtEnd: true);
     }
 
     private void SetPlayerFrozen(bool frozen)
@@ -749,22 +1254,26 @@ public class SkiResortStateController : MonoBehaviour
         float t = 0f;
         seconds = Mathf.Max(0.01f, seconds);
 
+        _currentTimeMultiplier = from;
+
         while (t < 1f)
         {
             t += Time.deltaTime / seconds;
-            float s = t * t * (3f - 2f * t); // smoothstep
+            float s = t * t * (3f - 2f * t);
 
             float m = Mathf.Lerp(from, to, s);
+            _currentTimeMultiplier = m;
             timeController.SetExternalTimeSpeedMultiplier(m);
 
             yield return null;
         }
 
+        _currentTimeMultiplier = to;
         timeController.SetExternalTimeSpeedMultiplier(to);
 
         if (clearOverrideAtEnd)
             timeController.ClearExternalTimeOverride();
+
+        _timeCo = null;
     }
-
-
 }

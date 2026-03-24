@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/UI/TutorialOverlay.uss?fileID=7433441132597879392&amp;guid=4b4be19541f68404293e995635741330&amp;type=3#TutorialOverlay" />
+    <ui:VisualElement name="MovementInputPanel" class="movement-panel" style="right: auto; left: 20px; bottom: 20px;">
+        <ui:Label name="Lbl_MovementInputTitle" text="Movement Inputs" class="movement-title" />
+        <ui:VisualElement name="MovementInputList" class="movement-list" />
+    </ui:VisualElement>
+</ui:UXML>

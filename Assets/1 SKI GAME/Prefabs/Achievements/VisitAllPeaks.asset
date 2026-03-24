@@ -15,9 +15,16 @@ MonoBehaviour:
   id: AllPeaks
   title: Visit All Peaks
   description: "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t"
+  mountainHudCategory: 20
+  mountainHudGlyph: 
   requirementKind: 10
   metric: 19
   target: 1
+  runId: 
   poiGroup: {fileID: 11400000, guid: d1c2fcbca1a725b43893dc0d62be391c, type: 2}
   poiVisitScope: 10
   autoTargetFromPOIGroup: 1
+  runGroup: {fileID: 0}
+  runVisitScope: 10
+  runGroupMeasure: 10
+  autoTargetFromRunGroup: 1

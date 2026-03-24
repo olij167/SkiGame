@@ -405,8 +405,9 @@ namespace SkiGame.RunsEditor
             if (snapToTerrainOnAdd)
                 p = SnapToTerrain(p);
 
-            // Use the same insertion policy as the SkiRunLine inspector:
-            // insert on the closest segment, including start/end when you click beyond.
+            // Use the same append-biased smart insertion policy as the SkiRunLine inspector:
+            // normal sequential painting prefers extending the tail, while deliberate
+            // clicks inside the run can still insert on an interior segment.
             Undo.RecordObject(run, "Insert Run Point");
             run.InsertPointWorldSmart(p);
 

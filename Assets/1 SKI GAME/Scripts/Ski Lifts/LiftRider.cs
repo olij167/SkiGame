@@ -1,8 +1,9 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using SkiGame.Progression;
+using SkiGame.UI;
 
-public class LiftRider : MonoBehaviour
+public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
 {
     [Header("Dependencies")]
     public Rigidbody rb;
@@ -366,6 +367,101 @@ public class LiftRider : MonoBehaviour
         }
     }
 
+    private LiftCarrier FindBestNearbyCarrierForPrompt()
+    {
+        Vector3 center = liftDetectPoint ? liftDetectPoint.position : transform.position;
+
+        int hitCount = Physics.OverlapSphereNonAlloc(
+            center,
+            liftDetectionRadius,
+            _overlapHits,
+            liftCarrierLayers,
+            QueryTriggerInteraction.Collide
+        );
+
+        if (hitCount <= 0)
+            return null;
+
+        LiftCarrier best = null;
+        float bestScore = float.NegativeInfinity;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            Collider c = _overlapHits[i];
+            if (!c) continue;
+
+            var carrier = c.GetComponentInParent<LiftCarrier>();
+            if (!carrier) continue;
+            if (!carrier.CanAttach(this)) continue;
+
+            Vector3 toAttach = carrier.attachPoint.position - center;
+            float dist = toAttach.magnitude;
+            if (dist < 0.001f) dist = 0.001f;
+
+            Vector3 toAttachDir = toAttach / dist;
+            float facing = Vector3.Dot(transform.forward, toAttachDir);
+            float score = (facing * 2f) - dist;
+
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = carrier;
+            }
+        }
+
+        return best;
+    }
+
+    public bool IsPromptAvailable
+    {
+        get
+        {
+            if (isAttached)
+                return true;
+
+            return FindBestNearbyCarrierForPrompt() != null;
+        }
+    }
+
+    public string PromptActionText => "Interact";
+
+    public string PromptDescriptionText
+    {
+        get
+        {
+            if (isAttached)
+                return isChairMode ? "Leave Lift" : "Release T-Bar";
+
+            var carrier = FindBestNearbyCarrierForPrompt();
+            if (carrier == null)
+                return string.Empty;
+
+            if (carrier.line != null && !string.IsNullOrWhiteSpace(carrier.line.name))
+                return $"Board {carrier.line.name}";
+
+            return carrier.mode == LiftCarrierMode.Chair ? "Board Lift" : "Grab T-Bar";
+        }
+    }
+
+    public bool PromptUsesHold => false;
+    public float PromptHoldDuration => 0f;
+
+    public Vector3 PromptWorldPosition
+    {
+        get
+        {
+            if (currentCarrier != null)
+                return currentCarrier.attachPoint != null ? currentCarrier.attachPoint.position : currentCarrier.transform.position;
+
+            var carrier = FindBestNearbyCarrierForPrompt();
+            if (carrier != null)
+                return carrier.attachPoint != null ? carrier.attachPoint.position : carrier.transform.position;
+
+            return transform.position;
+        }
+    }
+
+    public int PromptPriority => isAttached ? 100 : 60;
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {

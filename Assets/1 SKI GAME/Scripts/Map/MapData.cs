@@ -30,14 +30,19 @@ namespace SkiGame.Map
         [Tooltip("Optional: width in meters (authoring metadata). Rendering width is decided by UI.")]
         public float widthMeters;
 
-        [Header("Geometry (World XZ)")]
-        [Tooltip("World-space polyline points, projected onto XZ (Vector2.x = worldX, Vector2.y = worldZ).")]
+        [Header("Geometry (World)")]
+        [Tooltip("Preferred full 3D world points for accurate camera projection.")]
+        public List<Vector3> pointsWorld;
+
+        [Tooltip("Legacy/fallback world-space polyline points projected onto XZ (Vector2.x = worldX, Vector2.y = worldZ).")]
         public List<Vector2> pointsWorldXZ;
+
+        public bool Has3DPoints => pointsWorld != null && pointsWorld.Count >= 2;
+        public bool HasXZPoints => pointsWorldXZ != null && pointsWorldXZ.Count >= 2;
 
         public bool IsValid =>
             !string.IsNullOrWhiteSpace(id) &&
-            pointsWorldXZ != null &&
-            pointsWorldXZ.Count >= 2;
+            (Has3DPoints || HasXZPoints);
     }
 
     [Serializable]
@@ -113,6 +118,7 @@ namespace SkiGame.Map
 
         public void SetProjection(MapProjection p) => projection = p;
         public void SetBackground(Texture2D tex) => backgroundTexture = tex;
+        public void SetPreferCameraProjection(bool value) => preferCameraProjection = value;
 
         public void ClearAll()
         {

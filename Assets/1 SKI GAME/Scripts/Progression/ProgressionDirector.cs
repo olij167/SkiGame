@@ -22,6 +22,9 @@ namespace SkiGame.Progression
         [Tooltip("How often to evaluate tasks/achievements. Keeps it cheap and deterministic.")]
         [SerializeField, Range(0.05f, 2f)] private float evaluateIntervalSeconds = 0.25f;
 
+        [Header("Tutorial")]
+        [SerializeField] private DailyTaskLadderDefinitionSO tutorialWelcomeLadder;
+
         public event Action<TaskDefinitionSO> OnTaskCompleted;
         public event Action<AchievementDefinitionSO> OnAchievementUnlocked;
 
@@ -321,6 +324,23 @@ namespace SkiGame.Progression
             }
         }
 
+        private static int GetFirstUnclaimedTierIndex(PlayerStatsProfile.DailyTaskRowState row)
+        {
+            if (row == null || row.tiers == null || row.tiers.Count == 0)
+                return -1;
+
+            for (int i = 0; i < row.tiers.Count; i++)
+            {
+                var tier = row.tiers[i];
+                if (tier == null)
+                    continue;
+
+                if (!tier.claimed)
+                    return i;
+            }
+
+            return -1;
+        }
         private void EvaluateDailyTasks(PlayerStatsProfile profile, PlayerStatsManager mgr)
         {
             if (profile.dailyTasks == null || profile.dailyTasks.rows == null || profile.dailyTasks.rows.Count == 0)
@@ -363,29 +383,44 @@ namespace SkiGame.Progression
                         break;
                 }
 
-                // Update tiers
+                // Update only the current active tier.
+                // A ladder should not advance to later tiers until the current completed tier is claimed.
                 if (row.tiers == null) continue;
+
+                int activeTierIndex = GetFirstUnclaimedTierIndex(row);
+                if (activeTierIndex < 0)
+                    continue;
 
                 for (int t = 0; t < row.tiers.Count; t++)
                 {
                     var tier = row.tiers[t];
                     if (tier == null) continue;
 
-                    tier.lastProgress = progressForDay;
-
-                    if (!tier.completed && progressForDay + 0.0001f >= tier.target)
+                    if (t == activeTierIndex)
                     {
-                        tier.completed = true;
-                        tier.completedUtc = DateTimeUtc.Now();
-                        anyCompleted = true;
+                        tier.lastProgress = progressForDay;
 
-                        OnDailyTierCompleted?.Invoke(row.metric, t);
+                        if (!tier.completed && progressForDay + 0.0001f >= tier.target)
+                        {
+                            tier.completed = true;
+                            tier.completedUtc = DateTimeUtc.Now();
+                            anyCompleted = true;
+
+                            OnDailyTierCompleted?.Invoke(row.metric, t);
+                        }
+                    }
+                    else if (!tier.claimed)
+                    {
+                        // Keep future tiers visually unprogressed until they become active.
+                        tier.lastProgress = 0f;
+                        tier.completed = false;
+                        tier.completedUtc = default;
                     }
                 }
-            }
 
-            if (anyCompleted && mgr != null)
-                mgr.Save();
+                if (anyCompleted && mgr != null)
+                    mgr.Save();
+            }
         }
 
         private List<DailyTaskLadderDefinitionSO> PickDailyLadders(PlayerStatsProfile profile, int dayKey, int desiredCount)
@@ -1240,5 +1275,150 @@ namespace SkiGame.Progression
             return daily.rows;
         }
 
+        public bool EnsureAtLeastOneClaimableDailyTier(out string ladderId, out int tierIndex)
+        {
+            ladderId = null;
+            tierIndex = -1;
+
+            var mgr = PlayerStatsManager.Instance;
+            if (mgr == null) return false;
+
+            var profile = mgr.Profile;
+            if (profile == null) return false;
+
+            profile.Sanitize();
+            EnsureDailyTasks(profile, mgr);
+
+            if (profile.dailyTasks == null || profile.dailyTasks.rows == null)
+                return false;
+
+            // Prefer an already-claimable tutorial ladder tier if one exists.
+            if (tutorialWelcomeLadder != null)
+            {
+                string tutorialId = tutorialWelcomeLadder.SafeId;
+
+                for (int r = 0; r < profile.dailyTasks.rows.Count; r++)
+                {
+                    var row = profile.dailyTasks.rows[r];
+                    if (row == null || row.ladderId != tutorialId || row.tiers == null || row.tiers.Count == 0)
+                        continue;
+
+                    int activeTier = GetFirstUnclaimedTierIndex(row);
+                    if (activeTier >= 0)
+                    {
+                        var tier = row.tiers[activeTier];
+                        if (tier != null && tier.completed && !tier.claimed)
+                        {
+                            ladderId = row.ladderId;
+                            tierIndex = activeTier;
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            // Any existing claimable tier.
+            for (int r = 0; r < profile.dailyTasks.rows.Count; r++)
+            {
+                var row = profile.dailyTasks.rows[r];
+                if (row == null || row.tiers == null) continue;
+
+                int activeTier = GetFirstUnclaimedTierIndex(row);
+                if (activeTier < 0) continue;
+
+                var tier = row.tiers[activeTier];
+                if (tier == null) continue;
+
+                if (tier.completed && !tier.claimed)
+                {
+                    ladderId = row.ladderId;
+                    tierIndex = activeTier;
+                    return true;
+                }
+            }
+
+            // Force the tutorial welcome ladder first, if present in today's rows.
+            if (tutorialWelcomeLadder != null)
+            {
+                string tutorialId = tutorialWelcomeLadder.SafeId;
+
+                for (int r = 0; r < profile.dailyTasks.rows.Count; r++)
+                {
+                    var row = profile.dailyTasks.rows[r];
+                    if (row == null || row.ladderId != tutorialId || row.tiers == null || row.tiers.Count == 0)
+                        continue;
+
+                    int activeTier = GetFirstUnclaimedTierIndex(row);
+                    if (activeTier >= 0)
+                    {
+                        var tier = row.tiers[activeTier];
+                        if (tier == null) continue;
+
+                        tier.completed = true;
+                        tier.lastProgress = Mathf.Max(tier.lastProgress, tier.target);
+                        tier.completedUtc = DateTimeUtc.Now();
+                        tier.lastRewardGranted = 0;
+
+                        ladderId = row.ladderId;
+                        tierIndex = activeTier;
+                        mgr.Save();
+                        return true;
+                    }
+                }
+            }
+
+            // Fall back to the active tier of the first available row.
+            for (int r = 0; r < profile.dailyTasks.rows.Count; r++)
+            {
+                var row = profile.dailyTasks.rows[r];
+                if (row == null || row.tiers == null || row.tiers.Count == 0) continue;
+
+                int activeTier = GetFirstUnclaimedTierIndex(row);
+                if (activeTier < 0) continue;
+
+                var tier = row.tiers[activeTier];
+                if (tier == null) continue;
+
+                tier.completed = true;
+                tier.lastProgress = Mathf.Max(tier.lastProgress, tier.target);
+                tier.completedUtc = DateTimeUtc.Now();
+                tier.lastRewardGranted = 0;
+
+                ladderId = row.ladderId;
+                tierIndex = activeTier;
+                mgr.Save();
+                return true;
+            }
+
+            return false;
+        }
+
+        public int CountClaimedDailyTiers()
+        {
+            var mgr = PlayerStatsManager.Instance;
+            if (mgr == null || mgr.Profile == null) return 0;
+
+            var profile = mgr.Profile;
+            profile.Sanitize();
+
+            if (profile.dailyTasks?.rows == null)
+                return 0;
+
+            int count = 0;
+            for (int r = 0; r < profile.dailyTasks.rows.Count; r++)
+            {
+                var row = profile.dailyTasks.rows[r];
+                if (row?.tiers == null) continue;
+
+                for (int t = 0; t < row.tiers.Count; t++)
+                {
+                    var tier = row.tiers[t];
+                    if (tier != null && tier.claimed)
+                        count++;
+                }
+            }
+
+            return count;
+        }
     }
 }

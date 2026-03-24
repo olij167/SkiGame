@@ -1,0 +1,62 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/UI/MountainHudOverlay.uss?fileID=7433441132597879392&amp;guid=d17abb4f011fafd4891ed5e0c22994e9&amp;type=3#MountainHudOverlay" />
+    <ui:VisualElement name="OverlayRoot" class="overlay-root" style="flex-direction: column; position: absolute; top: 20px; left: 20px; right: 20px; bottom: 20px; justify-content: space-around; align-self: stretch;">
+        <ui:VisualElement name="MapHost" class="map-host" />
+        <ui:VisualElement name="TopStrip" class="top-strip panel" style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+            <ui:Label name="Lbl_TopTime" text="--:--" class="top-strip-time" />
+            <ui:Label name="Lbl_TopWeather" text="Weather" class="top-strip-weather" />
+            <ui:Label name="Lbl_TopLocation" text="Mountain Overview" class="top-strip-location" />
+            <ui:Label name="Lbl_TopHint" text="Runs 0 complete" class="top-strip-hint" />
+            <ui:Button name="Btn_CloseOverlay" text="Close" class="mini-button" />
+        </ui:VisualElement>
+        <ui:VisualElement name="LeftRail" class="left-rail" style="top: 90px;">
+            <ui:VisualElement name="ContextPanel" class="panel dock-panel context-panel" style="border-top-left-radius: 16px; border-top-right-radius: 16px; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-bottom-right-radius: 16px; border-bottom-left-radius: 16px;">
+                <ui:VisualElement class="panel-header">
+                    <ui:Label text="Run / Location" class="panel-title" />
+                    <ui:Button name="Btn_ContextExpand" text="Show History" class="mini-button" />
+                </ui:VisualElement>
+                <ui:Label name="Lbl_ContextTitle" text="Mountain" class="context-title" />
+                <ui:VisualElement name="ContextMetaRow" class="context-meta-row" />
+                <ui:Label name="Lbl_ContextBody" text="Explore the map." class="context-body" />
+                <ui:VisualElement name="ContextHighlights" class="context-highlights" />
+                <ui:ScrollView name="ContextAttemptsList" class="attempts-list" />
+            </ui:VisualElement>
+            <ui:VisualElement name="StatsPanel" class="panel dock-panel stats-panel">
+                <ui:VisualElement class="panel-header" style="margin-bottom: 4px;">
+                    <ui:Label text="Stats" class="panel-title" />
+                    <ui:VisualElement class="segmented-row">
+                        <ui:Button name="Btn_StatsToday" text="Today" class="segment-button is-selected" />
+                        <ui:Button name="Btn_StatsLifetime" text="Lifetime" class="segment-button" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:Label name="Lbl_StatsModeSummary" text="Session totals for this outing." class="stats-mode-summary" style="display: none;" />
+                <ui:VisualElement name="StatsGrid" class="stats-grid" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="RightRail" class="right-rail" style="top: 90px;">
+            <ui:VisualElement name="GoalsPanel" class="panel dock-panel goals-panel" style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+                <ui:VisualElement class="panel-header">
+                    <ui:Label text="Goals" class="panel-title" />
+                    <ui:VisualElement class="segmented-row">
+                        <ui:Button name="Btn_GoalsTasks" text="Tasks" class="segment-button is-selected" />
+                        <ui:Button name="Btn_GoalsAchievements" text="Achievements" class="segment-button" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:ScrollView name="GoalsList" class="goals-list" />
+                <ui:VisualElement name="AchievementCategoryRow" class="achievement-category-row" style="display: none; flex-wrap: nowrap; justify-content: space-around;" />
+                <ui:ScrollView name="AchievementScroll" class="achievement-scroll" style="display: none;">
+                    <ui:VisualElement name="AchievementGrid" class="achievement-grid" />
+                </ui:ScrollView>
+            </ui:VisualElement>
+            <ui:VisualElement name="PassPanel" class="panel dock-panel pass-panel">
+                <ui:VisualElement class="panel-header">
+                    <ui:Label text="Ski Pass" class="panel-title" style="display: none;" />
+                    <ui:Label name="Lbl_PassCurrent" text="Basic Pass (L0)" class="pass-current" />
+                    <ui:Button name="Btn_PassCurrent" text="Preview Current" class="mini-button" />
+                </ui:VisualElement>
+                <ui:VisualElement name="PassLevelsList" class="pass-levels-list" style="flex-wrap: nowrap; justify-content: space-around;" />
+                <ui:VisualElement name="PassPurchaseList" class="pass-purchase-list" style="flex-wrap: nowrap; justify-content: space-around;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

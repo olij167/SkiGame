@@ -1,8 +1,9 @@
 ﻿using UnityEngine;
 using UnityEngine.InputSystem;
+using SkiGame.UI;
 
 [DisallowMultipleComponent]
-public class SkiResortHoldInteractor : MonoBehaviour
+public class SkiResortHoldInteractor : MonoBehaviour, IWorldInteractionPromptSource
 {
     [Header("Input")]
     [SerializeField] private InputActionReference resortAction;
@@ -22,6 +23,50 @@ public class SkiResortHoldInteractor : MonoBehaviour
 
     private float _holdT;
     private bool _armed = true;
+
+    public bool IsPromptAvailable
+    {
+        get
+        {
+            if (controller == null)
+                controller = SkiResortStateController.Instance;
+
+            var zone = ResolveInteractZone();
+            if (controller == null || zone == null)
+                return false;
+
+            if (controller.State == SkiResortStateController.ResortState.InResort)
+                return true;
+
+            return zone.IsPlayerInZone(gameObject) &&
+                   controller.State == SkiResortStateController.ResortState.Outside;
+        }
+    }
+
+    public string PromptActionText => "Interact";
+
+    public string PromptDescriptionText
+    {
+        get
+        {
+            if (controller == null)
+                controller = SkiResortStateController.Instance;
+
+            if (controller != null && controller.State == SkiResortStateController.ResortState.InResort)
+                return "Leave Resort";
+
+            return ResolveInteractZone() != null ? "Enter Resort" : string.Empty;
+        }
+    }
+
+    public bool PromptUsesHold => true;
+    public float PromptHoldDuration => holdSeconds;
+    public Vector3 PromptWorldPosition => ResolveInteractZone() != null ? ResolveInteractZone().transform.position : transform.position;
+    public int PromptPriority => 40;
+
+    public bool IsPlayerInsideResort =>
+    controller != null &&
+    controller.State == SkiResortStateController.ResortState.InResort;
 
     private void Awake()
     {
@@ -62,8 +107,19 @@ public class SkiResortHoldInteractor : MonoBehaviour
     return;
 }
 
-        // Must be in a resort interaction zone.
-        if (currentZone == null || !currentZone.IsPlayerInZone(gameObject))
+        var interactZone = ResolveInteractZone();
+
+        // Outside: must still be in the trigger zone.
+        // In resort: use the controller's active zone even if the inside point is outside the trigger.
+        bool validForInteraction =
+            interactZone != null &&
+            controller != null &&
+            (
+                controller.State == SkiResortStateController.ResortState.InResort ||
+                interactZone.IsPlayerInZone(gameObject)
+            );
+
+        if (!validForInteraction)
         {
             _holdT = 0f;
             _armed = true;
@@ -96,11 +152,28 @@ public class SkiResortHoldInteractor : MonoBehaviour
             if (controller != null)
             {
                 if (logEvents) Debug.Log("[Resort] Hold complete → Toggle request");
-                controller.RequestToggleResort(gameObject, currentZone);
+                controller.RequestToggleResort(gameObject, interactZone);
             }
         }
     }
 
+    private SkiResortZone ResolveInteractZone()
+    {
+        if (controller == null)
+            controller = SkiResortStateController.Instance;
+
+        if (controller != null &&
+            controller.State == SkiResortStateController.ResortState.InResort &&
+            controller.ActiveZone != null)
+        {
+            return controller.ActiveZone;
+        }
+
+        if (currentZone != null && currentZone.IsPlayerInZone(gameObject))
+            return currentZone;
+
+        return null;
+    }
     private void OnTriggerEnter(Collider other)
     {
         var zone = other != null ? other.GetComponentInParent<SkiResortZone>() : null;
@@ -117,4 +190,5 @@ public class SkiResortHoldInteractor : MonoBehaviour
         if (currentZone == zone)
             currentZone = null;
     }
+
 }

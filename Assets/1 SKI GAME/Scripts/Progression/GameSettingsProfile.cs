@@ -51,6 +51,11 @@ namespace SkiGame.Progression
         public int colorAccessibilityMode = 0; // 0=None
         public int speedUnitMode = 0;          // 0=km/h, 1=mph
 
+        [Header("HUD / Input Help")]
+        public bool showMovementInputOverlay = true;
+        public bool showWorldInteractionPrompts = true;
+        public bool showTutorialOverlay = true;
+
         public void Sanitize()
         {
             version = Mathf.Max(version, 1);
@@ -94,7 +99,11 @@ namespace SkiGame.Progression
                 displayIndex = 0,
 
                 uiScale = 1f,
-                cameraFov = 85f
+                cameraFov = 85f,
+
+                showMovementInputOverlay = true,
+                showWorldInteractionPrompts = true,
+                showTutorialOverlay = true,
             };
 
             p.Sanitize();

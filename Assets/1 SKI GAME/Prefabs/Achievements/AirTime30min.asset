@@ -15,9 +15,16 @@ MonoBehaviour:
   id: 30mAirTime
   title: Half an Hour of Air
   description: Spend a half an hour (1800s) in the air throughout your lifetime
+  mountainHudCategory: 10
+  mountainHudGlyph: 
   requirementKind: 0
   metric: 2
   target: 1800
+  runId: 
   poiGroup: {fileID: 0}
   poiVisitScope: 10
   autoTargetFromPOIGroup: 1
+  runGroup: {fileID: 0}
+  runVisitScope: 10
+  runGroupMeasure: 10
+  autoTargetFromRunGroup: 1

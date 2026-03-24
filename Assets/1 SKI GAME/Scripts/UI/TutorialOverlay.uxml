@@ -1,0 +1,33 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/UI/TutorialOverlay.uss?fileID=7433441132597879392&amp;guid=4b4be19541f68404293e995635741330&amp;type=3#TutorialOverlay" />
+    <ui:VisualElement name="TutorialOfferBlocker" class="tutorial-modal-blocker">
+        <ui:VisualElement name="TutorialOfferPanel" class="tutorial-modal">
+            <ui:Label text="Sign Up for Ski Lessons?" class="tutorial-modal-title" />
+            <ui:Label text="Learn the basics of speed control, carving, skating, stopping, jumps, poles, soreness, and exploring the resort." class="tutorial-modal-body" />
+            <ui:VisualElement class="tutorial-modal-actions">
+                <ui:Button name="Btn_TutorialOfferStart" text="Start Lessons" class="tutorial-primary-button" />
+                <ui:Button name="Btn_TutorialOfferSkip" text="Skip for Now" class="tutorial-secondary-button" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="TutorialPanel" class="tutorial-panel">
+        <ui:VisualElement class="tutorial-header-row">
+            <ui:Label name="Lbl_TutorialProgress" text="Lesson 1/9" class="tutorial-progress" />
+            <ui:Label name="Lbl_TutorialCheck" text="✓" class="tutorial-check" />
+        </ui:VisualElement>
+        <ui:Label name="Lbl_TutorialTitle" text="Get Moving" class="tutorial-title" />
+        <ui:Label name="Lbl_TutorialInstruction" text="Instruction" class="tutorial-instruction" />
+        <ui:Label name="Lbl_TutorialHint" text="Hint" class="tutorial-hint" />
+        <ui:VisualElement class="tutorial-progress-bar">
+            <ui:VisualElement name="TutorialProgressFill" class="tutorial-progress-fill" />
+        </ui:VisualElement>
+        <ui:Label name="Lbl_TutorialProgressText" text="0/12 m" class="tutorial-progress-text" />
+    </ui:VisualElement>
+    <ui:VisualElement name="TutorialCompleteBlocker" class="tutorial-modal-blocker" style="top: 20px; left: 20px; right: 20px; bottom: 20px; background-color: rgba(0, 0, 0, 0); display: none;">
+        <ui:VisualElement name="TutorialCompletePanel" class="tutorial-modal" style="align-items: center; right: auto; top: 25%;">
+            <ui:Label text="Ski Lessons Complete" class="tutorial-modal-title" />
+            <ui:Label text="You know the basics. Ride lifts, explore runs, and keep improving." class="tutorial-modal-body" />
+            <ui:Label name="Lbl_TutorialCompleteContinueHint" text="Continue exploring the resort." class="tutorial-modal-hint" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,138 @@
+.resort-overlay-panel {
+    position: absolute;
+    right: 24px;
+    top: 24px;
+    width: 420px;
+    background-color: rgba(8, 12, 18, 0.95);
+    border-radius: 22px;
+    padding: 18px;
+    color: rgb(245, 245, 245);
+    border-top-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-left-width: 2px;
+    border-top-color: rgba(255, 255, 255, 0.1);
+    border-right-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+    border-left-color: rgba(255, 255, 255, 0.1);
+    display: none;
+}
+
+.resort-header-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+}
+
+.resort-header-copy {
+    flex-grow: 1;
+    margin-right: 12px;
+}
+
+.resort-title {
+    font-size: 24px;
+    -unity-font-style: bold;
+    margin-bottom: 4px;
+}
+
+.resort-subtitle {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.resort-time-block {
+    align-items: flex-end;
+}
+
+.resort-time-caption {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.62);
+    margin-bottom: 2px;
+}
+
+.resort-time-value {
+    font-size: 24px;
+    -unity-font-style: bold;
+}
+
+.resort-section {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding: 12px;
+    border-radius: 16px;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.resort-section-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.resort-section-title {
+    font-size: 16px;
+    -unity-font-style: bold;
+}
+
+.resort-section-value {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.resort-progress-bar {
+    width: 100%;
+    height: 12px;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.resort-progress-fill {
+    height: 100%;
+    width: 100%;
+    background-color: rgb(93, 190, 255);
+    border-radius: 999px;
+}
+
+.resort-body-text {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.82);
+    white-space: normal;
+}
+
+.resort-button-row {
+    flex-direction: row;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.resort-primary-button {
+    flex-grow: 1;
+    min-height: 38px;
+    color: rgb(27, 27, 27);
+    -unity-font-style: bold;
+}
+
+.resort-secondary-button {
+    flex-grow: 1;
+    min-height: 36px;
+    color: rgb(27, 27, 27);
+    -unity-font-style: bold;
+}
+
+.resort-ghost-button {
+    margin-top: 10px;
+    min-height: 34px;
+    color: rgb(27, 27, 27);
+    -unity-font-style: bold;
+}
+
+.resort-hint {
+    margin-top: 8px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.66);
+    white-space: normal;
+}

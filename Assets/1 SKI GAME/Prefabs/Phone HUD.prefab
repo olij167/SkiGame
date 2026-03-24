@@ -1,0 +1,128 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2664228223792458374
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9202966975677268430}
+  - component: {fileID: 1556698715834053908}
+  - component: {fileID: 4098823159318998097}
+  - component: {fileID: 2956801414807968728}
+  - component: {fileID: 2763317272244817429}
+  - component: {fileID: 8171702347788643474}
+  m_Layer: 0
+  m_Name: Phone HUD
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &9202966975677268430
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2664228223792458374}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1556698715834053908
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2664228223792458374}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 395ec0123f646b34b958c5ffb780d9b4, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 9197481963319205126, guid: 76c8e9a553a55e841a1b14dde2768168, type: 3}
+  m_SortingOrder: 0
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!114 &4098823159318998097
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2664228223792458374}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6678302dff03a8446bb475cd8f2a6be9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.PhoneHUDController
+  document: {fileID: 1556698715834053908}
+  styleSheet: {fileID: 7433441132597879392, guid: da161d3ed5064d84b9b72ddb153dfb63, type: 3}
+  tabAction: {fileID: 8739223163824013480, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  scrollAction: {fileID: 6240969308177333660, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  holdToOpenSeconds: 0.35
+  watchScrollSpeed: 260
+  startPhoneOpen: 0
+  hideWhenCustomizationShopOpen: 1
+  mapData: {fileID: 11400000, guid: 429b3d2f5a54e3e4c895b3d9f9ea8a46, type: 2}
+  mapReferenceCamera: {fileID: 0}
+  mapStyle: {fileID: 11400000, guid: 1c65ffdfdcda80c4d8505cebc559aedb, type: 2}
+  rebindActionsAsset: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  _twMaxVisibleHours: 6
+  uiRefreshIntervalSeconds: 0.1
+  sceneRefPollIntervalSeconds: 0.5
+--- !u!114 &2956801414807968728
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2664228223792458374}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e31b029e39fcdf3438246cb5a1eebbaf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.AchievementsPageUI
+  document: {fileID: 1556698715834053908}
+  refreshInterval: 0.15
+--- !u!114 &2763317272244817429
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2664228223792458374}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: efe4659b7bdad1e47849605944f5ff3f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Runs.RunsPageUI
+  profilePollInterval: 0.5
+--- !u!114 &8171702347788643474
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2664228223792458374}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8ccb283987548f49b551453f6f1d3a7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WatchPassFlashUI
+  doc: {fileID: 1556698715834053908}

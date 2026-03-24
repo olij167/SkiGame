@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using SkiGame.POI;
 
 namespace SkiGame.Progression
@@ -19,11 +19,26 @@ namespace SkiGame.Progression
             Lifetime = 10,
         }
 
+        public enum MountainHudCategory
+        {
+            Auto = 0,
+            Performance = 10,
+            Exploration = 20,
+            MountainMastery = 30,
+        }
+
         [Header("Identity")]
         public string id;
         public string title;
 
         [TextArea] public string description;
+
+        [Header("HUD Presentation")]
+        [Tooltip("Auto infers the Mountain HUD tab from the requirement kind / metric. Use an explicit value to override.")]
+        public MountainHudCategory mountainHudCategory = MountainHudCategory.Auto;
+
+        [Tooltip("Optional short glyph shown on the Mountain HUD card. Leave blank to use the automatic glyph.")]
+        public string mountainHudGlyph;
 
         [Header("Requirement")]
         public RequirementKind requirementKind = RequirementKind.Metric;
@@ -263,6 +278,108 @@ namespace SkiGame.Progression
 
                 _ => $"Target {target:0.##}"
             };
+        }
+
+        public MountainHudCategory GetMountainHudCategory()
+        {
+            if (mountainHudCategory != MountainHudCategory.Auto)
+                return mountainHudCategory;
+
+            if (requirementKind == RequirementKind.VisitPOIsInGroup)
+                return MountainHudCategory.Exploration;
+
+            if (requirementKind == RequirementKind.VisitRunsInGroup)
+                return MountainHudCategory.MountainMastery;
+
+            if (IsExplorationMetric(metric))
+                return MountainHudCategory.Exploration;
+
+            if (IsMasteryMetric(metric))
+                return MountainHudCategory.MountainMastery;
+
+            return MountainHudCategory.Performance;
+        }
+
+        public string GetMountainHudGlyph()
+        {
+            if (!string.IsNullOrWhiteSpace(mountainHudGlyph))
+                return mountainHudGlyph;
+
+            return GetMountainHudCategory() switch
+            {
+                MountainHudCategory.Exploration => "◎",
+                MountainHudCategory.MountainMastery => "▲",
+                _ => "★"
+            };
+        }
+
+        public float GetProgress01(PlayerStatsProfile profile)
+        {
+            float current = ReadCurrent(profile);
+            float goal = Mathf.Max(0.0001f, target);
+            return Mathf.Clamp01(current / goal);
+        }
+
+        public string GetProgressText(PlayerStatsProfile profile)
+        {
+            float current = Mathf.Max(0f, ReadCurrent(profile));
+            float goal = Mathf.Max(0.0001f, target);
+
+            if (requirementKind == RequirementKind.VisitPOIsInGroup ||
+                requirementKind == RequirementKind.VisitRunsInGroup)
+            {
+                return $"{Mathf.FloorToInt(current)}/{Mathf.FloorToInt(goal)}";
+            }
+
+            return metric switch
+            {
+                ProgressionMetric.SessionDistanceMeters or
+                ProgressionMetric.LifetimeDistanceMeters or
+                ProgressionMetric.SessionAirDistanceMeters or
+                ProgressionMetric.LifetimeAirDistanceMeters or
+                ProgressionMetric.SessionVerticalDescentMeters or
+                ProgressionMetric.LifetimeVerticalDescentMeters or
+                ProgressionMetric.SessionGrindDistanceMeters or
+                ProgressionMetric.LifetimeGrindDistanceMeters
+                    => $"{FormatMeters(current)} / {FormatMeters(goal)}",
+
+                ProgressionMetric.SessionTopSpeedMps or
+                ProgressionMetric.LifetimeTopSpeedMps or
+                ProgressionMetric.SessionTopRunSpeedMps or
+                ProgressionMetric.LifetimeTopRunSpeedMps
+                    => $"{current:0.0} / {goal:0.0} m/s",
+
+                ProgressionMetric.SessionAirTimeSeconds or
+                ProgressionMetric.LifetimeAirTimeSeconds or
+                ProgressionMetric.SessionGrindTimeSeconds or
+                ProgressionMetric.LifetimeGrindTimeSeconds
+                    => $"{current:0.0} / {goal:0.0} s",
+
+                _ => $"{Mathf.FloorToInt(current)}/{Mathf.FloorToInt(goal)}"
+            };
+        }
+
+        private static bool IsExplorationMetric(ProgressionMetric metric)
+        {
+            return metric == ProgressionMetric.SessionPlacesVisited ||
+                   metric == ProgressionMetric.LifetimePlacesVisited ||
+                   metric == ProgressionMetric.SessionLiftsUsed ||
+                   metric == ProgressionMetric.LifetimeLiftsUsed ||
+                   metric == ProgressionMetric.SessionRunsVisited ||
+                   metric == ProgressionMetric.LifetimeRunsVisited;
+        }
+
+        private static bool IsMasteryMetric(ProgressionMetric metric)
+        {
+            return metric == ProgressionMetric.SessionRunsCompleted ||
+                   metric == ProgressionMetric.LifetimeRunsCompleted ||
+                   metric == ProgressionMetric.SessionRunsCompletedClean ||
+                   metric == ProgressionMetric.LifetimeRunsCompletedClean ||
+                   metric == ProgressionMetric.SessionTopRunSpeedMps ||
+                   metric == ProgressionMetric.LifetimeTopRunSpeedMps ||
+                   metric == ProgressionMetric.LifetimeRunVisited ||
+                   metric == ProgressionMetric.LifetimeRunCompletedCount ||
+                   metric == ProgressionMetric.LifetimeRunCompletedCleanCount;
         }
 
         private static string FormatMeters(float meters)

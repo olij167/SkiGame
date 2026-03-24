@@ -283,9 +283,15 @@ namespace SkiGame.Runs
         }
 
         /// <summary>
-        /// Inserts a point on the closest segment of the polyline.
-        /// If the pick lies beyond the start/end, inserts at index 0 / Count.
-        /// Returns the inserted index.
+        /// Smart point insertion for editor authoring.
+        ///
+        /// Behaviour:
+        /// - Empty / single-point runs append.
+        /// - If the click looks like a continuation of the tail, append to the end.
+        /// - Otherwise, insert on the closest segment.
+        ///
+        /// This preserves intentional in-between editing while making normal sequential
+        /// terrain painting much less likely to insert into the middle of the run.
         /// </summary>
         public int InsertPointWorldSmart(Vector3 p)
         {
@@ -298,12 +304,61 @@ namespace SkiGame.Runs
             if (n <= 1)
                 return InsertPointWorld(n, p);
 
+            // Work in XZ so terrain height variation does not skew intent detection.
+            Vector2 pp = new Vector2(p.x, p.z);
+
+            // ------------------------------------------------------------
+            // 1) Check whether this looks like a tail extension.
+            // ------------------------------------------------------------
+            Vector3 prev3 = pointsWorld[n - 2];
+            Vector3 last3 = pointsWorld[n - 1];
+
+            Vector2 prev = new Vector2(prev3.x, prev3.z);
+            Vector2 last = new Vector2(last3.x, last3.z);
+
+            Vector2 tail = last - prev;
+            float tailLen = tail.magnitude;
+
+            if (tailLen > 0.0001f)
+            {
+                Vector2 tailDir = tail / tailLen;
+                Vector2 fromLast = pp - last;
+                float fromLastDist = fromLast.magnitude;
+
+                if (fromLastDist > 0.0001f)
+                {
+                    Vector2 fromLastDir = fromLast / fromLastDist;
+                    float forwardDot = Vector2.Dot(tailDir, fromLastDir);
+
+                    // Projection of the clicked point onto the tail direction, measured from the last point.
+                    float forwardDistance = Vector2.Dot(fromLast, tailDir);
+
+                    // Distance from the clicked point to the tail ray that extends forward from the last point.
+                    float lateralDistance = Mathf.Sqrt(Mathf.Max(0f, fromLast.sqrMagnitude - forwardDistance * forwardDistance));
+
+                    // Authoring-tuned heuristics:
+                    // - must be at least somewhat in front of the tail
+                    // - allow some lateral slop so terrain painting still feels forgiving
+                    // - append when close to the tail endpoint and roughly aligned
+                    const float minForwardDot = 0.15f;
+                    float appendProximityMeters = Mathf.Max(8f, tailLen * 1.75f);
+                    float appendLateralToleranceMeters = Mathf.Max(6f, runWidthMeters * 0.6f);
+
+                    bool isForwardOfTail = forwardDistance > 0f && forwardDot >= minForwardDot;
+                    bool isNearTailEndpoint = fromLastDist <= appendProximityMeters;
+                    bool isReasonablyAlignedWithTail = lateralDistance <= appendLateralToleranceMeters;
+
+                    if (isForwardOfTail && isNearTailEndpoint && isReasonablyAlignedWithTail)
+                        return InsertPointWorld(n, p);
+                }
+            }
+
+            // ------------------------------------------------------------
+            // 2) Fall back to closest-segment insertion.
+            // ------------------------------------------------------------
             int bestSeg = -1;
             float bestDist = float.PositiveInfinity;
             float bestTUnclamped = 0f;
-
-            // Work in XZ so terrain vertical variation doesn't skew insertion.
-            Vector2 pp = new Vector2(p.x, p.z);
 
             for (int i = 0; i < n - 1; i++)
             {
@@ -343,7 +398,7 @@ namespace SkiGame.Runs
             if (bestSeg == n - 2 && bestTUnclamped > 1f)
                 return InsertPointWorld(n, p);
 
-            // Otherwise, insert between bestSeg and bestSeg+1.
+            // Otherwise, insert between bestSeg and bestSeg + 1.
             return InsertPointWorld(bestSeg + 1, p);
         }
 

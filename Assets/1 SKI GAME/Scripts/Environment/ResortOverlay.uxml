@@ -1,0 +1,40 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/Environment/ResortOverlay.uss?fileID=7433441132597879392&amp;guid=772db980869d5454186c5a6682ef8fda&amp;type=3#ResortOverlay" />
+    <ui:VisualElement name="ResortOverlayPanel" class="resort-overlay-panel" style="display: flex;">
+        <ui:VisualElement class="resort-header-row">
+            <ui:VisualElement class="resort-header-copy">
+                <ui:Label name="Lbl_ResortTitle" text="Ski Resort" class="resort-title" />
+                <ui:Label name="Lbl_ResortDay" text="Week 1 - Day 1" class="resort-subtitle" />
+            </ui:VisualElement>
+            <ui:VisualElement class="resort-time-block">
+                <ui:Label text="Current Time" class="resort-time-caption" />
+                <ui:Label name="Lbl_ResortTime" text="08:00" class="resort-time-value" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="resort-section">
+            <ui:VisualElement class="resort-section-row">
+                <ui:Label text="Recovery" class="resort-section-title" />
+                <ui:Label name="Lbl_ResortSorenessValue" text="100% recovered" class="resort-section-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="resort-progress-bar">
+                <ui:VisualElement name="ResortSorenessFill" class="resort-progress-fill" />
+            </ui:VisualElement>
+            <ui:Label name="Lbl_ResortRecoveryDetail" text="Fully recovered" class="resort-body-text" />
+        </ui:VisualElement>
+        <ui:VisualElement class="resort-section">
+            <ui:Label text="Leave Resort" class="resort-section-title" />
+            <ui:Label name="Lbl_ResortScheduleStatus" text="No scheduled exit" class="resort-body-text" />
+            <ui:VisualElement class="resort-button-row">
+                <ui:Button name="Btn_ResortLeaveNow" text="Leave Now" class="resort-primary-button" />
+                <ui:Button name="Btn_ResortLeaveRecovered" text="When Recovered" class="resort-secondary-button" />
+            </ui:VisualElement>
+            <ui:VisualElement class="resort-button-row">
+                <ui:Button name="Btn_ResortLeave0600" text="Next 06:00" class="resort-secondary-button" />
+                <ui:Button name="Btn_ResortLeave0800" text="Next 08:00" class="resort-secondary-button" />
+                <ui:Button name="Btn_ResortLeave1200" text="Next 12:00" class="resort-secondary-button" />
+            </ui:VisualElement>
+            <ui:Button name="Btn_ResortCancelSchedule" text="Cancel Scheduled Exit" class="resort-ghost-button" />
+        </ui:VisualElement>
+        <ui:Label name="Lbl_ResortHint" text="Choose when to leave so time passes intentionally rather than drifting." class="resort-hint" style="display: none;" />
+    </ui:VisualElement>
+</ui:UXML>

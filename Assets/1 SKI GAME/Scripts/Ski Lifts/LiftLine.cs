@@ -108,6 +108,8 @@ public class LiftLine : MonoBehaviour
     }
 
     private readonly List<CarrierRuntime> _carrierRuntime = new List<CarrierRuntime>();
+    private float _visibleFastForwardMultiplier = 1f;
+    private Renderer[] _cachedRenderers;
 
     // World-space polyline describing the band loop
     private readonly List<Vector3> _bandPoints = new List<Vector3>();
@@ -248,7 +250,7 @@ public class LiftLine : MonoBehaviour
                 continue;
 
             float speedMult = GetStationSpeedMultiplierAtDistance(c.distanceAlong);
-            float step = bandSpeed * speedMult * dt;
+            float step = bandSpeed * _visibleFastForwardMultiplier * speedMult * dt;
 
             c.distanceAlong = Mathf.Repeat(c.distanceAlong + step, _bandLength);
 
@@ -299,6 +301,51 @@ public class LiftLine : MonoBehaviour
 
         float proximity = Mathf.Max(pBottom, pTop);
         return Mathf.Lerp(1f, stationMinSpeedMultiplier, proximity);
+    }
+
+    public void SetVisibleFastForwardMultiplier(float multiplier)
+    {
+        _visibleFastForwardMultiplier = Mathf.Max(1f, multiplier);
+    }
+
+    public bool TryGetVisibilityBounds(out Bounds bounds)
+    {
+        if (_cachedRenderers == null || _cachedRenderers.Length == 0)
+            _cachedRenderers = GetComponentsInChildren<Renderer>(includeInactive: false);
+
+        if (_cachedRenderers == null || _cachedRenderers.Length == 0)
+        {
+            bounds = new Bounds(transform.position, Vector3.one * 8f);
+            return true;
+        }
+
+        bool found = false;
+        bounds = default;
+
+        for (int i = 0; i < _cachedRenderers.Length; i++)
+        {
+            Renderer r = _cachedRenderers[i];
+            if (r == null || !r.enabled)
+                continue;
+
+            if (!found)
+            {
+                bounds = r.bounds;
+                found = true;
+            }
+            else
+            {
+                bounds.Encapsulate(r.bounds);
+            }
+        }
+
+        if (!found)
+        {
+            bounds = new Bounds(transform.position, Vector3.one * 8f);
+            return true;
+        }
+
+        return true;
     }
 
 

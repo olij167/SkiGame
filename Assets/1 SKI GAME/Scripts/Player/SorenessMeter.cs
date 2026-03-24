@@ -112,6 +112,28 @@ public class SorenessMeter : MonoBehaviour
 
     public float Soreness01 => soreness01;
 
+    public bool IsFullyRecovered(float threshold01 = 0.01f)
+    {
+        return soreness01 <= Mathf.Clamp01(threshold01);
+    }
+
+    public float GetRecoveryRatePerSecond(bool resting)
+    {
+        return resting ? restRecoveryPerSecond : recoveryPerSecond;
+    }
+
+    public float EstimateSecondsUntilRecovered(bool assumeResting, float targetSoreness01 = 0f)
+    {
+        float target = Mathf.Clamp01(targetSoreness01);
+        float remaining = Mathf.Max(0f, soreness01 - target);
+        float rate = GetRecoveryRatePerSecond(assumeResting);
+
+        if (rate <= 0f)
+            return float.PositiveInfinity;
+
+        return remaining / rate;
+    }
+
     public bool IsResting
     {
         get => isResting;
@@ -158,6 +180,22 @@ public class SorenessMeter : MonoBehaviour
         float shaped = impactSeverityCurve != null ? Mathf.Clamp01(impactSeverityCurve.Evaluate(s)) : s;
         float delta = Mathf.Lerp(impactSorenessMin, impactSorenessMax, shaped);
         AddExertion(delta);
+    }
+
+    public void ResetSoreness()
+    {
+        soreness01 = 0f;
+        _recoveryBlockedUntil = 0f;
+        _visualSorenessSmoothed = 0f;
+
+        if (postProcessVolume != null)
+            postProcessVolume.weight = 0f;
+
+        if (_headCached && headTransform != null)
+        {
+            headTransform.localPosition = _headLocalPosStart;
+            headTransform.localRotation = _headLocalRotStart;
+        }
     }
 
     private void Awake()
@@ -276,6 +314,7 @@ public class SorenessMeter : MonoBehaviour
         headTransform.localRotation = Quaternion.Slerp(headTransform.localRotation, rotTarget, k);
     }
 
+   
     private void ApplyPostFx(float tSoreness, float dt)
     {
 #if UNITY_RENDER_PIPELINE_UNIVERSAL

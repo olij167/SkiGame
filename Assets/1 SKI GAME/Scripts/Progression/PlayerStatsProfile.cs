@@ -17,6 +17,7 @@ namespace SkiGame.Progression
         public LifetimeStats lifetime = new LifetimeStats();
         public SessionStats session = new SessionStats();
         public PlaythroughState playthrough = new PlaythroughState();
+        public TutorialState tutorial = new TutorialState();
 
         // Stored as lists for JsonUtility compatibility.
         public List<string> unlockedAchievementIds = new List<string>();
@@ -131,6 +132,53 @@ namespace SkiGame.Progression
             }
         }
 
+        [Serializable]
+        public sealed class TutorialState
+        {
+            public bool skiLessonsPending = true;
+            public bool skiLessonsCompleted = false;
+            public bool skiLessonsAccepted = false;
+            public bool skiLessonsDeferred = false;
+            public int skiLessonStepIndex = 0;
+
+            public bool IsSkiLessonsActive => skiLessonsPending && skiLessonsAccepted && !skiLessonsCompleted;
+            public bool CanOfferSkiLessons => skiLessonsPending && !skiLessonsCompleted && !skiLessonsAccepted;
+
+            public void ResetForNewGame()
+            {
+                skiLessonsPending = true;
+                skiLessonsCompleted = false;
+                skiLessonsAccepted = false;
+                skiLessonsDeferred = false;
+                skiLessonStepIndex = 0;
+            }
+
+            public void AcceptLessons()
+            {
+                skiLessonsPending = true;
+                skiLessonsCompleted = false;
+                skiLessonsAccepted = true;
+                skiLessonsDeferred = false;
+            }
+
+            public void DeferLessons()
+            {
+                skiLessonsPending = true;
+                skiLessonsCompleted = false;
+                skiLessonsAccepted = false;
+                skiLessonsDeferred = true;
+                skiLessonStepIndex = 0;
+            }
+
+            public void MarkCompleted()
+            {
+                skiLessonsPending = false;
+                skiLessonsCompleted = true;
+                skiLessonsAccepted = false;
+                skiLessonsDeferred = false;
+                skiLessonStepIndex = 0;
+            }
+        }
 
         // Recent task IDs to avoid repeating the same tasks over and over.
         public List<string> recentTaskIds = new List<string>();
@@ -591,6 +639,8 @@ namespace SkiGame.Progression
             liftRideCounts?.Clear();
 
             dailyTasks = new DailyTaskMatrixState();
+
+            tutorial = new TutorialState();
         }
 
         public void Sanitize()
@@ -643,6 +693,8 @@ namespace SkiGame.Progression
 
             if (lifetime == null) lifetime = new LifetimeStats();
             if (session == null) session = new SessionStats();
+
+            tutorial ??= new TutorialState();
         }
 
         /// <summary>

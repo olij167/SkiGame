@@ -364,6 +364,14 @@ public sealed class MapBakeWindow : EditorWindow
         targetMapData.SetPolylines(polylines);
         targetMapData.SetMarkers(markers);
 
+        // Projection policy:
+        // For baked gameplay maps, prefer deterministic MapProjection alignment by default.
+        // A live scene camera should only be used when explicitly required and guaranteed
+        // to match the baked background exactly.
+        bool shouldPreferCameraProjection = false;
+
+        targetMapData.SetPreferCameraProjection(shouldPreferCameraProjection);
+
         if (bakeBackgroundTexture)
             targetMapData.SetBackground(bgTex);
 
@@ -383,7 +391,21 @@ public sealed class MapBakeWindow : EditorWindow
         }
 
         EditorUtility.SetDirty(targetMapData);
-        AssetDatabase.SaveAssets();
+
+        try
+        {
+#if UNITY_2022_2_OR_NEWER
+            AssetDatabase.SaveAssetIfDirty(targetMapData);
+#else
+    AssetDatabase.SaveAssets();
+#endif
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning(
+                $"[MapBake] MapData was updated in memory, but saving triggered an editor-side exception. " +
+                $"The baked marker data may not persist to disk until the terrain save issue is resolved.\n{ex}");
+        }
 
         Debug.Log($"[MapBake] Baked MapData '{targetMapData.name}'. Lines: {polylines.Count}, Markers: {markers.Count}, Background: {(bgTex ? bgTex.name : "none")}" +
                   $"{(bakeBackgroundTexture ? $" | Inset: {(lockBackgroundToProjectionBounds ? "(reset 0..1)" : (wroteInset ? $"{insetMin}..{insetMax}" : "(none)"))}" : "")}");
@@ -520,11 +542,15 @@ public sealed class MapBakeWindow : EditorWindow
                 lineType = MapLineType.SkiRun,
                 color = r.RunColor,
                 widthMeters = Mathf.Max(0.01f, r.RunWidthMeters),
+                pointsWorld = new List<Vector3>(pts.Count),
                 pointsWorldXZ = new List<Vector2>(pts.Count)
             };
 
             for (int p = 0; p < pts.Count; p++)
+            {
+                line.pointsWorld.Add(pts[p]);
                 line.pointsWorldXZ.Add(new Vector2(pts[p].x, pts[p].z));
+            }
 
             dst.Add(line);
         }
@@ -562,11 +588,17 @@ public sealed class MapBakeWindow : EditorWindow
             if (l.bottomStation == null || l.topStation == null)
                 continue;
 
-            var pts = new List<Vector2>(2)
-            {
-                new Vector2(l.bottomStation.position.x, l.bottomStation.position.z),
-                new Vector2(l.topStation.position.x, l.topStation.position.z)
-            };
+            var pts3 = new List<Vector3>(2)
+{
+    l.bottomStation.position,
+    l.topStation.position
+};
+
+            var ptsXZ = new List<Vector2>(2)
+{
+    new Vector2(l.bottomStation.position.x, l.bottomStation.position.z),
+    new Vector2(l.topStation.position.x, l.topStation.position.z)
+};
 
             var line = new MapPolyline
             {
@@ -575,7 +607,8 @@ public sealed class MapBakeWindow : EditorWindow
                 lineType = MapLineType.SkiLift,
                 color = color,
                 widthMeters = 2f,
-                pointsWorldXZ = pts
+                pointsWorld = pts3,
+                pointsWorldXZ = ptsXZ
             };
 
             dst.Add(line);
