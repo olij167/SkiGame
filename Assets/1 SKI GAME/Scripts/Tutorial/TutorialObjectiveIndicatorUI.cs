@@ -40,28 +40,49 @@ namespace SkiGame.UI
 
         private void Update()
         {
-            if (_indicator == null || lessonDirector == null || targetCamera == null)
+            if (_indicator == null || lessonDirector == null || targetCamera == null || _root == null)
                 return;
 
             var target = lessonDirector.CurrentObjectiveTarget;
-            bool show = lessonDirector.IsLessonActive && target != null && !string.IsNullOrEmpty(lessonDirector.CurrentObjectiveLabel);
+            string label = lessonDirector.CurrentObjectiveLabel;
+
+            bool show = lessonDirector.IsLessonActive && target != null && !string.IsNullOrEmpty(label);
 
             _indicator.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
             if (!show)
                 return;
 
+            Vector3 world = target.position + Vector3.up * 2f;
+            Vector3 viewport = targetCamera.WorldToViewportPoint(world);
+
+            bool behindCamera = viewport.z < 0f;
+            if (behindCamera)
+            {
+                viewport.x = 1f - viewport.x;
+                viewport.y = 1f - viewport.y;
+                viewport.z = 0f;
+            }
+
+            float rootWidth = Mathf.Max(1f, _root.resolvedStyle.width);
+            float rootHeight = Mathf.Max(1f, _root.resolvedStyle.height);
+
+            float padX = edgePadding / rootWidth;
+            float padY = edgePadding / rootHeight;
+
+            viewport.x = Mathf.Clamp(viewport.x, padX, 1f - padX);
+            viewport.y = Mathf.Clamp(viewport.y, padY, 1f - padY);
+
+            float x = viewport.x * rootWidth;
+            float y = viewport.y * rootHeight;
+
             if (_label != null)
             {
                 float dist = Vector3.Distance(target.position, targetCamera.transform.position);
-                _label.text = $"{lessonDirector.CurrentObjectiveLabel}  {dist:0} m";
+                _label.text = $"{label}  {dist:0} m";
             }
 
-            Vector3 screen = targetCamera.WorldToScreenPoint(target.position + Vector3.up * 2f);
-            float x = Mathf.Clamp(screen.x, edgePadding, Screen.width - edgePadding);
-            float y = Mathf.Clamp(Screen.height - screen.y, edgePadding, Screen.height - edgePadding);
-
-            _indicator.style.left = x - 80f;
-            _indicator.style.top = y - 18f;
+            _indicator.style.left = x - 90f;
+            _indicator.style.top = y - 20f;
         }
     }
 }

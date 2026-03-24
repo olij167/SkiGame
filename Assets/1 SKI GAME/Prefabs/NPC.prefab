@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 7279794892209992795}
   - component: {fileID: 9102821746034390035}
   - component: {fileID: 8068643646181222125}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Left Ski
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -114,9 +114,9 @@ GameObject:
   - component: {fileID: 8372029706752488572}
   - component: {fileID: 2849942397213681774}
   - component: {fileID: 3289933560086555512}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: NPC
-  m_TagString: Player
+  m_TagString: NPC
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -782,8 +782,8 @@ MonoBehaviour:
   locomotion: {fileID: 0}
   appearanceGenerator: {fileID: 9118590775965157313}
   pathAgent: {fileID: 3577129971718139236}
-  autoFindRunsInScene: 0
-  autoFindLiftsInScene: 0
+  autoFindRunsInScene: 1
+  autoFindLiftsInScene: 1
   availableRuns:
   - {fileID: 0}
   - {fileID: 0}
@@ -1326,7 +1326,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5639725955960979039}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Body Anchor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1359,7 +1359,7 @@ GameObject:
   - component: {fileID: 6498185041322512952}
   - component: {fileID: 6117921996982939834}
   - component: {fileID: 5382941238278528821}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Left Pole Back Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1448,7 +1448,7 @@ GameObject:
   - component: {fileID: 3906934786169531492}
   - component: {fileID: 5091617285071276538}
   - component: {fileID: 5757215797181143959}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Right Ski
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1535,7 +1535,7 @@ GameObject:
   - component: {fileID: 984116261436557764}
   - component: {fileID: 4291052193594415133}
   - component: {fileID: 6987485560459423338}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Head
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1649,7 +1649,7 @@ GameObject:
   - component: {fileID: 7385028889738868789}
   - component: {fileID: 8932616474915624610}
   - component: {fileID: 6880735037581308805}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Right Pole Handle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1758,7 +1758,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2535211689033977951}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Head Anchor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1791,7 +1791,7 @@ GameObject:
   - component: {fileID: 2301824631252324530}
   - component: {fileID: 5421523421890815725}
   - component: {fileID: 8496824109207701773}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Right Pole Back Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1881,7 +1881,7 @@ GameObject:
   - component: {fileID: 1117933808876425011}
   - component: {fileID: 929361917678884039}
   - component: {fileID: 7602144295442658529}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Left Eye
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1992,7 +1992,7 @@ GameObject:
   - component: {fileID: 6456231387114082838}
   - component: {fileID: 8541408683081402178}
   - component: {fileID: 8406389971131071106}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Left Ski Back Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2082,7 +2082,7 @@ GameObject:
   - component: {fileID: 953132150414525151}
   - component: {fileID: 7436810602482028841}
   - component: {fileID: 1337379149522443124}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Right Eye
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2192,7 +2192,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8123653840421101290}
   - component: {fileID: 322801110348059883}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Left Iris
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2254,7 +2254,7 @@ GameObject:
   - component: {fileID: 2976270046108161972}
   - component: {fileID: 6662668913425622852}
   - component: {fileID: 6296370856150715008}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Right Pole
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2368,7 +2368,7 @@ GameObject:
   - component: {fileID: 1264349808283513361}
   - component: {fileID: 3873782124703942520}
   - component: {fileID: 4000251225273028944}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Body
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2480,7 +2480,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8987544663170499772}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Back Positions
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2516,7 +2516,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3528441971824992534}
   - component: {fileID: 3259956340907008649}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Right Iris
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2579,7 +2579,7 @@ GameObject:
   - component: {fileID: 6234596895549060738}
   - component: {fileID: 6078885902233128748}
   - component: {fileID: 3108709282088708383}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Right Pole Tip
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2733,7 +2733,7 @@ GameObject:
   - component: {fileID: 2651976176198660153}
   - component: {fileID: 5851154626762347437}
   - component: {fileID: 1709962488962802788}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Right Ski Back Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2824,7 +2824,7 @@ GameObject:
   - component: {fileID: 858672010835532989}
   - component: {fileID: 6793824037398529286}
   - component: {fileID: 2341573749334055341}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Impact Snow Particles
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7747,9 +7747,17 @@ PrefabInstance:
       propertyPath: skiController
       value: 
       objectReference: {fileID: 6581433815363429812}
+    - target: {fileID: 3257141415647803867, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
+      propertyPath: m_Layer
+      value: 22
+      objectReference: {fileID: 0}
     - target: {fileID: 3465819460359008692, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
       propertyPath: m_Name
       value: Left Pole Handle
+      objectReference: {fileID: 0}
+    - target: {fileID: 3465819460359008692, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
+      propertyPath: m_Layer
+      value: 22
       objectReference: {fileID: 0}
     - target: {fileID: 4523742726443538813, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
       propertyPath: m_LocalPosition.x
@@ -7791,6 +7799,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5653122094483097597, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
+      propertyPath: m_Layer
+      value: 22
+      objectReference: {fileID: 0}
     - target: {fileID: 6810746815013408129, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
       propertyPath: m_SortMode
       value: 0
@@ -7798,6 +7810,10 @@ PrefabInstance:
     - target: {fileID: 6810746815013408129, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
       propertyPath: m_RenderAlignment
       value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 7740547516681553544, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
+      propertyPath: m_Layer
+      value: 22
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -7928,6 +7944,10 @@ PrefabInstance:
     - target: {fileID: 7865764469940900685, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_Name
       value: Right Ski Snow Particles (Back)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7865764469940900685, guid: 6288f5c737135a243a664a4890191021, type: 3}
+      propertyPath: m_Layer
+      value: 22
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -8072,6 +8092,10 @@ PrefabInstance:
     - target: {fileID: 7865764469940900685, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_Name
       value: Left Ski Snow Particles (Mid)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7865764469940900685, guid: 6288f5c737135a243a664a4890191021, type: 3}
+      propertyPath: m_Layer
+      value: 22
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -8227,6 +8251,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Right Pole Snow Particles
       objectReference: {fileID: 0}
+    - target: {fileID: 8638034960183571623, guid: 3d6658bc85834894088dc0288c8c925d, type: 3}
+      propertyPath: m_Layer
+      value: 22
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -8332,6 +8360,10 @@ PrefabInstance:
     - target: {fileID: 4725918148240965166, guid: da14a93770a7c57408ac20990939e9c2, type: 3}
       propertyPath: m_Name
       value: Left Ski Model
+      objectReference: {fileID: 0}
+    - target: {fileID: 4725918148240965166, guid: da14a93770a7c57408ac20990939e9c2, type: 3}
+      propertyPath: m_Layer
+      value: 22
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -8446,6 +8478,10 @@ PrefabInstance:
     - target: {fileID: 7865764469940900685, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_Name
       value: Right Ski Snow Particles (Mid)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7865764469940900685, guid: 6288f5c737135a243a664a4890191021, type: 3}
+      propertyPath: m_Layer
+      value: 22
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -8605,6 +8641,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Left Ski Snow Particles (Back)
       objectReference: {fileID: 0}
+    - target: {fileID: 7865764469940900685, guid: 6288f5c737135a243a664a4890191021, type: 3}
+      propertyPath: m_Layer
+      value: 22
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -8740,6 +8780,10 @@ PrefabInstance:
     - target: {fileID: 7865764469940900685, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_Name
       value: Left Ski Snow Particles (Front)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7865764469940900685, guid: 6288f5c737135a243a664a4890191021, type: 3}
+      propertyPath: m_Layer
+      value: 22
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -8882,6 +8926,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Right Ski Snow Particles (Front)
       objectReference: {fileID: 0}
+    - target: {fileID: 7865764469940900685, guid: 6288f5c737135a243a664a4890191021, type: 3}
+      propertyPath: m_Layer
+      value: 22
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -8965,6 +9013,10 @@ PrefabInstance:
     - target: {fileID: 4725918148240965166, guid: da14a93770a7c57408ac20990939e9c2, type: 3}
       propertyPath: m_Name
       value: Right Ski Model
+      objectReference: {fileID: 0}
+    - target: {fileID: 4725918148240965166, guid: da14a93770a7c57408ac20990939e9c2, type: 3}
+      propertyPath: m_Layer
+      value: 22
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

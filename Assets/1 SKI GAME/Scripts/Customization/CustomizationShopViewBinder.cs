@@ -15,9 +15,11 @@ public class CustomizationShopViewBinder : MonoBehaviour
 
     private VisualElement _root;
 
-    // Root tabs
-    private Button _tabShop;
-    private Button _tabInventory;
+    // Dual list content
+    private Label _lblShopListTitle;
+    private Label _lblInventoryListTitle;
+    private ListView _listShopOptions;
+    private ListView _listInventoryOptions;
 
     // Category tabs
     private Button _tabEyes;
@@ -30,10 +32,6 @@ public class CustomizationShopViewBinder : MonoBehaviour
     // Header
     private Label _lblCurrency;
     private Button _btnExit;
-
-    // Shop content
-    private Label _lblListTitle;
-    private ListView _listOptions;
 
     // Details
     private VisualElement _iconSelected;
@@ -163,15 +161,14 @@ public class CustomizationShopViewBinder : MonoBehaviour
 };
 
     // Stable buffer so ListView never points at controller's live lists (prevents mid-enumeration edits)
-    private readonly List<CustomizationOptionSO> _listBuffer = new();
-    private bool _suppressSelectionCallback;
+    private readonly List<CustomizationOptionSO> _shopBuffer = new();
+    private readonly List<CustomizationOptionSO> _inventoryBuffer = new();
+
+    private IReadOnlyList<CustomizationOptionSO> _shopSource;
+    private IReadOnlyList<CustomizationOptionSO> _inventorySource;
 
     private enum ColorTarget { None, Skin, Eye, Skis, Poles, Hat, Jacket }
     private ColorTarget _colorTarget = ColorTarget.None;
-
-
-    // Cached sources for ListView (we swap between these without allocating per-frame)
-    private IReadOnlyList<CustomizationOptionSO> _currentSource;
 
     private void Awake()
     {
@@ -181,7 +178,7 @@ public class CustomizationShopViewBinder : MonoBehaviour
         CacheElements();
         SetupColorGradientUI();
 
-        SetupList();
+        SetupLists();
         HookEvents();
 
         if (controller != null)
@@ -226,8 +223,10 @@ public class CustomizationShopViewBinder : MonoBehaviour
         _btnExit = _root.Q<Button>("Btn_Exit");
 
         // Root tabs
-        _tabShop = _root.Q<Button>("Tab_Shop");
-        _tabInventory = _root.Q<Button>("Tab_Inventory");
+        _lblShopListTitle = _root.Q<Label>("Lbl_ShopListTitle");
+        _lblInventoryListTitle = _root.Q<Label>("Lbl_InventoryListTitle");
+        _listShopOptions = _root.Q<ListView>("List_ShopOptions");
+        _listInventoryOptions = _root.Q<ListView>("List_InventoryOptions");
 
         // Category tabs
         _tabEyes = _root.Q<Button>("Tab_Eyes");
@@ -237,9 +236,6 @@ public class CustomizationShopViewBinder : MonoBehaviour
         _tabHats = _root.Q<Button>("Tab_Hats");
         _tabJackets = _root.Q<Button>("Tab_Jackets");
 
-        // List + title
-        _lblListTitle = _root.Q<Label>("Lbl_ListTitle");
-        _listOptions = _root.Q<ListView>("List_Options");
 
         // Details
         _iconSelected = _root.Q<VisualElement>("Icon_Selected");
@@ -343,14 +339,20 @@ public class CustomizationShopViewBinder : MonoBehaviour
 
     }
 
-    private void SetupList()
+    private void SetupLists()
     {
-        if (_listOptions == null) return;
+        SetupOptionList(_listShopOptions, true);
+        SetupOptionList(_listInventoryOptions, false);
+    }
 
-        _listOptions.selectionType = SelectionType.Single;
-        _listOptions.fixedItemHeight = 48f;
+    private void SetupOptionList(ListView listView, bool isShopList)
+    {
+        if (listView == null) return;
 
-        _listOptions.makeItem = () =>
+        listView.selectionType = SelectionType.Single;
+        listView.fixedItemHeight = 48f;
+
+        listView.makeItem = () =>
         {
             var row = new VisualElement();
             row.AddToClassList("option-row");
@@ -388,18 +390,8 @@ public class CustomizationShopViewBinder : MonoBehaviour
 
             row.AddManipulator(new Clickable(() =>
             {
-                if (controller == null || _listOptions == null) return;
-
-                if (row.userData is not int idx) return;
-                if (idx < 0 || idx >= _listBuffer.Count) return;
-
-                var opt = _listBuffer[idx];
-                if (opt == null) return;
-
-                // Ensure selection highlight updates even if same index
-                _suppressSelectionCallback = true;
-                _listOptions.SetSelection(idx);
-                _suppressSelectionCallback = false;
+                if (controller == null) return;
+                if (row.userData is not CustomizationOptionSO opt || opt == null) return;
 
                 controller.Select(opt);
                 _root?.schedule.Execute(RefreshAll);
@@ -408,13 +400,15 @@ public class CustomizationShopViewBinder : MonoBehaviour
             return row;
         };
 
-        _listOptions.bindItem = (ve, i) =>
+        listView.bindItem = (ve, i) =>
         {
-            if (_currentSource == null || i < 0 || i >= _currentSource.Count) return;
-            var opt = _currentSource[i];
+            var source = isShopList ? _shopBuffer : _inventoryBuffer;
+            if (i < 0 || i >= source.Count) return;
+
+            var opt = source[i];
             if (opt == null) return;
 
-            ve.userData = i;
+            ve.userData = opt;
 
             var icon = ve.Q<VisualElement>("icon");
             var name = ve.Q<Label>("name");
@@ -422,26 +416,23 @@ public class CustomizationShopViewBinder : MonoBehaviour
             var price = ve.Q<Label>("price");
             var badge = ve.Q<Label>("badge");
 
-            if (name != null) name.text = string.IsNullOrEmpty(opt.displayName) ? opt.name : opt.displayName;
-            if (meta != null) meta.text = GetMetaLine(opt);
+            if (name != null)
+                name.text = string.IsNullOrEmpty(opt.displayName) ? opt.name : opt.displayName;
 
-            // icon
+            if (meta != null)
+                meta.text = GetMetaLine(opt);
+
             if (icon != null)
             {
                 var tex = GetOptionIconTexture2D(opt);
-                if (tex != null)
-                    icon.style.backgroundImage = new StyleBackground(tex);
-                else
-                    icon.style.backgroundImage = StyleKeyword.None;
-
+                if (tex != null) icon.style.backgroundImage = new StyleBackground(tex);
+                else icon.style.backgroundImage = StyleKeyword.None;
             }
 
             bool owned = controller != null && controller.IsOwned(opt);
 
-            // Right side: shop shows price, inventory hides price
-            bool isShop = controller != null && controller.GetRootTab() == CustomizationUIController.RootTab.Shop;
             if (price != null)
-                price.text = isShop && !owned ? opt.cost.ToString() : "";
+                price.text = isShopList && !owned ? opt.cost.ToString() : "";
 
             if (badge != null)
             {
@@ -454,45 +445,23 @@ public class CustomizationShopViewBinder : MonoBehaviour
                     badge.text = "OWNED";
                     badge.AddToClassList("is-owned");
                 }
-                else if (!isShop)
-                {
-                    badge.text = ""; // inventory should only contain owned anyway
-                }
                 else
                 {
-                    badge.text = ""; // no badge by default in shop
+                    badge.text = "";
                 }
             }
         };
 
-        _listOptions.onSelectionChange += _ =>
+        listView.onSelectionChange += _ =>
         {
-            if (_suppressSelectionCallback) return;
-            if (controller == null || _listOptions == null) return;
-
-            int idx = _listOptions.selectedIndex;
-            if (idx < 0 || idx >= _listBuffer.Count) return;
-
-            var opt = _listBuffer[idx];
-            if (opt == null) return;
-
-            // IMPORTANT: do not Rebuild/Refresh synchronously inside selection notification.
-            controller.Select(opt);
-
-            // Defer UI refresh to next tick to avoid modifying collections mid-enumeration.
-            _root?.schedule.Execute(RefreshAll);
+            // Selection is handled by row click to avoid fighting both lists.
         };
-
     }
-
     private void HookEvents()
     {
         if (controller == null) return;
 
-        // Root tabs
-        if (_tabShop != null) _tabShop.clicked += () => { controller.SetRootTab(CustomizationUIController.RootTab.Shop); RefreshAll(); };
-        if (_tabInventory != null) _tabInventory.clicked += () => { controller.SetRootTab(CustomizationUIController.RootTab.Inventory); RefreshAll(); };
-
+       
         // Category tabs
         if (_tabEyes != null) _tabEyes.clicked += () => { controller.SetCategory(CustomizationOptionType.EyeIcon); RefreshAll(); };
         if (_tabPatterns != null) _tabPatterns.clicked += () => { controller.SetCategory(CustomizationOptionType.SkinPattern); RefreshAll(); };
@@ -641,36 +610,41 @@ public class CustomizationShopViewBinder : MonoBehaviour
             // Header
             if (_lblCurrency != null) _lblCurrency.text = controller.GetCurrency().ToString();
 
-            // List title
-            if (_lblListTitle != null)
+            if (_lblShopListTitle != null)
+                _lblShopListTitle.text = "Shop Offers (Buy / Preview)";
+
+            if (_lblInventoryListTitle != null)
+                _lblInventoryListTitle.text = "Inventory (Equip / Preview)";
+
+            _shopSource = controller.GetVisibleList();
+            _inventorySource = controller.GetOwnedList();
+
+            _shopBuffer.Clear();
+            if (_shopSource != null)
             {
-                _lblListTitle.text = controller.GetRootTab() == CustomizationUIController.RootTab.Shop
-                    ? "Today's Offers (Buy / Preview)"
-                    : "Owned Items (Equip / Preview)";
+                for (int i = 0; i < _shopSource.Count; i++)
+                    _shopBuffer.Add(_shopSource[i]);
             }
 
-            // List source swap
-            _currentSource = controller.GetRootTab() == CustomizationUIController.RootTab.Shop
-        ? controller.GetVisibleList()
-        : controller.GetOwnedList();
-
-            if (_listOptions != null)
+            _inventoryBuffer.Clear();
+            if (_inventorySource != null)
             {
-                _listBuffer.Clear();
-                if (_currentSource != null)
-                {
-                    for (int i = 0; i < _currentSource.Count; i++)
-                        _listBuffer.Add(_currentSource[i]);
-                }
+                for (int i = 0; i < _inventorySource.Count; i++)
+                    _inventoryBuffer.Add(_inventorySource[i]);
+            }
 
-                _suppressSelectionCallback = true;
-                _listOptions.itemsSource = _listBuffer;
-                _listOptions.Rebuild();
+            if (_listShopOptions != null)
+            {
+                _listShopOptions.itemsSource = _shopBuffer;
+                _listShopOptions.Rebuild();
+            }
+
+            if (_listInventoryOptions != null)
+            {
+                _listInventoryOptions.itemsSource = _inventoryBuffer;
+                _listInventoryOptions.Rebuild();
                 AutoSelectEquippedRow();
-
-                _suppressSelectionCallback = false;
             }
-
 
             // Details
             RefreshDetails();
@@ -710,14 +684,27 @@ public class CustomizationShopViewBinder : MonoBehaviour
         }
 
         bool owned = controller.IsOwned(sel);
-        bool isShop = controller.GetRootTab() == CustomizationUIController.RootTab.Shop;
+        bool isShop = !owned;
 
         if (_lblSelectedName != null) _lblSelectedName.text = string.IsNullOrEmpty(sel.displayName) ? sel.name : sel.displayName;
         if (_lblSelectedDesc != null) _lblSelectedDesc.text = sel.description;
         if (_lblSelectedOwned != null) _lblSelectedOwned.text = owned ? "Owned" : "Not owned";
 
-        if (_lblSelectedCost != null)
-            _lblSelectedCost.text = isShop && !owned ? $"Cost: {sel.cost}" : "";
+        if (_btnBuy != null)
+        {
+            if (!owned)
+                _btnBuy.RemoveFromClassList("is-hidden");
+            else
+                _btnBuy.AddToClassList("is-hidden");
+        }
+
+        if (_btnEquip != null)
+        {
+            if (owned)
+                _btnEquip.RemoveFromClassList("is-hidden");
+            else
+                _btnEquip.AddToClassList("is-hidden");
+        }
 
         if (_iconSelected != null)
         {
@@ -921,8 +908,8 @@ public class CustomizationShopViewBinder : MonoBehaviour
 
     private void AutoSelectEquippedRow()
     {
-        if (controller == null || _listOptions == null) return;
-        if (_listBuffer == null || _listBuffer.Count == 0) return;
+        if (controller == null || _listInventoryOptions == null) return;
+        if (_inventoryBuffer == null || _inventoryBuffer.Count == 0) return;
 
         // Don’t override an explicit user selection
         if (controller.GetSelected() != null) return;
@@ -930,50 +917,53 @@ public class CustomizationShopViewBinder : MonoBehaviour
         string desiredId = null;
         var cat = controller.GetActiveCategory();
 
-        // Only do this in Inventory so Shop doesn’t jump selection unexpectedly
-        if (controller.GetRootTab() != CustomizationUIController.RootTab.Inventory)
-            return;
-
         switch (cat)
         {
             case CustomizationOptionType.EyeIcon:
                 desiredId = controller.GetEquippedEyeOption()?.id;
                 break;
+
             case CustomizationOptionType.Skis:
                 desiredId = controller.GetEquippedSkisOption()?.id;
                 break;
+
             case CustomizationOptionType.Poles:
                 desiredId = controller.GetEquippedPolesOption()?.id;
                 break;
+
             case CustomizationOptionType.Hat:
-                desiredId = controller.GetEquippedHatOption()?.id; // null if "None"
-                if (string.IsNullOrEmpty(desiredId)) desiredId = ""; // ensure None matches
+                desiredId = controller.GetEquippedHatOption()?.id;
+                if (string.IsNullOrEmpty(desiredId)) desiredId = "";
                 break;
+
             case CustomizationOptionType.Jacket:
                 desiredId = controller.GetEquippedJacketOption()?.id;
+                if (string.IsNullOrEmpty(desiredId)) desiredId = "";
+                break;
+
+            case CustomizationOptionType.SkinPattern:
+                desiredId = controller.GetEquippedPatternOption(controller.GetPatternTarget())?.id;
                 if (string.IsNullOrEmpty(desiredId)) desiredId = "";
                 break;
         }
 
         int idx = -1;
-        for (int i = 0; i < _listBuffer.Count; i++)
+        for (int i = 0; i < _inventoryBuffer.Count; i++)
         {
-            var o = _listBuffer[i];
+            var o = _inventoryBuffer[i];
             if (o == null) continue;
-            if (o.id == desiredId)
+
+            if ((o.id ?? "") == desiredId)
             {
                 idx = i;
                 break;
             }
         }
 
-        if (idx < 0) idx = 0; // fall back to first item (often None for hat/jacket)
+        if (idx < 0) idx = 0;
 
-        _suppressSelectionCallback = true;
-        _listOptions.SetSelection(idx);
-        _suppressSelectionCallback = false;
-
-        controller.Select(_listBuffer[idx]);
+        _listInventoryOptions.SetSelectionWithoutNotify(new[] { idx });
+        controller.Select(_inventoryBuffer[idx]);
     }
 
     private void OpenColor(ColorTarget target, Color current)

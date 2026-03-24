@@ -1,0 +1,75 @@
+.lift-access-popup-root {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 96px;
+    padding-left: 24px;
+    padding-right: 24px;
+    pointer-events: none;
+}
+
+.lift-access-popup-panel {
+    min-width: 420px;
+    max-width: 620px;
+    flex-direction: row;
+    align-items: center;
+    background-color: rgba(10, 14, 22, 0.94);
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+    border-left-width: 5px;
+    border-right-width: 0px;
+    border-top-width: 0px;
+    border-bottom-width: 0px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    padding-left: 14px;
+    padding-right: 16px;
+    -unity-text-align: upper-left;
+}
+
+.lift-access-popup-negative {
+    border-left-color: rgb(234, 87, 87);
+}
+
+.lift-access-popup-positive {
+    border-left-color: rgb(72, 194, 118);
+}
+
+.lift-access-popup-icon-wrap {
+    width: 40px;
+    height: 40px;
+    margin-right: 12px;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255,255,255,0.08);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+}
+
+.lift-access-popup-icon {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: rgb(245, 247, 250);
+    unity-text-align: middle-center;
+}
+
+.lift-access-popup-copy {
+    flex-grow: 1;
+}
+
+.lift-access-popup-title {
+    color: rgb(245, 247, 250);
+    font-size: 15px;
+    -unity-font-style: bold;
+    margin-bottom: 2px;
+}
+
+.lift-access-popup-body {
+    color: rgba(230, 236, 244, 0.92);
+    font-size: 13px;
+    white-space: normal;
+}

@@ -181,8 +181,10 @@ namespace SkiGame.UI
         private void RefreshImmediate()
         {
             bool enabledBySettings = GameSettingsService.Current == null || GameSettingsService.Current.showTutorialOverlay;
+            bool shopOpen = CustomizationShopRuntime.IsOpen;
 
-            bool showOffer = enabledBySettings && lessonDirector.CanOfferLessons;
+            // Keep the offer modal suppressed in the shop, but do NOT hide the active tutorial panel.
+            bool showOffer = enabledBySettings && !shopOpen && lessonDirector.CanOfferLessons;
             bool showTutorial = enabledBySettings && lessonDirector.IsLessonActive;
             bool showComplete = enabledBySettings && !showTutorial && Time.unscaledTime < _completePanelUntil;
 

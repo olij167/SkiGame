@@ -1406,35 +1406,27 @@ public class SkiController : MonoBehaviour
 
     private void OnEnable()
     {
-        if (HasLegInputs)
-        {
+        if (leftSkiAction != null && leftSkiAction.action != null)
             leftSkiAction.action.Enable();
+
+        if (rightSkiAction != null && rightSkiAction.action != null)
             rightSkiAction.action.Enable();
-        }
 
-        if (HasLeanInput)
-        {
+        if (leanAction != null && leanAction.action != null)
             leanAction.action.Enable();
-        }
 
-        if (HasPolesInput)
-        {
+        if (polesAction != null && polesAction.action != null)
             polesAction.action.Enable();
-        }
 
-        if (HasJumpInput)
-        {
+        if (jumpAction != null && jumpAction.action != null)
             jumpAction.action.Enable();
-        }
 
         if (preventSkiTerrainClipping)
             SnapToGroundClearance(resetDownwardVelocity: true);
-
     }
 
     private void OnDisable()
     {
-        // Important: external NPC input should not imply InputAction references exist.
         if (leftSkiAction != null && leftSkiAction.action != null)
             leftSkiAction.action.Disable();
 
@@ -1449,11 +1441,6 @@ public class SkiController : MonoBehaviour
 
         if (jumpAction != null && jumpAction.action != null)
             jumpAction.action.Disable();
-
-        // IMPORTANT:
-        // Do NOT unbind gearLoadout here.
-        // The shop disables SkiController to freeze gameplay, but we still need
-        // gear changes (prefab/color) to update the visuals while previewing.
     }
 
     private void OnDestroy()

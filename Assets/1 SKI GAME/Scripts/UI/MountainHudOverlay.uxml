@@ -48,14 +48,16 @@
                     <ui:VisualElement name="AchievementGrid" class="achievement-grid" />
                 </ui:ScrollView>
             </ui:VisualElement>
-            <ui:VisualElement name="PassPanel" class="panel dock-panel pass-panel">
+            <ui:VisualElement name="PassPanel" class="panel dock-panel pass-panel" style="justify-content: space-between;">
                 <ui:VisualElement class="panel-header">
-                    <ui:Label text="Ski Pass" class="panel-title" style="display: none;" />
-                    <ui:Label name="Lbl_PassCurrent" text="Basic Pass (L0)" class="pass-current" />
-                    <ui:Button name="Btn_PassCurrent" text="Preview Current" class="mini-button" />
+                    <ui:Label text="Ski Pass" class="panel-title" />
                 </ui:VisualElement>
-                <ui:VisualElement name="PassLevelsList" class="pass-levels-list" style="flex-wrap: nowrap; justify-content: space-around;" />
-                <ui:VisualElement name="PassPurchaseList" class="pass-purchase-list" style="flex-wrap: nowrap; justify-content: space-around;" />
+                <ui:Label name="Lbl_PassCurrent" text="Basic Pass (L0)" class="pass-current" style="-unity-text-align: upper-center; font-size: 20px; white-space: normal;" />
+                <ui:Label name="Lbl_PassExpiryMeta" text="No expiry" class="pass-expiry-meta" style="-unity-font-style: bold; font-size: 14px;" />
+                <ui:VisualElement name="PassExpiryBar" class="pass-expiry-bar">
+                    <ui:VisualElement name="PassExpiryFill" class="pass-expiry-fill" />
+                </ui:VisualElement>
+                <ui:Button name="Btn_PassCurrent" text="Highlight Lifts" class="mini-button" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

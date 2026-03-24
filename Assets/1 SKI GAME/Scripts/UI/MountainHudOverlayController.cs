@@ -103,9 +103,9 @@ namespace SkiGame.Progression
         // Pass
         private Button _btnPassCurrent;
         private Label _lblPassCurrent;
-        private VisualElement _passLevelsList;
-        private VisualElement _passPurchaseList;
-        private int _previewPassLevel = -1;
+        private Label _lblPassExpiryMeta;
+        private VisualElement _passExpiryBar;
+        private VisualElement _passExpiryFill;
 
         private float _nextRefreshTime;
         private bool _pendingInitializeAfterPreview;
@@ -236,6 +236,12 @@ namespace SkiGame.Progression
             }
 
             ResolveReferences();
+            if (skiPassManager != null)
+            {
+                skiPassManager.OnPassChanged -= HandleSkiPassChanged;
+                skiPassManager.OnPassChanged += HandleSkiPassChanged;
+            }
+
             TryInitializeOverlayOrRetry();
         }
 
@@ -251,6 +257,8 @@ namespace SkiGame.Progression
 
             _pendingInitializeAfterPreview = false;
             ResolveReferences();
+            if (skiPassManager != null)
+                skiPassManager.OnPassChanged -= HandleSkiPassChanged;
             TryInitializeOverlayOrRetry();
         }
 
@@ -280,7 +288,12 @@ namespace SkiGame.Progression
             if (styleSheet != null && !_root.styleSheets.Contains(styleSheet))
                 _root.styleSheets.Add(styleSheet);
 
-            BindUI();
+            if (!BindUI())
+            {
+                StartCoroutine(RetryInitializeOverlayNextFrame());
+                return;
+            }
+
             BindMap();
 
             SetOverlayOpen(startOpen, refreshNow: true);
@@ -313,7 +326,12 @@ namespace SkiGame.Progression
             if (styleSheet != null && !_root.styleSheets.Contains(styleSheet))
                 _root.styleSheets.Add(styleSheet);
 
-            BindUI();
+            if (!BindUI())
+            {
+                Debug.LogWarning("[MountainHudOverlayController] Required UI elements still not ready after retry.");
+                yield break;
+            }
+
             BindMap();
 
             SetOverlayOpen(startOpen, refreshNow: true);
@@ -494,8 +512,11 @@ namespace SkiGame.Progression
             }).ExecuteLater(40);
         }
 
-        private void BindUI()
+        private bool BindUI()
         {
+            if (_root == null)
+                return false;
+
             _lblTopTime = _root.Q<Label>("Lbl_TopTime");
             _lblTopWeather = _root.Q<Label>("Lbl_TopWeather");
             _lblTopLocation = _root.Q<Label>("Lbl_TopLocation");
@@ -522,6 +543,39 @@ namespace SkiGame.Progression
             _achievementScroll = _root.Q<ScrollView>("AchievementScroll");
             _achievementGrid = _root.Q<VisualElement>("AchievementGrid");
 
+            _btnPassCurrent = _root.Q<Button>("Btn_PassCurrent");
+            _lblPassCurrent = _root.Q<Label>("Lbl_PassCurrent");
+            _lblPassExpiryMeta = _root.Q<Label>("Lbl_PassExpiryMeta");
+            _passExpiryBar = _root.Q<VisualElement>("PassExpiryBar");
+            _passExpiryFill = _root.Q<VisualElement>("PassExpiryFill");
+
+            bool hasRequiredUi =
+                _btnGoalsTasks != null &&
+                _btnGoalsAchievements != null &&
+                _goalsList != null &&
+                _achievementCategoryRow != null &&
+                _achievementScroll != null &&
+                _achievementGrid != null &&
+                _btnStatsToday != null &&
+                _btnStatsLifetime != null &&
+                _statsGrid != null;
+
+            if (!hasRequiredUi)
+            {
+                Debug.LogWarning(
+                    "[MountainHudOverlayController] Required UI elements are missing. " +
+                    $"Btn_GoalsTasks={_btnGoalsTasks != null}, " +
+                    $"Btn_GoalsAchievements={_btnGoalsAchievements != null}, " +
+                    $"GoalsList={_goalsList != null}, " +
+                    $"AchievementCategoryRow={_achievementCategoryRow != null}, " +
+                    $"AchievementScroll={_achievementScroll != null}, " +
+                    $"AchievementGrid={_achievementGrid != null}, " +
+                    $"Btn_StatsToday={_btnStatsToday != null}, " +
+                    $"Btn_StatsLifetime={_btnStatsLifetime != null}, " +
+                    $"StatsGrid={_statsGrid != null}");
+                return false;
+            }
+
             if (_achievementScroll != null)
             {
                 _achievementScroll.mode = ScrollViewMode.Vertical;
@@ -529,44 +583,47 @@ namespace SkiGame.Progression
                 _achievementScroll.verticalScrollerVisibility = ScrollerVisibility.Auto;
             }
 
-            _btnPassCurrent = _root.Q<Button>("Btn_PassCurrent");
-            _lblPassCurrent = _root.Q<Label>("Lbl_PassCurrent");
-            _passLevelsList = _root.Q<VisualElement>("PassLevelsList");
-            _passPurchaseList = _root.Q<VisualElement>("PassPurchaseList");
-
             if (_btnContextExpand != null)
+            {
+                _btnContextExpand.clicked -= ToggleContextExpand;
                 _btnContextExpand.clicked += ToggleContextExpand;
+            }
 
             if (_btnCloseOverlay != null)
-                _btnCloseOverlay.clicked += () => SetOverlayOpen(false);
+            {
+                _btnCloseOverlay.clicked -= CloseOverlayFromButton;
+                _btnCloseOverlay.clicked += CloseOverlayFromButton;
+            }
 
             if (_btnStatsToday != null)
-                _btnStatsToday.clicked += () => { _statsShowLifetime = false; RefreshStatsPanel(); };
+            {
+                _btnStatsToday.clicked -= ShowTodayStats;
+                _btnStatsToday.clicked += ShowTodayStats;
+            }
 
             if (_btnStatsLifetime != null)
-                _btnStatsLifetime.clicked += () => { _statsShowLifetime = true; RefreshStatsPanel(); };
-
-            _btnGoalsTasks.clicked += () =>
             {
-                _goalsShowAchievements = false;
-                _tutorialLastViewedSection = "Tasks";
-                _tutorialVisitedTasks = true;
-                RefreshGoalsPanel();
-            };
+                _btnStatsLifetime.clicked -= ShowLifetimeStats;
+                _btnStatsLifetime.clicked += ShowLifetimeStats;
+            }
 
-            _btnGoalsAchievements.clicked += () =>
+            if (_btnGoalsTasks != null)
             {
-                _goalsShowAchievements = true;
-                _tutorialLastViewedSection = "Achievements";
-                RefreshGoalsPanel();
-            };
+                _btnGoalsTasks.clicked -= ShowTasksGoals;
+                _btnGoalsTasks.clicked += ShowTasksGoals;
+            }
+
+            if (_btnGoalsAchievements != null)
+            {
+                _btnGoalsAchievements.clicked -= ShowAchievementsGoals;
+                _btnGoalsAchievements.clicked += ShowAchievementsGoals;
+            }
 
             if (_btnPassCurrent != null)
-                _btnPassCurrent.clicked += () =>
-                {
-                    int level = skiPassManager != null ? skiPassManager.CurrentLevel : 0;
-                    SetPassPreview(level);
-                };
+            {
+                _btnPassCurrent.clicked -= HighlightUsableLiftsForCurrentPass;
+                _btnPassCurrent.clicked += HighlightUsableLiftsForCurrentPass;
+            }
 
             BuildAchievementCategoryButtons();
 
@@ -576,6 +633,40 @@ namespace SkiGame.Progression
             _contextHistoryExpanded = false;
             _contextHistoryAvailable = false;
             ApplyContextHistoryVisibility();
+
+            return true;
+        }
+
+        private void CloseOverlayFromButton()
+        {
+            SetOverlayOpen(false);
+        }
+
+        private void ShowTodayStats()
+        {
+            _statsShowLifetime = false;
+            RefreshStatsPanel();
+        }
+
+        private void ShowLifetimeStats()
+        {
+            _statsShowLifetime = true;
+            RefreshStatsPanel();
+        }
+
+        private void ShowTasksGoals()
+        {
+            _goalsShowAchievements = false;
+            _tutorialLastViewedSection = "Tasks";
+            _tutorialVisitedTasks = true;
+            RefreshGoalsPanel();
+        }
+
+        private void ShowAchievementsGoals()
+        {
+            _goalsShowAchievements = true;
+            _tutorialLastViewedSection = "Achievements";
+            RefreshGoalsPanel();
         }
 
         private void BindMap()
@@ -1076,117 +1167,59 @@ namespace SkiGame.Progression
 
         private void RefreshPassPanel()
         {
-            if (_lblPassCurrent == null || _passLevelsList == null || _passPurchaseList == null)
+            if (_lblPassCurrent == null)
                 return;
 
             if (skiPassManager == null || skiPassManager.Config == null)
             {
                 _lblPassCurrent.text = "No ski pass system found.";
+
+                if (_lblPassExpiryMeta != null)
+                    _lblPassExpiryMeta.text = string.Empty;
+
+                if (_passExpiryBar != null)
+                    _passExpiryBar.style.display = DisplayStyle.None;
+
                 return;
             }
 
-            _lblPassCurrent.text = $"{skiPassManager.GetCurrentPassDisplayName()} • {skiPassManager.GetRemainingTimeString()}";
+            _lblPassCurrent.text = skiPassManager.GetCurrentPassDisplayName();
 
-            _passLevelsList.Clear();
-            _passPurchaseList.Clear();
+            bool hasTimedPass = skiPassManager.HasTimedPass;
 
-            var cfg = skiPassManager.Config;
-            if (_previewPassLevel < 0)
-                _previewPassLevel = skiPassManager.CurrentLevel;
-
-            for (int i = 0; i < cfg.levels.Length; i++)
+            if (!hasTimedPass)
             {
-                var level = cfg.levels[i];
-                if (level == null) continue;
+                if (_lblPassExpiryMeta != null)
+                    _lblPassExpiryMeta.text = "No expiry";
 
-                int levelIndex = level.levelIndex;
+                if (_passExpiryBar != null)
+                    _passExpiryBar.style.display = DisplayStyle.None;
 
-                var btn = new Button(() =>
-                {
-                    SetPassPreview(levelIndex);
-                })
-                {
-                    text = $"{level.displayName} (L{levelIndex})"
-                };
-
-                btn.AddToClassList("pass-level-button");
-                if (levelIndex == _previewPassLevel)
-                    btn.AddToClassList("is-selected");
-
-                _passLevelsList.Add(btn);
+                return;
             }
 
-            for (int d = 0; d < cfg.durations.Length; d++)
+            if (_lblPassExpiryMeta != null)
+                _lblPassExpiryMeta.text = skiPassManager.GetRemainingTimeString();
+
+            if (_passExpiryBar != null)
+                _passExpiryBar.style.display = DisplayStyle.Flex;
+
+            if (_passExpiryFill != null)
             {
-                var dur = cfg.durations[d];
-                if (dur == null) continue;
-
-                int durationIndex = d;
-
-                if (!skiPassManager.TryQuotePurchase(_previewPassLevel, durationIndex, out var quote, out string reason))
-                {
-                    var locked = new Label(reason);
-                    locked.AddToClassList("pass-quote-label");
-                    _passPurchaseList.Add(locked);
-                    continue;
-                }
-
-                var row = new VisualElement();
-                row.AddToClassList("pass-purchase-row");
-
-                var label = new Label($"{dur.label}\n{quote.finalCost}");
-                label.AddToClassList("pass-quote-label");
-                row.Add(label);
-
-                var buyBtn = new Button(() =>
-                {
-                    bool ok = skiPassManager.TryPurchase(
-                        _previewPassLevel,
-                        durationIndex,
-                        TrySpendCurrency,
-                        out var purchasedQuote,
-                        out string failReason);
-
-                    if (ok)
-                    {
-                        if (statsManager != null)
-                            statsManager.Save();
-
-                        SetPassPreview(skiPassManager.CurrentLevel);
-                        RefreshPassPanel();
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"[MountainHudOverlay] Pass purchase failed: {failReason}");
-                    }
-                })
-                {
-                    text = quote.isUpgrade ? "Upgrade" : (quote.isExtend ? "Extend" : "Buy")
-                };
-
-                buyBtn.AddToClassList("pass-buy-button");
-                row.Add(buyBtn);
-                _passPurchaseList.Add(row);
+                float fraction = skiPassManager.GetRemainingFraction01();
+                _passExpiryFill.style.width = Length.Percent(Mathf.RoundToInt(fraction * 100f));
             }
         }
 
-        private bool TrySpendCurrency(int amount)
+        private void HandleSkiPassChanged()
         {
-            var mgr = statsManager != null ? statsManager : PlayerStatsManager.Instance;
-            if (mgr == null || mgr.Profile == null) return false;
-            if (amount < 0) return false;
-            if (mgr.Profile.currency < amount) return false;
-
-            mgr.Profile.currency -= amount;
-            mgr.Save();
-            return true;
-        }
-
-        private void SetPassPreview(int passLevel)
-        {
-            _previewPassLevel = Mathf.Max(0, passLevel);
-            _mapUI?.PreviewLiftAccessForPassLevel(_previewPassLevel);
             RefreshPassPanel();
+        }
+
+        private void HighlightUsableLiftsForCurrentPass()
+        {
+            int level = skiPassManager != null ? skiPassManager.CurrentLevel : 0;
+            _mapUI?.PreviewLiftAccessForPassLevel(level);
         }
 
         private void OnMapPolylineSelected(MapPolyline poly)

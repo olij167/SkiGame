@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using SkiGame.UI;
 
 public class LiftCarrier : MonoBehaviour
 {
@@ -40,14 +41,12 @@ public class LiftCarrier : MonoBehaviour
 
             if (!passMgr.CanUseLift(req))
             {
-                // Watch flash (deny)
                 string requiredName = GetPassDisplayNameForLevel(req);
-                SkiPassWatchFeedbackBus.RaiseDenied(requiredName);
+                LiftAccessPopupBus.RaiseDenied(requiredName);
                 return false;
             }
 
-            // Watch flash (allow)
-            SkiPassWatchFeedbackBus.RaiseAllowed(passMgr.GetCurrentPassDisplayName());
+            LiftAccessPopupBus.RaiseAllowed(passMgr.GetCurrentPassDisplayName());
         }
 
         riders.Add(rider);

@@ -1,0 +1,22 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/Environment/SkiPassKiosk.uss?fileID=7433441132597879392&amp;guid=7f4c5864760c2534db9548a124b65558&amp;type=3#SkiPassKiosk" />
+    <ui:VisualElement name="SkiPassKioskRoot" class="ski-pass-kiosk-root" style="justify-content: flex-end;">
+        <ui:VisualElement name="SkiPassKioskPanel" class="ski-pass-kiosk-panel" style="justify-content: flex-end; margin-bottom: 20px;">
+            <ui:VisualElement class="ski-pass-kiosk-header">
+                <ui:Label text="Ski Pass Kiosk" class="ski-pass-kiosk-title" />
+                <ui:Button name="Btn_CloseSkiPassKiosk" text="Close" class="mini-button" />
+            </ui:VisualElement>
+            <ui:Label name="Lbl_CurrentPass" text="Basic Pass (L0)" class="ski-pass-current" />
+            <ui:Label name="Lbl_PassExpiry" text="No expiry" class="ski-pass-expiry" />
+            <ui:Label text="Pass Tiers" class="ski-pass-section-title" />
+            <ui:VisualElement name="PassLevelList" class="ski-pass-option-list" />
+            <ui:Label text="Duration" class="ski-pass-section-title" />
+            <ui:VisualElement name="DurationList" class="ski-pass-option-list horizontal" />
+            <ui:Label name="Lbl_PassQuote" class="ski-pass-quote" />
+            <ui:Button name="Btn_PurchasePass" text="Purchase" class="tasks-claimall-btn" style="-unity-font-style: bold;" />
+            <ui:Label name="Lbl_PassResult" class="ski-pass-result" />
+            <ui:Label text="Lift Access" class="ski-pass-section-title" />
+            <ui:ScrollView name="UnlockedLiftList" class="ski-pass-lift-list" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

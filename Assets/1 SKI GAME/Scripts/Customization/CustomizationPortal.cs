@@ -91,6 +91,12 @@ public class CustomizationPortal : MonoBehaviour, IWorldInteractionPromptSource
             return;
         }
 
+        if (_playerRootInTrigger == null)
+        {
+            Debug.LogWarning("[CustomizationPortal] No player root in trigger; cannot open customization shop.");
+            return;
+        }
+
         if (IsShopSceneLoaded())
         {
             Debug.Log("[CustomizationPortal] Shop scene still loaded -> not loading again");
@@ -98,6 +104,7 @@ public class CustomizationPortal : MonoBehaviour, IWorldInteractionPromptSource
         }
 
         Debug.Log("[CustomizationPortal] Loading shop scene additively...");
+        CustomizationShopRuntime.SetPendingPlayerRoot(_playerRootInTrigger);
         _busy = true;
         StartCoroutine(LoadCustomizationAdditive());
     }

@@ -1,12 +1,26 @@
 using System;
+using UnityEngine;
 
 public static class CustomizationShopRuntime
 {
     public static bool IsOpen { get; private set; }
     public static CustomizationSceneBootstrap ActiveBootstrap { get; private set; }
 
+    public static GameObject PendingPlayerRoot { get; private set; }
+
     /// <summary>Fires whenever the shop open state changes. Arg = isOpen.</summary>
     public static event Action<bool> OnOpenChanged;
+
+    public static void SetPendingPlayerRoot(GameObject playerRoot)
+    {
+        PendingPlayerRoot = playerRoot;
+    }
+
+    public static void ClearPendingPlayerRoot(GameObject playerRoot = null)
+    {
+        if (playerRoot == null || PendingPlayerRoot == playerRoot)
+            PendingPlayerRoot = null;
+    }
 
     public static void Register(CustomizationSceneBootstrap bootstrap)
     {
@@ -19,6 +33,7 @@ public static class CustomizationShopRuntime
         if (ActiveBootstrap == bootstrap)
             ActiveBootstrap = null;
 
+        PendingPlayerRoot = null;
         SetOpenState(ActiveBootstrap != null);
     }
 

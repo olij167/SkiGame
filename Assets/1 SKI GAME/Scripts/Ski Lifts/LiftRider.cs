@@ -68,7 +68,7 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
     /// True if the currently attached carrier is a T-bar.
     /// </summary>
     public bool IsTBarMode => isAttached && !isChairMode;
-
+    public LiftLine CurrentLiftLine => currentCarrier != null ? currentCarrier.line : null;
     private void Awake()
     {
         if (!rb) rb = GetComponent<Rigidbody>();
@@ -96,6 +96,7 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
             liftInput.action.Disable();
         }
     }
+
 
     /// <summary>
     /// Callback from the Input System for the configured lift input action.
@@ -412,10 +413,21 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
         return best;
     }
 
+    private bool IsPlayerPromptSource()
+    {
+        if (CompareTag("NPC") || transform.root.CompareTag("NPC"))
+            return false;
+
+        return CompareTag("Player") || transform.root.CompareTag("Player");
+    }
+
     public bool IsPromptAvailable
     {
         get
         {
+            if (!IsPlayerPromptSource())
+                return false;
+
             if (isAttached)
                 return true;
 
@@ -436,8 +448,21 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
             if (carrier == null)
                 return string.Empty;
 
-            if (carrier.line != null && !string.IsNullOrWhiteSpace(carrier.line.name))
-                return $"Board {carrier.line.name}";
+            var line = carrier.line;
+            if (line != null)
+            {
+                var passMgr = SkiPassManager.Instance;
+                int required = Mathf.Max(0, line.RequiredPassLevel);
+
+                if (passMgr != null && !passMgr.CanUseLift(required))
+                {
+                    string requiredName = line.GetRequiredPassDisplayName();
+                    return $"Upgrade your pass to {requiredName} at the kiosk to use this ski lift";
+                }
+
+                if (!string.IsNullOrWhiteSpace(line.name))
+                    return $"Board {line.name}";
+            }
 
             return carrier.mode == LiftCarrierMode.Chair ? "Board Lift" : "Grab T-Bar";
         }

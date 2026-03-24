@@ -22,6 +22,7 @@ TagManager:
   - water
   - Resort
   - TutorialSpawn
+  - NPC
   layers:
   - Default
   - TransparentFX
@@ -45,7 +46,7 @@ TagManager:
   - PDM_Batch_Pool_Break
   - Background
   - Clouds
-  - 
+  - NPC
   - 
   - 
   - 

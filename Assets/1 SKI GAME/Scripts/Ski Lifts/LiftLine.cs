@@ -712,7 +712,7 @@ public class LiftLine : MonoBehaviour
 
     #endregion
 
-    private string GetRequiredPassDisplayName()
+    public string GetRequiredPassDisplayName()
     {
         var mgr = SkiPassManager.Instance;
         var cfg = mgr != null ? mgr.Config : null;

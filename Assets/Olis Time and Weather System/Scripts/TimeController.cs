@@ -65,6 +65,8 @@ namespace TimeWeather
         private bool _hasExternalSecondsPerMinute;
         private float _externalSecondsPerMinute;
         private float _defaultSecondsPerMinute;
+        private int _externalPauseRequests;
+        public bool IsExternallyPaused => _externalPauseRequests > 0;
 
         [Tooltip("The current in-game time")]
         [Range(0, 24)] public float timeOfDay;
@@ -374,7 +376,10 @@ namespace TimeWeather
 
             // Simulation
             timeScale = 24f / (secondsPerMinuteInGame / 60f);
-            timeOfDay += Time.deltaTime * timeScale / 86400f; // seconds in a day
+
+            if (!IsExternallyPaused)
+                timeOfDay += Time.deltaTime * timeScale / 86400f; // seconds in a day
+
             timePercent = (timeOfDay %= 24f) / 24f;
 
             UpdateLighting();
@@ -1041,6 +1046,31 @@ namespace TimeWeather
 
                 timeText.text = timeString;
             }
+        }
+
+        /// <summary>
+        /// Requests a gameplay-level pause of in-world time progression.
+        /// Multiple systems may pause at once; each must later resume.
+        /// </summary>
+        public void PushExternalPause()
+        {
+            _externalPauseRequests++;
+        }
+
+        /// <summary>
+        /// Releases one gameplay-level pause request.
+        /// </summary>
+        public void PopExternalPause()
+        {
+            _externalPauseRequests = Mathf.Max(0, _externalPauseRequests - 1);
+        }
+
+        /// <summary>
+        /// Clears all external pause requests.
+        /// </summary>
+        public void ClearExternalPause()
+        {
+            _externalPauseRequests = 0;
         }
 
         /// <summary>

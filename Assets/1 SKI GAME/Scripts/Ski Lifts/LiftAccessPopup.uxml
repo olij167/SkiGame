@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/Ski%20Lifts/LiftAccessPopup.uss?fileID=7433441132597879392&amp;guid=6dee9bf0c66421745a5dd9d0b8f1638f&amp;type=3#LiftAccessPopup" />
+    <ui:VisualElement name="LiftAccessPopupRoot" class="lift-access-popup-root">
+        <ui:VisualElement name="LiftAccessPopupPanel" class="lift-access-popup-panel lift-access-popup-negative">
+            <ui:VisualElement class="lift-access-popup-icon-wrap">
+                <ui:Label name="Lbl_LiftAccessIcon" text="!" class="lift-access-popup-icon" />
+            </ui:VisualElement>
+            <ui:VisualElement class="lift-access-popup-copy">
+                <ui:Label name="Lbl_LiftAccessTitle" text="Lift Locked" class="lift-access-popup-title" />
+                <ui:Label name="Lbl_LiftAccessBody" text="Upgrade your pass at the kiosk to use this ski lift" class="lift-access-popup-body" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

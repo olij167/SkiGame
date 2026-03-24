@@ -264,14 +264,168 @@
 
 .tutorial-objective-indicator {
     position: absolute;
-    min-width: 160px;
-    background-color: rgba(0,0,0,0.82);
-    border-radius: 14px;
+    min-width: 180px;
+    background-color: rgba(6, 10, 16, 0.88);
+    border-radius: 16px;
     padding: 8px 12px;
+    border-top-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-left-width: 2px;
+    border-top-color: rgba(93, 190, 255, 0.45);
+    border-right-color: rgba(93, 190, 255, 0.45);
+    border-bottom-color: rgba(93, 190, 255, 0.45);
+    border-left-color: rgba(93, 190, 255, 0.45);
 }
 
 .tutorial-objective-label {
-    color: white;
+    color: rgb(240, 248, 255);
     -unity-font-style: bold;
     font-size: 14px;
+    unity-text-align: middle-center;
+}
+
+    .nav-hud-root {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 18px;
+    align-items: center;
+}
+
+.nav-hud-panel {
+    min-width: 300px;
+    max-width: 420px;
+    background-color: rgba(6, 10, 16, 0.92);
+    border-radius: 18px;
+    padding: 10px 14px 12px 14px;
+    border-top-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-left-width: 2px;
+    border-top-color: rgba(93, 190, 255, 0.45);
+    border-right-color: rgba(93, 190, 255, 0.45);
+    border-bottom-color: rgba(93, 190, 255, 0.45);
+    border-left-color: rgba(93, 190, 255, 0.45);
+}
+
+.nav-hud-title {
+    color: rgb(240, 248, 255);
+    -unity-font-style: bold;
+    font-size: 15px;
+    unity-text-align: middle-center;
+}
+
+.nav-hud-meta-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.nav-hud-distance {
+    color: rgba(208, 224, 240, 0.95);
+    font-size: 12px;
+    -unity-font-style: bold;
+}
+
+.nav-hud-bearing {
+    color: rgba(208, 224, 240, 0.95);
+    font-size: 12px;
+    -unity-font-style: bold;
+    unity-text-align: middle-right;
+}
+
+.nav-hud-track {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.nav-hud-track-edge {
+    color: rgba(190, 214, 232, 0.80);
+    font-size: 12px;
+    min-width: 14px;
+    unity-text-align: middle-center;
+}
+
+.nav-hud-track-line {
+    position: relative;
+    flex-grow: 1;
+    height: 8px;
+    margin-left: 8px;
+    margin-right: 8px;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+}
+
+.nav-hud-needle {
+    position: absolute;
+    top: -4px;
+    left: 0;
+    width: 18px;
+    height: 16px;
+    background-color: rgb(93, 190, 255);
+    border-radius: 6px;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.55);
+    border-right-color: rgba(255, 255, 255, 0.55);
+    border-bottom-color: rgba(255, 255, 255, 0.55);
+    border-left-color: rgba(255, 255, 255, 0.55);
+}
+
+.navigation-indicator-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.navigation-edge-indicator {
+    position: absolute;
+    min-width: 180px;
+    max-width: 260px;
+    flex-direction: row;
+    align-items: center;
+    background-color: rgba(6, 10, 16, 0.92);
+    border-radius: 18px;
+    padding: 8px 12px;
+    border-top-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-left-width: 2px;
+    border-top-color: rgba(93, 190, 255, 0.45);
+    border-right-color: rgba(93, 190, 255, 0.45);
+    border-bottom-color: rgba(93, 190, 255, 0.45);
+    border-left-color: rgba(93, 190, 255, 0.45);
+}
+
+.navigation-arrow-label {
+    min-width: 22px;
+    margin-right: 10px;
+    color: rgb(93, 190, 255);
+    -unity-font-style: bold;
+    font-size: 20px;
+    unity-text-align: middle-center;
+}
+
+.navigation-indicator-labels {
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.navigation-indicator-title {
+    color: rgb(240, 248, 255);
+    -unity-font-style: bold;
+    font-size: 14px;
+}
+
+.navigation-indicator-distance {
+    color: rgba(208, 224, 240, 0.95);
+    font-size: 12px;
+    margin-top: 2px;
 }

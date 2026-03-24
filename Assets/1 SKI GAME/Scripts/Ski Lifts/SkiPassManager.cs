@@ -11,6 +11,7 @@ public class SkiPassManager : MonoBehaviour
     private const string Key_Level = "ski_pass_level";
     private const string Key_ExpiryGameHours = "ski_pass_expiry_game_hours";   // absolute game-hours (dayCount*24 + hour)
     private const string Key_TotalHours = "ski_pass_total_hours";             // for progress bar fraction
+    private const string Key_DefaultClaimed = "ski_pass_default_claimed";
 
     public event Action OnPassChanged;
 
@@ -23,6 +24,8 @@ public class SkiPassManager : MonoBehaviour
     public double TotalHours { get; private set; }
 
     public SkiPassConfigSO Config => config;
+
+    public bool HasClaimedDefaultPass { get; private set; }
 
     private void Awake()
     {
@@ -83,6 +86,10 @@ public class SkiPassManager : MonoBehaviour
     public bool CanUseLift(int requiredLevel)
     {
         requiredLevel = Mathf.Max(0, requiredLevel);
+
+        if (!HasClaimedDefaultPass)
+            return false;
+
         return CurrentLevel >= requiredLevel;
     }
 
@@ -270,6 +277,33 @@ public class SkiPassManager : MonoBehaviour
         OnPassChanged?.Invoke();
     }
 
+    public bool TryClaimDefaultPass(out string reason)
+    {
+        reason = null;
+
+        if (config == null)
+        {
+            reason = "Missing SkiPassConfig.";
+            return false;
+        }
+
+        if (HasClaimedDefaultPass)
+        {
+            reason = "Default pass already claimed.";
+            return false;
+        }
+
+        int def = Mathf.Max(0, config.defaultLevelIndex);
+        CurrentLevel = def;
+        ExpiryGameHours = null;
+        TotalHours = 0;
+        HasClaimedDefaultPass = true;
+
+        Save();
+        OnPassChanged?.Invoke();
+        return true;
+    }
+
     private void EnforceExpiry()
     {
         if (!ExpiryGameHours.HasValue) return;
@@ -285,6 +319,8 @@ public class SkiPassManager : MonoBehaviour
 
     private void Load()
     {
+        HasClaimedDefaultPass = PlayerPrefs.GetInt(Key_DefaultClaimed, 0) == 1;
+
         CurrentLevel = PlayerPrefs.GetInt(Key_Level, 0);
         if (config != null) CurrentLevel = config.ClampLevel(CurrentLevel);
 
@@ -303,6 +339,8 @@ public class SkiPassManager : MonoBehaviour
 
     private void Save()
     {
+        PlayerPrefs.SetInt(Key_DefaultClaimed, HasClaimedDefaultPass ? 1 : 0);
+
         PlayerPrefs.SetInt(Key_Level, CurrentLevel);
 
         PlayerPrefs.SetString(Key_ExpiryGameHours, ExpiryGameHours.HasValue ? ExpiryGameHours.Value.ToString("R") : "");

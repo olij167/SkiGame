@@ -101,9 +101,9 @@
 }
 
 .tab-btn {
-    flex-grow: 1;
+    flex-grow: 0;
     margin-right: 6px;
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: rgb(53, 53, 53);
     color: white;
     text-overflow: clip;
     flex-direction: column;
@@ -120,7 +120,6 @@
 }
 
 .options-list {
-    height: 320px;
     background-color: rgba(0, 0, 0, 0.15);
     border-radius: 8px;
 }
@@ -402,7 +401,7 @@
     margin-right: 0;
     margin-bottom: 0;
     margin-left: 0;
-    padding: 0px;
+    padding: 0;
 }
 
 .loadout-badge {
@@ -837,21 +836,27 @@
     width: 22px;
     height: 11px;
     border-radius: 8px;
-    border-color: rgba(0,0,0,0);
-    border-width: 0px;
-    background-color: rgba(255,255,255,0.06);
+    border-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    background-color: rgba(255, 255, 255, 0.06);
     -unity-font-style: bold;
     font-size: 12px;
     opacity: 0.85;
     padding: 8px;
-
-    margin: 0px;
+    margin: 0;
     justify-content: flex-start;
     align-self: flex-end;
 }
 
-.reset-btn:hover { opacity: 1.0; background-color: rgba(255,255,255,0.10); }
-.reset-btn:active { opacity: 1.0; background-color: rgba(255,255,255,0.14); }
+.reset-btn:hover {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.reset-btn:active {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.14);
+}
 
 .preview-clear-btn {
     width: 18px;
@@ -859,12 +864,45 @@
     margin-left: 6px;
     padding: 0;
     border-radius: 9px;
-    background-color: rgba(255,255,255,0.08);
+    background-color: rgba(255, 255, 255, 0.08);
     opacity: 0.85;
     font-size: 11px;
     unity-text-align: middle-center;
-    display: none; /* default hidden; binder shows only when previewing */
+    display: none;
 }
 
-.preview-clear-btn:hover { opacity: 1.0; background-color: rgba(255,255,255,0.12); }
-.preview-clear-btn:active { background-color: rgba(255,255,255,0.16); }
+.preview-clear-btn:hover {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.preview-clear-btn:active {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.shop-lists-column {
+    flex-grow: 1;
+    flex-direction: column;
+    margin-right: 10px;
+    min-width: 0;
+}
+
+.top-list {
+    flex-grow: 1;
+    min-height: 160px;
+    margin-bottom: 12px;
+}
+
+.bottom-list {
+    flex-grow: 1;
+    min-height: 160px;
+}
+
+.options-list {
+    background-color: rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    min-width: 0;
+}
+
+.is-active {
+}

@@ -140,28 +140,6 @@ public class CustomizationUIController : MonoBehaviour
 
     // ---------------- Tab controls ----------------
 
-    public void SetRootTab(RootTab tab)
-    {
-        if (_rootTab == tab) return;
-
-        _rootTab = tab;
-        _selected = null;
-
-        // IMPORTANT: Do NOT clear previews here.
-        // Previews must persist across Shop/Inventory swaps so the user can preview multiple slots.
-
-        RebuildLists();
-        NotifyChanged();
-    }
-
-    public void SetSubTab(SubTab tab)
-    {
-        if (_subTab == tab) return;
-        _subTab = tab;
-        _selected = null;
-        RebuildLists();
-    }
-
     public void SetCategory(CustomizationOptionType t)
     {
         if (_activeCategory == t) return;
@@ -674,22 +652,17 @@ public class CustomizationUIController : MonoBehaviour
 
         if (_catalog == null) return;
 
-        if (_rootTab == RootTab.Shop)
-        {
-            DailyShopService.GetTodayOffers(_catalog, _todayKey, _activeCategory, _visible);
-        }
-        else
-        {
-            if (_activeCategory == CustomizationOptionType.Hat || _activeCategory == CustomizationOptionType.Jacket)
-{
-                _owned.Insert(0, GetNoneOption(_activeCategory));
-            }
+        DailyShopService.GetTodayOffers(_catalog, _todayKey, _activeCategory, _visible);
 
-            foreach (var o in _catalog.GetByType(_activeCategory))
-            {
-                if (o == null) continue;
-                if (IsOwned(o)) _owned.Add(o);
-            }
+        if (_activeCategory == CustomizationOptionType.Hat || _activeCategory == CustomizationOptionType.Jacket)
+        {
+            _owned.Insert(0, GetNoneOption(_activeCategory));
+        }
+
+        foreach (var o in _catalog.GetByType(_activeCategory))
+        {
+            if (o == null) continue;
+            if (IsOwned(o)) _owned.Add(o);
         }
     }
 

@@ -1,0 +1,98 @@
+.ski-pass-kiosk-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.45);
+}
+
+.ski-pass-kiosk-panel {
+    width: 520px;
+    max-height: 85%;
+    padding: 18px;
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+    background-color: rgba(10, 16, 24, 0.96);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.08);
+    border-right-color: rgba(255,255,255,0.08);
+    border-top-color: rgba(255,255,255,0.08);
+    border-bottom-color: rgba(255,255,255,0.08);
+}
+
+.ski-pass-kiosk-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.ski-pass-kiosk-title {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: rgb(245,248,252);
+}
+
+.ski-pass-current {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: rgb(236, 243, 252);
+    margin-bottom: 4px;
+}
+
+.ski-pass-expiry,
+.ski-pass-quote,
+.ski-pass-result {
+    color: rgba(230,235,240,0.82);
+    margin-bottom: 10px;
+}
+
+.ski-pass-section-title {
+    margin-top: 8px;
+    margin-bottom: 6px;
+    -unity-font-style: bold;
+    color: rgb(220,228,238);
+}
+
+.ski-pass-option-list {
+    flex-direction: column;
+    margin-bottom: 8px;
+}
+
+.ski-pass-option-list.horizontal {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.ski-pass-option-button {
+    margin-bottom: 6px;
+    margin-right: 6px;
+}
+
+.ski-pass-option-button.is-selected {
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+}
+
+.ski-pass-lift-list {
+    max-height: 220px;
+}
+
+.ski-pass-lift-row {
+    margin-bottom: 4px;
+    color: rgb(230,236,244);
+}
+
+.ski-pass-lift-row.is-locked {
+    color: rgba(180, 188, 198, 0.55);
+}

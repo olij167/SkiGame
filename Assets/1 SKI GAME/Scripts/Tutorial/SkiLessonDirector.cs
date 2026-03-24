@@ -1,5 +1,6 @@
 using SkiGame.Runs;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace SkiGame.Progression
 {
@@ -17,9 +18,12 @@ namespace SkiGame.Progression
             Poles,
             Soreness,
             ResortRecovery,
+            EquipSkis,
             HudAndTasks,
             CustomisationShop,
-            Explore,
+            SkiPassKiosk,
+            RideLift,
+            DismountLift,
             Complete
         }
 
@@ -34,6 +38,10 @@ namespace SkiGame.Progression
         [SerializeField] private MiniMountainHudController miniMountainHud;
         [SerializeField] private MountainHudOverlayController mountainHudOverlay;
         [SerializeField] private CustomizationPortal customizationPortal;
+        [SerializeField] private WalkingController walkingController;
+        [SerializeField] private LiftRider liftRider;
+        [SerializeField] private InputActionAsset inputActions;
+        [SerializeField] private SkiPassKiosk skiPassKiosk;
 
         [Header("Activation")]
         [SerializeField] private bool forceRunEvenIfCompleted = false;
@@ -44,7 +52,6 @@ namespace SkiGame.Progression
         [SerializeField] private float quickStopPrimeSpeed = 5.25f;
         [SerializeField] private float quickStopExitSpeed = 3.4f;
         [SerializeField] private float sorenessRequired = 0.035f;
-        [SerializeField] private float exploreTravelDistanceRequired = 200f;
         [SerializeField] private float moveIntroDelaySeconds = 1.4f;
         [SerializeField] private float moveInputThreshold = 0.18f;
 
@@ -85,16 +92,25 @@ namespace SkiGame.Progression
         private int _tutorialReadyTaskTierIndex = -1;
 
         private bool _shopOpened;
-        private bool _shopBought;
-        private bool _shopEquipped;
-        private int _shopUnlockedBaseline;
-        private string _shopEquippedSignatureBaseline;
+        private bool _shopExitedAfterOpen;
 
+        private bool _liftRideStarted;
+
+        private bool _equipSkisPhaseEntered;
+        private bool _sawSkisUnequippedAfterResort;
+
+        [SerializeField] private float tutorialLiftSearchRadius = 2000f;
+
+        private LiftLine _tutorialTargetLiftLine;
+
+        private bool _kioskOpened;
+        private bool _defaultPassClaimedDuringTutorial;
+        private bool _hadDefaultPassBeforeKioskStep;
         public bool IsLessonActive => _active;
         public bool CanOfferLessons => playerStatsManager != null && playerStatsManager.Profile?.tutorial != null && playerStatsManager.Profile.tutorial.CanOfferSkiLessons;
         public bool LessonsCompleted => playerStatsManager != null && playerStatsManager.Profile?.tutorial != null && playerStatsManager.Profile.tutorial.skiLessonsCompleted;
         public int CurrentStepIndex => (int)_currentStep;
-        public int TotalStepCount => (int)LessonStep.Explore + 1;
+        public int TotalStepCount => (int)LessonStep.DismountLift + 1;
         public string CurrentStepTitle => GetStepTitle(_currentStep);
         public string CurrentStepBody => GetStepBody(_currentStep);
         public string CurrentStepHint => GetStepHint(_currentStep);
@@ -116,6 +132,40 @@ namespace SkiGame.Progression
                         if (!_shopOpened && customizationPortal != null)
                             return customizationPortal.transform;
                         break;
+
+                    case LessonStep.SkiPassKiosk:
+                        if (skiPassKiosk != null && !_defaultPassClaimedDuringTutorial)
+                            return skiPassKiosk.transform;
+                        break;
+
+                    case LessonStep.RideLift:
+                        {
+                            var lift = ResolveTutorialTargetLiftLine();
+                            if (lift != null)
+                            {
+                                if (lift.bottomStation != null)
+                                    return lift.bottomStation;
+
+                                return lift.transform;
+                            }
+                            break;
+                        }
+
+                    case LessonStep.DismountLift:
+                        {
+                            var lift = liftRider != null && liftRider.CurrentLiftLine != null
+                                ? liftRider.CurrentLiftLine
+                                : ResolveTutorialTargetLiftLine();
+
+                            if (lift != null)
+                            {
+                                if (lift.topStation != null)
+                                    return lift.topStation;
+
+                                return lift.transform;
+                            }
+                            break;
+                        }
                 }
 
                 return null;
@@ -133,6 +183,15 @@ namespace SkiGame.Progression
 
                     case LessonStep.CustomisationShop:
                         return !_shopOpened ? "Go to Customisation Shop" : string.Empty;
+
+                    case LessonStep.SkiPassKiosk:
+                        return !_defaultPassClaimedDuringTutorial ? "Go to Ski Pass Kiosk" : string.Empty;
+
+                    case LessonStep.RideLift:
+                        return "Go to Ski Lift";
+
+                    case LessonStep.DismountLift:
+                        return "Dismount at Top Station";
                 }
 
                 return string.Empty;
@@ -205,7 +264,8 @@ namespace SkiGame.Progression
             if (skiResortInteractor == null)
                 skiResortInteractor = FindObjectOfType<SkiResortHoldInteractor>();
 
-
+            if (walkingController == null)
+                walkingController = FindObjectOfType<WalkingController>();
 
             if (progressionDirector == null)
                 progressionDirector = ProgressionDirector.Instance != null
@@ -214,6 +274,59 @@ namespace SkiGame.Progression
 
             if (customizationPortal == null)
                 customizationPortal = FindObjectOfType<CustomizationPortal>();
+
+            if (liftRider == null)
+                liftRider = FindObjectOfType<LiftRider>();
+
+            if (skiPassKiosk == null)
+                skiPassKiosk = FindObjectOfType<SkiPassKiosk>();
+        }
+
+        private LiftLine ResolveTutorialTargetLiftLine()
+        {
+            if (_tutorialTargetLiftLine != null)
+                return _tutorialTargetLiftLine;
+
+            _tutorialTargetLiftLine = FindNearestTutorialLiftLine();
+            return _tutorialTargetLiftLine;
+        }
+
+        private LiftLine FindNearestTutorialLiftLine()
+        {
+            if (skiController == null)
+                return null;
+
+            Vector3 playerPos = skiController.transform.position;
+            float maxSqr = tutorialLiftSearchRadius * tutorialLiftSearchRadius;
+
+            LiftLine best = null;
+            float bestSqr = maxSqr;
+
+#if UNITY_2023_1_OR_NEWER
+            var lifts = FindObjectsByType<LiftLine>(FindObjectsSortMode.None);
+#else
+    var lifts = FindObjectsOfType<LiftLine>();
+#endif
+
+            for (int i = 0; i < lifts.Length; i++)
+            {
+                var lift = lifts[i];
+                if (lift == null)
+                    continue;
+
+                Vector3 anchor =
+                    lift.bottomStation != null ? lift.bottomStation.position :
+                    lift.transform.position;
+
+                float d2 = (anchor - playerPos).sqrMagnitude;
+                if (d2 < bestSqr)
+                {
+                    bestSqr = d2;
+                    best = lift;
+                }
+            }
+
+            return best;
         }
 
         public void BeginLessons()
@@ -224,7 +337,7 @@ namespace SkiGame.Progression
             playerStatsManager.Profile.tutorial.AcceptLessons();
 
             int rawIndex = playerStatsManager.Profile.tutorial.skiLessonStepIndex;
-            _currentStep = (LessonStep)Mathf.Clamp(rawIndex, 0, (int)LessonStep.Explore);
+            _currentStep = (LessonStep)Mathf.Clamp(rawIndex, 0, (int)LessonStep.DismountLift);
 
             var profile = playerStatsManager.Profile;
             _baselineRunsCompleted = profile.session != null ? profile.session.runsCompleted : 0;
@@ -284,10 +397,18 @@ namespace SkiGame.Progression
             _tutorialReadyTaskTierIndex = -1;
 
             _shopOpened = false;
-            _shopBought = false;
-            _shopEquipped = false;
-            _shopUnlockedBaseline = 0;
-            _shopEquippedSignatureBaseline = string.Empty;
+            _shopExitedAfterOpen = false;
+
+            _liftRideStarted = false;
+
+            _equipSkisPhaseEntered = false;
+            _sawSkisUnequippedAfterResort = false;
+
+            _tutorialTargetLiftLine = null;
+
+            _kioskOpened = false;
+            _defaultPassClaimedDuringTutorial = false;
+            _hadDefaultPassBeforeKioskStep = false;
         }
 
         private void HandleStepEntered()
@@ -301,6 +422,12 @@ namespace SkiGame.Progression
             {
                 _resortRecoveryStartSoreness = sorenessMeter != null ? sorenessMeter.Soreness01 : 0f;
                 _resortRecoveryExplained = true;
+            }
+
+            if (_currentStep == LessonStep.EquipSkis)
+            {
+                _equipSkisPhaseEntered = true;
+                _sawSkisUnequippedAfterResort = false;
             }
 
             if (_currentStep == LessonStep.HudAndTasks)
@@ -317,13 +444,31 @@ namespace SkiGame.Progression
 
             if (_currentStep == LessonStep.CustomisationShop)
             {
-                _shopUnlockedBaseline = GetUnlockedCustomizationCount();
-                _shopEquippedSignatureBaseline = GetEquippedCustomizationSignature();
+                _shopOpened = false;
+                _shopExitedAfterOpen = false;
             }
 
-            if (_currentStep == LessonStep.Explore)
+            if (_currentStep == LessonStep.SkiPassKiosk)
             {
-                _exploreStartDistanceMeters = GetSessionDistanceMeters();
+                _kioskOpened = false;
+
+                var passMgr = SkiPassManager.Instance != null ? SkiPassManager.Instance : FindObjectOfType<SkiPassManager>();
+                _hadDefaultPassBeforeKioskStep = passMgr != null && passMgr.HasClaimedDefaultPass;
+                _defaultPassClaimedDuringTutorial = _hadDefaultPassBeforeKioskStep;
+            }
+
+            if (_currentStep == LessonStep.RideLift)
+            {
+                _liftRideStarted = liftRider != null && liftRider.IsAttached;
+                _tutorialTargetLiftLine = ResolveTutorialTargetLiftLine();
+            }
+
+            if (_currentStep == LessonStep.DismountLift)
+            {
+                _liftRideStarted = true;
+                _tutorialTargetLiftLine = liftRider != null && liftRider.CurrentLiftLine != null
+                    ? liftRider.CurrentLiftLine
+                    : ResolveTutorialTargetLiftLine();
             }
         }
 
@@ -380,7 +525,7 @@ namespace SkiGame.Progression
 
                 case LessonStep.Skate:
                     {
-                        if (skiController.IsRiderGrounded && skiController.ForwardLeanInput > 0.05f)
+                        if (skiController.IsRiderGrounded)
                         {
                             float diff = skiController.RightLegInput - skiController.LeftLegInput;
                             int dominant = Mathf.Abs(diff) >= 0.45f ? (diff > 0f ? 1 : -1) : 0;
@@ -452,8 +597,8 @@ namespace SkiGame.Progression
                             {
                                 _quickStopBrakeStarted = false;
                                 _quickStopBrakeStartSpeed = 0f;
-                                _quickStopBestSpeedDrop = 0f;
                                 _quickStopBrakeWindowTimer = 0f;
+                                _quickStopBestSpeedDrop = 0f;
                             }
                         }
 
@@ -462,13 +607,13 @@ namespace SkiGame.Progression
 
                 case LessonStep.JumpAndAir:
                     {
-                        if (!skiController.IsRiderGrounded && skiController.Velocity.y > 1f)
+                        if (!skiController.IsRiderGrounded)
+                        {
                             _jumpStarted = true;
 
-                        if (_jumpStarted && !skiController.IsRiderGrounded)
-                        {
-                            if (Mathf.Abs(skiController.RightLegInput - skiController.LeftLegInput) >= 0.2f ||
-                                Mathf.Abs(skiController.ForwardLeanInput) >= 0.2f)
+                            if (Mathf.Abs(skiController.ForwardLeanInput) >= 0.2f ||
+                                Mathf.Abs(skiController.LeftLegInput) >= 0.2f ||
+                                Mathf.Abs(skiController.RightLegInput) >= 0.2f)
                             {
                                 _airAdjusted = true;
                             }
@@ -482,13 +627,10 @@ namespace SkiGame.Progression
 
                 case LessonStep.Poles:
                     {
-                        if (skiController.CurrentPolePhase == SkiController.PoleStrokePhase.Entry ||
-                            skiController.CurrentPolePhase == SkiController.PoleStrokePhase.FollowThrough)
-                        {
+                        if (IsPolePushActive())
                             _sawPolePush = true;
-                        }
 
-                        if (skiController.CurrentPolePhase == SkiController.PoleStrokePhase.Drag && speed > 2f)
+                        if (IsPoleDragActive())
                             _sawPoleDrag = true;
 
                         if (_sawPolePush && _sawPoleDrag)
@@ -499,9 +641,7 @@ namespace SkiGame.Progression
 
                 case LessonStep.Soreness:
                     {
-                        bool hitConfirmed = WasHitForSoreness();
-
-                        if (hitConfirmed)
+                        if (WasHitForSoreness())
                             AdvanceStep();
 
                         break;
@@ -518,15 +658,19 @@ namespace SkiGame.Progression
                         bool sorenessReduced = currentSoreness < _resortRecoveryStartSoreness - 0.01f;
                         bool fullyRecovered = currentSoreness <= 0.001f;
 
-                        // First, require the player to actually enter the resort.
                         if (!_enteredResortAfterSoreness)
                             break;
 
-                        // Then let them leave once they have seen the resort and had time to recover, even a little.
                         if (!inResort && (_resortRecoveryExplained || sorenessReduced || fullyRecovered))
-                        {
                             AdvanceStep();
-                        }
+
+                        break;
+                    }
+
+                case LessonStep.EquipSkis:
+                    {
+                        if (AreSkisEquippedNow())
+                            AdvanceStep();
 
                         break;
                     }
@@ -535,11 +679,11 @@ namespace SkiGame.Progression
                     {
                         bool overlayOpen = mountainHudOverlay != null && mountainHudOverlay.IsOpen;
                         bool visitedStats = mountainHudOverlay != null && mountainHudOverlay.TutorialVisitedStats;
-                        bool visitedTasks = mountainHudOverlay != null && mountainHudOverlay.TutorialVisitedTasks;
                         bool visitedMap = mountainHudOverlay != null && mountainHudOverlay.TutorialVisitedMap;
                         bool claimedTask = progressionDirector != null && progressionDirector.CountClaimedDailyTiers() > _hudClaimedTierBaseline;
 
-                        if (overlayOpen && visitedStats && visitedTasks && visitedMap && claimedTask)
+                        // Tasks is open by default, so do not require a tasks-button click.
+                        if (overlayOpen && visitedStats && visitedMap && claimedTask)
                             AdvanceStep();
 
                         break;
@@ -548,43 +692,84 @@ namespace SkiGame.Progression
                 case LessonStep.CustomisationShop:
                     {
                         if (CustomizationShopRuntime.IsOpen)
+                        {
                             _shopOpened = true;
+                        }
+                        else if (_shopOpened)
+                        {
+                            _shopExitedAfterOpen = true;
+                        }
 
-                        if (GetUnlockedCustomizationCount() > _shopUnlockedBaseline)
-                            _shopBought = true;
-
-                        if (GetEquippedCustomizationSignature() != _shopEquippedSignatureBaseline)
-                            _shopEquipped = true;
-
-                        if (_shopOpened && _shopBought && _shopEquipped)
+                        // Completing the step now only requires visiting the shop and exiting it.
+                        if (_shopOpened && _shopExitedAfterOpen)
                             AdvanceStep();
 
                         break;
                     }
 
-                case LessonStep.Explore:
+                case LessonStep.SkiPassKiosk:
                     {
-                        var profile = playerStatsManager.Profile;
-                        int currentRuns = profile.session != null ? profile.session.runsCompleted : 0;
-                        int currentLifts = profile.session != null ? profile.session.liftsUsed : 0;
-                        float traveled = GetSessionDistanceMeters() - _exploreStartDistanceMeters;
+                        var passMgr = SkiPassManager.Instance != null ? SkiPassManager.Instance : FindObjectOfType<SkiPassManager>();
 
-                        if (_loggedRunAttempt ||
-                            currentRuns > _baselineRunsCompleted ||
-                            currentLifts > _baselineLiftsUsed ||
-                            traveled >= exploreTravelDistanceRequired)
+                        if (skiPassKiosk != null)
                         {
-                            CompleteLessons();
+                            var kioskUi = skiPassKiosk.GetComponentInChildren<SkiPassKioskUI>(true);
+                            if (kioskUi != null && kioskUi.IsOpen)
+                                _kioskOpened = true;
                         }
+
+                        if (passMgr != null && passMgr.HasClaimedDefaultPass)
+                            _defaultPassClaimedDuringTutorial = true;
+
+                        if (_defaultPassClaimedDuringTutorial)
+                            AdvanceStep();
+
+                        break;
+                    }
+
+                case LessonStep.RideLift:
+                    {
+                        if (liftRider != null && liftRider.IsAttached)
+                        {
+                            _liftRideStarted = true;
+                            if (liftRider.CurrentLiftLine != null)
+                                _tutorialTargetLiftLine = liftRider.CurrentLiftLine;
+
+                            AdvanceStep();
+                        }
+
+                        break;
+                    }
+
+                case LessonStep.DismountLift:
+                    {
+                        if (liftRider != null && liftRider.IsAttached)
+                            _liftRideStarted = true;
+
+                        if (_liftRideStarted && liftRider != null && !liftRider.IsAttached)
+                            CompleteLessons();
 
                         break;
                     }
             }
         }
 
-        private float GetSessionDistanceMeters()
+        private bool IsPolePushActive()
         {
-            return playerStatsManager?.Profile?.session != null ? playerStatsManager.Profile.session.distanceMeters : 0f;
+            if (skiController == null)
+                return false;
+
+            return
+                skiController.CurrentPolePhase == SkiController.PoleStrokePhase.Entry ||
+                skiController.CurrentPolePhase == SkiController.PoleStrokePhase.FollowThrough;
+        }
+
+        private bool IsPoleDragActive()
+        {
+            if (skiController == null)
+                return false;
+
+            return skiController.CurrentPolePhase == SkiController.PoleStrokePhase.Drag;
         }
 
         private float GetPlanarSpeed()
@@ -606,6 +791,94 @@ namespace SkiGame.Progression
                 Mathf.Abs(skiController.LeftLegInput) >= 0.18f ||
                 Mathf.Abs(skiController.RightLegInput) >= 0.18f ||
                 Mathf.Abs(skiController.RawLeanInput) >= 0.18f;
+        }
+
+        private string GetBindingDisplay(string actionName, params string[] compositePartNames)
+        {
+            var action = FindActionByFriendlyName(actionName);
+            if (action == null)
+                return "-";
+
+            int bindingIndex = (compositePartNames != null && compositePartNames.Length > 0)
+                ? FindCompositePartBindingIndex(action, compositePartNames)
+                : FindPrimaryBindingIndex(action);
+
+            return action.GetBindingDisplayString(bindingIndex, InputBinding.DisplayStringOptions.DontUseShortDisplayNames);
+        }
+
+        private string CombineBindings(params string[] actionNames)
+        {
+            if (actionNames == null || actionNames.Length == 0)
+                return "-";
+
+            var sb = new System.Text.StringBuilder();
+
+            for (int i = 0; i < actionNames.Length; i++)
+            {
+                if (i > 0)
+                    sb.Append(" / ");
+
+                sb.Append(GetBindingDisplay(actionNames[i]));
+            }
+
+            return sb.ToString();
+        }
+
+        private InputAction FindActionByFriendlyName(string actionName)
+        {
+            if (inputActions == null || string.IsNullOrWhiteSpace(actionName))
+                return null;
+
+            string normalizedTarget = Normalize(actionName);
+
+            foreach (var map in inputActions.actionMaps)
+            {
+                for (int i = 0; i < map.actions.Count; i++)
+                {
+                    var action = map.actions[i];
+                    if (Normalize(action.name) == normalizedTarget)
+                        return action;
+                }
+            }
+
+            return null;
+        }
+
+        private static string Normalize(string value)
+        {
+            return value.Replace(" ", "").Replace("_", "").ToLowerInvariant();
+        }
+
+        private static int FindPrimaryBindingIndex(InputAction action)
+        {
+            for (int i = 0; i < action.bindings.Count; i++)
+            {
+                var b = action.bindings[i];
+                if (b.isComposite || b.isPartOfComposite) continue;
+                if (!string.IsNullOrEmpty(b.path)) return i;
+            }
+
+            return 0;
+        }
+
+        private static int FindCompositePartBindingIndex(InputAction action, params string[] partNames)
+        {
+            if (action == null)
+                return 0;
+
+            for (int i = 0; i < action.bindings.Count; i++)
+            {
+                var b = action.bindings[i];
+                if (!b.isPartOfComposite) continue;
+
+                for (int p = 0; p < partNames.Length; p++)
+                {
+                    if (string.Equals(b.name, partNames[p], System.StringComparison.OrdinalIgnoreCase))
+                        return i;
+                }
+            }
+
+            return FindPrimaryBindingIndex(action);
         }
 
         private bool WasHitForSoreness()
@@ -643,6 +916,22 @@ namespace SkiGame.Progression
             if (c == null) return string.Empty;
 
             return $"{c.equippedEyeIconId}|{c.equippedSkisId}|{c.equippedPolesId}|{c.equippedHatId}|{c.equippedJacketId}|{c.equippedSkisPatternId}|{c.equippedPolesPatternId}|{c.equippedHatPatternId}|{c.equippedJacketPatternId}";
+        }
+
+        private bool AreSkisEquippedNow()
+        {
+            if (walkingController != null)
+                return walkingController.SkisOn;
+
+            if (skiController != null)
+                return skiController.enabled && skiController.gameObject.activeInHierarchy;
+
+            return false;
+        }
+
+        private bool AreSkisUnequippedNow()
+        {
+            return !AreSkisEquippedNow();
         }
 
         private void HandleAttemptLogged(RunProgressTracker.AttemptLoggedInfo info)
@@ -716,7 +1005,7 @@ namespace SkiGame.Progression
                     return ((_sawForwardLean ? 1f : 0f) + (_sawBackwardLean ? 1f : 0f)) / 2f;
 
                 case LessonStep.Turn:
-                    return Mathf.Clamp01(_turnAccumulatedTime / 1f);
+                    return Mathf.Clamp01(_turnAccumulatedTime / 1.0f);
 
                 case LessonStep.Skate:
                     return Mathf.Clamp01(_skateAlternations / 4f);
@@ -727,19 +1016,16 @@ namespace SkiGame.Progression
                             return Mathf.Clamp01(GetPlanarSpeed() / Mathf.Max(0.01f, quickStopPrimeSpeed));
 
                         if (!_quickStopBrakeStarted)
-                            return 0.35f;
+                            return 0.5f;
 
-                        float stopProgress = Mathf.Clamp01(_quickStopBestSpeedDrop / 1.9f);
-                        float finishProgress = Mathf.Clamp01(1f - (GetPlanarSpeed() / Mathf.Max(0.01f, quickStopPrimeSpeed)));
-                        return Mathf.Clamp01(stopProgress * 0.75f + finishProgress * 0.25f);
+                        return Mathf.Clamp01(_quickStopBestSpeedDrop / 1.9f);
                     }
 
                 case LessonStep.JumpAndAir:
                     {
                         float p = 0f;
-                        if (_jumpStarted) p += 0.34f;
-                        if (_airAdjusted) p += 0.33f;
-                        if (_jumpStarted && _airAdjusted && skiController.IsRiderGrounded) p = 1f;
+                        if (_jumpStarted) p += 0.5f;
+                        if (_airAdjusted) p += 0.5f;
                         return p;
                     }
 
@@ -747,50 +1033,51 @@ namespace SkiGame.Progression
                     return ((_sawPolePush ? 1f : 0f) + (_sawPoleDrag ? 1f : 0f)) / 2f;
 
                 case LessonStep.Soreness:
-                    {
-                        if (!_sorenessImpactConfirmed)
-                            return sorenessMeter != null ? Mathf.Clamp01(sorenessMeter.Soreness01 / Mathf.Max(0.001f, sorenessRequired)) : 0f;
-
-                        return 1f;
-                    }
+                    return WasHitForSoreness() ? 1f : Mathf.Clamp01((sorenessMeter != null ? sorenessMeter.Soreness01 : 0f) / Mathf.Max(0.001f, sorenessRequired));
 
                 case LessonStep.ResortRecovery:
                     {
                         if (!IsPlayerInResort())
-                            return 1f;
+                            return _enteredResortAfterSoreness ? 1f : 0f;
 
-                        if (sorenessMeter == null)
-                            return 0.5f;
-
-                        float current = sorenessMeter.Soreness01;
+                        float current = sorenessMeter != null ? sorenessMeter.Soreness01 : 0f;
                         float recovered = Mathf.Max(0f, _resortRecoveryStartSoreness - current);
                         float target = Mathf.Max(0.02f, _resortRecoveryStartSoreness);
                         return Mathf.Clamp01(recovered / target);
                     }
 
+                case LessonStep.EquipSkis:
+                    return AreSkisEquippedNow() ? 1f : 0f;
+
                 case LessonStep.HudAndTasks:
                     {
                         float p = 0f;
-                        if (mountainHudOverlay != null && mountainHudOverlay.TutorialVisitedStats) p += 0.25f;
-                        if (mountainHudOverlay != null && mountainHudOverlay.TutorialVisitedTasks) p += 0.25f;
-                        if (mountainHudOverlay != null && mountainHudOverlay.TutorialVisitedMap) p += 0.25f;
-                        if (progressionDirector != null && progressionDirector.CountClaimedDailyTiers() > _hudClaimedTierBaseline) p += 0.25f;
+                        if (mountainHudOverlay != null && mountainHudOverlay.TutorialVisitedStats) p += 0.34f;
+                        if (mountainHudOverlay != null && mountainHudOverlay.TutorialVisitedMap) p += 0.33f;
+                        if (progressionDirector != null && progressionDirector.CountClaimedDailyTiers() > _hudClaimedTierBaseline) p += 0.33f;
                         return p;
                     }
 
                 case LessonStep.CustomisationShop:
                     {
                         float p = 0f;
-                        if (_shopOpened) p += 0.34f;
-                        if (_shopBought) p += 0.33f;
-                        if (_shopEquipped) p += 0.33f;
+                        if (_shopOpened) p += 0.5f;
+                        if (_shopExitedAfterOpen) p += 0.5f;
                         return p;
                     }
 
-                case LessonStep.Explore:
+                case LessonStep.SkiPassKiosk:
+                    return _defaultPassClaimedDuringTutorial ? 1f : (_kioskOpened ? 0.5f : 0f);
+
+                case LessonStep.RideLift:
+                    return (liftRider != null && liftRider.IsAttached) ? 1f : 0f;
+
+                case LessonStep.DismountLift:
                     {
-                        float traveled = GetSessionDistanceMeters() - _exploreStartDistanceMeters;
-                        return Mathf.Clamp01(traveled / Mathf.Max(0.01f, exploreTravelDistanceRequired));
+                        if (!_liftRideStarted)
+                            return 0f;
+
+                        return (liftRider != null && !liftRider.IsAttached) ? 1f : 0.5f;
                     }
             }
 
@@ -839,30 +1126,41 @@ namespace SkiGame.Progression
                         float current = sorenessMeter != null ? sorenessMeter.Soreness01 : 0f;
                         return $"Soreness: {current:0.00}";
                     }
-
                     return "Leave the resort when ready";
+
+                case LessonStep.EquipSkis:
+                    return AreSkisEquippedNow() ? "Skis equipped" : "Put your skis on";
 
                 case LessonStep.HudAndTasks:
                     {
                         int count = 0;
                         if (mountainHudOverlay != null && mountainHudOverlay.TutorialVisitedStats) count++;
-                        if (mountainHudOverlay != null && mountainHudOverlay.TutorialVisitedTasks) count++;
                         if (mountainHudOverlay != null && mountainHudOverlay.TutorialVisitedMap) count++;
                         if (progressionDirector != null && progressionDirector.CountClaimedDailyTiers() > _hudClaimedTierBaseline) count++;
-                        return $"{count}/4";
+                        return $"{count}/3";
                     }
 
                 case LessonStep.CustomisationShop:
                     {
                         int count = 0;
                         if (_shopOpened) count++;
-                        if (_shopBought) count++;
-                        if (_shopEquipped) count++;
-                        return $"{count}/3";
+                        if (_shopExitedAfterOpen) count++;
+                        return $"{count}/2";
                     }
 
-                case LessonStep.Explore:
-                    return $"{Mathf.Max(0f, GetSessionDistanceMeters() - _exploreStartDistanceMeters):0}/{exploreTravelDistanceRequired:0} m";
+                case LessonStep.SkiPassKiosk:
+                    {
+                        if (_defaultPassClaimedDuringTutorial)
+                            return "Pass unlocked";
+
+                        return _kioskOpened ? "Claim the free pass" : "Visit kiosk";
+                    }
+
+                case LessonStep.RideLift:
+                    return (liftRider != null && liftRider.IsAttached) ? "Lift boarded" : "Board a lift";
+
+                case LessonStep.DismountLift:
+                    return (liftRider != null && !liftRider.IsAttached) ? "Lift dismounted" : "Dismount the lift";
             }
 
             return string.Empty;
@@ -881,9 +1179,12 @@ namespace SkiGame.Progression
                 case LessonStep.Poles: return "Use Poles";
                 case LessonStep.Soreness: return "Soreness";
                 case LessonStep.ResortRecovery: return "Recover in the Resort";
+                case LessonStep.EquipSkis: return "Put Your Skis On";
                 case LessonStep.HudAndTasks: return "Mini HUD and Overlay";
                 case LessonStep.CustomisationShop: return "Customisation Shop";
-                case LessonStep.Explore: return "Explore";
+                case LessonStep.SkiPassKiosk: return "Get Your Ski Pass";
+                case LessonStep.RideLift: return "Ride the Lift";
+                case LessonStep.DismountLift: return "Dismount";
                 default: return "Ski Lessons";
             }
         }
@@ -893,25 +1194,25 @@ namespace SkiGame.Progression
             switch (step)
             {
                 case LessonStep.Move:
-                    return "Press your movement inputs and move away from the start.";
+                    return $"Press {GetBindingDisplay("Lean", "positive", "up", "forward")} and use {CombineBindings("LeftSki", "RightSki")} to move away from the start.";
 
                 case LessonStep.Lean:
-                    return "Press forward lean to gain speed. Press backward lean to slow down.";
+                    return $"Press {GetBindingDisplay("Lean", "positive", "up", "forward")} to gain speed and {GetBindingDisplay("Lean", "negative", "down", "back", "backward")} to slow down.";
 
                 case LessonStep.Turn:
-                    return "Press your ski steering inputs to turn and carve.";
+                    return $"Use {GetBindingDisplay("LeftSki")} and {GetBindingDisplay("RightSki")} to turn and carve.";
 
                 case LessonStep.Skate:
-                    return "Lean forward and alternate: left, right, left, right.";
+                    return $"Alternate {GetBindingDisplay("LeftSki")} and {GetBindingDisplay("RightSki")} to skate forward.";
 
                 case LessonStep.QuickStop:
-                    return "Build some speed, then lean back and turn sharply to scrub speed fast.";
+                    return $"Build some speed, then press {GetBindingDisplay("Lean", "negative", "down", "back", "backward")} and turn with {CombineBindings("LeftSki", "RightSki")} to stop quickly.";
 
                 case LessonStep.JumpAndAir:
-                    return "Press and hold jump to pop. Use lean and ski inputs in the air.";
+                    return $"Press and hold {GetBindingDisplay("Jump")} to jump. Use {GetBindingDisplay("Lean")} and {CombineBindings("LeftSki", "RightSki")} in the air to control yourself.";
 
                 case LessonStep.Poles:
-                    return "Press poles to push on flats and drag them to control speed.";
+                    return $"Press {GetBindingDisplay("Poles")} to push on flats and drag them to control speed.";
 
                 case LessonStep.Soreness:
                     return _sorenessImpactConfirmed
@@ -919,16 +1220,25 @@ namespace SkiGame.Progression
                         : "Crashes and hard efforts build soreness.";
 
                 case LessonStep.ResortRecovery:
-                    return "Go to the ski resort to recover. Soreness heals inside, time moves forward, and you can choose when to leave.";
+                    return $"Go to the ski resort and use {GetBindingDisplay("Interact")} to recover. Soreness heals inside and time moves forward while you rest.";
+
+                case LessonStep.EquipSkis:
+                    return $"Press {GetBindingDisplay("EquipSkis")} to put your skis back on before heading out.";
 
                 case LessonStep.HudAndTasks:
-                    return "The Mini HUD shows live mountain info. Open the Mountain Overlay, check Stats, open Tasks, view the Map, and claim the ready task.";
+                    return "The Mini HUD shows live mountain info. Open the Mountain Overlay, check Stats, view the Map, and claim the ready task.";
 
                 case LessonStep.CustomisationShop:
-                    return "Go to the customisation shop. Buy one item and equip one item.";
+                    return $"Go to the customisation shop and use {GetBindingDisplay("Interact")} to enter. You can leave again whenever you are ready.";
 
-                case LessonStep.Explore:
-                    return "Ride a lift, attempt a run, or travel 200 m to finish the lesson.";
+                case LessonStep.SkiPassKiosk:
+                    return $"Go to the ski pass kiosk and use {GetBindingDisplay("Interact")} to open it. Claim the default pass for free so you can use the lifts.";
+
+                case LessonStep.RideLift:
+                    return $"Head to the ski lift and press {GetBindingDisplay("Interact")} to board it.";
+
+                case LessonStep.DismountLift:
+                    return $"At the top station, press {GetBindingDisplay("Interact")} to get off the lift and finish the tutorial.";
             }
 
             return string.Empty;
@@ -939,25 +1249,51 @@ namespace SkiGame.Progression
             switch (step)
             {
                 case LessonStep.Move:
-                    return "Push off, lean, or skate to start moving.";
-                case LessonStep.Lean: return "Forward = faster. Backward = slower.";
-                case LessonStep.Turn: return "Keep moving while you turn.";
-                case LessonStep.Skate: return "Left, right, left, right.";
-                case LessonStep.QuickStop: return "A strong speed drop counts, even if the stop is not perfect.";
-                case LessonStep.JumpAndAir: return "Holding sprint in the air gives you more movement.";
-                case LessonStep.Poles: return "Push for speed. Drag for braking.";
+                    return $"Use {GetBindingDisplay("Lean", "positive", "up", "forward")} or alternate {GetBindingDisplay("LeftSki")} and {GetBindingDisplay("RightSki")} to get moving.";
+
+                case LessonStep.Lean:
+                    return $"{GetBindingDisplay("Lean", "positive", "up", "forward")} = faster. {GetBindingDisplay("Lean", "negative", "down", "back", "backward")} = slower.";
+
+                case LessonStep.Turn:
+                    return $"Keep moving while using {GetBindingDisplay("LeftSki")} and {GetBindingDisplay("RightSki")}.";
+
+                case LessonStep.Skate:
+                    return $"You do not need to lean forward here. Just alternate {GetBindingDisplay("LeftSki")} and {GetBindingDisplay("RightSki")}.";
+
+                case LessonStep.QuickStop:
+                    return $"Use {GetBindingDisplay("Lean", "negative", "down", "back", "backward")} plus {CombineBindings("LeftSki", "RightSki")} for a strong stop.";
+
+                case LessonStep.JumpAndAir:
+                    return $"Hold {GetBindingDisplay("Jump")} for more pop.";
+
+                case LessonStep.Poles:
+                    return $"{GetBindingDisplay("Poles")} handles both push and drag.";
+
                 case LessonStep.Soreness:
                     return _sorenessImpactConfirmed
                         ? "Now head to the resort to recover."
                         : "Soreness reduces your condition until you recover.";
+
                 case LessonStep.ResortRecovery:
-                    return "Enter the resort, recover for a moment, then use the exit options when ready.";
+                    return $"Enter the resort with {GetBindingDisplay("Interact")}, recover for a moment, then leave when ready.";
+
+                case LessonStep.EquipSkis:
+                    return $"Press {GetBindingDisplay("EquipSkis")} once to equip your skis.";
+
                 case LessonStep.HudAndTasks:
-                    return "Use the overlay to review your progress and navigate the mountain.";
+                    return "The tasks panel is already open by default.";
 
                 case LessonStep.CustomisationShop:
-                    return "Use the shop to personalise your skier.";
-                case LessonStep.Explore: return "You do not need to complete a full run.";
+                    return $"Use {GetBindingDisplay("Interact")} to enter and leave. You do not need to buy anything.";
+
+                case LessonStep.SkiPassKiosk:
+                    return $"The default pass only needs to be claimed once and never expires. Use {GetBindingDisplay("Interact")} at the kiosk.";
+
+                case LessonStep.RideLift:
+                    return $"Press {GetBindingDisplay("Interact")} to board the lift.";
+
+                case LessonStep.DismountLift:
+                    return $"Press {GetBindingDisplay("Interact")} again to dismount.";
             }
 
             return string.Empty;

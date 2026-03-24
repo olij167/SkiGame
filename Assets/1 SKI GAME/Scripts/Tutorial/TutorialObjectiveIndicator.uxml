@@ -1,6 +1,13 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements">
-    <Style src="TutorialOverlay.uss" />
-    <ui:VisualElement name="TutorialObjectiveIndicator" class="tutorial-objective-indicator">
-        <ui:Label name="Lbl_TutorialObjective" text="Objective" class="tutorial-objective-label" />
+﻿<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/UI/TutorialOverlay.uss?fileID=7433441132597879392&amp;guid=4b4be19541f68404293e995635741330&amp;type=3#TutorialOverlay" />
+
+    <ui:VisualElement name="NavigationIndicatorRoot" class="navigation-indicator-root">
+        <ui:VisualElement name="NavigationEdgeIndicator" class="navigation-edge-indicator">
+            <ui:Label name="NavigationArrow" text="▲" class="navigation-arrow-label" />
+            <ui:VisualElement class="navigation-indicator-labels">
+                <ui:Label name="Lbl_NavTitle" text="Objective" class="navigation-indicator-title" />
+                <ui:Label name="Lbl_NavDistance" text="0 m" class="navigation-indicator-distance" />
+            </ui:VisualElement>
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

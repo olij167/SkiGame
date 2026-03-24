@@ -17,10 +17,10 @@ namespace SkiGame.Progression
 
         [Header("Impact")]
         [SerializeField] private float preLaunchDelaySeconds = 0.05f;
-        [SerializeField] private float impactSpeed = 42f;
-        [SerializeField] private float steeringStrength = 40f;
-        [SerializeField] private float maxCueDuration = 1.1f;
-        [SerializeField] private float guaranteedHitDistance = 1.25f;
+        [SerializeField] private float impactSpeed = 65f;
+        [SerializeField] private float steeringStrength = 60f;
+        [SerializeField] private float maxCueDuration = 0.75f;
+        [SerializeField] private float guaranteedHitDistance = 2.2f;
         [SerializeField] private float forcedImpactSeverity = 1f;
 
         [Header("Restore")]
