@@ -16,8 +16,8 @@ namespace SkiGame.POI
     [Serializable]
     public struct POIInfo
     {
-        public string id;
         public string displayName;
+        public string id;
         public POIType type;
         public bool alwaysShowLabel;
         public Vector3 position;

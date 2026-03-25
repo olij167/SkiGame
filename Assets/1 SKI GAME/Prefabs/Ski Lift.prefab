@@ -20796,7 +20796,7 @@ MonoBehaviour:
   topStation: {fileID: 1649968311501956818}
   requiredPassLevel: 0
   horizontalSeparation: 4
-  verticalOffset: 12
+  verticalOffset: 0
   ropeClearance: 0.2
   sideMaxSegmentLength: 8
   sideSagFraction: 0.1
@@ -20834,7 +20834,7 @@ MonoBehaviour:
   terrainLayers:
     serializedVersion: 2
     m_Bits: 64
-  terrainClearanceHeight: 0
+  terrainClearanceHeight: 20
   terrainRaycastStartHeight: 50
   terrainRaycastMaxDistance: 200
   terrainClearanceInEditMode: 1

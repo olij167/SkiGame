@@ -24,7 +24,7 @@ MonoBehaviour:
   grind: 10
   poles: 10
   tuning:
-    downhillAccelMul: 0.8
+    downhillAccelMul: 1
     forwardFrictionMul: 1.3
     sideFrictionMul: 1.2
     tuckEffectMul: 0.85
