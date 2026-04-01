@@ -16,10 +16,29 @@ namespace SkiGame.Progression
         [Header("References")]
         [SerializeField] private SkiController skiController;
         [SerializeField] private Rigidbody rb;
+        [SerializeField] private LiftRider liftRider;
 
         [Header("Detection")]
         [Tooltip("How often we scan runs to find an initial run to start tracking.")]
         [SerializeField] private float scanIntervalSeconds = 0.2f;
+
+        [Header("Entry Gating")]
+        [SerializeField, Tooltip("If enabled, the tracker refuses to start attempts that begin implausibly late into a run.")]
+        private bool useEntryGating = true;
+
+        [SerializeField, Tooltip("A run attempt cannot start beyond this fraction along the run length.")]
+        [Range(0.5f, 0.98f)]
+        private float maxEntryFractionToStartAttempt = 0.78f;
+
+        [SerializeField, Tooltip("Hard no-start zone near the end of the run, expressed as a fraction of total length.")]
+        [Range(0.01f, 0.25f)]
+        private float noStartNearEndFraction = 0.12f;
+
+        [SerializeField, Tooltip("Hard no-start zone near the end of the run, expressed in meters remaining to the finish.")]
+        private float noStartNearEndMeters = 50f;
+
+        [SerializeField, Tooltip("Minimum horizontal speed required before we consider corridor entry a real attempt.")]
+        private float minEntrySpeedMps = 2.5f;
 
         [Tooltip("Extra leeway added to corridor width when first entering a run.")]
         [SerializeField] private float enterClearanceMeters = 2.0f;
@@ -249,10 +268,17 @@ namespace SkiGame.Progression
         private string _blockedRunIdAfterCompletion;
         private bool _waitingForExitAfterCompletion;
 
+        // Active on-route coverage intervals for the current attempt.
+        private readonly List<ProgressInterval> _activeCoverageIntervals = new List<ProgressInterval>(8);
+        private bool _hasOpenCoverageInterval;
+        private float _openCoverageStartDist;
+        private bool _isStrictlyOnRoute;
+
         private void Reset()
         {
             if (skiController == null) skiController = GetComponent<SkiController>();
             if (rb == null) rb = GetComponent<Rigidbody>();
+            if (liftRider == null) liftRider = GetComponent<LiftRider>();
         }
 
         private void DebugLog(string message, bool force = false)
@@ -280,6 +306,7 @@ namespace SkiGame.Progression
         {
             if (skiController == null) skiController = GetComponent<SkiController>();
             if (rb == null) rb = GetComponent<Rigidbody>();
+            if (liftRider == null) liftRider = GetComponent<LiftRider>();
 
             if (skiController != null)
                 skiController.OnStacked += OnPlayerStacked;
@@ -298,6 +325,9 @@ namespace SkiGame.Progression
         {
             if (_run != null)
                 return; // while we have an active attempt, we do not scan for a new run (locking logic)
+
+            if (IsLiftTrackingSuppressed())
+                return;
 
             if (_waitingForExitAfterCompletion)
             {
@@ -329,6 +359,16 @@ namespace SkiGame.Progression
         {
             if (_run == null || skiController == null || rb == null)
                 return;
+
+            if (IsLiftTrackingSuppressed())
+            {
+                if (_committed)
+                    RecordPartialAndClear("Boarded lift");
+                else
+                    ClearAttemptState("Boarded lift before commit");
+
+                return;
+            }
 
             Vector3 pos = transform.position;
 
@@ -461,8 +501,11 @@ namespace SkiGame.Progression
             _lostTrackingTime = 0f;
 
 
+            float strictThreshold = halfWidthMeters;
             float abandonThreshold = halfWidthMeters + Mathf.Max(0f, abandonExtraDistanceMeters);
-            bool insideCorridor = distToCenterXZ <= abandonThreshold;
+
+            bool strictlyOnRoute = distToCenterXZ <= strictThreshold;
+            bool insideAttemptGrace = distToCenterXZ <= abandonThreshold;
 
             // Declare usedAlong early so it can be referenced below.
             float usedAlong = distAlong;
@@ -497,19 +540,30 @@ namespace SkiGame.Progression
 
                                 if (_pendingSwitchTime >= Mathf.Max(0.05f, switchConfirmSeconds))
                                 {
-                                    DebugLog($"Switching run: {_run.RunId} -> {candId} (beyondCurrent={beyondCurrent} candCloser={candidateMuchCloser})", force: true);
+                                    if (!CanStartAttempt(cand, candAlong, out string switchRejectReason))
+                                    {
+                                        DebugLog(
+                                            $"Switch candidate rejected: {_run.RunId} -> {candId} | {switchRejectReason}",
+                                            force: true
+                                        );
 
-                                    // Finalize current attempt (partial if it meets thresholds)
-                                    if (_committed) RecordPartialAndClear($"Switched to {candId}");
-                                    else ClearAttemptState($"Switched to {candId} (uncommitted)");
+                                        _pendingSwitchRunId = null;
+                                        _pendingSwitchTime = 0f;
+                                    }
+                                    else
+                                    {
+                                        DebugLog($"Switching run: {_run.RunId} -> {candId} (beyondCurrent={beyondCurrent} candCloser={candidateMuchCloser})", force: true);
 
-                                    // Start new attempt immediately
-                                    StartAttempt(cand, candAlong, candSegIdx, candSegT, candDistXZ);
+                                        if (_committed) RecordPartialAndClear($"Switched to {candId}");
+                                        else ClearAttemptState($"Switched to {candId} (uncommitted)");
 
-                                    _pendingSwitchRunId = null;
-                                    _pendingSwitchTime = 0f;
+                                        StartAttempt(cand, candAlong, candSegIdx, candSegT, candDistXZ);
 
-                                    return; // we restarted state; avoid continuing with old variables this tick
+                                        _pendingSwitchRunId = null;
+                                        _pendingSwitchTime = 0f;
+
+                                        return;
+                                    }
                                 }
                             }
                         }
@@ -528,7 +582,7 @@ namespace SkiGame.Progression
             }
 
             // Track last "inside-ish" sample for exit snapshots
-            if (insideCorridor)
+            if (strictlyOnRoute)
             {
                 _lastInsideDistAlong = usedAlong;
                 _hasLastInside = true;
@@ -570,7 +624,7 @@ namespace SkiGame.Progression
             // Clamp solver snaps so tracking can't deadlock.
             usedAlong = distAlong;
 
-            if (insideCorridor)
+            if (strictlyOnRoute)
             {
                 if (!_hasTrackedAlong)
                 {
@@ -584,25 +638,23 @@ namespace SkiGame.Progression
                     _trackedAlong = Mathf.MoveTowards(_trackedAlong, distAlong, maxAdvance);
                     usedAlong = _trackedAlong;
 
-                    // Log only when solver jumps significantly and gets clamped
                     if (Mathf.Abs(distAlong - prev) > maxAdvance * 2f)
                         DebugLog($"Along snap clamped: solver={distAlong:F1} prev={prev:F1} used={usedAlong:F1} maxStep={maxAdvance:F1}");
                 }
             }
             else
             {
-                // Outside corridor: don't update trackedAlong (avoid drifting to wrong branch)
                 usedAlong = _hasTrackedAlong ? _trackedAlong : distAlong;
             }
 
-            if (insideCorridor && _directionSign < 0 && usedAlong > distAlong + 5f)
+            if (strictlyOnRoute && _directionSign < 0 && usedAlong > distAlong + 5f)
             {
                 DebugLog($"Inside corridor but solver behind: used={usedAlong:F1} solver={distAlong:F1}");
             }
 
             // Corridor membership / abandon gating
             // IMPORTANT: rejected samples should not drive abandon timers
-            bool beyondAbandon = (distToCenterXZ > abandonThreshold);
+            bool beyondAbandon = !insideAttemptGrace;
 
             float prevBeyondTime = _timeBeyondAbandon;
 
@@ -623,10 +675,15 @@ namespace SkiGame.Progression
             }
 
             // Update progress bounds when inside the corridor (NOT the narrower leeway threshold)
-            if (insideCorridor)
+            if (strictlyOnRoute)
             {
                 if (usedAlong > _maxDistAlong) _maxDistAlong = usedAlong;
                 if (usedAlong < _minDistAlong) _minDistAlong = usedAlong;
+
+                if (!_isStrictlyOnRoute)
+                    OpenCoverageInterval(usedAlong);
+
+                _isStrictlyOnRoute = true;
 
                 _trackSegIndex = segIdx;
                 _trackSegT = segT;
@@ -642,12 +699,10 @@ namespace SkiGame.Progression
 
                     if (fwd >= th || rev >= th)
                     {
-                        // Pick the dominant drift direction.
                         _directionSign = (fwd >= rev) ? 1 : -1;
                     }
                     else if (speed >= Mathf.Max(0.01f, directionMinSpeedMps))
                     {
-                        // Fall back: velocity projected onto the current segment direction.
                         var pts = _run.PointsWorld;
                         if (pts != null && segIdx >= 0 && segIdx + 1 < pts.Count)
                         {
@@ -669,9 +724,16 @@ namespace SkiGame.Progression
                     }
                 }
             }
+            else
+            {
+                if (_isStrictlyOnRoute)
+                    CloseCoverageInterval(_hasLastInside ? _lastInsideDistAlong : usedAlong);
+
+                _isStrictlyOnRoute = false;
+            }
 
             // ---- Direction-aware completion fraction + end proximity ----
-            bool withinCompletionCorridor = insideCorridor;
+            bool withinCompletionCorridor = strictlyOnRoute;
 
             float completionFrac;
             bool nearEnd = false;
@@ -751,7 +813,7 @@ namespace SkiGame.Progression
             }
 
             // Commit logic
-            if (insideCorridor)
+            if (strictlyOnRoute)
                 _timeInside += dt;
             else
                 _timeInside = 0f; // optional but recommended: must be continuously inside to commit
@@ -823,6 +885,11 @@ namespace SkiGame.Progression
             }
         }
 
+        private bool IsLiftTrackingSuppressed()
+        {
+            return liftRider != null && liftRider.IsAttached;
+        }
+
         private bool TryFindBestRunAtPosition(
     Vector3 pos,
     string ignoreRunId,
@@ -881,11 +948,90 @@ namespace SkiGame.Progression
             return best != null;
         }
 
-        private void StartAttempt(SkiRunLine run, float enteredAlong, int segIdx, float segT, float distXZForDebug)
+        private float GetHorizontalSpeedMps()
+        {
+            if (rb == null)
+                return 0f;
+
+            Vector3 v = rb.linearVelocity;
+            v.y = 0f;
+            return v.magnitude;
+        }
+
+        private bool CanStartAttempt(
+            SkiRunLine run,
+            float enteredAlong,
+            out string rejectReason)
+        {
+            rejectReason = null;
+
+            if (run == null)
+            {
+                rejectReason = "Run was null";
+                return false;
+            }
+
+            if (!useEntryGating)
+                return true;
+
+            float runLen = run.GetTotalLengthMeters();
+            if (runLen <= 0.001f)
+            {
+                rejectReason = "Run length invalid";
+                return false;
+            }
+
+            float entryFrac01 = Mathf.Clamp01(enteredAlong / runLen);
+            float remainingToEnd = Mathf.Max(0f, runLen - enteredAlong);
+
+            float hardNoStartDistance = Mathf.Max(
+                Mathf.Max(0f, noStartNearEndMeters),
+                Mathf.Max(0f, noStartNearEndFraction) * runLen
+            );
+
+            if (remainingToEnd <= hardNoStartDistance)
+            {
+                rejectReason =
+                    $"Rejected start: entered too close to end " +
+                    $"(remaining={remainingToEnd:F1}m, blockedWithin={hardNoStartDistance:F1}m)";
+                return false;
+            }
+
+            if (entryFrac01 > maxEntryFractionToStartAttempt)
+            {
+                rejectReason =
+                    $"Rejected start: entered too late into run " +
+                    $"(entry={entryFrac01:P0}, max={maxEntryFractionToStartAttempt:P0})";
+                return false;
+            }
+
+            float horizontalSpeed = GetHorizontalSpeedMps();
+            if (horizontalSpeed < minEntrySpeedMps)
+            {
+                rejectReason =
+                    $"Rejected start: entry speed too low " +
+                    $"({horizontalSpeed:F1}m/s < {minEntrySpeedMps:F1}m/s)";
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool StartAttempt(SkiRunLine run, float enteredAlong, int segIdx, float segT, float distXZForDebug)
         {
             var mgr = PlayerStatsManager.Instance;
             var profile = mgr != null ? mgr.Profile : null;
-            if (profile == null || run == null) return;
+            if (profile == null || run == null)
+                return false;
+
+            if (!CanStartAttempt(run, enteredAlong, out string rejectReason))
+            {
+                DebugLog(
+                    $"Start attempt blocked: run={run.RunId} name='{run.RunName}' enteredAlong={enteredAlong:F1}m distXZ={distXZForDebug:F1}m | {rejectReason}",
+                    force: true
+                );
+                return false;
+            }
 
             _run = run;
             _hasLastAttempt = false;
@@ -915,8 +1061,9 @@ namespace SkiGame.Progression
             _lastSegT = 0f;
 
             ResetAttemptMetrics();
+            ResetCoverageIntervals();
+            OpenCoverageInterval(enteredAlong);
 
-            // Visits
             if (recordSessionVisits)
             {
                 profile.TryAddVisitedRunThisSession(run.RunId);
@@ -933,112 +1080,8 @@ namespace SkiGame.Progression
                 $"Start attempt: run={run.RunId} name='{run.RunName}' enteredAlong={enteredAlong:F1}m distXZ={distXZForDebug:F1}m seg={segIdx} t={segT:F2}",
                 force: true
             );
-        }
 
-        private void TryStartRunIfInsideAny()
-        {
-            var mgr = PlayerStatsManager.Instance;
-            var profile = mgr != null ? mgr.Profile : null;
-            if (profile == null) return;
-
-#if UNITY_2023_1_OR_NEWER
-            var runs = UnityEngine.Object.FindObjectsByType<SkiRunLine>(FindObjectsSortMode.None);
-#else
-            var runs = Object.FindObjectsOfType<SkiRunLine>();
-#endif
-            if (runs == null || runs.Length == 0)
-                return;
-
-            Vector3 pos = transform.position;
-
-            SkiRunLine best = null;
-            float bestDist = float.PositiveInfinity;
-            float bestAlong = 0f;
-            int bestSegIdx = -1;
-            float bestSegT = 0f;
-
-            for (int i = 0; i < runs.Length; i++)
-            {
-                var r = runs[i];
-                if (r == null) continue;
-
-                if (!r.TryGetClosestPointOnCenterlineXZ_Detailed(
-     pos,
-     out float along,
-     out float distXZ,
-     out float halfW,
-     out Vector3 closest,
-     out int segIdx,
-     out float segT))
-                    continue;
-
-                // Reject stacked overlaps (bridges / switchbacks) by height
-                if (verticalToleranceMeters > 0f && Mathf.Abs(pos.y - closest.y) > verticalToleranceMeters)
-                    continue;
-
-                if (distXZ <= (halfW + Mathf.Max(0f, enterClearanceMeters)))
-                {
-                    if (distXZ < bestDist)
-                    {
-                        best = r;
-                        bestDist = distXZ;
-                        bestAlong = along;
-                        bestSegIdx = segIdx;
-                        bestSegT = segT;
-
-                    }
-                }
-            }
-
-            if (best == null)
-                return;
-
-            // Start attempt
-            _run = best;
-            _hasLastAttempt = false;
-
-            _committed = false;
-            _enteredAtDist = bestAlong;
-            _maxDistAlong = bestAlong;
-            _minDistAlong = bestAlong;
-            _lastInsideDistAlong = bestAlong;
-            _hasLastInside = true;
-            _directionSign = 0;
-            _hasTrackedAlong = false;
-            _trackedAlong = bestAlong;
-
-            _trackSegIndex = bestSegIdx;
-            _trackSegT = bestSegT;
-
-            _timeEntered = Time.time;
-            _timeInside = 0f;
-            _timeBeyondAbandon = 0f;
-
-            BuildRunDistanceCache(best);
-            _lastSegIndex = -1;
-            _lastSegT = 0f;
-
-            ResetAttemptMetrics();
-
-            // Record visit (session/lifetime) + increment counts (anti-spam is handled by enter detection)
-            if (recordSessionVisits)
-            {
-                profile.TryAddVisitedRunThisSession(best.RunId);
-                profile.IncrementRunVisitCount(best.RunId, session: true);
-            }
-
-            if (recordLifetimeVisits)
-            {
-                profile.TryAddVisitedRun(best.RunId);
-                profile.IncrementRunVisitCount(best.RunId, session: false);
-            }
-
-            DebugLog(
-    $"Start attempt: run={best.RunId} name='{best.RunName}' enteredAlong={bestAlong:F1}m distXZ={bestDist:F1}m seg={bestSegIdx} t={bestSegT:F2} " +
-    $"halfW={best.GetHalfWidthMetersAtSample(bestSegIdx, bestSegT):F1}m pos=({pos.x:F1},{pos.y:F1},{pos.z:F1})",
-    force: true
-);
-
+            return true;
         }
 
         private bool IsInsideRunCorridor(string runId)
@@ -1259,6 +1302,8 @@ namespace SkiGame.Progression
 
             _hasPrev = false;
             _stackEvents.Clear();
+
+            ResetCoverageIntervals();
         }
 
         private void RecordPartialAndClear(string reason)
@@ -1280,7 +1325,6 @@ namespace SkiGame.Progression
             // Avoid spammy micro-attempts
             if (!_committed || timeSeconds < minPartialTimeSeconds || coveredMeters < minPartialCoverageMeters)
             {
-                ClearAttemptState();
                 ClearAttemptState($"Partial ignored: committed={_committed} time={timeSeconds:F2}s covered={coveredMeters:F1}m ... | {reason}");
 
                 return;
@@ -1494,28 +1538,31 @@ namespace SkiGame.Progression
             public readonly int stacks;
             public readonly bool committed;
 
+            public readonly ProgressInterval[] coverageIntervals;
+            public readonly bool isStrictlyOnRoute;
+
             // Back-compat constructor (existing call sites still compile if you accidentally use it somewhere)
-            public ActiveRunProgress(
-                string runId,
-                string runName,
-                float completion01,
-                float elapsedSeconds,
-                float topSpeedMps,
-                int stacks,
-                bool committed)
-            {
-                this.runId = runId;
-                this.runName = runName;
-                this.completion01 = completion01;
+            //public ActiveRunProgress(
+            //    string runId,
+            //    string runName,
+            //    float completion01,
+            //    float elapsedSeconds,
+            //    float topSpeedMps,
+            //    int stacks,
+            //    bool committed)
+            //{
+            //    this.runId = runId;
+            //    this.runName = runName;
+            //    this.completion01 = completion01;
 
-                this.entryFraction01 = 0f;
-                this.currentFraction01 = 0f;
+            //    this.entryFraction01 = 0f;
+            //    this.currentFraction01 = 0f;
 
-                this.elapsedSeconds = elapsedSeconds;
-                this.topSpeedMps = topSpeedMps;
-                this.stacks = stacks;
-                this.committed = committed;
-            }
+            //    this.elapsedSeconds = elapsedSeconds;
+            //    this.topSpeedMps = topSpeedMps;
+            //    this.stacks = stacks;
+            //    this.committed = committed;
+            //}
 
             // Preferred constructor (new fields included)
             public ActiveRunProgress(
@@ -1527,7 +1574,9 @@ namespace SkiGame.Progression
                 float elapsedSeconds,
                 float topSpeedMps,
                 int stacks,
-                bool committed)
+                bool committed,
+                ProgressInterval[] coverageIntervals,
+                bool isStrictlyOnRoute)
             {
                 this.runId = runId;
                 this.runName = runName;
@@ -1538,7 +1587,85 @@ namespace SkiGame.Progression
                 this.topSpeedMps = topSpeedMps;
                 this.stacks = stacks;
                 this.committed = committed;
+                this.coverageIntervals = coverageIntervals ?? Array.Empty<ProgressInterval>();
+                this.isStrictlyOnRoute = isStrictlyOnRoute;
             }
+        }
+
+        [Serializable]
+        public readonly struct ProgressInterval
+        {
+            public readonly float startFraction01;
+            public readonly float endFraction01;
+
+            public ProgressInterval(float startFraction01, float endFraction01)
+            {
+                this.startFraction01 = Mathf.Clamp01(startFraction01);
+                this.endFraction01 = Mathf.Clamp01(endFraction01);
+            }
+        }
+
+        private void ResetCoverageIntervals()
+        {
+            _activeCoverageIntervals.Clear();
+            _hasOpenCoverageInterval = false;
+            _openCoverageStartDist = 0f;
+            _isStrictlyOnRoute = false;
+        }
+
+        private void OpenCoverageInterval(float along)
+        {
+            if (_hasOpenCoverageInterval)
+                return;
+
+            _hasOpenCoverageInterval = true;
+            _openCoverageStartDist = along;
+        }
+
+        private void CloseCoverageInterval(float along)
+        {
+            if (!_hasOpenCoverageInterval || _runTotalLenMeters <= 0.001f)
+                return;
+
+            float a = Mathf.Clamp01(_openCoverageStartDist / _runTotalLenMeters);
+            float b = Mathf.Clamp01(along / _runTotalLenMeters);
+
+            float lo = Mathf.Min(a, b);
+            float hi = Mathf.Max(a, b);
+
+            if (hi - lo > 0.0005f)
+                MergeCoverageInterval(lo, hi);
+
+            _hasOpenCoverageInterval = false;
+        }
+
+        private void MergeCoverageInterval(float start01, float end01)
+        {
+            float lo = Mathf.Clamp01(Mathf.Min(start01, end01));
+            float hi = Mathf.Clamp01(Mathf.Max(start01, end01));
+
+            if (hi <= lo)
+                return;
+
+            for (int i = 0; i < _activeCoverageIntervals.Count; i++)
+            {
+                var existing = _activeCoverageIntervals[i];
+
+                bool overlaps =
+                    !(hi < existing.startFraction01 - 0.002f ||
+                      lo > existing.endFraction01 + 0.002f);
+
+                if (!overlaps)
+                    continue;
+
+                lo = Mathf.Min(lo, existing.startFraction01);
+                hi = Mathf.Max(hi, existing.endFraction01);
+                _activeCoverageIntervals.RemoveAt(i);
+                i--;
+            }
+
+            _activeCoverageIntervals.Add(new ProgressInterval(lo, hi));
+            _activeCoverageIntervals.Sort((x, y) => x.startFraction01.CompareTo(y.startFraction01));
         }
 
         // -------------------------
@@ -1633,6 +1760,25 @@ namespace SkiGame.Progression
 
             float elapsed = Mathf.Max(0f, Time.time - _attemptStartTime);
 
+            ProgressInterval[] intervals = _activeCoverageIntervals.ToArray();
+
+            if (_hasOpenCoverageInterval && _runTotalLenMeters > 0.001f)
+            {
+                float openA = Mathf.Clamp01(_openCoverageStartDist / _runTotalLenMeters);
+                float openB = Mathf.Clamp01(currentAlong / _runTotalLenMeters);
+
+                var temp = new List<ProgressInterval>(_activeCoverageIntervals.Count + 1);
+                temp.AddRange(_activeCoverageIntervals);
+
+                float lo = Mathf.Min(openA, openB);
+                float hi = Mathf.Max(openA, openB);
+                if (hi - lo > 0.0005f)
+                    temp.Add(new ProgressInterval(lo, hi));
+
+                temp.Sort((x, y) => x.startFraction01.CompareTo(y.startFraction01));
+                intervals = temp.ToArray();
+            }
+
             progress = new ActiveRunProgress(
                 id,
                 name,
@@ -1642,7 +1788,9 @@ namespace SkiGame.Progression
                 elapsed,
                 _topSpeed,
                 _stacks,
-                _committed
+                _committed,
+                intervals,
+                _isStrictlyOnRoute
             );
 
             return true;

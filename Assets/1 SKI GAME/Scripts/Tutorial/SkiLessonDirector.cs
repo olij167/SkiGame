@@ -42,6 +42,8 @@ namespace SkiGame.Progression
         [SerializeField] private LiftRider liftRider;
         [SerializeField] private InputActionAsset inputActions;
         [SerializeField] private SkiPassKiosk skiPassKiosk;
+        [SerializeField] private SkiResortZone tutorialResortZone;
+        [SerializeField] private Transform tutorialResortNavigationTarget;
 
         [Header("Activation")]
         [SerializeField] private bool forceRunEvenIfCompleted = false;
@@ -124,8 +126,20 @@ namespace SkiGame.Progression
                 switch (_currentStep)
                 {
                     case LessonStep.ResortRecovery:
-                        if (!IsPlayerInResort() && skiResortInteractor != null)
-                            return skiResortInteractor.transform;
+                        if (!IsPlayerInResort())
+                        {
+                            if (tutorialResortNavigationTarget != null)
+                                return tutorialResortNavigationTarget;
+
+                            var zone = ResolveTutorialResortZone();
+                            if (zone != null)
+                            {
+                                if (zone.entrancePoint != null)
+                                    return zone.entrancePoint;
+
+                                return zone.transform;
+                            }
+                        }
                         break;
 
                     case LessonStep.CustomisationShop:
@@ -195,6 +209,46 @@ namespace SkiGame.Progression
                 }
 
                 return string.Empty;
+            }
+        }
+
+        public bool CurrentObjectiveClearOnReach
+        {
+            get
+            {
+                switch (_currentStep)
+                {
+                    case LessonStep.ResortRecovery:
+                        return false;
+
+                    default:
+                        return true;
+                }
+            }
+        }
+
+        public float CurrentObjectiveArriveDistance
+        {
+            get
+            {
+                switch (_currentStep)
+                {
+                    case LessonStep.ResortRecovery:
+                        return 7f;
+
+                    case LessonStep.SkiPassKiosk:
+                        return 7f;
+
+                    case LessonStep.CustomisationShop:
+                        return 8f;
+
+                    case LessonStep.RideLift:
+                    case LessonStep.DismountLift:
+                        return 10f;
+
+                    default:
+                        return 10f;
+                }
             }
         }
 
@@ -280,6 +334,14 @@ namespace SkiGame.Progression
 
             if (skiPassKiosk == null)
                 skiPassKiosk = FindObjectOfType<SkiPassKiosk>();
+
+            if (tutorialResortZone == null)
+                tutorialResortZone = FindObjectOfType<SkiResortZone>();
+
+            if (tutorialResortNavigationTarget == null && tutorialResortZone != null)
+                tutorialResortNavigationTarget = tutorialResortZone.entrancePoint != null
+                    ? tutorialResortZone.entrancePoint
+                    : tutorialResortZone.transform;
         }
 
         private LiftLine ResolveTutorialTargetLiftLine()
@@ -454,7 +516,10 @@ namespace SkiGame.Progression
 
                 var passMgr = SkiPassManager.Instance != null ? SkiPassManager.Instance : FindObjectOfType<SkiPassManager>();
                 _hadDefaultPassBeforeKioskStep = passMgr != null && passMgr.HasClaimedDefaultPass;
-                _defaultPassClaimedDuringTutorial = _hadDefaultPassBeforeKioskStep;
+
+                // Do not auto-complete the step just because the player already has the default pass.
+                // If they already have it, opening the kiosk is enough to teach the interaction.
+                _defaultPassClaimedDuringTutorial = false;
             }
 
             if (_currentStep == LessonStep.RideLift)
@@ -718,10 +783,16 @@ namespace SkiGame.Progression
                                 _kioskOpened = true;
                         }
 
-                        if (passMgr != null && passMgr.HasClaimedDefaultPass)
+                        bool hasDefaultPassNow = passMgr != null && passMgr.HasClaimedDefaultPass;
+
+                        if (!_hadDefaultPassBeforeKioskStep && hasDefaultPassNow)
                             _defaultPassClaimedDuringTutorial = true;
 
-                        if (_defaultPassClaimedDuringTutorial)
+                        bool stepComplete =
+                            _defaultPassClaimedDuringTutorial ||
+                            (_hadDefaultPassBeforeKioskStep && _kioskOpened);
+
+                        if (stepComplete)
                             AdvanceStep();
 
                         break;
@@ -968,6 +1039,15 @@ namespace SkiGame.Progression
                 playerStatsManager.Profile.tutorial.MarkCompleted();
                 playerStatsManager.Save();
             }
+        }
+
+        private SkiResortZone ResolveTutorialResortZone()
+        {
+            if (tutorialResortZone != null)
+                return tutorialResortZone;
+
+            tutorialResortZone = FindObjectOfType<SkiResortZone>();
+            return tutorialResortZone;
         }
 
         public void SkipLessons()

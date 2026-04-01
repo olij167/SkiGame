@@ -103,6 +103,13 @@ public class CustomizationPortal : MonoBehaviour, IWorldInteractionPromptSource
             return;
         }
 
+        if (_playerRootInTrigger != null && _playerRootInTrigger.CompareTag("NPC"))
+        {
+            Debug.LogWarning("[CustomizationPortal] Ignoring trigger because the stored root is an NPC.");
+            _playerRootInTrigger = null;
+            return;
+        }
+
         Debug.Log("[CustomizationPortal] Loading shop scene additively...");
         CustomizationShopRuntime.SetPendingPlayerRoot(_playerRootInTrigger);
         _busy = true;
@@ -125,10 +132,10 @@ public class CustomizationPortal : MonoBehaviour, IWorldInteractionPromptSource
     private void OnTriggerEnter(Collider other)
     {
         var root = ResolvePlayerRoot(other);
-        if (root == null) return;
+        if (root == null)
+            return;
 
         _enterArmed = false; // require release before allowing enter again
-
         _playerRootInTrigger = root;
     }
 
@@ -145,27 +152,38 @@ public class CustomizationPortal : MonoBehaviour, IWorldInteractionPromptSource
 
     private GameObject ResolvePlayerRoot(Collider other)
     {
-        if (other == null) return null;
+        if (other == null)
+            return null;
 
-        // Prefer components
-        var ski = other.GetComponentInParent<SkiController>();
-        if (ski != null) return ski.gameObject;
-
-        var walk = other.GetComponentInParent<WalkingController>();
-        if (walk != null) return walk.gameObject;
-
-        var pi = other.GetComponentInParent<PlayerInput>();
-        if (pi != null) return pi.gameObject;
-
-        // Fallback to tag on any parent
+        // Never allow NPCs to claim player interactions.
         var t = other.transform;
         while (t != null)
         {
-            if (t.CompareTag("Player")) return t.gameObject;
+            if (t.CompareTag("NPC"))
+                return null;
             t = t.parent;
         }
 
-        return null;
+        Transform playerTagged = null;
+        t = other.transform;
+        while (t != null)
+        {
+            if (t.CompareTag("Player"))
+            {
+                playerTagged = t;
+                break;
+            }
+            t = t.parent;
+        }
+
+        if (playerTagged == null)
+            return null;
+
+        var pi = other.GetComponentInParent<PlayerInput>();
+        if (pi != null)
+            return pi.gameObject;
+
+        return playerTagged.gameObject;
     }
 
     public bool IsPromptAvailable => _playerRootInTrigger != null && !_busy;

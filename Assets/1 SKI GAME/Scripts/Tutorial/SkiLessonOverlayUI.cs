@@ -231,7 +231,13 @@ namespace SkiGame.UI
             if (_cameraController != null)
             {
                 _cameraWasEnabledBeforeModal = _cameraController.enabled;
-                _cameraController.enabled = false;
+
+                // Keep the camera controller alive so it continues tracking the player,
+                // but suppress manual look input while the modal is open.
+                if (!_cameraController.enabled)
+                    _cameraController.enabled = true;
+
+                _cameraController.SetExternalUiLookLock(true);
             }
         }
 
@@ -248,7 +254,10 @@ namespace SkiGame.UI
             GameCursorService.Release(this);
 
             if (_cameraController != null)
+            {
+                _cameraController.SetExternalUiLookLock(false);
                 _cameraController.enabled = _cameraWasEnabledBeforeModal;
+            }
         }
 
         private void HandleOfferAccepted()

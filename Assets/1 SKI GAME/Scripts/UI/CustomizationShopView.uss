@@ -6,6 +6,7 @@
     padding-bottom: 10px;
     background-color: rgba(0, 0, 0, 0.35);
     flex-grow: 1;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .shop-header {
@@ -19,6 +20,7 @@
     font-size: 18px;
     unity-font-style: bold;
     color: white;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
 }
 
 .shop-header-right {
@@ -30,11 +32,13 @@
     margin-right: 10px;
     color: white;
     unity-font-style: bold;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .shop-exit {
     padding-left: 10px;
     padding-right: 10px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .shop-body {
@@ -69,6 +73,7 @@
     margin-bottom: 10px;
     color: rgba(255, 255, 255, 0.5);
     font-size: 11px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .loadout-panel {
@@ -84,6 +89,7 @@
     unity-font-style: bold;
     margin-bottom: 8px;
     color: white;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
 }
 
 .panel-title.small {
@@ -108,6 +114,7 @@
     text-overflow: clip;
     flex-direction: column;
     font-size: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .tab-btn.is-active {
@@ -154,21 +161,25 @@
     margin-top: 4px;
     unity-font-style: bold;
     font-size: 15px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .detail-desc {
     color: rgba(255, 255, 255, 0.85);
     font-size: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .detail-meta {
     margin-top: 6px;
     margin-bottom: 8px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .detail-meta-line {
     color: rgba(255, 255, 255, 0.85);
     font-size: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .detail-actions {
@@ -179,6 +190,7 @@
 .action-btn {
     flex-grow: 1;
     margin-right: 8px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .action-btn.primary {
@@ -225,12 +237,14 @@
     font-size: 12px;
     margin-top: 0;
     margin-bottom: 0;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .option-meta {
     color: rgba(255, 255, 255, 0.6);
     font-size: 10px;
     margin-top: 1px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .option-right {
@@ -243,6 +257,7 @@
     color: rgba(255, 255, 255, 0.85);
     unity-font-style: bold;
     font-size: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .option-badge {
@@ -255,6 +270,7 @@
     unity-font-style: bold;
     color: rgba(255, 255, 255, 0.9);
     background-color: rgba(255, 255, 255, 0.07);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .option-badge.is-equipped {
@@ -299,6 +315,7 @@
     margin-top: 8px;
     border-radius: 12px;
     background-color: rgba(255, 255, 255, 0.04);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .loadout-row-btn:hover {
@@ -315,6 +332,7 @@
     color: rgba(255, 255, 255, 0.9);
     font-size: 12px;
     unity-font-style: bold;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .loadout-sub {
@@ -325,11 +343,13 @@
     white-space: normal;
     text-overflow: ellipsis;
     flex-grow: 1;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .loadout-chevron {
     color: rgba(255, 255, 255, 0.35);
     margin-left: 6px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .loadout-gear-row {
@@ -376,6 +396,7 @@
     color: rgba(255, 255, 255, 0.85);
     font-size: 11px;
     unity-font-style: bold;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .slot-title.small {
@@ -387,6 +408,7 @@
     color: rgba(255, 255, 255, 0.6);
     font-size: 10px;
     margin-top: 2px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .pattern-thumb {
@@ -432,6 +454,7 @@
     align-self: flex-start;
     justify-content: flex-start;
     display: flex;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .loadout-badge.is-equipped {
@@ -459,6 +482,7 @@
     padding: 12px;
     background-color: rgba(15, 15, 15, 0.95);
     border-radius: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .color-popover-header {
@@ -485,6 +509,7 @@
     color: rgba(255, 255, 255, 0.75);
     font-size: 11px;
     unity-text-align: middle-left;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .color-slider {
@@ -509,400 +534,4 @@
     align-items: stretch;
     gap: 10px;
     margin-top: 6px;
-}
-
-.skin-mini {
-    width: 86px;
-    flex-shrink: 0;
-    padding: 8px;
-    border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.04);
-    flex-direction: column;
-    justify-content: center;
-}
-
-.skin-mini-title {
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 11px;
-    unity-font-style: bold;
-    margin-bottom: 6px;
-}
-
-.skin-mini-swatch {
-    height: 28px;
-    border-radius: 10px;
-}
-
-.eye-mini-row {
-    flex-grow: 1;
-    flex-shrink: 1;
-    min-width: 0;
-    padding: 8px;
-    margin-top: 0;
-    border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.04);
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    position: relative;
-}
-
-.gear-mini-row {
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    margin-top: 8px;
-    padding: 8px;
-    border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.04);
-}
-
-.gear-mini-gear {
-    flex-grow: 1;
-    flex-shrink: 1;
-    min-width: 0;
-    padding: 8px;
-    border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.05);
-    position: relative;
-    flex-direction: row;
-    align-items: flex-end;
-    gap: 6px;
-    padding-top: 20px;
-    justify-content: flex-start;
-    -unity-text-align: middle-left;
-    white-space: normal;
-    text-overflow: clip;
-}
-
-.gear-mini-gear .loadout-text {
-    min-width: 0;
-}
-
-.gear-mini-color {
-    width: 30%;
-    height: 28px;
-    flex-shrink: 0;
-    border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.05);
-    justify-content: flex-start;
-    align-items: center;
-    min-width: 30%;
-    max-width: 30%;
-    align-self: center;
-}
-
-.gear-mini-pattern {
-    width: 72px;
-    flex-shrink: 1;
-    padding: 6px;
-    border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.05);
-    flex-direction: row;
-    justify-content: center;
-    padding-top: 0;
-    padding-right: 0;
-    padding-bottom: 0;
-    padding-left: 0;
-    margin-top: 0;
-    margin-right: 0;
-    margin-bottom: 0;
-    margin-left: 6px;
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-    border-bottom-left-radius: 0;
-}
-
-.loadout-sub.tiny {
-    font-size: 9px;
-    margin-top: 4px;
-    opacity: 0.7;
-    unity-text-align: middle-center;
-}
-
-.color-swatch.mini {
-    width: 28px;
-    height: 28px;
-    border-radius: 10px;
-}
-
-.loadout-icon.mini {
-    width: 28px;
-    height: 28px;
-    border-radius: 10px;
-}
-
-.pattern-thumb.mini {
-    width: 100%;
-    height: 22px;
-    border-radius: 8px;
-}
-
-.is-equipped {
-    justify-content: flex-start;
-    align-self: flex-start;
-}
-
-.is-pattern-target {
-    outline-width: 2px;
-    outline-style: solid;
-    outline-color: rgba(255, 255, 255, 0.85);
-    background-color: rgba(255, 255, 255, 0.08);
-}
-
-.gear-mini-row {
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    margin-top: 8px;
-    padding: 8px;
-    border-radius: 14px;
-    background-color: rgba(255, 255, 255, 0.03);
-}
-
-.gear-mini-gear {
-    flex-grow: 1;
-    min-width: 0;
-    padding: 10px;
-    border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.04);
-    position: relative;
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    padding-top: 10px;
-}
-
-.gear-mini-pattern {
-    width: 64px;
-    padding: 6px;
-    border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.04);
-}
-
-.color-popover {
-    width: 290px;
-    padding: 12px;
-    background-color: rgba(12, 12, 12, 0.96);
-    border-radius: 16px;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.06);
-}
-
-.color-preview {
-    height: 52px;
-    border-radius: 14px;
-    margin-bottom: 10px;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.06);
-}
-
-.color-presets {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 8px;
-}
-
-.color-preset-swatch {
-    width: 32px;
-    height: 32px;
-    border-radius: 12px;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.08);
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-    border-bottom-left-radius: 0;
-    padding-left: 0;
-    padding-top: 0;
-    padding-right: 0;
-    padding-bottom: 0;
-    margin-top: 1px;
-    margin-right: 1px;
-    margin-bottom: 1px;
-    margin-left: 1px;
-}
-
-.color-preset-swatch:hover {
-    border-color: rgba(255, 255, 255, 0.22);
-}
-
-.gear-mini-row {
-    cursor: pointer;
-}
-
-.eye-mini-row {
-    cursor: pointer;
-}
-
-.gear-mini-pattern {
-    cursor: pointer;
-}
-
-#Slot_SkisGear {
-    cursor: pointer;
-}
-
-#Slot_PolesGear {
-    cursor: pointer;
-}
-
-#Slot_HatGear {
-    cursor: pointer;
-}
-
-#Slot_JacketGear {
-    cursor: pointer;
-}
-
-.color-popover {
-    border-top-left-radius: 14px;
-    border-top-right-radius: 14px;
-    border-bottom-left-radius: 14px;
-    border-bottom-right-radius: 14px;
-}
-
-.color-preview {
-    height: 52px;
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-left-color: rgba(255, 255, 255, 0.12);
-    border-right-color: rgba(255, 255, 255, 0.12);
-    border-top-color: rgba(255, 255, 255, 0.12);
-    border-bottom-color: rgba(255, 255, 255, 0.12);
-}
-
-.color-target {
-    margin-top: 4px;
-    opacity: 0.75;
-    font-size: 12px;
-}
-
-.color-value {
-    margin-top: 2px;
-    margin-bottom: 6px;
-    opacity: 0.85;
-    font-size: 12px;
-    unity-font-style: bold;
-}
-
-.color-slider {
-    height: 18px;
-    flex-grow: 1;
-}
-
-.color-slider .unity-tracker {
-    height: 10px;
-    border-top-left-radius: 6px;
-    border-top-right-radius: 6px;
-    border-bottom-left-radius: 6px;
-    border-bottom-right-radius: 6px;
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-left-color: rgba(255, 255, 255, 0.1);
-    border-right-color: rgba(255, 255, 255, 0.1);
-    border-top-color: rgba(255, 255, 255, 0.1);
-    border-bottom-color: rgba(255, 255, 255, 0.1);
-}
-
-.color-slider .unity-dragger {
-    width: 16px;
-    height: 16px;
-    border-top-left-radius: 999px;
-    border-top-right-radius: 999px;
-    border-bottom-left-radius: 999px;
-    border-bottom-right-radius: 999px;
-    border-left-width: 2px;
-    border-right-width: 2px;
-    border-top-width: 2px;
-    border-bottom-width: 2px;
-    border-left-color: rgba(0, 0, 0, 0.35);
-    border-right-color: rgba(0, 0, 0, 0.35);
-    border-top-color: rgba(0, 0, 0, 0.35);
-    border-bottom-color: rgba(0, 0, 0, 0.35);
-}
-
-.reset-btn {
-    width: 22px;
-    height: 11px;
-    border-radius: 8px;
-    border-color: rgba(0, 0, 0, 0);
-    border-width: 0;
-    background-color: rgba(255, 255, 255, 0.06);
-    -unity-font-style: bold;
-    font-size: 12px;
-    opacity: 0.85;
-    padding: 8px;
-    margin: 0;
-    justify-content: flex-start;
-    align-self: flex-end;
-}
-
-.reset-btn:hover {
-    opacity: 1;
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.reset-btn:active {
-    opacity: 1;
-    background-color: rgba(255, 255, 255, 0.14);
-}
-
-.preview-clear-btn {
-    width: 18px;
-    height: 18px;
-    margin-left: 6px;
-    padding: 0;
-    border-radius: 9px;
-    background-color: rgba(255, 255, 255, 0.08);
-    opacity: 0.85;
-    font-size: 11px;
-    unity-text-align: middle-center;
-    display: none;
-}
-
-.preview-clear-btn:hover {
-    opacity: 1;
-    background-color: rgba(255, 255, 255, 0.12);
-}
-
-.preview-clear-btn:active {
-    background-color: rgba(255, 255, 255, 0.16);
-}
-
-.shop-lists-column {
-    flex-grow: 1;
-    flex-direction: column;
-    margin-right: 10px;
-    min-width: 0;
-}
-
-.top-list {
-    flex-grow: 1;
-    min-height: 160px;
-    margin-bottom: 12px;
-}
-
-.bottom-list {
-    flex-grow: 1;
-    min-height: 160px;
-}
-
-.options-list {
-    background-color: rgba(0, 0, 0, 0.15);
-    border-radius: 8px;
-    min-width: 0;
-}
-
-.is-active {
 }

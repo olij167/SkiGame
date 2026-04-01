@@ -2,7 +2,7 @@
     flex-grow: 1;
     background-color: rgba(0, 0, 0, 0);
     color: rgb(245, 245, 245);
-    -unity-font-definition: resource('Inter-Regular');
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .map-viewport {
@@ -82,19 +82,23 @@
     font-size: 18px;
     -unity-font-style: bold;
     min-width: 80px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .top-strip-weather {
     min-width: 150px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .top-strip-location {
     flex-grow: 1;
     -unity-font-style: bold;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .top-strip-hint {
     color: rgba(255, 255, 255, 0.75);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .left-rail {
@@ -149,24 +153,28 @@
 .panel-title {
     font-size: 16px;
     -unity-font-style: bold;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
 }
 
 .context-title {
     font-size: 18px;
     -unity-font-style: bold;
     margin-bottom: 6px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .context-body {
     white-space: normal;
     line-height: 18px;
     color: rgba(255, 255, 255, 0.92);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .stats-body {
     white-space: normal;
     line-height: 18px;
     color: rgba(255, 255, 255, 0.92);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .attempts-list {
@@ -188,6 +196,7 @@
 .attempt-row-label {
     white-space: normal;
     font-size: 11px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .segmented-row {
@@ -200,6 +209,7 @@
     border-top-right-radius: 12px;
     border-bottom-left-radius: 12px;
     border-bottom-right-radius: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .mini-button {
@@ -207,6 +217,7 @@
     border-top-right-radius: 12px;
     border-bottom-left-radius: 12px;
     border-bottom-right-radius: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .pass-level-button {
@@ -214,6 +225,7 @@
     border-top-right-radius: 12px;
     border-bottom-left-radius: 12px;
     border-bottom-right-radius: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .pass-buy-button {
@@ -221,6 +233,7 @@
     border-top-right-radius: 12px;
     border-bottom-left-radius: 12px;
     border-bottom-right-radius: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .goal-subtab-button {
@@ -228,6 +241,7 @@
     border-top-right-radius: 12px;
     border-bottom-left-radius: 12px;
     border-bottom-right-radius: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .map-layer-button {
@@ -235,6 +249,7 @@
     border-top-right-radius: 12px;
     border-bottom-left-radius: 12px;
     border-bottom-right-radius: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .map-button {
@@ -242,6 +257,7 @@
     border-top-right-radius: 12px;
     border-bottom-left-radius: 12px;
     border-bottom-right-radius: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .list-row {
@@ -249,6 +265,7 @@
     border-top-right-radius: 12px;
     border-bottom-left-radius: 12px;
     border-bottom-right-radius: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .segment-button {
@@ -322,11 +339,13 @@
     flex-grow: 1;
     -unity-font-style: bold;
     white-space: normal;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .list-row-value {
     color: rgba(255, 255, 255, 0.85);
     margin-left: 8px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .achievement-category-row {
@@ -346,7 +365,6 @@
     width: 100%;
     min-width: 0;
 }
-
 
 .achievement-card {
     width: 48.5%;
@@ -376,18 +394,21 @@
 .achievement-card-icon {
     font-size: 22px;
     margin-bottom: 6px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .achievement-card-title {
     -unity-font-style: bold;
     white-space: normal;
     margin-bottom: 6px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .achievement-card-state {
     font-size: 11px;
     color: rgba(255, 255, 255, 0.72);
     white-space: normal;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .achievement-card-state.is-complete {
@@ -404,6 +425,7 @@
     color: rgba(255, 255, 255, 0.72);
     background-color: rgba(255, 255, 255, 0.04);
     border-radius: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .achievement-card.is-complete {
@@ -428,6 +450,7 @@
     margin-bottom: 6px;
     max-height: 32px;
     overflow: hidden;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .achievement-card-requirement {
@@ -437,6 +460,7 @@
     margin-bottom: 8px;
     max-height: 32px;
     overflow: hidden;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .achievement-progress-track {
@@ -457,19 +481,38 @@
 .achievement-card-progress {
     font-size: 11px;
     color: rgba(255, 255, 255, 0.78);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
-.achievement-card-title,
-.achievement-card-description,
-.achievement-card-requirement,
-.achievement-card-progress,
+.achievement-card-title {
+    min-width: 0;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.achievement-card-description {
+    min-width: 0;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.achievement-card-requirement {
+    min-width: 0;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.achievement-card-progress {
+    min-width: 0;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
 .achievement-card-state {
     min-width: 0;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .pass-current {
     -unity-font-style: bold;
     margin-bottom: 8px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .pass-levels-list {
@@ -515,6 +558,7 @@
     font-size: 10px;
     white-space: normal;
     unity-text-align: upper-left;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .pass-buy-button {
@@ -530,6 +574,7 @@
     color: rgba(255, 255, 255, 0.78);
     -unity-text-align: upper-center;
     font-size: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .pass-expiry-bar {
@@ -593,6 +638,115 @@
     overflow: hidden;
 }
 
+.map-legend-panel {
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    width: 220px;
+    max-width: 220px;
+
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+
+    border-radius: 16px;
+    background-color: rgba(8, 12, 18, 0.82);
+
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+
+    border-left-color: rgba(255,255,255,0.08);
+    border-right-color: rgba(255,255,255,0.08);
+    border-top-color: rgba(255,255,255,0.08);
+    border-bottom-color: rgba(255,255,255,0.08);
+}
+
+.map-legend-title {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.96);
+    margin-bottom: 8px;
+}
+
+.map-legend-section-label {
+    margin-top: 6px;
+    margin-bottom: 5px;
+    font-size: 10px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.72);
+}
+
+.map-legend-row {
+    flex-direction: row;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.map-legend-wrap {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.map-legend-chip {
+    min-height: 24px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+
+    border-radius: 999px;
+    background-color: rgba(255,255,255,0.08);
+}
+
+.map-legend-chip.is-on {
+    background-color: rgba(255,255,255,0.18);
+}
+
+.map-legend-chip-compact {
+    min-width: 0;
+}
+
+.map-legend-chip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background-color: rgba(255,255,255,0.34);
+}
+
+.map-legend-chip.is-on .map-legend-chip-dot {
+    background-color: rgba(255,255,255,0.92);
+}
+
+.map-legend-chip-text {
+    font-size: 10px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.88);
+}
+
+.legend-chip-run .map-legend-chip-dot { background-color: rgba(90,200,255,0.95); }
+.legend-chip-lift .map-legend-chip-dot { background-color: rgba(255,214,10,0.95); }
+.legend-chip-poi .map-legend-chip-dot { background-color: rgba(255,255,255,0.95); }
+
+.legend-chip-resort .map-legend-chip-dot { background-color: rgba(64,191,255,0.95); }
+.legend-chip-kiosk .map-legend-chip-dot { background-color: rgba(255,191,64,0.95); }
+.legend-chip-shop .map-legend-chip-dot { background-color: rgba(255,102,166,0.95); }
+.legend-chip-service .map-legend-chip-dot { background-color: rgba(96,255,128,0.95); }
+.legend-chip-landmark .map-legend-chip-dot { background-color: rgba(204,204,255,0.95); }
+.legend-chip-custom .map-legend-chip-dot { background-color: rgba(255,255,255,0.80); }
+
+.is-difficulty-green .map-legend-chip-dot { background-color: rgba(65,217,65,0.95); }
+.is-difficulty-blue .map-legend-chip-dot { background-color: rgba(64,128,255,0.95); }
+.is-difficulty-red .map-legend-chip-dot { background-color: rgba(242,77,77,0.95); }
+.is-difficulty-black .map-legend-chip-dot { background-color: rgba(230,230,230,0.95); }
+
 .context-meta-row {
     flex-direction: row;
     flex-wrap: wrap;
@@ -616,12 +770,14 @@
 .context-meta-chip-label {
     font-size: 10px;
     color: rgba(255, 255, 255, 0.68);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .context-meta-chip-value {
     font-size: 11px;
     -unity-font-style: bold;
     color: rgba(255, 255, 255, 0.96);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .context-highlights {
@@ -650,17 +806,20 @@
     -unity-font-style: bold;
     margin-bottom: 2px;
     white-space: normal;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .context-highlight-value {
     color: rgba(255, 255, 255, 0.92);
     margin-bottom: 2px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .context-highlight-detail {
     font-size: 11px;
     color: rgba(255, 255, 255, 0.68);
     white-space: normal;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .stats-grid {
@@ -704,12 +863,14 @@
     color: rgba(255, 255, 255, 0.68);
     margin-bottom: 0;
     white-space: normal;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .stat-tile-value {
     font-size: 16px;
     -unity-font-style: bold;
     color: rgba(255, 255, 255, 0.98);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .task-card {
@@ -754,11 +915,13 @@
     flex-grow: 1;
     -unity-font-style: bold;
     white-space: normal;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .task-card-tier {
     font-size: 11px;
     color: rgba(255, 255, 255, 0.68);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .task-card-status {
@@ -766,6 +929,7 @@
     color: rgba(255, 255, 255, 0.78);
     margin-bottom: 6px;
     white-space: normal;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .task-card-bottomrow {
@@ -779,6 +943,7 @@
 .task-card-reward {
     font-size: 11px;
     color: rgba(255, 255, 255, 0.78);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .task-progress-track {
@@ -809,6 +974,7 @@
     margin-bottom: 6px;
     font-size: 11px;
     color: rgba(255, 255, 255, 0.68);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .achievement-scroll {
@@ -833,4 +999,113 @@
     margin-top: 8px;
     max-height: 220px;
     flex-shrink: 0;
+}
+
+.top-weather-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    min-width: 150px;
+}
+
+.top-strip-weather-icon {
+    width: 24px;
+    min-width: 24px;
+    -unity-text-align: middle-center;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.95);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.top-strip-weather {
+    min-width: 0;
+    flex-shrink: 1;
+    white-space: normal;
+}
+
+.context-hero {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.context-icon {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    padding-top: 7px;
+    border-radius: 12px;
+    background-color: rgba(83, 170, 255, 0.16);
+    -unity-text-align: upper-center;
+    font-size: 20px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.context-hero-copy {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.context-title-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.context-status-pill {
+    flex-shrink: 0;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-radius: 999px;
+    background-color: rgba(83, 170, 255, 0.18);
+    color: rgba(255, 255, 255, 0.96);
+    font-size: 10px;
+    -unity-font-style: bold;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.context-guidance-box {
+    margin-bottom: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.06);
+    border-right-color: rgba(255, 255, 255, 0.06);
+    border-top-color: rgba(255, 255, 255, 0.06);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.context-guidance {
+    white-space: normal;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.78);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.context-highlight-card.is-positive {
+    background-color: rgba(86, 150, 104, 0.14);
+    border-left-color: rgba(180, 235, 180, 0.18);
+    border-right-color: rgba(180, 235, 180, 0.18);
+    border-top-color: rgba(180, 235, 180, 0.18);
+    border-bottom-color: rgba(180, 235, 180, 0.18);
+}
+
+.context-highlight-card.is-warning {
+    background-color: rgba(214, 146, 43, 0.14);
+    border-left-color: rgba(255, 211, 138, 0.18);
+    border-right-color: rgba(255, 211, 138, 0.18);
+    border-top-color: rgba(255, 211, 138, 0.18);
+    border-bottom-color: rgba(255, 211, 138, 0.18);
 }

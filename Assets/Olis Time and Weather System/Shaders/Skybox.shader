@@ -45,6 +45,9 @@ Shader "Skybox/ProceduralGradient"
         _CloudMotionScale("Cloud Motion Scale", Range(0, 400)) = 140
         _CloudWarpStrength("Cloud Warp Strength", Range(0, 1)) = 0.16
         _CloudHorizonFade("Cloud Horizon Fade", Range(0,1)) = 0.22
+        _CloudSoftness("Cloud Softness", Range(0.01, 0.5)) = 0.14
+        _CloudCoverageBias("Cloud Coverage Bias", Range(-0.5, 0.5)) = 0
+        _CloudTurbulence("Cloud Turbulence", Range(0, 1)) = 0.35
 
         // Overcast visual response (kept minimal)
         _CloudShadowStrength("Cloud Shadow Strength", Range(0,1)) = 0.65
@@ -122,6 +125,9 @@ Shader "Skybox/ProceduralGradient"
     half  _CloudMotionScale;
     half  _CloudWarpStrength;
     half  _CloudHorizonFade;
+    half  _CloudSoftness;
+    half  _CloudCoverageBias;
+    half  _CloudTurbulence;
 
     half _CloudShadowStrength;
     half _CloudGreyStrength;
@@ -190,47 +196,31 @@ Shader "Skybox/ProceduralGradient"
 
     half CloudMask(float3 dir)
     {
-        if (dir.y <= 0.001) return 0;
+        if (dir.y <= 0.001h) return 0;
 
-        // Fade near horizon to prevent any residual pattern emphasis
-        // Fade only very near the horizon. Treat _CloudHorizonFade as a *width*, not a cutoff.
         half hFade = smoothstep(0.0h, max(0.001h, _CloudHorizonFade), dir.y);
-
-        // Motion (boosted)
         float2 motion = (_CloudSpeed.xy * _CloudMotionScale) * _Time.y;
-
-        // Seed offsets (stable per-day/preset from WeatherController)
-        // Using non-integer constants prevents obvious alignment.
         float2 seedOff = float2(_CloudSeed * 0.0137, _CloudSeed * 0.0211);
 
-        // Base scale: interpret _CloudTiling as "cloud size"
-        // Higher tiling => finer clouds. We invert so increasing tiling gives smaller features.
         float baseScale = lerp(0.35, 2.50, saturate(_CloudTiling));
+        const float R = 1.7320508;
 
-        // Irrational ratio scale to break repetition
-        const float R = 1.7320508; // ~sqrt(3)
-
-        // Domain warp (continuous): one cheap triplanar sample
         half warp = TriplanarNoise(dir, baseScale * 0.55, motion * 0.35 + seedOff) * 2.0h - 1.0h;
-
-        // Apply warp by nudging the direction slightly (continuous, no UV seams)
         float3 dWarp = normalize(dir + float3(warp, warp * 0.6, -warp * 0.8) * (_CloudWarpStrength * 0.18));
 
-        // Two-layer cloud field (continuous + large combined period)
         half n1 = TriplanarNoise(dWarp, baseScale, motion + seedOff);
         half n2 = TriplanarNoise(dWarp, baseScale * R, motion * float2(-0.73, 0.61) + seedOff * 1.37);
+        half n3 = TriplanarNoise(dWarp, baseScale * 0.27, motion * float2(0.18, -0.12) + seedOff * 0.57);
 
-        half n = lerp(n1, n2, 0.45h);
+        half detailMix = saturate(_CloudTurbulence);
+        half n = lerp(lerp(n1, n2, 0.45h), n3, detailMix * 0.35h);
 
-        // Coverage semantics: 0 = more clouds, 5 = clear
-        half coverage = saturate(1.0h - (_CloudPower / 5.0h));
-
-        // Shape curve tuned to feel “cloud-like” without extra params
-        half threshold = lerp(0.82h, 0.36h, coverage);
-        half softness  = lerp(0.07h, 0.20h, coverage);
+        half coverage = saturate(1.0h - (_CloudPower / 5.0h) + _CloudCoverageBias);
+        half threshold = lerp(0.82h, 0.30h, coverage);
+        threshold += (n3 - 0.5h) * _CloudTurbulence * 0.18h;
+        half softness = max(0.01h, _CloudSoftness);
 
         half m = smoothstep(threshold - softness, threshold + softness, n);
-
         return m * hFade * _CloudAlpha;
     }
 

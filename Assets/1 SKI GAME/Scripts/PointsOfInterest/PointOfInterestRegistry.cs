@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 using SkiGame.Runs;
@@ -19,11 +20,12 @@ namespace SkiGame.POI
         public string displayName;
         public string id;
         public POIType type;
+        public POICategory category;
         public bool alwaysShowLabel;
         public Vector3 position;
         public Color color;
         public string meta;
-        public UnityEngine.Object source; // SkiRunLine / LiftLine / null (custom)
+        public UnityEngine.Object source; // SkiRunLine / LiftLine / MapPOIAnchor / null
 
         public bool IsValid => !string.IsNullOrWhiteSpace(id);
     }
@@ -42,6 +44,7 @@ namespace SkiGame.POI
         [Header("Discovery")]
         [SerializeField] private bool includeSkiRuns = true;
         [SerializeField] private bool includeLiftLines = true;
+        [SerializeField] private bool includeWorldPOIs = true;
 
         [Header("Gizmos")]
         [SerializeField] private bool drawGizmos = true;
@@ -137,6 +140,9 @@ namespace SkiGame.POI
             if (includeLiftLines)
                 AppendLiftLines(_cache);
 
+            if (includeWorldPOIs)
+                AppendWorldPOIs(_cache);
+
             AppendCustom(_cache);
 
             OnChanged?.Invoke(_cache);
@@ -163,9 +169,10 @@ namespace SkiGame.POI
                 id = entry.id,
                 displayName = entry.name,
                 type = POIType.Custom,
+                category = POICategory.Custom,
                 position = entry.position,
                 color = entry.color,
-                meta = entry.meta,
+                meta = POIMetaUtility.EnsureToken(entry.meta, POIMetaUtility.BuildCategoryToken(POICategory.Custom)),
                 source = null
             };
 
@@ -305,8 +312,9 @@ namespace SkiGame.POI
                     id = id,
                     displayName = r.RunName,
                     type = POIType.SkiRun,
+                    category = POICategory.None,
                     position = pos,
-                    color = r.RunColor,                 // run difficulty color (already computed by BakeMetrics)
+                    color = r.RunColor,
                     meta = r.Difficulty.ToString(),
                     source = r
                 });
@@ -345,6 +353,7 @@ namespace SkiGame.POI
                         id = $"{entry.id}__bottom",
                         displayName = $"{baseName} (Bottom)",
                         type = POIType.SkiLift,
+                        category = POICategory.None,
                         position = lift.bottomStation.position,
                         color = entry.color,
                         meta = metaBase,
@@ -360,6 +369,7 @@ namespace SkiGame.POI
                         id = $"{entry.id}__top",
                         displayName = $"{baseName} (Top)",
                         type = POIType.SkiLift,
+                        category = POICategory.None,
                         position = lift.topStation.position,
                         color = entry.color,
                         meta = metaBase,
@@ -375,6 +385,7 @@ namespace SkiGame.POI
                         id = $"{entry.id}__mid",
                         displayName = baseName,
                         type = POIType.SkiLift,
+                        category = POICategory.None,
                         position = lift.transform.position,
                         color = entry.color,
                         meta = metaBase,
@@ -417,6 +428,150 @@ namespace SkiGame.POI
             return created;
         }
 
+        private void AppendWorldPOIs(List<POIInfo> dst)
+        {
+            HashSet<int> anchoredInstanceIds = new HashSet<int>();
+
+#if UNITY_2023_1_OR_NEWER
+            var anchors = UnityEngine.Object.FindObjectsByType<MapPOIAnchor>(FindObjectsSortMode.None);
+#else
+    var anchors = UnityEngine.Object.FindObjectsOfType<MapPOIAnchor>(true);
+#endif
+
+            for (int i = 0; i < anchors.Length; i++)
+            {
+                var anchor = anchors[i];
+                if (anchor == null || !anchor.IncludeInMapBake)
+                    continue;
+
+                anchoredInstanceIds.Add(anchor.gameObject.GetInstanceID());
+
+                string id = !string.IsNullOrWhiteSpace(anchor.CustomId)
+                    ? anchor.CustomId.Trim()
+                    : $"anchor__{anchor.gameObject.scene.name}__{anchor.gameObject.GetInstanceID()}";
+
+                string meta = anchor.Meta;
+                meta = POIMetaUtility.EnsureToken(meta, POIMetaUtility.BuildCategoryToken(anchor.Category));
+
+                dst.Add(new POIInfo
+                {
+                    id = id,
+                    displayName = anchor.DisplayName,
+                    type = POIType.Custom,
+                    category = anchor.Category,
+                    alwaysShowLabel = anchor.AlwaysShowLabel,
+                    position = anchor.WorldPosition,
+                    color = anchor.Color,
+                    meta = meta,
+                    source = anchor
+                });
+            }
+
+#if UNITY_2023_1_OR_NEWER
+            var resorts = UnityEngine.Object.FindObjectsByType<SkiResortZone>(FindObjectsSortMode.None);
+            var portals = UnityEngine.Object.FindObjectsByType<CustomizationPortal>(FindObjectsSortMode.None);
+            var kiosks = UnityEngine.Object.FindObjectsByType<SkiPassKiosk>(FindObjectsSortMode.None);
+#else
+    var resorts = UnityEngine.Object.FindObjectsOfType<SkiResortZone>(true);
+    var portals = UnityEngine.Object.FindObjectsOfType<CustomizationPortal>(true);
+    var kiosks = UnityEngine.Object.FindObjectsOfType<SkiPassKiosk>(true);
+#endif
+
+            AppendAutoWorldPOIs(
+                resorts,
+                anchoredInstanceIds,
+                dst,
+                POICategory.Resort,
+                new Color(0.25f, 0.75f, 1f, 1f),
+                "Resort",
+                GetResortWorldPosition);
+
+            AppendAutoWorldPOIs(
+                portals,
+                anchoredInstanceIds,
+                dst,
+                POICategory.Shop,
+                new Color(1f, 0.45f, 0.75f, 1f),
+                "Shop",
+                c => c != null ? c.transform.position : Vector3.zero);
+
+            AppendAutoWorldPOIs(
+                kiosks,
+                anchoredInstanceIds,
+                dst,
+                POICategory.Kiosk,
+                new Color(1f, 0.75f, 0.2f, 1f),
+                "Ski Pass Kiosk",
+                c => c != null ? c.transform.position : Vector3.zero);
+        }
+
+        private void AppendAutoWorldPOIs<T>(
+            T[] objects,
+            HashSet<int> anchoredInstanceIds,
+            List<POIInfo> dst,
+            POICategory category,
+            Color color,
+            string fallbackName,
+            Func<T, Vector3> worldPosResolver) where T : Component
+        {
+            if (objects == null || dst == null)
+                return;
+
+            for (int i = 0; i < objects.Length; i++)
+            {
+                var obj = objects[i];
+                if (obj == null)
+                    continue;
+
+                int id = obj.gameObject.GetInstanceID();
+                if (anchoredInstanceIds.Contains(id))
+                    continue;
+
+                string displayName = ResolveDisplayName(obj.gameObject, fallbackName);
+                string meta = POIMetaUtility.BuildCategoryToken(category);
+
+                dst.Add(new POIInfo
+                {
+                    id = $"auto__{category.ToString().ToLowerInvariant()}__{id}",
+                    displayName = displayName,
+                    type = POIType.Custom,
+                    category = category,
+                    alwaysShowLabel = true,
+                    position = worldPosResolver(obj),
+                    color = color,
+                    meta = meta,
+                    source = obj
+                });
+            }
+        }
+
+        private static string ResolveDisplayName(GameObject go, string fallbackName)
+        {
+            if (go == null)
+                return fallbackName;
+
+            string n = go.name;
+            if (string.IsNullOrWhiteSpace(n))
+                return fallbackName;
+
+            n = n.Replace("_", " ").Trim();
+            return string.IsNullOrWhiteSpace(n) ? fallbackName : n;
+        }
+
+        private static Vector3 GetResortWorldPosition(SkiResortZone zone)
+        {
+            if (zone == null)
+                return Vector3.zero;
+
+            if (zone.insidePoint != null)
+                return zone.insidePoint.position;
+
+            if (zone.entrancePoint != null)
+                return zone.entrancePoint.position;
+
+            return zone.transform.position;
+        }
+
         private void AppendCustom(List<POIInfo> dst)
         {
             for (int i = 0; i < customPoints.Count; i++)
@@ -429,9 +584,10 @@ namespace SkiGame.POI
                     id = c.id,
                     displayName = string.IsNullOrWhiteSpace(c.name) ? "POI" : c.name,
                     type = POIType.Custom,
+                    category = POICategory.Custom,
                     position = c.position,
                     color = c.color,
-                    meta = c.meta,
+                    meta = POIMetaUtility.EnsureToken(c.meta, POIMetaUtility.BuildCategoryToken(POICategory.Custom)),
                     source = null,
                     alwaysShowLabel = c.alwaysShowLabel
                 });

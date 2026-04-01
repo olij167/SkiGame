@@ -28,6 +28,7 @@ namespace TimeWeather
         {
             [Tooltip("The name of the weather condition used for identification. \n Ensure each condition has a unique name to avoid errors")]
             public string weatherCondition;
+
             [Header("Requirements for Weather Selection")]
             [Tooltip("The temperature range required for this condition. \n This can be used to differentiate between weather conditions")]
             public Vector2 tempRange;
@@ -35,28 +36,68 @@ namespace TimeWeather
             public Vector2 rainRange;
             [Tooltip("Whether this condition requires it to be raining \n This can be used to differentiate between weather conditions")]
             public bool isRaining;
+
             [Space(10)]
             [Header("Weather Condition Effects")]
             [Tooltip("The cloud planes which are active during this weather condition")]
             public List<Renderer> activeClouds;
-            //[Tooltip("The strength range of the clouds when this condition is active \n 0 = full cloud coverage, 5 = no clouds")]
+
             public Vector2 cloudPowerRange;
-            public Vector2 cloudAlphaRange;
+            public Vector2 cloudAlphaRange = new Vector2(0.25f, 1f);
+
+            [Header("Dynamic Cloud Motion")]
+            [Tooltip("Base wind speed range for this weather preset. This drives cloud drift.")]
+            public Vector2 windSpeedRange = new Vector2(0.2f, 1f);
+            [Tooltip("Wind direction in degrees. Use a small range for stable weather and a wide range for chaotic weather.")]
+            public Vector2 windDirectionRange = new Vector2(0f, 360f);
+            [Tooltip("How much the wind gusts around the base speed.")]
+            public Vector2 gustStrengthRange = new Vector2(0.05f, 0.2f);
+
+            [Header("Skybox Cloud Shaping")]
+            public Vector2 skyCloudAlphaRange = new Vector2(0.15f, 0.75f);
+            public Vector2 skyCloudPowerRange = new Vector2(0.5f, 4.5f);
+            [Range(0.01f, 0.5f)] public float cloudSoftness = 0.14f;
+            [Range(-0.5f, 0.5f)] public float cloudCoverageBias = 0f;
+            [Range(0f, 1f)] public float cloudTurbulence = 0.35f;
+            [Range(0f, 1f)] public float cloudWarpStrength = 0.16f;
+            public Color cloudTint = Color.white;
+            [Range(0f, 1f)] public float cloudShadowStrength = 0.65f;
+            [Range(0f, 1f)] public float cloudGreyStrength = 0.55f;
+            [Range(0f, 1f)] public float cloudSunLightStrength = 0.60f;
+
+            [Header("Scene Cloud Layer Controls")]
+            [Range(0f, 1f)] public float planeEdgeFade = 0.25f;
+            [Range(0f, 1f)] public float planeRadialFade = 0.35f;
+
+            [Header("Volumetric Cloud Controls")]
+            [Range(0f, 2f)] public float volumeDensity = 0.65f;
+            [Range(0f, 4f)] public float volumeAbsorption = 1.15f;
+            [Range(0f, 2f)] public float volumeLightingStrength = 0.75f;
+            [Range(0f, 2f)] public float volumeAlphaMultiplier = 1.0f;
+
+            [Range(10f, 600f)] public float volumeClusterScale = 180f;
+            [Range(0f, 2f)] public float volumeClusterDensity = 0.72f;
+            [Range(0f, 2f)] public float volumeDetailStrength = 0.85f;
+            [Range(0.02f, 0.45f)] public float volumeEdgeFade = 0.22f;
 
             [Tooltip("The strength of the fog when this condition is active")]
             [Range(0f, 1f)] public float fogStrength;
-            //[Tooltip("The colour of the fog when this condition is active, depending on the time of day")]
-            //public Gradient fogColour;
+
             [Tooltip("The level of surface wetness for materials with the 'Wet' or 'WetAndSnowy' shader during this condition")]
             public float wetness;
+
             [Tooltip("The level of surface snowiness for materials with the 'Snowy' or 'WetAndSnowy' shader during this condition")]
             public float snowiness;
+
             [Tooltip("The particles which are active during this condition")]
             public WeatherParticles[] weatherParticles;
+
             [Tooltip("an array of ambient audio clips to play during this condition, picked randomly")]
             public AudioClip[] clips;
+
             [Tooltip("The pitch to play the clip at")]
             public float pitch;
+
             [Tooltip("The volume to play the clip at")]
             public float volume;
         }
@@ -169,9 +210,45 @@ namespace TimeWeather
         private static readonly int ID_CloudAlpha = Shader.PropertyToID("_CloudAlpha");
         private static readonly int ID_CloudPower = Shader.PropertyToID("_CloudPower");
         private static readonly int ID_CloudSpeed = Shader.PropertyToID("_CloudSpeed");
+        private static readonly int ID_CloudSoftness = Shader.PropertyToID("_CloudSoftness");
+        private static readonly int ID_CloudCoverageBias = Shader.PropertyToID("_CloudCoverageBias");
+        private static readonly int ID_CloudTurbulence = Shader.PropertyToID("_CloudTurbulence");
+        private static readonly int ID_CloudWarpStrength = Shader.PropertyToID("_CloudWarpStrength");
+        private static readonly int ID_EdgeFade = Shader.PropertyToID("_EdgeFade");
+        private static readonly int ID_RadialFade = Shader.PropertyToID("_RadialFade");
+        private static readonly int ID_CloudColour = Shader.PropertyToID("_CloudColour");
         static readonly int ID_CloudSeed = Shader.PropertyToID("_CloudSeed");
 
+        private static readonly int ID_VolCloudColour = Shader.PropertyToID("_VolCloudColour");
+        private static readonly int ID_VolShadowColour = Shader.PropertyToID("_VolShadowColour");
+        private static readonly int ID_VolDensity = Shader.PropertyToID("_VolDensity");
+        private static readonly int ID_VolAbsorption = Shader.PropertyToID("_VolAbsorption");
+        private static readonly int ID_VolLightingStrength = Shader.PropertyToID("_VolLightingStrength");
+        private static readonly int ID_VolCloudSpeed = Shader.PropertyToID("_VolCloudSpeed");
+        private static readonly int ID_VolCloudSoftness = Shader.PropertyToID("_VolCloudSoftness");
+        private static readonly int ID_VolCoverageBias = Shader.PropertyToID("_VolCoverageBias");
+        private static readonly int ID_VolTurbulence = Shader.PropertyToID("_VolTurbulence");
+        private static readonly int ID_VolWarpStrength = Shader.PropertyToID("_VolWarpStrength");
+        private static readonly int ID_VolAlphaMultiplier = Shader.PropertyToID("_VolAlphaMultiplier");
+        private static readonly int ID_VolClusterScale = Shader.PropertyToID("_VolClusterScale");
+        private static readonly int ID_VolClusterDensity = Shader.PropertyToID("_VolClusterDensity");
+        private static readonly int ID_VolDetailStrength = Shader.PropertyToID("_VolDetailStrength");
+        private static readonly int ID_VolEdgeFade = Shader.PropertyToID("_VolEdgeFade");
+        private static readonly int ID_VolFieldOffset = Shader.PropertyToID("_VolFieldOffset");
+
         private Vector2 _lastCloudSpeed;
+
+        private Vector2 _globalVolumetricFieldOffset;
+
+        [Header("Cloud Drift Multipliers")]
+        [Tooltip("Extra drift multiplier applied to the skybox cloud speed.")]
+        public float skyboxCloudDriftScale = 3.0f;
+
+        [Tooltip("Extra drift multiplier applied to scene cloud planes.")]
+        public float sceneCloudDriftScale = 1.0f;
+
+        [Tooltip("Minimum drift applied to the skybox so clouds never look static.")]
+        public float minimumSkyboxDrift = 0.0015f;
 
         // --- CPU/GC optimisations ---
         // Avoid per-frame List.Contains checks on active cloud renderers.
@@ -478,16 +555,18 @@ namespace TimeWeather
                     if (idx >= 0)
                     {
                         hourly.weatherCondition = weatherDataPresets[idx].weatherCondition;
-                        hourly.cloudPower = Random.Range(weatherDataPresets[idx].cloudPowerRange.x, weatherDataPresets[idx].cloudPowerRange.y);
+                        ApplyWeatherProfileToHour(weatherDataPresets[idx], hourly, i);
 
                         if (weatherDataPresets[idx].clips != null && weatherDataPresets[idx].clips.Length > 0)
                             hourly.weatherAudio = weatherDataPresets[idx].clips[Random.Range(0, weatherDataPresets[idx].clips.Length)];
                     }
                     else
                     {
-                        // Fallback if no preset matches
                         hourly.weatherCondition = string.Empty;
-                        hourly.cloudPower = 0f;
+                        hourly.cloudPower = 5f;
+                        hourly.cloudAlphaTarget = 0f;
+                        hourly.skyCloudAlpha = 0f;
+                        hourly.skyCloudPower = 5f;
                     }
 
                 }
@@ -514,7 +593,7 @@ namespace TimeWeather
             if (idx >= 0)
             {
                 hourlyWeather[hour].weatherCondition = weatherDataPresets[idx].weatherCondition;
-                hourlyWeather[hour].cloudPower = Random.Range(weatherDataPresets[idx].cloudPowerRange.x, weatherDataPresets[idx].cloudPowerRange.y);
+                ApplyWeatherProfileToHour(weatherDataPresets[idx], hourlyWeather[hour], hour);
 
                 if (weatherDataPresets[idx].clips != null && weatherDataPresets[idx].clips.Length > 0)
                     hourlyWeather[hour].weatherAudio = weatherDataPresets[idx].clips[Random.Range(0, weatherDataPresets[idx].clips.Length)];
@@ -522,325 +601,417 @@ namespace TimeWeather
             else
             {
                 hourlyWeather[hour].weatherCondition = string.Empty;
-                hourlyWeather[hour].cloudPower = 0f;
+                hourlyWeather[hour].cloudPower = 5f;
+                hourlyWeather[hour].cloudAlphaTarget = 0f;
+                hourlyWeather[hour].skyCloudAlpha = 0f;
+                hourlyWeather[hour].skyCloudPower = 5f;
             }
+        }
 
+        private void ApplyWeatherProfileToHour(WeatherData preset, HourlyWeather hourly, int hourIndex)
+        {
+            if (preset == null || hourly == null) return;
+
+            hourly.cloudPower = Random.Range(preset.cloudPowerRange.x, preset.cloudPowerRange.y);
+            hourly.cloudAlphaTarget = Random.Range(preset.cloudAlphaRange.x, preset.cloudAlphaRange.y);
+            hourly.windSpeedTarget = Random.Range(preset.windSpeedRange.x, preset.windSpeedRange.y);
+            hourly.windDirection = Random.Range(preset.windDirectionRange.x, preset.windDirectionRange.y);
+            hourly.gustStrength = Random.Range(preset.gustStrengthRange.x, preset.gustStrengthRange.y);
+
+            hourly.skyCloudAlpha = Random.Range(preset.skyCloudAlphaRange.x, preset.skyCloudAlphaRange.y);
+            hourly.skyCloudPower = Random.Range(preset.skyCloudPowerRange.x, preset.skyCloudPowerRange.y);
+            hourly.cloudSoftness = preset.cloudSoftness;
+            hourly.cloudCoverageBias = preset.cloudCoverageBias;
+            hourly.cloudTurbulence = preset.cloudTurbulence;
+            hourly.cloudWarpStrength = preset.cloudWarpStrength;
+            hourly.cloudTint = preset.cloudTint;
+            hourly.cloudShadowStrength = preset.cloudShadowStrength;
+            hourly.cloudGreyStrength = preset.cloudGreyStrength;
+            hourly.cloudSunLightStrength = preset.cloudSunLightStrength;
+            hourly.planeEdgeFade = preset.planeEdgeFade;
+            hourly.planeRadialFade = preset.planeRadialFade;
+            hourly.volumeDensity = preset.volumeDensity;
+            hourly.volumeAbsorption = preset.volumeAbsorption;
+            hourly.volumeLightingStrength = preset.volumeLightingStrength;
+            hourly.volumeAlphaMultiplier = preset.volumeAlphaMultiplier;
+            hourly.volumeClusterScale = preset.volumeClusterScale;
+            hourly.volumeClusterDensity = preset.volumeClusterDensity;
+            hourly.volumeDetailStrength = preset.volumeDetailStrength;
+            hourly.volumeEdgeFade = preset.volumeEdgeFade;
+        }
+
+        private static Vector2 DirectionFromDegrees(float degrees)
+        {
+            float radians = degrees * Mathf.Deg2Rad;
+            return new Vector2(Mathf.Cos(radians), Mathf.Sin(radians));
+        }
+
+        private float InterpolateAngle(float a, float b, float t)
+        {
+            return a + Mathf.DeltaAngle(a, b) * t;
+        }
+
+        private float SampleGust01(float timeValue, float seed)
+        {
+            return Mathf.PerlinNoise(timeValue * 0.075f + seed, seed * 0.173f);
+        }
+
+        public bool TryGetCurrentVolumetricCloudState(
+    out Color cloudTint,
+    out float softness,
+    out float coverageBias,
+    out float turbulence,
+    out float warpStrength,
+    out float density,
+    out float absorption,
+    out float lightingStrength,
+    out float alphaMultiplier,
+    out float clusterScale,
+    out float clusterDensity,
+    out float detailStrength,
+    out float edgeFade,
+    out Vector2 drift)
+        {
+            cloudTint = Color.white;
+            softness = 0.14f;
+            coverageBias = 0f;
+            turbulence = 0.35f;
+            warpStrength = 0.16f;
+            density = 0.65f;
+            absorption = 1.15f;
+            lightingStrength = 0.75f;
+            alphaMultiplier = 1.0f;
+            clusterScale = 180f;
+            clusterDensity = 0.72f;
+            detailStrength = 0.85f;
+            edgeFade = 0.22f;
+            drift = Vector2.zero;
+
+            if (hourlyWeather == null || timeController == null || hourlyWeather.Count == 0)
+                return false;
+
+            int hour = Mathf.Clamp(timeController.timeHours, 0, Mathf.Max(0, hourlyWeather.Count - 2));
+            float t = timeController.hourlyTimePercent;
+
+            HourlyWeather currentHour = hourlyWeather[hour];
+            HourlyWeather nextHour = hourlyWeather[Mathf.Min(hour + 1, hourlyWeather.Count - 1)];
+
+            cloudTint = Color.Lerp(currentHour.cloudTint, nextHour.cloudTint, t);
+            softness = Mathf.Lerp(currentHour.cloudSoftness, nextHour.cloudSoftness, t);
+            coverageBias = Mathf.Lerp(currentHour.cloudCoverageBias, nextHour.cloudCoverageBias, t);
+            turbulence = Mathf.Lerp(currentHour.cloudTurbulence, nextHour.cloudTurbulence, t);
+            warpStrength = Mathf.Lerp(currentHour.cloudWarpStrength, nextHour.cloudWarpStrength, t);
+            density = Mathf.Lerp(currentHour.volumeDensity, nextHour.volumeDensity, t);
+            absorption = Mathf.Lerp(currentHour.volumeAbsorption, nextHour.volumeAbsorption, t);
+            lightingStrength = Mathf.Lerp(currentHour.volumeLightingStrength, nextHour.volumeLightingStrength, t);
+            alphaMultiplier = Mathf.Lerp(currentHour.volumeAlphaMultiplier, nextHour.volumeAlphaMultiplier, t);
+            clusterScale = Mathf.Lerp(currentHour.volumeClusterScale, nextHour.volumeClusterScale, t);
+            clusterDensity = Mathf.Lerp(currentHour.volumeClusterDensity, nextHour.volumeClusterDensity, t);
+            detailStrength = Mathf.Lerp(currentHour.volumeDetailStrength, nextHour.volumeDetailStrength, t);
+            edgeFade = Mathf.Lerp(currentHour.volumeEdgeFade, nextHour.volumeEdgeFade, t);
+
+            Vector2 windDir = wind.sqrMagnitude > 0.0000001f ? wind.normalized : Vector2.right;
+            drift = windDir * Mathf.Max(0.001f, windSpeed * 0.0035f) * sceneCloudDriftScale;
+
+            return true;
         }
 
         public void SetCurrentConditions()
         {
-            if (hourlyWeather != null)
+            if (hourlyWeather == null || timeController == null || timeController.timeHours >= 23)
+                return;
+
+            float hourlyTimePercent = timeController.hourlyTimePercent;
+            int hour = timeController.timeHours;
+
+            HourlyWeather currentHour = hourlyWeather[hour];
+            HourlyWeather nextHour = hourlyWeather[hour + 1];
+
+            temperature = Mathf.Lerp(currentHour.temp, nextHour.temp, hourlyTimePercent);
+            rainChance = Mathf.Lerp(currentHour.rainChance, nextHour.rainChance, hourlyTimePercent);
+
+            if (toggleTempUI && tempText != null)
+                tempText.text = temperature.ToString("00") + "°C";
+
+            int resolvedIdx = currentHour.presetIndex >= 0
+                ? currentHour.presetIndex
+                : ResolvePresetIndex(temperature, rainChance, currentHour.isRaining);
+
+            WeatherData resolvedPreset = (resolvedIdx >= 0 && resolvedIdx < weatherDataPresets.Length)
+                ? weatherDataPresets[resolvedIdx]
+                : null;
+
+            if (resolvedPreset != null)
+                weatherCondition = resolvedPreset.weatherCondition;
+
+            if (toggleWeatherUI && weatherConditionText != null)
+                weatherConditionText.text = weatherCondition;
+
+            if (toggleRainUI && rainText != null)
+                rainText.text = rainChance.ToString("00") + "% Rain";
+
+            if (_lastAppliedPreset != resolvedPreset)
             {
-                if (timeController.timeHours < 23)
+                currentWeatherPreset = resolvedPreset;
+                _lastAppliedPreset = resolvedPreset;
+
+                _activeCloudSet.Clear();
+                if (currentWeatherPreset != null && currentWeatherPreset.activeClouds != null)
                 {
-                    float hourlyTimePercent = timeController.hourlyTimePercent;
-
-                    temperature = Mathf.Lerp(hourlyWeather[timeController.timeHours].temp, hourlyWeather[timeController.timeHours + 1].temp, hourlyTimePercent);
-
-                    rainChance = Mathf.Lerp(hourlyWeather[timeController.timeHours].rainChance, hourlyWeather[timeController.timeHours + 1].rainChance, hourlyTimePercent);
-
-                    if (toggleTempUI && tempText != null)
-                        tempText.text = temperature.ToString("00") + "°C";
-
-                    // Resolve the most appropriate preset index directly (no per-frame scan).
-                    int resolvedIdx = ResolvePresetIndex(temperature, rainChance, hourlyWeather[timeController.timeHours].isRaining);
-                    if (resolvedIdx >= 0)
-                        weatherCondition = weatherDataPresets[resolvedIdx].weatherCondition;
-
-                    if (toggleWeatherUI && weatherConditionText != null)
-                        weatherConditionText.text = weatherCondition;
-
-                    if (toggleRainUI && rainText != null)
-                        rainText.text = rainChance.ToString("00") + "% Rain";
-
-                    for (int r = 0; r < cloudRenderer.Length; r++)
+                    for (int a = 0; a < currentWeatherPreset.activeClouds.Count; a++)
                     {
-                        var hc = cloudRenderer[r];
-                        if (hc == null || hc.cloudRenderer == null) continue;
-
-                        // Ensure MPB exists (it should be created in Start(), but keep this robust)
-                        if (hc.mpb == null) hc.mpb = new MaterialPropertyBlock();
-
-                        // Hot path: use a HashSet to avoid per-frame List.Contains.
-                        bool isActive = (currentWeatherPreset != null && _activeCloudSet.Contains(hc.cloudRenderer));
-
-                        // 1) Power + alpha targets
-                        if (isActive)
-                        {
-                            // Drive power toward the next hour’s target power (smooth hour blending)
-                            desiredPower = Mathf.Lerp(hc.cloudPower, hourlyWeather[timeController.timeHours + 1].cloudPower, hourlyTimePercent);
-                            hc.cloudPower = Mathf.Lerp(hc.cloudPower, desiredPower, hourlyTimePercent);
-
-                            // Drive alpha toward a stable target within the preset’s alpha range.
-                            // IMPORTANT: do NOT call Random.Range every frame; use a stable noise-based target.
-                            float noise = Mathf.PerlinNoise(r * 17.123f, timeController.timePercent * 2.0f);
-                            float targetAlpha = Mathf.Lerp(currentWeatherPreset.cloudAlphaRange.x, currentWeatherPreset.cloudAlphaRange.y, noise);
-
-                            // Blend from baseAlpha toward targetAlpha (and keep smoothing gentle)
-                            desiredAlpha = Mathf.Lerp(hc.baseAlpha, targetAlpha, hourlyTimePercent);
-                            hc.cloudAlpha = Mathf.Lerp(hc.cloudAlpha, desiredAlpha, hourlyTimePercent * 0.5f);
-                        }
-                        else
-                        {
-                            // Fade out inactive planes
-                            hc.cloudAlpha = Mathf.Lerp(hc.cloudAlpha, 0f, hourlyTimePercent * 0.05f);
-                            // Optionally also ease power toward clear-sky if your shader interprets higher as clearer
-                            // hc.cloudPower = Mathf.Lerp(hc.cloudPower, 5f, hourlyTimePercent * 0.05f);
-                        }
-
-                        // 2) Wind smoothing (your existing logic, but we keep it inside the same loop)
-                        if (desiredWindSpeed == rand)
-                            rand = Random.Range(windSpeed - 0.05f, windSpeed + 0.05f);
-                        else
-                            desiredWindSpeed = Mathf.Lerp(windSpeed, rand, hourlyTimePercent);
-
-                        windSpeed = Mathf.Lerp(windSpeed, desiredWindSpeed, hourlyTimePercent * 0.5f);
-
-                        wind.x = Mathf.Lerp(wind.x, windSpeed * windMultiplier, hourlyTimePercent * 0.5f);
-                        wind.y = Mathf.Lerp(wind.y, windSpeed * windMultiplier, hourlyTimePercent * 0.5f);
-
-                        Vector2 cloudSpeed;
-                        if (timeController.timeOfDay <= 12)
-                            cloudSpeed = wind * timeController.timeScale * (timeController.timeOfDay * 0.5f) * (timeController.timePercent * 25f);
-                        else
-                            cloudSpeed = wind * timeController.timeScale * (23 - timeController.timeOfDay) * (timeController.timePercent * 25f);
-
-                        _lastCloudSpeed = cloudSpeed;
-
-                        // 3) Apply to shader via MPB (no material instancing)
-                        hc.cloudRenderer.GetPropertyBlock(hc.mpb);
-                        hc.mpb.SetFloat(ID_CloudAlpha, hc.cloudAlpha);
-                        hc.mpb.SetFloat(ID_CloudPower, hc.cloudPower);
-                        hc.mpb.SetVector(ID_CloudSpeed, new Vector4(cloudSpeed.x * 0.5f, cloudSpeed.y * 0.5f, 0f, 0f));
-                        hc.cloudRenderer.SetPropertyBlock(hc.mpb);
-
-
-                        // Write back (because HourlyClouds is a class, this is technically not required,
-                        // but leaving this makes it explicit if you ever convert it to a struct)
-                        cloudRenderer[r] = hc;
+                        var r = currentWeatherPreset.activeClouds[a];
+                        if (r != null) _activeCloudSet.Add(r);
                     }
+                }
 
-                    // --- Skybox clouds (drive Skybox.shader using same params) ---
-                    var skyMat = RenderSettings.skybox;
-                    if (skyMat != null)
+                _presetParticleSet.Clear();
+                if (currentWeatherPreset != null && currentWeatherPreset.weatherParticles != null)
+                {
+                    for (int w = 0; w < currentWeatherPreset.weatherParticles.Length; w++)
                     {
-                        if (skyMat.HasProperty(ID_CloudSeed))
-                        {
-                            // Stable-ish seed: changes with day + weather preset index (or hash)
-                            int presetIndex = currentWeatherPreset != null ? System.Array.IndexOf(weatherDataPresets, currentWeatherPreset) : 0;
-                            float seed = (timeController != null ? timeController.dayCount : 0) * 31.73f + presetIndex * 101.11f;
-                            skyMat.SetFloat(ID_CloudSeed, seed);
-                        }
-
-                        float alphaSum = 0f, powerSum = 0f;
-                        int activeCount = 0;
-
-                        if (currentWeatherPreset != null && currentWeatherPreset.activeClouds != null)
-                        {
-                            for (int r = 0; r < cloudRenderer.Length; r++)
-                            {
-                                var hc = cloudRenderer[r];
-                                if (hc == null || hc.cloudRenderer == null) continue;
-
-                                if (_activeCloudSet.Contains(hc.cloudRenderer))
-                                {
-                                    alphaSum += hc.cloudAlpha;
-                                    powerSum += hc.cloudPower;
-                                    activeCount++;
-                                }
-                            }
-                        }
-
-                        // Average cloud params from the active 3D cloud renderers
-                        float avgAlpha = (activeCount > 0) ? (alphaSum / activeCount) : 0f;
-                        float avgPower = (activeCount > 0) ? (powerSum / activeCount) : 5f;
-
-                        // IMPORTANT:
-                        // Shader Graph clouds use CloudAlpha in ~0..15 (per your material inspector),
-                        // but the skybox shader expects CloudAlpha in 0..1.
-                        // Remap and clamp so we never feed skybox alpha > 1.
-                        const float PLANE_ALPHA_MAX = 15f;
-                        float skyCloudAlpha = Mathf.Clamp01(avgAlpha / PLANE_ALPHA_MAX);
-
-                        // CloudPower is already intended to be 0..5 (0=overcast, 5=clear).
-                        float skyCloudPower = Mathf.Clamp(avgPower, 0f, 5f);
-
-                        skyMat.SetFloat(ID_CloudAlpha, skyCloudAlpha);
-                        skyMat.SetFloat(ID_CloudPower, skyCloudPower);
-
-
-                        // IMPORTANT: use the exact same speed you used for planes
-                        Vector4 skySpeedV4 = new Vector4(_lastCloudSpeed.x * 0.5f, _lastCloudSpeed.y * 0.5f, 0f, 0f);
-
-                        if (skyMat.HasProperty("_CloudAlpha")) skyMat.SetFloat("_CloudAlpha", skyCloudAlpha);
-                        if (skyMat.HasProperty("_CloudPower")) skyMat.SetFloat("_CloudPower", skyCloudPower);
-                        if (skyMat.HasProperty("_CloudSpeed")) skyMat.SetVector("_CloudSpeed", skySpeedV4);
+                        var ps = currentWeatherPreset.weatherParticles[w].particleSystem;
+                        if (ps != null) _presetParticleSet.Add(ps);
                     }
+                }
 
-                    // --- Feed fog into skybox so fog affects the sky material ---
-                    if (skyMat != null)
+                if (weatherDataPresets != null)
+                {
+                    for (int p = 0; p < weatherDataPresets.Length; p++)
                     {
-                        // RenderSettings fog color is already time-of-day driven in TimeController.
-                        // Weather drives density via fogStrength; we mirror that into the skybox shader.
-                        if (skyMat.HasProperty("_FogColor"))
-                            skyMat.SetColor("_FogColor", RenderSettings.fogColor);
+                        var preset = weatherDataPresets[p];
+                        if (preset == null || preset.weatherParticles == null) continue;
 
-                        if (skyMat.HasProperty("_FogDensity"))
-                            skyMat.SetFloat("_FogDensity", RenderSettings.fogDensity);
-
-                        // Optional: push a stronger “sky fog strength” when the preset is foggy/rainy
-                        // (This does NOT change which preset is chosen; only improves perception.)
-                        if (skyMat.HasProperty("_FogSkyStrength"))
+                        for (int w = 0; w < preset.weatherParticles.Length; w++)
                         {
-                            float fogSkyStrength = Mathf.Lerp(2.0f, 6.0f, Mathf.Clamp01(currentWeatherPreset != null ? currentWeatherPreset.fogStrength : 0f));
-                            skyMat.SetFloat("_FogSkyStrength", fogSkyStrength);
+                            var ps = preset.weatherParticles[w].particleSystem;
+                            if (ps != null && !_presetParticleSet.Contains(ps) && ps.isPlaying)
+                                ps.Stop();
                         }
-
-                        if (skyMat.HasProperty("_FogHorizonBoost"))
-                        {
-                            float boost = Mathf.Lerp(2.0f, 5.0f, Mathf.Clamp01(currentWeatherPreset != null ? currentWeatherPreset.fogStrength : 0f));
-                            skyMat.SetFloat("_FogHorizonBoost", boost);
-                        }
-                    }
-
-                    if (currentWeatherPreset.snowiness < snowiness)
-                    {
-                        desiredSnowiness = Mathf.Lerp(snowiness, currentWeatherPreset.snowiness, hourlyTimePercent * evaporationSpeed * (1 - (temperature / 100)));
-                    }
-                    else if (currentWeatherPreset.snowiness > snowiness)
-                    {
-                        desiredSnowiness = Mathf.Lerp(snowiness, currentWeatherPreset.snowiness, hourlyTimePercent * snowCoverSpeed);
-                    }
-
-                    if (snowiness != desiredSnowiness)
-                        snowiness = Mathf.Lerp(snowiness, desiredSnowiness, hourlyTimePercent * 0.5f);
-
-                    Shader.SetGlobalFloat("_SnowAmount", snowiness);
-
-                    if (currentWeatherPreset.wetness < wetness)
-                    {
-                        desiredWetness = Mathf.Lerp(wetness, currentWeatherPreset.wetness, hourlyTimePercent * evaporationSpeed * (1 - (temperature / 100)));
-                    }
-                    else if (currentWeatherPreset.wetness > wetness)
-                    {
-                        desiredWetness = Mathf.Lerp(wetness, currentWeatherPreset.wetness, hourlyTimePercent * wetnessSpeed);
-                    }
-
-                    if (wetness != desiredWetness)
-                        wetness = Mathf.Lerp(wetness, desiredWetness, hourlyTimePercent * 0.5f);
-
-                    Shader.SetGlobalFloat("_Wetness", wetness);
-
-                    // --- Apply preset (CPU/GC optimised; no per-frame full scans or List allocations) ---
-                    WeatherData resolvedPreset = null;
-                    if (!string.IsNullOrEmpty(weatherCondition) && _presetByName != null)
-                        _presetByName.TryGetValue(weatherCondition, out resolvedPreset);
-
-                    if (resolvedPreset != null)
-                    {
-                        // Detect preset change
-                        if (_lastAppliedPreset != resolvedPreset)
-                        {
-                            currentWeatherPreset = resolvedPreset;
-                            _lastAppliedPreset = resolvedPreset;
-
-                            // Rebuild active cloud set once per preset change
-                            _activeCloudSet.Clear();
-                            if (currentWeatherPreset.activeClouds != null)
-                            {
-                                for (int a = 0; a < currentWeatherPreset.activeClouds.Count; a++)
-                                {
-                                    var r = currentWeatherPreset.activeClouds[a];
-                                    if (r != null) _activeCloudSet.Add(r);
-                                }
-                            }
-
-                            // Stop particles that are not part of the new preset (only on change)
-                            _presetParticleSet.Clear();
-                            if (currentWeatherPreset.weatherParticles != null)
-                            {
-                                for (int w = 0; w < currentWeatherPreset.weatherParticles.Length; w++)
-                                {
-                                    var ps = currentWeatherPreset.weatherParticles[w].particleSystem;
-                                    if (ps != null) _presetParticleSet.Add(ps);
-                                }
-                            }
-
-                            if (weatherDataPresets != null)
-                            {
-                                for (int p = 0; p < weatherDataPresets.Length; p++)
-                                {
-                                    var preset = weatherDataPresets[p];
-                                    if (preset == null || preset.weatherParticles == null) continue;
-
-                                    for (int w = 0; w < preset.weatherParticles.Length; w++)
-                                    {
-                                        var ps = preset.weatherParticles[w].particleSystem;
-                                        if (ps != null && !_presetParticleSet.Contains(ps) && ps.isPlaying)
-                                            ps.Stop();
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            // Keep pointer up to date even if unchanged
-                            currentWeatherPreset = resolvedPreset;
-                        }
-
-                        // Fog + audio (every frame, but O(1))
-                        RenderSettings.fogDensity = Mathf.Lerp(RenderSettings.fogDensity, currentWeatherPreset.fogStrength, hourlyTimePercent * fogSpeed);
-
-                        // Weather audio can be moved during menu->game transition.
-                        // If the serialized reference was destroyed, re-acquire safely.
-                        if (weatherAudio == null)
-                        {
-                            weatherAudio = GetComponentInChildren<CrossFadeAudio>(true);
-                            if (weatherAudio == null)
-                                weatherAudio = FindObjectOfType<CrossFadeAudio>(true);
-                        }
-
-                        if (weatherAudio != null && currentWeatherPreset.clips != null && currentWeatherPreset.clips.Length > 0)
-                            weatherAudio.newSoundtrack(hourlyWeather[timeController.timeHours].weatherAudio, currentWeatherPreset.volume);
-
-                        // Particles (update emission/noise; ensure playing)
-                        if (currentWeatherPreset.weatherParticles != null && currentWeatherPreset.weatherParticles.Length > 0)
-                        {
-                            for (int w = 0; w < currentWeatherPreset.weatherParticles.Length; w++)
-                            {
-                                var ps = currentWeatherPreset.weatherParticles[w].particleSystem;
-                                if (ps == null) continue;
-
-                                particleEmission = ps.emission;
-                                particleNoise = ps.noise;
-
-                                particleEmission.rateOverTime = Mathf.Lerp(
-                                    particleEmission.rateOverTime.constant,
-                                    currentWeatherPreset.weatherParticles[w].particleAmount,
-                                    hourlyTimePercent
-                                );
-
-                                particleNoise.strength = Mathf.Lerp(
-                                    particleNoise.strength.constant,
-                                    currentWeatherPreset.weatherParticles[w].noiseStrength,
-                                    hourlyTimePercent
-                                );
-
-                                if (!ps.isPlaying) ps.Play();
-                            }
-                        }
-                    }
-
-                    if (temperature <= 0f && currentWeatherPreset.isRaining)
-                    {
-                        Shader.SetGlobalFloat("_isSnowing", 1);
-                    }
-                    else if (temperature > 0f && currentWeatherPreset.isRaining)
-                    {
-                        Shader.SetGlobalFloat("_isSnowing", 0);
                     }
                 }
             }
+            else
+            {
+                currentWeatherPreset = resolvedPreset;
+            }
+
+            if (currentWeatherPreset == null)
+                return;
+
+            RenderSettings.fogDensity = Mathf.Lerp(RenderSettings.fogDensity, currentWeatherPreset.fogStrength, hourlyTimePercent * fogSpeed);
+
+            if (weatherAudio == null)
+            {
+                weatherAudio = GetComponentInChildren<CrossFadeAudio>(true);
+                if (weatherAudio == null)
+                    weatherAudio = FindObjectOfType<CrossFadeAudio>(true);
+            }
+
+            if (weatherAudio != null && currentWeatherPreset.clips != null && currentWeatherPreset.clips.Length > 0)
+                weatherAudio.newSoundtrack(currentHour.weatherAudio, currentWeatherPreset.volume);
+
+            if (currentWeatherPreset.weatherParticles != null && currentWeatherPreset.weatherParticles.Length > 0)
+            {
+                for (int w = 0; w < currentWeatherPreset.weatherParticles.Length; w++)
+                {
+                    var ps = currentWeatherPreset.weatherParticles[w].particleSystem;
+                    if (ps == null) continue;
+
+                    particleEmission = ps.emission;
+                    particleNoise = ps.noise;
+
+                    particleEmission.rateOverTime = Mathf.Lerp(
+                        particleEmission.rateOverTime.constant,
+                        currentWeatherPreset.weatherParticles[w].particleAmount,
+                        hourlyTimePercent
+                    );
+
+                    particleNoise.strength = Mathf.Lerp(
+                        particleNoise.strength.constant,
+                        currentWeatherPreset.weatherParticles[w].noiseStrength,
+                        hourlyTimePercent
+                    );
+
+                    if (!ps.isPlaying) ps.Play();
+                }
+            }
+
+            float targetWindSpeed = Mathf.Lerp(currentHour.windSpeedTarget, nextHour.windSpeedTarget, hourlyTimePercent);
+            float targetWindDirection = InterpolateAngle(currentHour.windDirection, nextHour.windDirection, hourlyTimePercent);
+            float gustStrength = Mathf.Lerp(currentHour.gustStrength, nextHour.gustStrength, hourlyTimePercent);
+            float gustNoise = (SampleGust01(Time.time, targetWindDirection * 0.01f + hour * 0.37f) * 2f) - 1f;
+            float gustedWindSpeed = Mathf.Max(0f, targetWindSpeed * (1f + gustNoise * gustStrength));
+
+            windSpeed = Mathf.Lerp(windSpeed, gustedWindSpeed, hourlyTimePercent * 0.35f);
+            Vector2 windDir = DirectionFromDegrees(targetWindDirection);
+            wind = Vector2.Lerp(wind, windDir * (windSpeed * windMultiplier), hourlyTimePercent * 0.35f);
+
+            Vector2 targetCloudDrift = windDir * (windSpeed * 0.0035f);
+            Vector2 smoothedCloudDrift = Vector2.Lerp(_lastCloudSpeed, targetCloudDrift, hourlyTimePercent * 0.35f);
+            _lastCloudSpeed = smoothedCloudDrift;
+
+            Vector2 sceneCloudSpeed = smoothedCloudDrift * sceneCloudDriftScale;
+            Vector2 skyboxCloudSpeed = smoothedCloudDrift * skyboxCloudDriftScale;
+
+            // Ensure the skybox always has a subtle readable drift even in calm weather.
+            if (skyboxCloudSpeed.sqrMagnitude < (minimumSkyboxDrift * minimumSkyboxDrift))
+            {
+                Vector2 fallbackDir = windDir.sqrMagnitude > 0.0001f ? windDir.normalized : new Vector2(0.85f, 0.35f).normalized;
+                skyboxCloudSpeed = fallbackDir * minimumSkyboxDrift;
+            }
+
+            float planeAlphaTarget = Mathf.Lerp(currentHour.cloudAlphaTarget, nextHour.cloudAlphaTarget, hourlyTimePercent);
+            float planePowerTarget = Mathf.Lerp(currentHour.cloudPower, nextHour.cloudPower, hourlyTimePercent);
+            float cloudSoftness = Mathf.Lerp(currentHour.cloudSoftness, nextHour.cloudSoftness, hourlyTimePercent);
+            float cloudCoverageBias = Mathf.Lerp(currentHour.cloudCoverageBias, nextHour.cloudCoverageBias, hourlyTimePercent);
+            float cloudTurbulence = Mathf.Lerp(currentHour.cloudTurbulence, nextHour.cloudTurbulence, hourlyTimePercent);
+            float cloudWarpStrength = Mathf.Lerp(currentHour.cloudWarpStrength, nextHour.cloudWarpStrength, hourlyTimePercent);
+            Color cloudTint = Color.Lerp(currentHour.cloudTint, nextHour.cloudTint, hourlyTimePercent);
+            float planeEdgeFade = Mathf.Lerp(currentHour.planeEdgeFade, nextHour.planeEdgeFade, hourlyTimePercent);
+            float planeRadialFade = Mathf.Lerp(currentHour.planeRadialFade, nextHour.planeRadialFade, hourlyTimePercent);
+
+            for (int r = 0; r < cloudRenderer.Length; r++)
+            {
+                var hc = cloudRenderer[r];
+                if (hc == null || hc.cloudRenderer == null) continue;
+                if (hc.mpb == null) hc.mpb = new MaterialPropertyBlock();
+
+                bool isActive = _activeCloudSet.Contains(hc.cloudRenderer);
+
+                float desiredPlaneAlpha = isActive ? planeAlphaTarget : 0f;
+                float desiredPlanePower = isActive ? planePowerTarget : 5f;
+
+                hc.cloudAlpha = Mathf.Lerp(hc.cloudAlpha, desiredPlaneAlpha, hourlyTimePercent * (isActive ? 0.5f : 0.1f));
+                hc.cloudPower = Mathf.Lerp(hc.cloudPower, desiredPlanePower, hourlyTimePercent * (isActive ? 0.35f : 0.08f));
+
+                hc.cloudRenderer.GetPropertyBlock(hc.mpb);
+                hc.mpb.SetFloat(ID_CloudAlpha, hc.cloudAlpha);
+                hc.mpb.SetFloat(ID_CloudPower, hc.cloudPower);
+                hc.mpb.SetVector(ID_CloudSpeed, new Vector4(sceneCloudSpeed.x, sceneCloudSpeed.y, 0f, 0f));
+                hc.mpb.SetFloat(ID_CloudSoftness, cloudSoftness);
+                hc.mpb.SetFloat(ID_CloudCoverageBias, cloudCoverageBias);
+                hc.mpb.SetFloat(ID_CloudTurbulence, cloudTurbulence);
+                hc.mpb.SetFloat(ID_CloudWarpStrength, cloudWarpStrength);
+                hc.mpb.SetFloat(ID_EdgeFade, planeEdgeFade);
+                hc.mpb.SetFloat(ID_RadialFade, planeRadialFade);
+                hc.mpb.SetColor(ID_CloudColour, cloudTint);
+                hc.cloudRenderer.SetPropertyBlock(hc.mpb);
+
+                cloudRenderer[r] = hc;
+            }
+
+            var skyMat = RenderSettings.skybox;
+            if (skyMat != null)
+            {
+                float skyCloudAlpha = Mathf.Clamp01(Mathf.Lerp(currentHour.skyCloudAlpha, nextHour.skyCloudAlpha, hourlyTimePercent));
+                float skyCloudPower = Mathf.Clamp(Mathf.Lerp(currentHour.skyCloudPower, nextHour.skyCloudPower, hourlyTimePercent), 0f, 5f);
+                float skyShadowStrength = Mathf.Lerp(currentHour.cloudShadowStrength, nextHour.cloudShadowStrength, hourlyTimePercent);
+                float skyGreyStrength = Mathf.Lerp(currentHour.cloudGreyStrength, nextHour.cloudGreyStrength, hourlyTimePercent);
+                float skySunLightStrength = Mathf.Lerp(currentHour.cloudSunLightStrength, nextHour.cloudSunLightStrength, hourlyTimePercent);
+
+                if (skyMat.HasProperty(ID_CloudSeed))
+                {
+                    float seed = (timeController != null ? timeController.dayCount : 0) * 31.73f + resolvedIdx * 101.11f;
+                    skyMat.SetFloat(ID_CloudSeed, seed);
+                }
+
+                if (skyMat.HasProperty("_CloudAlpha")) skyMat.SetFloat("_CloudAlpha", skyCloudAlpha);
+                if (skyMat.HasProperty("_CloudPower")) skyMat.SetFloat("_CloudPower", skyCloudPower);
+                if (skyMat.HasProperty("_CloudSpeed")) skyMat.SetVector("_CloudSpeed", new Vector4(skyboxCloudSpeed.x, skyboxCloudSpeed.y, 0f, 0f));
+                if (skyMat.HasProperty("_CloudSoftness")) skyMat.SetFloat("_CloudSoftness", cloudSoftness);
+                if (skyMat.HasProperty("_CloudCoverageBias")) skyMat.SetFloat("_CloudCoverageBias", cloudCoverageBias);
+                if (skyMat.HasProperty("_CloudTurbulence")) skyMat.SetFloat("_CloudTurbulence", cloudTurbulence);
+                if (skyMat.HasProperty("_CloudWarpStrength")) skyMat.SetFloat("_CloudWarpStrength", cloudWarpStrength);
+                if (skyMat.HasProperty("_CloudColor")) skyMat.SetColor("_CloudColor", cloudTint);
+                if (skyMat.HasProperty("_CloudShadowStrength")) skyMat.SetFloat("_CloudShadowStrength", skyShadowStrength);
+                if (skyMat.HasProperty("_CloudGreyStrength")) skyMat.SetFloat("_CloudGreyStrength", skyGreyStrength);
+                if (skyMat.HasProperty("_CloudSunLightStrength")) skyMat.SetFloat("_CloudSunLightStrength", skySunLightStrength);
+
+                if (skyMat.HasProperty("_FogColor"))
+                    skyMat.SetColor("_FogColor", RenderSettings.fogColor);
+
+                if (skyMat.HasProperty("_FogDensity"))
+                    skyMat.SetFloat("_FogDensity", RenderSettings.fogDensity);
+
+                if (skyMat.HasProperty("_FogSkyStrength"))
+                    skyMat.SetFloat("_FogSkyStrength", Mathf.Lerp(2.0f, 6.0f, Mathf.Clamp01(currentWeatherPreset.fogStrength)));
+
+                if (skyMat.HasProperty("_FogHorizonBoost"))
+                    skyMat.SetFloat("_FogHorizonBoost", Mathf.Lerp(2.0f, 5.0f, Mathf.Clamp01(currentWeatherPreset.fogStrength)));
+
+                if (TryGetCurrentVolumetricCloudState(
+    out Color volCloudTint,
+    out float volSoftness,
+    out float volCoverageBias,
+    out float volTurbulence,
+    out float volWarpStrength,
+    out float volDensity,
+    out float volAbsorption,
+    out float volLightingStrength,
+    out float volAlphaMultiplier,
+    out float volClusterScale,
+    out float volClusterDensity,
+    out float volDetailStrength,
+    out float volEdgeFade,
+    out Vector2 volDrift))
+                {
+                    _globalVolumetricFieldOffset += volDrift * Time.deltaTime;
+
+                    Color volShadowColour = Color.Lerp(
+                        volCloudTint * 0.65f,
+                        new Color(0.62f, 0.68f, 0.76f, 1f),
+                        0.65f
+                    );
+
+                    Shader.SetGlobalColor(ID_VolCloudColour, volCloudTint);
+                    Shader.SetGlobalColor(ID_VolShadowColour, volShadowColour);
+                    Shader.SetGlobalFloat(ID_VolDensity, volDensity);
+                    Shader.SetGlobalFloat(ID_VolAbsorption, volAbsorption);
+                    Shader.SetGlobalFloat(ID_VolLightingStrength, volLightingStrength);
+                    Shader.SetGlobalVector(ID_VolCloudSpeed, new Vector4(volDrift.x, volDrift.y, 0f, 0f));
+                    Shader.SetGlobalFloat(ID_VolCloudSoftness, volSoftness);
+                    Shader.SetGlobalFloat(ID_VolCoverageBias, volCoverageBias);
+                    Shader.SetGlobalFloat(ID_VolTurbulence, volTurbulence);
+                    Shader.SetGlobalFloat(ID_VolWarpStrength, volWarpStrength);
+                    Shader.SetGlobalFloat(ID_VolAlphaMultiplier, volAlphaMultiplier);
+                    Shader.SetGlobalFloat(ID_VolClusterScale, volClusterScale);
+                    Shader.SetGlobalFloat(ID_VolClusterDensity, volClusterDensity);
+                    Shader.SetGlobalFloat(ID_VolDetailStrength, volDetailStrength);
+                    Shader.SetGlobalFloat(ID_VolEdgeFade, volEdgeFade);
+                    Shader.SetGlobalVector(ID_VolFieldOffset, new Vector4(_globalVolumetricFieldOffset.x, _globalVolumetricFieldOffset.y, 0f, 0f));
+                }
+            }
+
+            if (currentWeatherPreset.snowiness < snowiness)
+            {
+                desiredSnowiness = Mathf.Lerp(snowiness, currentWeatherPreset.snowiness, hourlyTimePercent * evaporationSpeed * (1 - (temperature / 100)));
+            }
+            else if (currentWeatherPreset.snowiness > snowiness)
+            {
+                desiredSnowiness = Mathf.Lerp(snowiness, currentWeatherPreset.snowiness, hourlyTimePercent * snowCoverSpeed);
+            }
+
+            if (snowiness != desiredSnowiness)
+                snowiness = Mathf.Lerp(snowiness, desiredSnowiness, hourlyTimePercent * 0.5f);
+
+            Shader.SetGlobalFloat("_SnowAmount", snowiness);
+
+            if (currentWeatherPreset.wetness < wetness)
+            {
+                desiredWetness = Mathf.Lerp(wetness, currentWeatherPreset.wetness, hourlyTimePercent * evaporationSpeed * (1 - (temperature / 100)));
+            }
+            else if (currentWeatherPreset.wetness > wetness)
+            {
+                desiredWetness = Mathf.Lerp(wetness, currentWeatherPreset.wetness, hourlyTimePercent * wetnessSpeed);
+            }
+
+            if (wetness != desiredWetness)
+                wetness = Mathf.Lerp(wetness, desiredWetness, hourlyTimePercent * 0.5f);
+
+            Shader.SetGlobalFloat("_Wetness", wetness);
+
+            Shader.SetGlobalFloat("_isSnowing", (temperature <= 0f && currentWeatherPreset.isRaining) ? 1f : 0f);
         }
 
         private bool _lastToggleTempUI, _lastToggleRainUI, _lastToggleWeatherUI;
@@ -907,29 +1078,53 @@ namespace TimeWeather
     {
         [Tooltip("The time of this forcast hour")]
         public int forcastTime;
+
         [Tooltip("The temperature at the start of this forcast hour")]
         public float temp;
+
         [Tooltip("The chance of rain at the start of this forcast hour")]
         public float rainChance;
+
         [Tooltip("The weather condition of this forcast hour")]
         public string weatherCondition;
-       // [Tooltip("The cloud strength this forcast hour \n 0 = full cloud cover, 5 = clear sky")]
+
         public float cloudPower;
-        //public float cloudAlpha;
-        //public HourlyClouds[] hourlyClouds;
-        //[Tooltip("The windspeed this forcast hour")]
-        //public float windSpeed;
-        //[Tooltip("The surface wetness of this forcast hour \n Only applied to materials with the 'Wet' or 'WetAndSnowy' shader")]
-        //public float wetness;
-        //[Tooltip("The surface snowiness of this forcast hour  \n Only applied to materials with the 'Snowy' or 'WetAndSnowy' shader")]
-        //public float snowiness;
+        public float cloudAlphaTarget;
+        public float windSpeedTarget;
+        public float windDirection;
+        public float gustStrength;
+        public float skyCloudAlpha;
+        public float skyCloudPower;
+        public float cloudSoftness;
+        public float cloudCoverageBias;
+        public float cloudTurbulence;
+        public float cloudWarpStrength;
+        public Color cloudTint = Color.white;
+        public float cloudShadowStrength;
+        public float cloudGreyStrength;
+        public float cloudSunLightStrength;
+        public float planeEdgeFade;
+        public float planeRadialFade;
+
+        public float volumeDensity;
+        public float volumeAbsorption;
+        public float volumeLightingStrength;
+        public float volumeAlphaMultiplier;
+
+        public float volumeClusterScale;
+        public float volumeClusterDensity;
+        public float volumeDetailStrength;
+        public float volumeEdgeFade;
+
         [Tooltip("Whether it is raining during this hour")]
         public bool isRaining = false;
+
         [HideInInspector] public bool isMidnight = false;
+
         [Tooltip("The audio clip to play during this hours weather. \n selected randomly from 'clips' in the weather preset")]
         public AudioClip weatherAudio;
-        [HideInInspector] public int presetIndex = -1;
 
+        [HideInInspector] public int presetIndex = -1;
     }
 
     [System.Serializable]

@@ -29,6 +29,7 @@ namespace SkiGame.Navigation
         public bool clearWhenReached;
         public float arriveDistance;
         public Color accentColor;
+        public bool preferMiniMapIndicator;
 
         public Vector3 ResolveWorldPosition()
         {
@@ -60,6 +61,7 @@ namespace SkiGame.Navigation
         [Header("Player Tracking")]
         [SerializeField] private Transform playerTransform;
         [SerializeField] private float fallbackArriveDistance = 8f;
+
 
         private readonly Dictionary<int, Entry> _entries = new();
         private long _nextSequence = 1;
@@ -320,7 +322,7 @@ namespace SkiGame.Navigation
             if (!_activeTarget.showWorldBeacon || beaconPrefab == null)
                 return;
 
-            _activeBeaconInstance = Instantiate(beaconPrefab, _activeBeaconWorldPosition, Quaternion.identity);
+            _activeBeaconInstance = Instantiate(beaconPrefab, _activeBeaconWorldPosition, beaconPrefab.transform.rotation);
             _activeBeaconInstance.name = $"{beaconPrefab.name}_{_activeTarget.displayName}";
             _activeBeaconInstance.Configure(_activeBeaconWorldPosition, _activeTarget.displayName, _activeTarget.accentColor);
         }

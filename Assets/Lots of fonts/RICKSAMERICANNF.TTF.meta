@@ -1,0 +1,22 @@
+fileFormatVersion: 2
+guid: 91e944497cb8c214d955d311dba91e05
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontNames:
+  - Ricks American NF
+  fallbackFontReferences:
+  - {fileID: 12800000, guid: edf6032811b70cf41bb1c6666fc6b422, type: 3}
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  useLegacyBoundsCalculation: 0
+  shouldRoundAdvanceValue: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

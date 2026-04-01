@@ -1,0 +1,185 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &3291350521933348949
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 154894592666884878, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_Name
+      value: NPC Racer Variant
+      objectReference: {fileID: 0}
+    - target: {fileID: 1931090390662744828, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 1420
+      objectReference: {fileID: 0}
+    - target: {fileID: 1931090390662744828, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 758.48
+      objectReference: {fileID: 0}
+    - target: {fileID: 1931090390662744828, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -1430.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 1931090390662744828, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1931090390662744828, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1931090390662744828, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1931090390662744828, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1931090390662744828, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1931090390662744828, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1931090390662744828, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2849942397213681774, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3289933560086555512, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3368651367975192256, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3577129971718139236, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815614781584907458, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5278650216396597934, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6721536688426726489, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7056251311214554038, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7056251311214554038, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: 'availableRuns.Array.data[3]'
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 7056251311214554038, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: 'availableLifts.Array.data[0]'
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 7949360351100678939, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 154894592666884878, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      insertIndex: 4
+      addedObject: {fileID: 3022155257223070360}
+    - targetCorrespondingSourceObject: {fileID: 154894592666884878, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      insertIndex: 6
+      addedObject: {fileID: -238582240224898367}
+  m_SourcePrefab: {fileID: 100100000, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+--- !u!1 &3425957368392555355 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 154894592666884878, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+  m_PrefabInstance: {fileID: 3291350521933348949}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3022155257223070360
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3425957368392555355}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 73b0743dd0173914ab334158b8e6a590, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RaceCourseNpcRacer
+  skiController: {fileID: 8572825039590221281}
+  baseCruiseSpeed: 12
+  minLookaheadMeters: 8
+  maxLookaheadMeters: 24
+  speedToLookahead: 0.65
+  turnSensitivity: 2
+  turnDeadZone: 0.08
+  neutralLeanForwardBias: 0.18
+  brakeLeanStrength: 0.95
+  finishDistanceRemainingMeters: 8
+  finishCenterlineToleranceMeters: 14
+--- !u!114 &-238582240224898367
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3425957368392555355}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d031dd5293d81541a78ff531373cd2e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcAppearanceBootstrap
+  appearanceGenerator: {fileID: 5991621640502167444}
+  profile: {fileID: 8136469458124043276}
+  runOnStart: 1
+--- !u!114 &5991621640502167444 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 9118590775965157313, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+  m_PrefabInstance: {fileID: 3291350521933348949}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3425957368392555355}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ead2cc3c654f154a8d7304618c41c7b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcSkierAppearanceGenerator
+--- !u!114 &8136469458124043276 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6721536688426726489, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+  m_PrefabInstance: {fileID: 3291350521933348949}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3425957368392555355}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb05d33308fa572449cf13893426d6b0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcSkierProfile
+--- !u!114 &8572825039590221281 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6581433815363429812, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+  m_PrefabInstance: {fileID: 3291350521933348949}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3425957368392555355}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ab7e4192ebf2294c9903dc1abf385cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkiController

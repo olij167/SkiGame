@@ -567,7 +567,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.RunProgressTracker
   skiController: {fileID: 5130916524721657879}
   rb: {fileID: 4111373406727744186}
+  liftRider: {fileID: 0}
   scanIntervalSeconds: 0.2
+  useEntryGating: 1
+  maxEntryFractionToStartAttempt: 0.78
+  noStartNearEndFraction: 0.12
+  noStartNearEndMeters: 50
+  minEntrySpeedMps: 2.5
   enterClearanceMeters: 10
   verticalToleranceMeters: 20
   commitAfterSecondsInside: 0.35

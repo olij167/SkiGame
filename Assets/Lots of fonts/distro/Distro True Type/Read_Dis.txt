@@ -1,0 +1,54 @@
+Yo reader of readme.txt files.
+
+This document contains important information on the use of these fonts. You MUST read it ;)
+(Copyright information at bottom, don't skip it now)
+---
+
+The DISTRO basic set includes Light, Regular, Bold, Heavy and Black versions, plus a fantastically useful set of matching Distrobats.  You also get a Toasted version for breakfast and an Extinct one for scaring your aunt. Rumours of further variants abound... At least one of these fonts was included on the commercial FontHaus Exclusives CD, but you're getting them for free!
+
+The Distro series was part inspired by Brody's ubiquitous Blur and also by the blurry print of a Chinese novel printed by the Beijing Publishing Co. (Ya gotta love 'em, go check out their catalog.)  I adored Brody!Blur but felt hampered by the lack of weights.. and also by the fact that it's been done to death in these parts. (I guess that means it's a classic.) 
+
+So I started work on my own version, and was fascinated to discover how the character shapes changed with different blur and contrast settings. There's still a lot to be explored with the way light and focus affects type....
+---
+
+Helpful notes
+These fonts were designed to be used at all sizes.  I put a lot of work into making them readable as body text and you shouldn't have any trouble with that.  But my true confession for this evening is that I adjusted the kerning and character spacing, particularly of the heavier weights, to suit larger size output.  Use 'em big and you'll have lotsa fun, but if you need some Distro body text, you should increase the character spacing/tracking a little in your layout app. The effect should be that of glancing blearily over a printed page at 2am after one too many beers. (Now there's a design brief we can all relate too!)
+
+That's all very well, but what color should it be? Hmmm.. You can get some very nice effects by reversing out the fonts on a black background.  Don't get too saturated with color, keep to muted hues and work with the effect of light. Try some lime greens, some aquatic blues. Toast in particular looks wonderful that way, almost like a monitor burnout. 
+
+Now apostrophe has thrown a spanner in the works. He's shown me Distro-enhanced graphics which have made me realise that, used in a certain way, they can appear cartoon-like and rather funky. Try Extinct in bright pink, that's a good one. 
+
+I did start making a special filler font to accompany Toast. It fills the hollow spaces inside to give you a font that is essentially 3D. This isn't being released just yet, but maybe if there's a demand for it... 
+---
+
+Sundry matters
+
+These fonts are top notch, professional quality typefaces. A previous version of Distro Extinct has been sold commercially by FontHaus (now DesignHaus) on their FontHaus Exclusives CD, under the name 'Extinction'.  If you bought this font from them, you should know that they released an UNAUTHORIZED and UNFINISHED version which has major flaws and many missing characters. Despite promises of a contract, FontHaus have never paid me a cent in royalties and I am currently taking legal advice. Font designers beware!
+
+But rest assured, this Distro package contains the definitive final versions. I hope someone out there does some good stuff with them. Weeks and months and years of my life went into making these, so do the decent thing and USE them. 
+
+----
+
+And now the moment you've all been waiting for - the Copyright Notice!
+
+*fanfares, trumpets*
+
+The original Distro fonts are copyright (c) 1997-2001 PJA Ramsey/Swordfish Design
+The new, improved and finally released Distro fonts are copyright (c) 2001 Peter Ramsey/Swordfish Design & Apostrophic Labs.  All rights reserved.
+
+These fonts are offered for distribution as limited license 'freeware'.  You are welcome to use them and distribute them in any way you wish, provided that NO MONEY CHANGES HANDS at any stage. A copy of this text file MUST accompany any and all fonts distributed in any manner. The font files themselves must not be modified, either by editing the outlines or by messing with the font's names, copyright or other notices.
+
+If you would like to do something with these fonts which is prohibited by the above notice, please obtain some friendly advice from peter@swordfishdesign.co.uk or info@apostrophiclab.com.
+
+If you use these fonts in a commercial or other project and would like to show your appreciation to the designers, give whatever you feel is right to your favorite charity.  You can also help by spreading the word about www.apostrophiclab.com.  If you're *really* grateful, you can visit Peter's site www.swordfishbooks.com and check out the cool stuff on offer.
+---
+
+Distro
+Devised and produced by Peter at Swordfish Design UK
+http://www.swordfishdesign.co.uk
+Revised and reproduced by apostrophe at The L'ab
+http://www.apostrophiclab.com
+
+Dedicated to Sabra, who told me they were beautiful :)
+
+Typed by ;-Peter Ramsey on 30 August 2001. It's my birthday today! 

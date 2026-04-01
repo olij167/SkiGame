@@ -232,6 +232,7 @@ public class LiftLine : MonoBehaviour
             return;
         }
 
+        SnapStationsToTerrainIfAvailable();
         BuildAnalyticLoop();
         SpawnCarriers();
     }
@@ -360,6 +361,7 @@ public class LiftLine : MonoBehaviour
         if (!ValidateStations())
             return;
 
+        SnapStationsToTerrainIfAvailable();
         BuildAnalyticLoop();
     }
 
@@ -395,6 +397,23 @@ public class LiftLine : MonoBehaviour
     }
 
     #endregion
+
+    private void SnapStationsToTerrainIfAvailable()
+    {
+        if (bottomStation != null)
+        {
+            var snap = bottomStation.GetComponent<LiftStationTerrainSnap>();
+            if (snap != null)
+                snap.SnapToTerrain();
+        }
+
+        if (topStation != null)
+        {
+            var snap = topStation.GetComponent<LiftStationTerrainSnap>();
+            if (snap != null)
+                snap.SnapToTerrain();
+        }
+    }
 
     #region Setup & Validation
 

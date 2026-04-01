@@ -1,14 +1,15 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using SkiGame.Map;
+using SkiGame.Map.UI;
+using SkiGame.Navigation;
+using SkiGame.POI;
+using SkiGame.Runs;
+using SkiGame.UI;
+using TimeWeather;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
-using SkiGame.UI;
-using SkiGame.Map;
-using SkiGame.Map.UI;
-using SkiGame.POI;
-using SkiGame.Runs;
-using TimeWeather;
 
 namespace SkiGame.Progression
 {
@@ -33,6 +34,7 @@ namespace SkiGame.Progression
 
         [Header("Map")]
         [SerializeField] private MapData mapData;
+        [SerializeField] private MapRegionSet regionSet;
         [SerializeField] private Camera mapReferenceCamera;
         [SerializeField] private MapUIStyleSettings mapStyle;
 
@@ -74,6 +76,13 @@ namespace SkiGame.Progression
         private Button _btnContextExpand;
         private ScrollView _contextAttemptsList;
 
+        private Label _lblTopWeatherIcon;
+
+        private Label _lblContextIcon;
+        private Label _lblContextStatus;
+        private Label _lblContextGuidance;
+        private VisualElement _contextGuidanceBox;
+
         // Stats
         private Button _btnStatsToday;
         private Button _btnStatsLifetime;
@@ -109,6 +118,11 @@ namespace SkiGame.Progression
 
         private float _nextRefreshTime;
         private bool _pendingInitializeAfterPreview;
+
+        private MapWaypointManager _waypointManager;
+
+        private float _lastWaypointClickTime = -10f;
+        private string _lastClickedWaypointId;
 
         private enum SelectedMapKind
         {
@@ -224,6 +238,11 @@ namespace SkiGame.Progression
                     "[MountainHudOverlayController] MapData prefers camera projection, but no explicit mapReferenceCamera is assigned. " +
                     "Falling back to baked MapProjection is recommended for stable alignment.");
             }
+
+            if (_waypointManager == null)
+                _waypointManager = MapWaypointManager.Instance != null
+                    ? MapWaypointManager.Instance
+                    : MapWaypointManager.EnsureInstance();
         }
 
         private void OnEnable()
@@ -364,6 +383,7 @@ namespace SkiGame.Progression
         private void OnDisable()
         {
             UnhookInput();
+            UnbindMap();
             ApplyCursorState(false);
             ApplyCameraLockState(false);
 
@@ -523,6 +543,13 @@ namespace SkiGame.Progression
             _lblTopHint = _root.Q<Label>("Lbl_TopHint");
             _btnCloseOverlay = _root.Q<Button>("Btn_CloseOverlay");
 
+            _lblTopWeatherIcon = _root.Q<Label>("Lbl_TopWeatherIcon");
+
+            _lblContextIcon = _root.Q<Label>("Lbl_ContextIcon");
+            _lblContextStatus = _root.Q<Label>("Lbl_ContextStatus");
+            _lblContextGuidance = _root.Q<Label>("Lbl_ContextGuidance");
+            _contextGuidanceBox = _root.Q<VisualElement>("ContextGuidanceBox");
+
             _lblContextTitle = _root.Q<Label>("Lbl_ContextTitle");
             _lblContextBody = _root.Q<Label>("Lbl_ContextBody");
             _contextMetaRow = _root.Q<VisualElement>("ContextMetaRow");
@@ -677,6 +704,8 @@ namespace SkiGame.Progression
                 return;
             }
 
+            UnbindMap();
+
             var overlayRoot = _root.Q<VisualElement>("OverlayRoot") ?? _root;
             var host = overlayRoot.Q<VisualElement>("MapHost");
 
@@ -709,10 +738,29 @@ namespace SkiGame.Progression
 
             _mapUI = new PhoneMapPageUI();
             _mapUI.Bind(runtimeMapRoot, mapData, mapReferenceCamera);
+            _mapUI.SetWaypointManager(_waypointManager);
+
+            var resolvedRegionSet = ResolveRegionSet();
+            if (resolvedRegionSet != null)
+                _mapUI.SetRegionSet(resolvedRegionSet);
+
+            if (skiController != null)
+                _mapUI.SetPlayer(skiController.transform);
+
+            _mapUI.SetPlayerTracking(showMarker: true, drawTrail: true);
             _mapUI.MarkerSelected += OnMapMarkerSelected;
+            _mapUI.MarkerDoubleClicked += OnMapMarkerDoubleClicked;
+            _mapUI.MarkerRightDoubleClicked += OnMapMarkerRightDoubleClicked;
             _mapUI.PolylineSelected += OnMapPolylineSelected;
+            _mapUI.BackgroundWorldClicked += OnMapBackgroundWorldClicked;
+            _mapUI.BackgroundWorldDoubleClicked += OnMapBackgroundWorldDoubleClicked;
             _mapUI.SelectionCleared += OnMapSelectionCleared;
             _mapUI.SetMinimapMode(false, followPlayer: false, lockPan: false, allowZoom: true, suppressSelection: false, hideMarkerLabels: false);
+
+            _mapUI.WaypointClicked += OnMapWaypointClicked;
+            _mapUI.WaypointDoubleClicked += OnMapWaypointDoubleClicked;
+            _mapUI.WaypointDeleteRequested += OnMapWaypointDeleteRequested;
+            _mapUI.WaypointLabelEditRequested += OnMapWaypointLabelEditRequested;
 
             var viewport = runtimeMapRoot.Q<VisualElement>("MapViewport");
             if (viewport != null)
@@ -725,6 +773,25 @@ namespace SkiGame.Progression
 
             RefreshMapDependencies(forceRefresh: true);
             _mapUI.Refresh();
+        }
+
+        private void UnbindMap()
+        {
+            if (_mapUI == null)
+                return;
+
+            _mapUI.MarkerSelected -= OnMapMarkerSelected;
+            _mapUI.MarkerDoubleClicked -= OnMapMarkerDoubleClicked;
+            _mapUI.MarkerRightDoubleClicked -= OnMapMarkerRightDoubleClicked;
+            _mapUI.PolylineSelected -= OnMapPolylineSelected;
+            _mapUI.BackgroundWorldClicked -= OnMapBackgroundWorldClicked;
+            _mapUI.SelectionCleared -= OnMapSelectionCleared;
+            _mapUI.BackgroundWorldDoubleClicked -= OnMapBackgroundWorldDoubleClicked;
+
+            _mapUI.WaypointClicked -= OnMapWaypointClicked;
+            _mapUI.WaypointDoubleClicked -= OnMapWaypointDoubleClicked;
+            _mapUI.WaypointDeleteRequested -= OnMapWaypointDeleteRequested;
+            _mapUI.WaypointLabelEditRequested -= OnMapWaypointLabelEditRequested;
         }
 
         private void RefreshMapDependencies(bool forceRefresh)
@@ -785,6 +852,9 @@ namespace SkiGame.Progression
             if (_lblTopWeather != null)
                 _lblTopWeather.text = FormatWeather();
 
+            if (_lblTopWeatherIcon != null)
+                _lblTopWeatherIcon.text = GetWeatherGlyph();
+
             if (_lblTopLocation != null)
                 _lblTopLocation.text = BuildLocationLine();
 
@@ -805,7 +875,39 @@ namespace SkiGame.Progression
                 _lblContextTitle.text = _selectedTitle;
                 _lblContextBody.text = _selectedBody;
 
+                switch (_selectedKind)
+                {
+                    case SelectedMapKind.Run:
+                        SetContextPresentation(
+                            icon: "🎿",
+                            status: "Run Selected",
+                            guidance: "Single click inspects this route. Double click its marker to place or cycle a linked waypoint.");
+                        break;
+
+                    case SelectedMapKind.Lift:
+                        SetContextPresentation(
+                            icon: "🚡",
+                            status: "Lift Selected",
+                            guidance: "Review access before you commit. Use Highlight Lifts in the ski pass panel to quickly see eligible lines.");
+                        break;
+
+                    case SelectedMapKind.POI:
+                        SetContextPresentation(
+                            icon: "📍",
+                            status: "Point of Interest",
+                            guidance: "Use landmarks to orient yourself, then place a custom waypoint if you want a navigation beacon.");
+                        break;
+
+                    default:
+                        SetContextPresentation(
+                            icon: "🔎",
+                            status: "Selection",
+                            guidance: "Inspect the map, then act from here.");
+                        break;
+                }
+
                 PopulateSelectedContextMeta();
+                PopulateSelectedContextHighlights();
                 RefreshContextAttemptsForSelection();
                 return;
             }
@@ -813,8 +915,12 @@ namespace SkiGame.Progression
             if (runProgressTracker != null && runProgressTracker.TryGetActiveProgress(out var active))
             {
                 _lblContextTitle.text = active.runName;
-                _lblContextBody.text =
-                    "Current run in progress. Stay clean and keep your speed through the line.";
+                _lblContextBody.text = "Current run in progress. Stay composed through the line and protect the clean finish.";
+
+                SetContextPresentation(
+                    icon: "⛷",
+                    status: "Live Run",
+                    guidance: "Keep momentum, avoid stacks, and finish clean. Open history to compare this run against previous attempts.");
 
                 AddContextMetaChip("State", "On Run", accent: true);
                 AddContextMetaChip("Progress", $"{Mathf.RoundToInt(active.completion01 * 100f)}%");
@@ -827,14 +933,17 @@ namespace SkiGame.Progression
                     _contextHighlights.Add(MakeContextHighlightCard(
                         "Run Snapshot",
                         $"{Mathf.RoundToInt(active.completion01 * 100f)}% complete",
-                        $"{FormatSeconds(active.elapsedSeconds)} elapsed � {FormatSpeed(active.topSpeedMps)} top speed"));
+                        $"{FormatSeconds(active.elapsedSeconds)} elapsed • {FormatSpeed(active.topSpeedMps)} top speed"));
 
-                    _contextHighlights.Add(MakeContextHighlightCard(
-                        "Clean Finish Goal",
+                    var cleanCard = MakeContextHighlightCard(
+                        "Clean Finish",
                         active.stacks <= 0 ? "Still clean" : $"{active.stacks} stack{(active.stacks == 1 ? "" : "s")}",
                         active.stacks <= 0
-                            ? "You are on track for a clean completion."
-                            : "Avoid further falls to preserve the attempt."));
+                            ? "You are still on track for a clean completion."
+                            : "Avoid more falls to salvage the attempt.");
+
+                    cleanCard.AddToClassList(active.stacks <= 0 ? "is-positive" : "is-warning");
+                    _contextHighlights.Add(cleanCard);
                 }
 
                 RefreshContextAttemptsForActiveRun(active.runId);
@@ -842,6 +951,140 @@ namespace SkiGame.Progression
             }
 
             BuildNearbyRunsContext();
+        }
+
+        private void SetContextPresentation(string icon, string status, string guidance)
+        {
+            if (_lblContextIcon != null)
+                _lblContextIcon.text = string.IsNullOrWhiteSpace(icon) ? "🗺" : icon;
+
+            if (_lblContextStatus != null)
+                _lblContextStatus.text = string.IsNullOrWhiteSpace(status) ? "Overview" : status;
+
+            if (_lblContextGuidance != null)
+                _lblContextGuidance.text = string.IsNullOrWhiteSpace(guidance)
+                    ? "Use the map to inspect routes, plan a waypoint, or find your next descent."
+                    : guidance;
+
+            if (_contextGuidanceBox != null)
+                _contextGuidanceBox.style.display = DisplayStyle.Flex;
+        }
+
+        private void PopulateSelectedContextHighlights()
+        {
+            if (_contextHighlights == null)
+                return;
+
+            var profile = Profile;
+            if (profile == null || string.IsNullOrWhiteSpace(_selectedId))
+                return;
+
+            switch (_selectedKind)
+            {
+                case SelectedMapKind.Run:
+                    {
+                        if (profile.TryGetRunRecord(_selectedId, out var record) && record != null)
+                        {
+                            int attempts = record.attempts != null ? record.attempts.Count : 0;
+
+                            _contextHighlights.Add(MakeContextHighlightCard(
+                                "Run Record",
+                                $"{record.timesCompleted} completions",
+                                $"{attempts} stored attempt{(attempts == 1 ? "" : "s")}"));
+
+                            var bestCard = MakeContextHighlightCard(
+                                "Best Speed",
+                                FormatSpeed(record.bestTopSpeedMps),
+                                record.bestTopSpeedMps > 0f ? "Your strongest recorded pace on this run." : "No strong benchmark recorded yet.");
+
+                            if (record.bestTopSpeedMps > 0f)
+                                bestCard.AddToClassList("is-positive");
+
+                            _contextHighlights.Add(bestCard);
+                        }
+                        else
+                        {
+                            _contextHighlights.Add(MakeContextHighlightCard(
+                                "First Descent",
+                                "No record yet",
+                                "This route has not been logged in your profile yet."));
+                        }
+
+                        break;
+                    }
+
+                case SelectedMapKind.Lift:
+                    {
+                        var lift = FindLiftById(_selectedId);
+                        int requiredLevel = lift != null ? lift.RequiredPassLevel : 0;
+                        bool canUse = skiPassManager == null || skiPassManager.CanUseLift(requiredLevel);
+
+                        var accessCard = MakeContextHighlightCard(
+                            "Access",
+                            canUse ? "Available now" : $"Requires pass L{requiredLevel}",
+                            canUse
+                                ? "You can ride this lift with your current pass."
+                                : "Upgrade at the kiosk before attempting to board.");
+
+                        accessCard.AddToClassList(canUse ? "is-positive" : "is-warning");
+                        _contextHighlights.Add(accessCard);
+
+                        int rides = profile.GetLiftRideCount(_selectedId, session: false);
+                        _contextHighlights.Add(MakeContextHighlightCard(
+                            "Usage",
+                            $"{rides} total ride{(rides == 1 ? "" : "s")}",
+                            rides > 0 ? "You have already used this lift before." : "This lift has not been ridden yet."));
+                        break;
+                    }
+
+                case SelectedMapKind.POI:
+                    {
+                        bool visited = profile.HasVisitedLandmark(_selectedId);
+                        var visitCard = MakeContextHighlightCard(
+                            "Discovery",
+                            visited ? "Visited" : "Undiscovered",
+                            visited
+                                ? "This landmark is already in your exploration history."
+                                : "Visit this point to add it to your discoveries.");
+
+                        visitCard.AddToClassList(visited ? "is-positive" : "is-warning");
+                        _contextHighlights.Add(visitCard);
+                        break;
+                    }
+            }
+        }
+
+        private string GetWeatherGlyph()
+        {
+            if (weatherController == null || weatherController.currentWeatherPreset == null)
+                return "◌";
+
+            string condition = weatherController.currentWeatherPreset.weatherCondition ?? string.Empty;
+            string lower = condition.ToLowerInvariant();
+
+            bool raining = weatherController.currentWeatherPreset.isRaining;
+            float temp = weatherController.temperature;
+
+            if (lower.Contains("storm") || lower.Contains("thunder"))
+                return "⛈";
+            if (raining && temp <= 0f)
+                return "❄";
+            if (lower.Contains("snow") || lower.Contains("blizzard") || lower.Contains("sleet"))
+                return "❄";
+            if (lower.Contains("fog") || lower.Contains("mist"))
+                return "🌫";
+            if (lower.Contains("wind"))
+                return "🌀";
+            if (lower.Contains("cloud") || lower.Contains("overcast"))
+                return "☁";
+            if (lower.Contains("rain") || lower.Contains("shower") || raining)
+                return "🌧";
+            if (lower.Contains("night"))
+                return "☾";
+
+            int hour = timeController != null ? timeController.timeHours : 12;
+            bool daytime = hour >= 6 && hour < 18;
+            return daytime ? "☀" : "☾";
         }
 
         private void PopulateSelectedContextMeta()
@@ -1278,6 +1521,153 @@ namespace SkiGame.Progression
             RefreshContextPanel();
         }
 
+        private void OnMapMarkerDoubleClicked(MapMarker marker)
+        {
+            if (_waypointManager == null || !marker.IsValid)
+                return;
+
+            NavigationTargetKind kind = marker.type switch
+            {
+                POIType.SkiLift => NavigationTargetKind.Lift,
+                POIType.SkiRun => NavigationTargetKind.PointOfInterest,
+                _ => NavigationTargetKind.PointOfInterest
+            };
+
+            string sourceKey = $"marker:{marker.id}";
+            string label = string.IsNullOrWhiteSpace(marker.displayName) ? marker.id : marker.displayName;
+            Vector3 waypointWorld = ResolveWaypointWorldPositionForMarker(marker);
+
+            Color waypointColour = ResolveMarkerWaypointColour(marker);
+
+            _waypointManager.ToggleOrCycleSourceWaypoint(
+                sourceKey,
+                label,
+                waypointWorld,
+                kind,
+                waypointColour,
+                setActive: true);
+        }
+
+        private Vector3 ResolveWaypointWorldPositionForMarker(MapMarker marker)
+        {
+            if (!marker.IsValid)
+                return marker.worldPosition;
+
+            // For ski run markers, use the start of the run polyline so the
+            // map connector / dotted line targets the actual run marker anchor,
+            // not a midpoint-like fallback position.
+            if (marker.type == POIType.SkiRun && mapData != null && mapData.Polylines != null)
+            {
+                string polylineId = marker.id;
+
+                int suffixIndex = polylineId.LastIndexOf("__", StringComparison.Ordinal);
+                if (suffixIndex > 0)
+                    polylineId = polylineId.Substring(0, suffixIndex);
+
+                var polylines = mapData.Polylines;
+                for (int i = 0; i < polylines.Count; i++)
+                {
+                    var poly = polylines[i];
+                    if (!poly.IsValid || !string.Equals(poly.id, polylineId, StringComparison.Ordinal))
+                        continue;
+
+                    if (poly.Has3DPoints && poly.pointsWorld != null && poly.pointsWorld.Count > 0)
+                        return poly.pointsWorld[0];
+
+                    if (poly.pointsWorldXZ != null && poly.pointsWorldXZ.Count > 0)
+                    {
+                        Vector2 p = poly.pointsWorldXZ[0];
+                        return new Vector3(p.x, marker.worldPosition.y, p.y);
+                    }
+
+                    break;
+                }
+            }
+
+            return marker.worldPosition;
+        }
+
+        private static Color ResolveMarkerWaypointColour(MapMarker marker)
+        {
+            Color c = marker.color;
+
+            // Guard against empty / uninitialized authored colours.
+            if (c.a <= 0.001f)
+            {
+                switch (marker.category)
+                {
+                    case POICategory.Resort:
+                        return new Color(0.25f, 0.75f, 1f, 1f);
+
+                    case POICategory.Shop:
+                        return new Color(1f, 0.45f, 0.75f, 1f);
+
+                    case POICategory.Kiosk:
+                        return new Color(1f, 0.75f, 0.2f, 1f);
+
+                    case POICategory.Service:
+                        return new Color(0.45f, 1f, 0.45f, 1f);
+
+                    case POICategory.Landmark:
+                        return new Color(0.8f, 0.8f, 1f, 1f);
+                }
+            }
+
+            return c;
+        }
+
+        private void OnMapMarkerRightDoubleClicked(MapMarker marker)
+        {
+            if (_waypointManager == null || !marker.IsValid)
+                return;
+
+            string sourceKey = $"marker:{marker.id}";
+            _waypointManager.RemoveWaypointBySourceKey(sourceKey);
+        }
+
+        private void OnMapBackgroundWorldClicked(Vector3 worldPosition)
+        {
+            // Intentionally left blank.
+            // Waypoint selection / colour cycling / deletion is now marker-driven in PhoneMapPageUI.
+        }
+
+        private void OnMapBackgroundWorldDoubleClicked(Vector3 worldPosition)
+        {
+            if (_waypointManager == null)
+                return;
+
+            _waypointManager.AddCustomWaypoint(worldPosition, "Custom Waypoint", setActive: true);
+        }
+
+        private void OnMapWaypointClicked(string waypointId)
+        {
+            if (_waypointManager == null)
+                return;
+
+            _waypointManager.SelectWaypoint(waypointId, setActive: true);
+        }
+
+        private void OnMapWaypointDoubleClicked(string waypointId)
+        {
+            if (_waypointManager == null)
+                return;
+
+            if (_waypointManager.IsWaypointSelected(waypointId))
+                _waypointManager.CycleWaypointColour(waypointId);
+            else
+                _waypointManager.SelectWaypoint(waypointId, setActive: true);
+        }
+
+        private void OnMapWaypointDeleteRequested(string waypointId)
+        {
+            _waypointManager?.RemoveWaypoint(waypointId);
+        }
+
+        private void OnMapWaypointLabelEditRequested(string waypointId)
+        {
+            // Inline rename is now handled directly inside PhoneMapPageUI.
+        }
+
         private void OnMapSelectionCleared()
         {
             _selectedKind = SelectedMapKind.None;
@@ -1363,8 +1753,8 @@ namespace SkiGame.Progression
 
                 string title = a.isCompletion ? "Completion" : "Attempt";
                 string body =
-                    $"{title} � {FormatSeconds(a.timeSeconds)} � {FormatSpeed(a.topSpeedMps)}\n" +
-                    $"{(a.isCompletion ? "Complete" : $"Progress {Mathf.RoundToInt(a.coveredFraction01 * 100f)}%")} � Stacks {a.stacks}";
+                    $"{title} • {FormatSeconds(a.timeSeconds)} • {FormatSpeed(a.topSpeedMps)}\n" +
+                    $"{(a.isCompletion ? "Complete" : $"Progress {Mathf.RoundToInt(a.coveredFraction01 * 100f)}%")} • Stacks {a.stacks}";
 
                 var row = new VisualElement();
                 row.AddToClassList("attempt-row");
@@ -1415,7 +1805,11 @@ namespace SkiGame.Progression
             if (reg == null || playerT == null)
             {
                 _lblContextTitle.text = "Mountain";
-                _lblContextBody.text = "Explore the map.";
+                _lblContextBody.text = "Use the overlay to inspect routes, check conditions, and plan your next move.";
+                SetContextPresentation(
+                    icon: "🔎",
+                    status: "Overview",
+                    guidance: "Select a run, lift, or landmark to focus the panel and reveal more specific stats.");
                 _contextMetaRow?.Clear();
                 _contextHighlights?.Clear();
                 _contextHistoryAvailable = false;
@@ -1452,7 +1846,12 @@ namespace SkiGame.Progression
             }
 
             _lblContextTitle.text = "Nearby Runs";
-            _lblContextBody.text = "Choose a nearby line to start a new descent or continue exploring the mountain.";
+            _lblContextBody.text = "You are currently free-roaming. Pick a nearby descent, inspect a lift, or drop a waypoint to start navigating with intent.";
+
+            SetContextPresentation(
+                icon: "🔎",
+                status: "Exploring",
+                guidance: "Single click to inspect. Double click markers to create or cycle linked waypoints. Double click empty map space for a custom waypoint.");
 
             _contextMetaRow?.Clear();
             _contextHighlights?.Clear();
@@ -1745,7 +2144,7 @@ namespace SkiGame.Progression
             int completed = profile.lifetime.totalRunsCompleted;
             int discovered = profile.visitedRunIds != null ? profile.visitedRunIds.Count : 0;
             int pois = profile.visitedLandmarkIds != null ? profile.visitedLandmarkIds.Count : 0;
-            return $"Runs {completed} complete � {discovered} discovered � {pois} landmarks";
+            return $"Runs {completed} complete • {discovered} discovered • {pois} landmarks";
         }
 
         private static string FormatRunDifficulty(SkiRunDifficulty difficulty)
@@ -1814,7 +2213,7 @@ namespace SkiGame.Progression
             if (string.IsNullOrWhiteSpace(name) || sqrDist == float.MaxValue)
                 return "--";
 
-            return $"{name} � {Mathf.Sqrt(sqrDist):0} m";
+            return $"{name} • {Mathf.Sqrt(sqrDist):0} m";
         }
 
         private static LiftLine FindLiftById(string liftId)
@@ -1877,6 +2276,44 @@ namespace SkiGame.Progression
             }
 
             return fallback;
+        }
+
+        private MapRegionSet ResolveRegionSet()
+        {
+            if (regionSet != null)
+            {
+                if (regionSet.MapData == null && mapData != null)
+                    regionSet.SetMapData(mapData);
+
+                return regionSet;
+            }
+
+            var tracker = FindObjectOfType<PlayerMapRegionTracker>();
+            if (tracker != null)
+            {
+                // We only need the region asset reference path here, not the current face.
+            }
+
+            var all = Resources.FindObjectsOfTypeAll<MapRegionSet>();
+            if (all == null || all.Length == 0)
+                return null;
+
+            for (int i = 0; i < all.Length; i++)
+            {
+                var set = all[i];
+                if (set == null)
+                    continue;
+
+                if (mapData == null || set.MapData == mapData)
+                {
+                    if (set.MapData == null && mapData != null)
+                        set.SetMapData(mapData);
+
+                    return set;
+                }
+            }
+
+            return all[0];
         }
 
         private static Camera AutoFindMapReferenceCamera()

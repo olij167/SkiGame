@@ -1635,6 +1635,111 @@ private static void ClearChildrenRuntime(Transform t)
             return runWidthMeters;
         }
 
+        public void BuildMapCorridorPolygonWorldXZ(List<Vector2> dst)
+        {
+            if (dst == null)
+                return;
+
+            dst.Clear();
+
+            if (pointsWorld == null || pointsWorld.Count < 2)
+                return;
+
+            int count = pointsWorld.Count;
+            List<Vector2> left = new List<Vector2>(count);
+            List<Vector2> right = new List<Vector2>(count);
+
+            for (int i = 0; i < count; i++)
+            {
+                Vector2 curr = new Vector2(pointsWorld[i].x, pointsWorld[i].z);
+                Vector2 tangent = ResolveBakeTangentXZ(i);
+                Vector2 lateral = new Vector2(-tangent.y, tangent.x);
+
+                float widthMeters = Mathf.Max(2f, GetWidthMetersForPoint(i));
+                float halfWidth = Mathf.Max(0.25f, widthMeters * 0.5f);
+
+                left.Add(curr + lateral * halfWidth);
+                right.Add(curr - lateral * halfWidth);
+            }
+
+            AppendDistinct(dst, left);
+
+            for (int i = right.Count - 1; i >= 0; i--)
+                AppendDistinct(dst, right[i]);
+
+            if (dst.Count >= 2)
+            {
+                Vector2 first = dst[0];
+                Vector2 last = dst[dst.Count - 1];
+                if ((first - last).sqrMagnitude <= 0.0001f)
+                    dst.RemoveAt(dst.Count - 1);
+            }
+        }
+
+        private Vector2 ResolveBakeTangentXZ(int index)
+        {
+            int count = pointsWorld != null ? pointsWorld.Count : 0;
+            if (count < 2)
+                return Vector2.up;
+
+            Vector2 curr = new Vector2(pointsWorld[index].x, pointsWorld[index].z);
+
+            Vector2 prevDir = Vector2.zero;
+            Vector2 nextDir = Vector2.zero;
+
+            if (index > 0)
+            {
+                Vector2 prev = new Vector2(pointsWorld[index - 1].x, pointsWorld[index - 1].z);
+                prevDir = curr - prev;
+                if (prevDir.sqrMagnitude > 0.000001f)
+                    prevDir.Normalize();
+            }
+
+            if (index < count - 1)
+            {
+                Vector2 next = new Vector2(pointsWorld[index + 1].x, pointsWorld[index + 1].z);
+                nextDir = next - curr;
+                if (nextDir.sqrMagnitude > 0.000001f)
+                    nextDir.Normalize();
+            }
+
+            Vector2 tangent = prevDir + nextDir;
+
+            if (tangent.sqrMagnitude <= 0.000001f)
+            {
+                tangent = nextDir.sqrMagnitude > 0.000001f
+                    ? nextDir
+                    : (prevDir.sqrMagnitude > 0.000001f ? prevDir : Vector2.up);
+            }
+
+            tangent.Normalize();
+            return tangent;
+        }
+
+        private static void AppendDistinct(List<Vector2> dst, IReadOnlyList<Vector2> src)
+        {
+            if (dst == null || src == null)
+                return;
+
+            for (int i = 0; i < src.Count; i++)
+                AppendDistinct(dst, src[i]);
+        }
+
+        private static void AppendDistinct(List<Vector2> dst, Vector2 point)
+        {
+            if (dst == null)
+                return;
+
+            if (dst.Count == 0)
+            {
+                dst.Add(point);
+                return;
+            }
+
+            if ((dst[dst.Count - 1] - point).sqrMagnitude > 0.0001f)
+                dst.Add(point);
+        }
+
         // ------------------------------------------------------------
         // Boundary / Corridor helpers
         // ------------------------------------------------------------

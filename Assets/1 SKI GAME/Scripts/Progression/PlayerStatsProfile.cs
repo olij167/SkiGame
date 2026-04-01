@@ -142,7 +142,7 @@ namespace SkiGame.Progression
             public int skiLessonStepIndex = 0;
 
             public bool IsSkiLessonsActive => skiLessonsPending && skiLessonsAccepted && !skiLessonsCompleted;
-            public bool CanOfferSkiLessons => skiLessonsPending && !skiLessonsCompleted && !skiLessonsAccepted;
+            public bool CanOfferSkiLessons => skiLessonsPending && !skiLessonsCompleted && !skiLessonsAccepted && !skiLessonsDeferred;
 
             public void ResetForNewGame()
             {

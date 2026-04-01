@@ -1,6 +1,18 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/UI/MiniMountainHud.uss?fileID=7433441132597879392&amp;guid=34f320af78033a44ea14cfe00fa27725&amp;type=3#MiniMountainHud" />
     <ui:VisualElement name="MiniHudRoot" class="mini-root" style="top: 21px; left: 20px; right: 20px; bottom: 20px; position: absolute; align-content: flex-start; align-self: auto; justify-content: flex-end;">
+        <ui:VisualElement name="RunBannerAnchor" class="run-banner-anchor">
+            <ui:VisualElement name="RunBanner" class="run-banner is-hidden" style="display: none;">
+                <ui:VisualElement class="run-banner-header">
+                    <ui:Label name="Lbl_RunBannerName" text="Run Name" class="run-banner-name" />
+                    <ui:Label name="Lbl_RunBannerTime" text="00:00" class="run-banner-time" style="-unity-font-style: bold;" />
+                </ui:VisualElement>
+                <ui:VisualElement name="RunBannerTrack" class="run-banner-track" style="border-top-left-radius: 20px; border-top-right-radius: 20px; border-bottom-right-radius: 20px; border-bottom-left-radius: 20px;">
+                    <ui:VisualElement name="RunBannerSegments" class="run-banner-segments" />
+                    <ui:Label name="Lbl_RunBannerPercent" text="0%" class="run-banner-percent" style="-unity-font-style: bold;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
         <ui:VisualElement name="MiniHudShell" class="mini-shell" style="position: relative; justify-content: flex-end; top: auto; left: auto; align-content: auto; align-items: auto; align-self: flex-end;">
             <ui:VisualElement name="MiniMapColumn" class="mini-map-column" style="width: auto;">
                 <ui:VisualElement name="MiniHeader" class="mini-panel mini-header" style="margin-bottom: 0; border-top-left-radius: 6px; border-top-right-radius: 6px; border-bottom-right-radius: 6px; border-bottom-left-radius: 6px; border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0;">
@@ -12,8 +24,9 @@
                     <ui:VisualElement name="MiniMapHost" class="mini-map-host" style="background-color: rgba(8, 12, 18, 0.78); flex-grow: 1;" />
                 </ui:VisualElement>
                 <ui:VisualElement name="MiniRunPanel" class="mini-panel mini-run-panel" style="position: relative; justify-content: space-around; align-content: flex-end; align-self: stretch; align-items: stretch; border-left-color: rgba(255, 255, 255, 0); border-right-color: rgba(255, 255, 255, 0); border-top-color: rgba(255, 255, 255, 0); border-bottom-color: rgba(255, 255, 255, 0); border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; border-top-left-radius: 6px; border-top-right-radius: 6px; border-bottom-right-radius: 0; border-bottom-left-radius: 0;">
-                    <ui:Label name="Lbl_MiniRunTitle" text="No Active Run" class="mini-run-title" />
-                    <ui:Label name="Lbl_MiniRunBody" text="Explore the mountain" class="mini-run-body" />
+                    <ui:Label text="Current Region" class="mini-region-kicker" />
+                    <ui:Label name="Lbl_MiniRunTitle" text="Unknown Region" class="mini-run-title" style="-unity-font-definition: url(&quot;project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&amp;guid=281591823e5a02d439cd5679a23ed27e&amp;type=3#Slackey&quot;);" />
+                    <ui:Label name="Lbl_MiniRunBody" text="Move around the mountain to discover named areas" class="mini-run-body" />
                 </ui:VisualElement>
                 <ui:VisualElement name="MiniStatsPanel" class="mini-panel mini-stats-panel" style="align-self: stretch; align-items: flex-start; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 6px; border-bottom-left-radius: 6px; border-left-color: rgba(255, 255, 255, 0); border-right-color: rgba(255, 255, 255, 0); border-top-color: rgba(255, 255, 255, 0); border-bottom-color: rgba(255, 255, 255, 0); border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; flex-direction: column; min-height: auto;">
                     <ui:Label text="Today" class="mini-stats-title" style="flex-shrink: 1; white-space: normal; display: none;" />

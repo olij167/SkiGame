@@ -85,6 +85,12 @@ public class SkiPassKiosk : MonoBehaviour, IWorldInteractionPromptSource
 
     private void Trigger()
     {
+        if (_playerRootInTrigger != null && _playerRootInTrigger.CompareTag("NPC"))
+        {
+            _playerRootInTrigger = null;
+            return;
+        }
+
         if (kioskUI == null)
             return;
 
@@ -117,25 +123,38 @@ public class SkiPassKiosk : MonoBehaviour, IWorldInteractionPromptSource
 
     private GameObject ResolvePlayerRoot(Collider other)
     {
-        if (other == null) return null;
+        if (other == null)
+            return null;
 
-        var ski = other.GetComponentInParent<SkiController>();
-        if (ski != null) return ski.gameObject;
-
-        var walk = other.GetComponentInParent<WalkingController>();
-        if (walk != null) return walk.gameObject;
-
-        var pi = other.GetComponentInParent<PlayerInput>();
-        if (pi != null) return pi.gameObject;
-
+        // Never allow NPCs to claim player interactions.
         var t = other.transform;
         while (t != null)
         {
-            if (t.CompareTag("Player")) return t.gameObject;
+            if (t.CompareTag("NPC"))
+                return null;
             t = t.parent;
         }
 
-        return null;
+        Transform playerTagged = null;
+        t = other.transform;
+        while (t != null)
+        {
+            if (t.CompareTag("Player"))
+            {
+                playerTagged = t;
+                break;
+            }
+            t = t.parent;
+        }
+
+        if (playerTagged == null)
+            return null;
+
+        var pi = other.GetComponentInParent<PlayerInput>();
+        if (pi != null)
+            return pi.gameObject;
+
+        return playerTagged.gameObject;
     }
 
     public bool IsPromptAvailable => _playerRootInTrigger != null && !_busy && kioskUI != null && !kioskUI.IsBlocked;

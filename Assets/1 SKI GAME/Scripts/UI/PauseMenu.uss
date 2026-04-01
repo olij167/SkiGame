@@ -1,310 +1,193 @@
 .pause-root {
-    position: absolute;
-    left: 0;
-    top: 0;
-    right: 0;
-    bottom: 0;
+    flex-grow: 1;
+    width: 100%;
+    height: 100%;
     align-items: center;
     justify-content: center;
-}
-
-.pause-backdrop {
-    position: absolute;
-    left: 0;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.55);
+    background-color: rgba(0, 0, 0, 0.42);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .pause-shell {
-    width: 1180px;
-    max-width: 96%;
-    height: 720px;
-    max-height: 94%;
-    align-items: center;
-    justify-content: center;
-}
-
-.pause-screen {
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    align-items: center;
-    justify-content: center;
-}
-
-/* =========================
-   SHARED VISUAL LANGUAGE
-   Matched to MainMenu.uss
-   ========================= */
-
-.hero-card {
-    width: 520px;
-    max-width: 92%;
-    padding: 28px;
-    border-radius: 18px;
-    background-color: rgba(18, 26, 36, 0.78);
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.08);
-    align-items: center;
-}
-
-.hero-title {
-    font-size: 64px;
-    unity-font-style: bold;
-    color: rgb(240, 248, 255);
-    unity-text-align: middle-center;
-    margin-bottom: 8px;
-}
-
-.hero-subtitle {
-    font-size: 16px;
-    color: rgba(230, 238, 247, 0.86);
-    unity-text-align: middle-center;
-    white-space: normal;
-    margin-bottom: 22px;
-}
-
-.hero-actions {
-    width: 100%;
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.hero-footnote {
-    font-size: 12px;
-    color: rgba(215, 225, 236, 0.58);
-    unity-text-align: middle-center;
-}
-
-.page-card {
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    flex-grow: 1;
-    padding: 22px;
-    border-radius: 18px;
-    background-color: rgba(18, 26, 36, 0.78);
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.08);
-}
-
-.page-header {
+    width: 1100px;
+    max-width: 94%;
+    height: 680px;
+    max-height: 92%;
     flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
+    gap: 18px;
 }
 
-.page-title {
-    font-size: 30px;
-    unity-font-style: bold;
-    color: rgb(240, 248, 255);
-}
-
-.settings-scroll {
-    flex-grow: 1;
-    flex-shrink: 1;
-    min-height: 0;
-}
-
-.settings-group {
-    margin-bottom: 16px;
-    padding: 16px;
-    border-radius: 14px;
-    background-color: rgba(255, 255, 255, 0.04);
+.pause-sidebar {
+    width: 260px;
+    padding: 18px;
+    border-radius: 20px;
+    background-color: rgba(10, 14, 22, 0.9);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.08);
 }
 
-.group-title {
-    font-size: 18px;
-    unity-font-style: bold;
-    color: rgb(245, 250, 255);
-    margin-bottom: 12px;
+.pause-title {
+    font-size: 30px;
+    -unity-font-style: bold;
+    color: rgb(245, 248, 252);
+    margin-bottom: 6px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
 }
 
-.setting-row {
+.pause-subtitle {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.64);
+    margin-bottom: 18px;
+    white-space: normal;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.pause-nav {
+    gap: 10px;
+}
+
+.pause-nav-button {
+    min-height: 44px;
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.92);
+    -unity-font-style: bold;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.pause-nav-button.is-active {
+    background-color: rgba(120, 190, 255, 0.18);
+}
+
+.pause-main {
+    flex-grow: 1;
+    padding: 20px;
+    border-radius: 20px;
+    background-color: rgba(10, 14, 22, 0.9);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.pause-page-title {
+    font-size: 24px;
+    -unity-font-style: bold;
+    color: rgb(245, 248, 252);
+    margin-bottom: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
+}
+
+.pause-button-list {
+    gap: 10px;
+}
+
+.pause-action-button {
+    min-height: 48px;
+    border-radius: 14px;
+    font-size: 15px;
+    -unity-font-style: bold;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.pause-scroll {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.pause-section {
+    margin-bottom: 16px;
+    padding: 14px;
+    border-radius: 16px;
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+.pause-section-title {
+    font-size: 17px;
+    -unity-font-style: bold;
+    color: rgb(245, 248, 252);
+    margin-bottom: 10px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.pause-section-body {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.76);
+    white-space: normal;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.pause-setting-row {
     flex-direction: row;
     align-items: center;
     gap: 12px;
     margin-bottom: 10px;
 }
 
-.setting-label {
-    width: 170px;
+.pause-setting-label {
+    width: 180px;
     font-size: 14px;
-    color: rgba(225, 233, 243, 0.82);
+    color: rgba(255, 255, 255, 0.84);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
-.setting-slider {
-    flex-grow: 1;
-}
-
-.setting-dropdown {
-    flex-grow: 1;
-}
-
-.setting-toggle {
-    flex-grow: 1;
-    align-items: flex-end;
-}
-
-.setting-value {
+.pause-setting-value {
     width: 70px;
     font-size: 13px;
-    color: rgb(245, 250, 255);
-    unity-text-align: upper-right;
+    color: rgba(255, 255, 255, 0.7);
+    -unity-text-align: upper-right;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
-.settings-actions {
-    flex-direction: row;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 8px;
-    margin-bottom: 8px;
-}
-
-.settings-note {
-    font-size: 12px;
-    color: rgba(215, 225, 236, 0.62);
-    margin-top: 6px;
-}
-
-.menu-button {
-    height: 46px;
-    border-radius: 12px;
-    font-size: 15px;
-    unity-font-style: bold;
-    color: rgb(240, 248, 255);
-    background-color: rgba(255, 255, 255, 0.06);
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-.menu-button:hover {
-    background-color: rgba(255, 255, 255, 0.12);
-}
-
-.menu-button:active {
-    background-color: rgba(255, 255, 255, 0.16);
-}
-
-.menu-button-primary {
-    background-color: rgba(95, 155, 255, 0.3);
-    border-color: rgba(140, 190, 255, 0.72);
-}
-
-.menu-button-primary:hover {
-    background-color: rgba(95, 155, 255, 0.42);
-}
-
-.menu-button-danger {
-    background-color: rgba(150, 50, 50, 0.28);
-    border-color: rgba(220, 120, 120, 0.6);
-}
-
-.menu-button-danger:hover {
-    background-color: rgba(170, 60, 60, 0.38);
-}
-
-.small-button {
-    min-width: 120px;
-    height: 40px;
-    border-radius: 10px;
-    font-size: 14px;
-    unity-font-style: bold;
-    color: rgb(240, 248, 255);
-    background-color: rgba(255, 255, 255, 0.06);
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-.small-button:hover {
-    background-color: rgba(255, 255, 255, 0.12);
-}
-
-.controls-toolbar {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 8px;
-}
-
-.controls-status {
+.pause-setting-slider,
+.pause-setting-dropdown,
+.pause-setting-toggle {
     flex-grow: 1;
-    font-size: 13px;
-    color: rgba(225, 233, 243, 0.82);
 }
 
-.controls-status.is-listening {
-    color: rgb(245, 250, 255);
-}
-
-.controls-note {
+.pause-controls-note {
     font-size: 12px;
-    color: rgba(215, 225, 236, 0.62);
+    color: rgba(255, 255, 255, 0.6);
     margin-bottom: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
-.controls-rebind-list {
-    gap: 10px;
-    padding-top: 2px;
-    padding-bottom: 6px;
+.pause-rebind-list {
+    gap: 8px;
 }
 
-.controls-rebind-row {
+.pause-rebind-row {
     flex-direction: row;
     align-items: center;
     gap: 12px;
-    padding: 12px 14px;
+    padding: 12px;
     border-radius: 12px;
     background-color: rgba(255, 255, 255, 0.04);
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.08);
     margin-bottom: 8px;
 }
 
-.controls-rebind-row.is-listening {
-    background-color: rgba(95, 155, 255, 0.16);
-    border-color: rgba(140, 190, 255, 0.72);
-}
-
-.controls-rebind-action {
+.pause-rebind-action {
     width: 220px;
     font-size: 14px;
-    color: rgb(245, 250, 255);
-    unity-font-style: bold;
+    color: rgb(245, 248, 252);
+    -unity-font-style: bold;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
-.controls-rebind-binding {
+.pause-rebind-binding {
     flex-grow: 1;
-    font-size: 14px;
-    color: rgba(225, 233, 243, 0.82);
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.76);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
-.controls-rebind-binding.is-listening {
-    color: rgb(245, 250, 255);
-}
-
-.controls-rebind-btn {
+.pause-rebind-button {
     min-width: 110px;
-    height: 40px;
+    min-height: 38px;
     border-radius: 10px;
-    font-size: 14px;
-    unity-font-style: bold;
-    color: rgb(240, 248, 255);
-    background-color: rgba(255, 255, 255, 0.06);
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.1);
+    -unity-font-style: bold;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
-.controls-rebind-btn:hover {
-    background-color: rgba(255, 255, 255, 0.12);
-}
-
-.unity-scroll-view__content-container {
-    flex-grow: 1;
+.is-hidden {
+    display: none;
 }

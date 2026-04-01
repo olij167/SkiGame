@@ -30,6 +30,13 @@ namespace SkiGame.Map
         [Tooltip("Optional: width in meters (authoring metadata). Rendering width is decided by UI.")]
         public float widthMeters;
 
+        [Header("Run Metadata")]
+        [Tooltip("Ascending difficulty rank for run filtering. Non-runs can leave this at 0.")]
+        public int difficultyRank;
+
+        [Tooltip("Optional baked difficulty label for UI/debugging.")]
+        public string difficultyLabel;
+
         [Header("Geometry (World)")]
         [Tooltip("Preferred full 3D world points for accurate camera projection.")]
         public List<Vector3> pointsWorld;
@@ -46,12 +53,45 @@ namespace SkiGame.Map
     }
 
     [Serializable]
+    public struct MapRunCorridor
+    {
+        [Header("Identity")]
+        public string displayName;
+        public string id;
+
+        [Header("Visuals")]
+        public Color color;
+
+        [Header("Run Metadata")]
+        [Tooltip("Ascending difficulty rank for run filtering.")]
+        public int difficultyRank;
+
+        [Tooltip("Optional baked difficulty label for UI/debugging.")]
+        public string difficultyLabel;
+
+        [Header("Geometry (World XZ)")]
+        [Tooltip("Closed corridor polygon in world XZ space (x = worldX, y = worldZ).")]
+        public List<Vector2> polygonWorldXZ;
+
+        [Tooltip("Optional centerline retained for labels / fallback logic.")]
+        public List<Vector2> centerlineWorldXZ;
+
+        public bool HasPolygon => polygonWorldXZ != null && polygonWorldXZ.Count >= 3;
+        public bool HasCenterline => centerlineWorldXZ != null && centerlineWorldXZ.Count >= 2;
+
+        public bool IsValid =>
+            !string.IsNullOrWhiteSpace(id) &&
+            HasPolygon;
+    }
+
+    [Serializable]
     public struct MapMarker
     {
         [Header("Identity")]
         public string displayName;
         public string id;
         public POIType type;
+        public POICategory category;
 
         [Header("Visuals")]
         public Color color;
@@ -75,7 +115,7 @@ namespace SkiGame.Map
     [CreateAssetMenu(menuName = "SkiGame/Map/Map Data", fileName = "MapData")]
     public sealed class MapData : ScriptableObject
     {
-        public const int CurrentSchemaVersion = 1;
+        public const int CurrentSchemaVersion = 2;
 
         [Header("Versioning")]
         [SerializeField] private int schemaVersion = CurrentSchemaVersion;
@@ -108,6 +148,10 @@ namespace SkiGame.Map
         [SerializeField] private List<MapPolyline> polylines = new();
         public IReadOnlyList<MapPolyline> Polylines => polylines;
 
+        [Header("Run Corridors")]
+        [SerializeField] private List<MapRunCorridor> runCorridors = new();
+        public IReadOnlyList<MapRunCorridor> RunCorridors => runCorridors;
+
         [Header("Markers")]
         [SerializeField] private List<MapMarker> markers = new();
         public IReadOnlyList<MapMarker> Markers => markers;
@@ -123,12 +167,18 @@ namespace SkiGame.Map
         public void ClearAll()
         {
             polylines.Clear();
+            runCorridors.Clear();
             markers.Clear();
         }
 
         public void SetPolylines(List<MapPolyline> lines)
         {
             polylines = (lines != null) ? lines : new List<MapPolyline>();
+        }
+
+        public void SetRunCorridors(List<MapRunCorridor> corridors)
+        {
+            runCorridors = (corridors != null) ? corridors : new List<MapRunCorridor>();
         }
 
         public void SetMarkers(List<MapMarker> list)
@@ -147,6 +197,74 @@ namespace SkiGame.Map
         public Vector2 WorldXZToMapUV(Vector2 worldXZ)
         {
             return projection.WorldToNormalized(new Vector3(worldXZ.x, 0f, worldXZ.y));
+        }
+
+        public bool TryGetRunCorridorById(string id, out MapRunCorridor corridor)
+        {
+            corridor = default;
+
+            if (string.IsNullOrWhiteSpace(id) || runCorridors == null)
+                return false;
+
+            for (int i = 0; i < runCorridors.Count; i++)
+            {
+                if (string.Equals(runCorridors[i].id, id, StringComparison.Ordinal))
+                {
+                    corridor = runCorridors[i];
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool TryResolveRunAtWorldPosition(Vector3 worldPos, out MapRunCorridor corridor)
+        {
+            corridor = default;
+
+            if (runCorridors == null || runCorridors.Count == 0)
+                return false;
+
+            Vector2 point = new Vector2(worldPos.x, worldPos.z);
+
+            for (int i = 0; i < runCorridors.Count; i++)
+            {
+                var c = runCorridors[i];
+                if (!c.IsValid || c.polygonWorldXZ == null || c.polygonWorldXZ.Count < 3)
+                    continue;
+
+                if (ContainsPointXZ(c.polygonWorldXZ, point))
+                {
+                    corridor = c;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool ContainsPointXZ(IReadOnlyList<Vector2> polygon, Vector2 point)
+        {
+            if (polygon == null || polygon.Count < 3)
+                return false;
+
+            bool inside = false;
+            int count = polygon.Count;
+
+            for (int i = 0, j = count - 1; i < count; j = i++)
+            {
+                Vector2 a = polygon[j];
+                Vector2 b = polygon[i];
+
+                bool intersect =
+                    ((a.y > point.y) != (b.y > point.y)) &&
+                    (point.x < (b.x - a.x) * (point.y - a.y) / Mathf.Max(0.000001f, (b.y - a.y)) + a.x);
+
+                if (intersect)
+                    inside = !inside;
+            }
+
+            return inside;
         }
 
 #if UNITY_EDITOR

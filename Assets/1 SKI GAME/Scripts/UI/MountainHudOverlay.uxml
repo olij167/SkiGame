@@ -4,7 +4,10 @@
         <ui:VisualElement name="MapHost" class="map-host" />
         <ui:VisualElement name="TopStrip" class="top-strip panel" style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 16px; border-top-right-radius: 16px;">
             <ui:Label name="Lbl_TopTime" text="--:--" class="top-strip-time" />
-            <ui:Label name="Lbl_TopWeather" text="Weather" class="top-strip-weather" />
+            <ui:VisualElement name="TopWeatherGroup" class="top-weather-group">
+                <ui:Label name="Lbl_TopWeatherIcon" text="☀" class="top-strip-weather-icon" style="-unity-font-style: bold; font-size: 24px;" />
+                <ui:Label name="Lbl_TopWeather" text="Weather" class="top-strip-weather" />
+            </ui:VisualElement>
             <ui:Label name="Lbl_TopLocation" text="Mountain Overview" class="top-strip-location" />
             <ui:Label name="Lbl_TopHint" text="Runs 0 complete" class="top-strip-hint" />
             <ui:Button name="Btn_CloseOverlay" text="Close" class="mini-button" />
@@ -12,12 +15,23 @@
         <ui:VisualElement name="LeftRail" class="left-rail" style="top: 90px;">
             <ui:VisualElement name="ContextPanel" class="panel dock-panel context-panel" style="border-top-left-radius: 16px; border-top-right-radius: 16px; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-bottom-right-radius: 16px; border-bottom-left-radius: 16px;">
                 <ui:VisualElement class="panel-header">
-                    <ui:Label text="Run / Location" class="panel-title" />
+                    <ui:Label text="Context" class="panel-title" />
                     <ui:Button name="Btn_ContextExpand" text="Show History" class="mini-button" />
                 </ui:VisualElement>
-                <ui:Label name="Lbl_ContextTitle" text="Mountain" class="context-title" />
-                <ui:VisualElement name="ContextMetaRow" class="context-meta-row" />
-                <ui:Label name="Lbl_ContextBody" text="Explore the map." class="context-body" />
+                <ui:VisualElement name="ContextHero" class="context-hero">
+                    <ui:Label name="Lbl_ContextIcon" text="★" class="context-icon" style="background-color: rgba(83, 170, 255, 0); display: none;" />
+                    <ui:VisualElement class="context-hero-copy">
+                        <ui:VisualElement class="context-title-row">
+                            <ui:Label name="Lbl_ContextTitle" text="Mountain Overview" class="context-title" />
+                            <ui:Label name="Lbl_ContextStatus" text="Exploring" class="context-status-pill" style="border-top-left-radius: 12px; border-top-right-radius: 12px; border-bottom-right-radius: 12px; border-bottom-left-radius: 12px;" />
+                        </ui:VisualElement>
+                        <ui:Label name="Lbl_ContextBody" text="Select a run, lift, or point of interest to inspect it here." class="context-body" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="ContextGuidanceBox" class="context-guidance-box">
+                    <ui:Label name="Lbl_ContextGuidance" text="Use the map to inspect routes, plan a waypoint, or find your next descent." class="context-guidance" />
+                </ui:VisualElement>
+                <ui:VisualElement name="ContextMetaRow" class="context-meta-row" style="flex-wrap: nowrap;" />
                 <ui:VisualElement name="ContextHighlights" class="context-highlights" />
                 <ui:ScrollView name="ContextAttemptsList" class="attempts-list" />
             </ui:VisualElement>
@@ -54,8 +68,8 @@
                 </ui:VisualElement>
                 <ui:Label name="Lbl_PassCurrent" text="Basic Pass (L0)" class="pass-current" style="-unity-text-align: upper-center; font-size: 20px; white-space: normal;" />
                 <ui:Label name="Lbl_PassExpiryMeta" text="No expiry" class="pass-expiry-meta" style="-unity-font-style: bold; font-size: 14px;" />
-                <ui:VisualElement name="PassExpiryBar" class="pass-expiry-bar">
-                    <ui:VisualElement name="PassExpiryFill" class="pass-expiry-fill" />
+                <ui:VisualElement name="PassExpiryBar" class="pass-expiry-bar" style="border-top-left-radius: 20px; border-top-right-radius: 20px; border-bottom-right-radius: 20px; border-bottom-left-radius: 20px;">
+                    <ui:VisualElement name="PassExpiryFill" class="pass-expiry-fill" style="border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0;" />
                 </ui:VisualElement>
                 <ui:Button name="Btn_PassCurrent" text="Highlight Lifts" class="mini-button" />
             </ui:VisualElement>

@@ -222,6 +222,19 @@ public class SkiPassManager : MonoBehaviour
         return true;
     }
 
+    public void ResetForNewGame()
+    {
+        int def = config != null ? Mathf.Max(0, config.defaultLevelIndex) : 0;
+
+        CurrentLevel = def;
+        ExpiryGameHours = null;
+        TotalHours = 0;
+        HasClaimedDefaultPass = false;
+
+        Save();
+        OnPassChanged?.Invoke();
+    }
+
     public bool TryPurchase(int targetLevel, int durationIndex, Func<int, bool> trySpendCurrency, out Quote q, out string failReason)
     {
         if (!TryQuotePurchase(targetLevel, durationIndex, out q, out failReason))

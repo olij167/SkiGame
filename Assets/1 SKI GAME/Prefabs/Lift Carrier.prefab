@@ -320,6 +320,17 @@ MonoBehaviour:
   hanger: {fileID: 7633566988692405381}
   hangLength: 14
   localOffset: {x: 0, y: 0, z: -3}
+  terrainAwareNearStations: 1
+  terrainLayers:
+    serializedVersion: 2
+    m_Bits: 64
+  desiredGroundClearance: 1.6
+  terrainRaycastStartHeight: 8
+  terrainRaycastMaxDistance: 25
+  stationAdjustDistance: 14
+  maxAdditionalHang: 10
+  maxShortening: 10
+  hangLengthLerpSpeed: 8
   positionSmoothTime: 0.2
   rotationSmoothTime: 0.12
   maxCatchupSpeed: 25

@@ -21,12 +21,14 @@ namespace SkiGame.Progression
 
         [Header("Map")]
         [SerializeField] private MapData mapData;
+        [SerializeField] private MapRegionSet regionSet;
         [SerializeField] private Camera mapReferenceCamera;
         [SerializeField] private MapUIStyleSettings mapStyle;
 
         [Header("References")]
         [SerializeField] private SkiController skiController;
         [SerializeField] private RunProgressTracker runProgressTracker;
+        [SerializeField] private PlayerMapRegionTracker playerRegionTracker;
         [SerializeField] private PlayerStatsManager statsManager;
         [SerializeField] private TimeController timeController;
         [SerializeField] private WeatherController weatherController;
@@ -51,6 +53,13 @@ namespace SkiGame.Progression
         private Label _lblStatVertical;
         private Button _btnOpenOverlay;
 
+        private VisualElement _runBanner;
+        private VisualElement _runBannerSegments;
+        private Label _lblRunBannerName;
+        private Label _lblRunBannerTime;
+        private Label _lblRunBannerPercent;
+        private VisualElement _miniRunPanel;
+
         private float _nextRefreshTime;
         private bool _visible = true;
         private Rigidbody _rb;
@@ -63,6 +72,7 @@ namespace SkiGame.Progression
             if (document == null) document = GetComponent<UIDocument>();
             if (skiController == null) skiController = FindObjectOfType<SkiController>();
             if (runProgressTracker == null) runProgressTracker = FindObjectOfType<RunProgressTracker>();
+            if (playerRegionTracker == null) playerRegionTracker = FindObjectOfType<PlayerMapRegionTracker>();
             if (statsManager == null) statsManager = PlayerStatsManager.Instance != null ? PlayerStatsManager.Instance : FindObjectOfType<PlayerStatsManager>();
             if (timeController == null) timeController = TimeController.instance != null ? TimeController.instance : FindObjectOfType<TimeController>();
             if (weatherController == null) weatherController = FindObjectOfType<WeatherController>();
@@ -88,6 +98,45 @@ namespace SkiGame.Progression
                     "[MiniMountainHudController] MapData prefers camera projection, but no explicit mapReferenceCamera is assigned. " +
                     "Falling back to baked MapProjection is recommended for stable alignment.");
             }
+        }
+
+        private static bool IsUsablePlayerSkiController(SkiController candidate)
+        {
+            if (candidate == null)
+                return false;
+
+            if (!candidate.isActiveAndEnabled)
+                return false;
+
+            var go = candidate.gameObject;
+            if (!go.activeInHierarchy)
+                return false;
+
+            if (candidate.CompareTag("Player") || candidate.transform.root.CompareTag("Player"))
+                return true;
+
+            return false;
+        }
+
+        private SkiController FindBestPlayerSkiController()
+        {
+            SkiController taggedPlayer = null;
+            var all = FindObjectsOfType<SkiController>(true);
+
+            for (int i = 0; i < all.Length; i++)
+            {
+                var ski = all[i];
+                if (!IsUsablePlayerSkiController(ski))
+                    continue;
+
+                if (ski.CompareTag("Player") || ski.transform.root.CompareTag("Player"))
+                    return ski;
+
+                if (taggedPlayer == null)
+                    taggedPlayer = ski;
+            }
+
+            return taggedPlayer != null ? taggedPlayer : FindObjectOfType<SkiController>();
         }
 
         private void OnEnable()
@@ -214,9 +263,23 @@ namespace SkiGame.Progression
         {
             ResolveBootstrapReferences();
 
-            if (skiController == null) skiController = FindObjectOfType<SkiController>();
+            var resolvedPlayer = FindBestPlayerSkiController();
+            if (resolvedPlayer != null && resolvedPlayer != skiController)
+                skiController = resolvedPlayer;
+            else if (skiController == null)
+                skiController = FindObjectOfType<SkiController>();
+
             if (runProgressTracker == null) runProgressTracker = FindObjectOfType<RunProgressTracker>();
+            if (playerRegionTracker == null) playerRegionTracker = FindObjectOfType<PlayerMapRegionTracker>();
             if (statsManager == null) statsManager = PlayerStatsManager.Instance != null ? PlayerStatsManager.Instance : FindObjectOfType<PlayerStatsManager>();
+
+            var resolvedRegionSet = ResolveRegionSet();
+            if (playerRegionTracker != null)
+                playerRegionTracker.Configure(
+                    resolvedRegionSet,
+                    skiController != null ? skiController.transform : null,
+                    mapData);
+
             if (timeController == null) timeController = TimeController.instance != null ? TimeController.instance : FindObjectOfType<TimeController>();
             if (weatherController == null) weatherController = FindObjectOfType<WeatherController>();
             if (overlayController == null) overlayController = FindObjectOfType<MountainHudOverlayController>();
@@ -225,11 +288,71 @@ namespace SkiGame.Progression
 
             if (_miniMapUI != null)
             {
-                if (skiController != null)
-                    _miniMapUI.SetPlayer(skiController.transform);
-
+                _miniMapUI.SetPlayer(skiController != null ? skiController.transform : null);
                 _miniMapUI.SetPlayerTracking(showMarker: true, drawTrail: true);
             }
+        }
+
+        private MapRegionSet ResolveRegionSet()
+        {
+            if (regionSet != null)
+            {
+                if (regionSet.MapData == null && mapData != null)
+                    regionSet.SetMapData(mapData);
+
+                return regionSet;
+            }
+
+            var auto = AutoFindRegionSetForCurrentMap();
+            if (auto != null && auto.MapData == null && mapData != null)
+                auto.SetMapData(mapData);
+
+            return auto;
+        }
+
+        private MapRegionSet AutoFindRegionSetForCurrentMap()
+        {
+            var all = Resources.FindObjectsOfTypeAll<MapRegionSet>();
+            if (all == null || all.Length == 0)
+                return null;
+
+            MapRegionSet firstMatchingMap = null;
+            MapRegionSet firstAny = null;
+
+            bool havePlayerUv = false;
+            Vector2 playerUv = Vector2.zero;
+
+            if (mapData != null && skiController != null)
+            {
+                playerUv = mapData.WorldToMapUV(skiController.transform.position);
+                havePlayerUv = true;
+            }
+
+            for (int i = 0; i < all.Length; i++)
+            {
+                var set = all[i];
+                if (set == null)
+                    continue;
+
+                if (firstAny == null)
+                    firstAny = set;
+
+                if (mapData != null && set.MapData != mapData)
+                    continue;
+
+                if (firstMatchingMap == null)
+                    firstMatchingMap = set;
+
+                if (havePlayerUv)
+                {
+                    set.EnsureInitialized();
+                    string regionId = MapRegionUtility.ResolveRegionId(set, playerUv);
+                    if (!string.IsNullOrWhiteSpace(regionId))
+                        return set;
+                }
+            }
+
+            return firstMatchingMap != null ? firstMatchingMap : firstAny;
         }
 
         private void BindUI()
@@ -244,6 +367,14 @@ namespace SkiGame.Progression
             _lblStatVertical = _root.Q<Label>("Lbl_MiniStatVertical");
             _btnOpenOverlay = _root.Q<Button>("Btn_OpenOverlay");
 
+            _miniRunPanel = _root.Q<VisualElement>("MiniRunPanel");
+
+            _runBanner = _root.Q<VisualElement>("RunBanner");
+            _runBannerSegments = _root.Q<VisualElement>("RunBannerSegments");
+            _lblRunBannerName = _root.Q<Label>("Lbl_RunBannerName");
+            _lblRunBannerTime = _root.Q<Label>("Lbl_RunBannerTime");
+            _lblRunBannerPercent = _root.Q<Label>("Lbl_RunBannerPercent");
+
             if (_btnOpenOverlay != null)
             {
                 _btnOpenOverlay.clicked += () =>
@@ -252,6 +383,9 @@ namespace SkiGame.Progression
                         overlayController.SetOverlayOpen(true);
                 };
             }
+
+            if (_miniRunPanel != null)
+                _miniRunPanel.style.display = DisplayStyle.None;
         }
 
         private void BindMap()
@@ -286,6 +420,16 @@ namespace SkiGame.Progression
 
             _miniMapUI = new PhoneMapPageUI();
             _miniMapUI.Bind(miniRoot, mapData, mapReferenceCamera);
+
+            var waypointManager = SkiGame.Navigation.MapWaypointManager.Instance != null
+    ? SkiGame.Navigation.MapWaypointManager.Instance
+    : SkiGame.Navigation.MapWaypointManager.EnsureInstance();
+
+            _miniMapUI.SetWaypointManager(waypointManager);
+
+            var resolvedRegionSet = ResolveRegionSet();
+            if (resolvedRegionSet != null)
+                _miniMapUI.SetRegionSet(resolvedRegionSet);
 
             if (skiController != null)
                 _miniMapUI.SetPlayer(skiController.transform);
@@ -344,19 +488,17 @@ namespace SkiGame.Progression
             ResolveReferences();
             RefreshMapDependencies(forceRefresh: false);
             RefreshTimeWeather();
-            RefreshRunPanel();
+            RefreshRegionPanel();
             RefreshStatsPanel();
 
             if (_miniMapUI != null)
             {
+                _miniMapUI.SetPlayer(skiController != null ? skiController.transform : null);
+
                 if (force)
                 {
                     _miniMapUI.Refresh();
                     _miniMapUI.RequestCenterOnPlayer(keepZoom: false, minZoom: 1.25f);
-                }
-                else
-                {
-                    _miniMapUI.RequestCenterOnPlayer(keepZoom: true, minZoom: 1.25f);
                 }
             }
         }
@@ -370,25 +512,123 @@ namespace SkiGame.Progression
                 _lblMiniWeather.text = FormatWeather();
         }
 
-        private void RefreshRunPanel()
+        private MapRegionFace ResolveCurrentRegionDirect()
+        {
+            var set = ResolveRegionSet();
+            if (set == null || skiController == null)
+                return null;
+
+            if (set.MapData == null && mapData != null)
+                set.SetMapData(mapData);
+
+            if (set.MapData == null)
+                return null;
+
+            set.EnsureInitialized();
+
+            Vector2 uv = set.MapData.WorldToMapUV(skiController.transform.position);
+            uv.x = Mathf.Clamp01(uv.x);
+            uv.y = Mathf.Clamp01(uv.y);
+
+            return MapRegionUtility.ResolveRegion(set, uv);
+        }
+
+        private string ResolveCurrentRunName()
+        {
+            if (runProgressTracker != null && runProgressTracker.TryGetActiveProgress(out var active))
+            {
+                if (!string.IsNullOrWhiteSpace(active.runName))
+                    return active.runName;
+            }
+
+            if (mapData != null && skiController != null &&
+                mapData.TryResolveRunAtWorldPosition(skiController.transform.position, out var corridor))
+            {
+                if (!string.IsNullOrWhiteSpace(corridor.displayName))
+                    return corridor.displayName;
+
+                if (!string.IsNullOrWhiteSpace(corridor.id))
+                    return corridor.id;
+            }
+
+            return null;
+        }
+
+        private void RefreshRegionPanel()
         {
             if (_lblRunTitle == null || _lblRunBody == null)
                 return;
 
-            if (runProgressTracker != null && runProgressTracker.TryGetActiveProgress(out var active))
+            if (_miniRunPanel != null)
+                _miniRunPanel.style.display = DisplayStyle.Flex;
+
+            string regionName = null;
+            string runName = ResolveCurrentRunName();
+
+            var directRegion = ResolveCurrentRegionDirect();
+            if (directRegion != null)
             {
-                _lblRunTitle.text = active.runName;
-                _lblRunBody.text =
-                    $"{Mathf.RoundToInt(active.completion01 * 100f)}% � {FormatSeconds(active.elapsedSeconds)}\n" +
-                    $"{FormatSpeed(active.topSpeedMps)} � Stacks {active.stacks}";
+                regionName = directRegion.displayName;
+            }
+            else if (playerRegionTracker != null && playerRegionTracker.CurrentRegion != null)
+            {
+                regionName = playerRegionTracker.CurrentRegion.displayName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(runName) && !string.IsNullOrWhiteSpace(regionName))
+            {
+                _lblRunTitle.text = $"{runName}, {regionName}";
+                _lblRunBody.text = BuildRegionSubtitle(regionName);
                 return;
             }
 
-            string nearestRun = FindNearestRunName();
-            _lblRunTitle.text = "No Active Run";
-            _lblRunBody.text = string.IsNullOrWhiteSpace(nearestRun)
-                ? "Explore the mountain"
-                : $"Nearest: {nearestRun}";
+            if (!string.IsNullOrWhiteSpace(runName))
+            {
+                _lblRunTitle.text = runName;
+                _lblRunBody.text = "On a mapped ski run";
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(regionName))
+            {
+                _lblRunTitle.text = regionName;
+                _lblRunBody.text = BuildRegionSubtitle(regionName);
+                return;
+            }
+
+            _lblRunTitle.text = "Unknown Region";
+            _lblRunBody.text = "Move around the mountain to discover named areas";
+        }
+
+        private void DrawRunBannerSegments(RunProgressTracker.ActiveRunProgress active)
+        {
+            _runBannerSegments.Clear();
+
+            var intervals = active.coverageIntervals;
+            if (intervals == null || intervals.Length == 0)
+            {
+                AddRunBannerSegment(active.entryFraction01, active.currentFraction01);
+                return;
+            }
+
+            for (int i = 0; i < intervals.Length; i++)
+                AddRunBannerSegment(intervals[i].startFraction01, intervals[i].endFraction01);
+        }
+
+        private void AddRunBannerSegment(float start01, float end01)
+        {
+            float lo = Mathf.Clamp01(Mathf.Min(start01, end01));
+            float hi = Mathf.Clamp01(Mathf.Max(start01, end01));
+
+            if (hi - lo <= 0.0005f)
+                return;
+
+            var seg = new VisualElement();
+            seg.AddToClassList("run-banner-segment");
+            seg.style.left = Length.Percent(lo * 100f);
+            seg.style.width = Length.Percent((hi - lo) * 100f);
+
+            _runBannerSegments.Add(seg);
         }
 
         private void RefreshStatsPanel()
@@ -423,6 +663,21 @@ namespace SkiGame.Progression
                 _lblStatVertical.text = $"Vertical\n{FormatMeters(profile.session.verticalDescentMeters)}";
         }
 
+        private string BuildRegionSubtitle(string currentRegionName)
+        {
+            if (runProgressTracker != null && runProgressTracker.TryGetActiveProgress(out var active))
+            {
+                float pct = Mathf.Clamp01(active.currentFraction01) * 100f;
+                return $"On {active.runName} · {Mathf.RoundToInt(pct)}% complete";
+            }
+
+            string nearestRun = FindNearestRunName();
+            if (!string.IsNullOrWhiteSpace(nearestRun))
+                return $"Nearest run · {nearestRun}";
+
+            return "Explore the mountain";
+        }
+
         private string FindNearestRunName()
         {
             if (skiController == null || PointOfInterestRegistry.Instance == null)
@@ -449,7 +704,7 @@ namespace SkiGame.Progression
             if (string.IsNullOrWhiteSpace(bestName))
                 return null;
 
-            return $"{bestName} � {Mathf.Sqrt(bestSq):0} m";
+            return $"{bestName} · {Mathf.Sqrt(bestSq):0} m";
         }
 
         private string FormatTime()

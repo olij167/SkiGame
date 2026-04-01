@@ -1,0 +1,22 @@
+fileFormatVersion: 2
+guid: a3cc918c1f6e1644ebd118f223e40306
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontNames:
+  - Chickweed Titling
+  fallbackFontReferences:
+  - {fileID: 12800000, guid: d1f9bf292a5dac447ab7d466795d2eb6, type: 3}
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  useLegacyBoundsCalculation: 0
+  shouldRoundAdvanceValue: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

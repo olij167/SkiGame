@@ -13,14 +13,20 @@ MonoBehaviour:
   m_Name: MapUIStyleSettings
   m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Map.UI.MapUIStyleSettings
   usePOIRegistryMarkerColors: 1
-  markerSize: 8
-  markerSizeSelected: 12
+  markerSize: 12
+  markerSizeSelected: 16
   markerBorderWidth: 1
   markerBorderColor: {r: 0, g: 0, b: 0, a: 0.65}
-  playerMarkerSize: 12
+  playerMarkerSize: 20
   playerMarkerColor: {r: 0.5176471, g: 0.4392157, b: 1, a: 1}
   playerBorderWidth: 1
   playerBorderColor: {r: 0, g: 0, b: 0, a: 0.65}
+  waypointMarkerSize: 14
+  waypointMarkerSizeSelected: 18
+  waypointMarkerBorderWidth: 2
+  waypointMarkerBorderWidthActive: 2
+  waypointMarkerBorderColor: {r: 0, g: 0, b: 0, a: 0.7}
+  waypointMarkerBorderColorActive: {r: 1, g: 1, b: 1, a: 1}
   runWidthPx: 3
   liftWidthPx: 3.5
   selectedWidthMultiplier: 2
@@ -28,15 +34,15 @@ MonoBehaviour:
   outlineExtraSelectedPx: 2
   outlineColor: {r: 1, g: 1, b: 1, a: 0.35}
   outlineColorSelected: {r: 1, g: 1, b: 1, a: 0.55}
-  polylineWidthZoomExponent: 0.35
+  polylineWidthZoomExponent: 0.75
   polylineWidthZoomMinMul: 0.7
   polylineWidthZoomMaxMul: 1.6
-  labelFontSize: 8
+  labelFontSize: 10
   labelFontStyle: 1
   labelColor: {r: 1, g: 1, b: 1, a: 0.8}
-  labelFontSizeSelected: 10
+  labelFontSizeSelected: 12
   labelFontStyleSelected: 1
-  labelColorSelected: {r: 1, g: 1, b: 1, a: 1}
+  labelColorSelected: {r: 0.99371064, g: 0.96856225, b: 0.6780981, a: 1}
   markerLabelFontSize: 8
   markerLabelFontStyle: 0
   markerLabelColor: {r: 1, g: 1, b: 1, a: 0.95}
@@ -49,9 +55,9 @@ MonoBehaviour:
   polylineLabelFontSizeSelected: 10
   polylineLabelFontStyleSelected: 1
   polylineLabelColorSelected: {r: 0.94117653, g: 0.90196085, b: 0.54901963, a: 1}
-  labelZoomCompensation: 0
+  labelZoomCompensation: 0.25
   labelFontMin: 12
-  labelFontMax: 12
-  labelPlateAlpha: 0.5
+  labelFontMax: 32
+  labelPlateAlpha: 0.8
   labelAccentStripeWidth: 5
   labelClutteredOpacity: 0.65

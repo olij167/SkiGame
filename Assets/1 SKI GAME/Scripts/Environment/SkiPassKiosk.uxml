@@ -1,7 +1,7 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/Environment/SkiPassKiosk.uss?fileID=7433441132597879392&amp;guid=7f4c5864760c2534db9548a124b65558&amp;type=3#SkiPassKiosk" />
-    <ui:VisualElement name="SkiPassKioskRoot" class="ski-pass-kiosk-root" style="justify-content: flex-end;">
-        <ui:VisualElement name="SkiPassKioskPanel" class="ski-pass-kiosk-panel" style="justify-content: flex-end; margin-bottom: 20px;">
+    <ui:VisualElement name="SkiPassKioskRoot" class="ski-pass-kiosk-root" style="justify-content: center;">
+        <ui:VisualElement name="SkiPassKioskPanel" class="ski-pass-kiosk-panel" style="justify-content: flex-start; margin-bottom: 20px;">
             <ui:VisualElement class="ski-pass-kiosk-header">
                 <ui:Label text="Ski Pass Kiosk" class="ski-pass-kiosk-title" />
                 <ui:Button name="Btn_CloseSkiPassKiosk" text="Close" class="mini-button" />

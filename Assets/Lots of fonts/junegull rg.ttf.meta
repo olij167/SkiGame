@@ -1,0 +1,22 @@
+fileFormatVersion: 2
+guid: b65db3fa3d46bfa4487b59151d67a7eb
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontNames:
+  - Junegull
+  fallbackFontReferences:
+  - {fileID: 12800000, guid: d88dd087ca75ce24b9e6ad1c045e50e9, type: 3}
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  useLegacyBoundsCalculation: 0
+  shouldRoundAdvanceValue: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -1,12 +1,12 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" editor-extension-mode="False">
-    <Style src="project://database/Assets/1%20SKI%20GAME/UI/MainMenu.uss?fileID=7433441132597879392&amp;guid=5eda19afd96ffa44a900c7c338707bda&amp;type=3#MainMenu" />
+    <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/UI/MainMenu.uss?fileID=7433441132597879392&amp;guid=5eda19afd96ffa44a900c7c338707bda&amp;type=3#MainMenu" />
     <ui:VisualElement name="Root" class="root">
         <ui:VisualElement name="Background" class="background" />
         <ui:VisualElement name="Shell" class="shell">
             <ui:VisualElement name="Panel_Home" class="screen home-screen">
                 <ui:VisualElement class="hero-card">
-                    <ui:Label text="SKI TRIP" class="hero-title" />
-                    <ui:Label text="It&apos;s time to hit the slopes!" class="hero-subtitle" />
+                    <ui:Label text="SKI TRIP" class="hero-title" style="-unity-font-definition: url(&quot;project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&amp;guid=281591823e5a02d439cd5679a23ed27e&amp;type=3#Slackey&quot;);" />
+                    <ui:Label text="Let&apos;s hit the slopes!" class="hero-subtitle" style="-unity-font-definition: url(&quot;project://database/Assets/Lots%20of%20fonts/monkey-fingers/MonkeyFingersNF.otf?fileID=12800000&amp;guid=3f61c9e0b3f59874f8b5f7f125916820&amp;type=3#MonkeyFingersNF&quot;); font-size: 24px; display: none;" />
                     <ui:VisualElement class="hero-actions">
                         <ui:Button name="Button_Play" text="Play" class="menu-button menu-button-primary" />
                         <ui:Button name="Button_OpenSettings" text="Settings" class="menu-button" />

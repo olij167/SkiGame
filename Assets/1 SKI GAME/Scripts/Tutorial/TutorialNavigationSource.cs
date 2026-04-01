@@ -10,7 +10,6 @@ namespace SkiGame.Progression
         [SerializeField] private SkiLessonDirector lessonDirector;
         [SerializeField] private int priority = 100;
         [SerializeField] private Vector3 targetWorldOffset = new Vector3(0f, 1.5f, 0f);
-        [SerializeField] private float arriveDistance = 10f;
         [SerializeField] private Color accentColor = new Color(0.36f, 0.74f, 1f, 1f);
 
         private void OnEnable()
@@ -59,9 +58,10 @@ namespace SkiGame.Progression
                 priority = priority,
                 showHud = true,
                 showWorldBeacon = true,
-                clearWhenReached = true,
-                arriveDistance = arriveDistance,
-                accentColor = accentColor
+                clearWhenReached = lessonDirector.CurrentObjectiveClearOnReach,
+                arriveDistance = lessonDirector.CurrentObjectiveArriveDistance,
+                accentColor = accentColor,
+                preferMiniMapIndicator = true,
             });
         }
     }

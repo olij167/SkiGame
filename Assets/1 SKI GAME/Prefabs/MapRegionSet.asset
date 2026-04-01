@@ -1,0 +1,412 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2559c11f7b434ad4baf0b6ef7d3b16b9, type: 3}
+  m_Name: MapRegionSet
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Map.MapRegionSet
+  mapData: {fileID: 11400000, guid: 429b3d2f5a54e3e4c895b3d9f9ea8a46, type: 2}
+  vertices:
+  - id: 4a2e862ee9f2468984834ecfd3399678
+    uv: {x: 0, y: 0}
+  - id: e873071d8213486893c019238e64ba5a
+    uv: {x: 1, y: 0}
+  - id: 7d372ad77bde4becb968390c53526eb6
+    uv: {x: 1, y: 1}
+  - id: 76e19a5b783f47d7b83fc966cdeb70f4
+    uv: {x: 0, y: 1}
+  - id: bbb2d1c0a47546ac9acedf3e640716d4
+    uv: {x: 1, y: 0.16018307}
+  - id: 8b9f20d0a7f441a3b86853ad705b39fd
+    uv: {x: 0.8670668, y: 0.19829917}
+  - id: 9c150d4bee9a433a9289a0a05890fed1
+    uv: {x: 0.84721464, y: 0.20504887}
+  - id: 50ca8af7f9194b478ceac1c022d7ea08
+    uv: {x: 0.81743646, y: 0.20504887}
+  - id: b7196193e9a64b5ab905252f17999294
+    uv: {x: 0.7979814, y: 0.19631393}
+  - id: 0dcffdcb618449e2ba2eaf20bf940c41
+    uv: {x: 0.7606594, y: 0.1613742}
+  - id: c190d3b357404416901076ded631a388
+    uv: {x: 0.7344546, y: 0.12762552}
+  - id: 0e1e9cd0e78f4719927e4ab3866211c9
+    uv: {x: 0.69143367, y: 0}
+  - id: ceaf26b5bb4d4e09beac2b648a64dad7
+    uv: {x: 0.6938701, y: 0.0792792}
+  - id: 5e5bf5a976c64858a336c07f8eefd763
+    uv: {x: 0.92344683, y: 0.15978602}
+  - id: 64c818f6bd4246f9b6f865407713a4e0
+    uv: {x: 0.5572009, y: 0}
+  - id: bbfc7808f22a4b83938dedf0ec1fd781
+    uv: {x: 0.5755852, y: 0.11717682}
+  - id: 979e55c39c8943d681ddeb55c6f46629
+    uv: {x: 0.57413375, y: 0.14281793}
+  - id: 40fd8d3dafa04b49bba756e92de40069
+    uv: {x: 0.5562333, y: 0.18345681}
+  - id: 743ca20df50247818f524dd8bcba41b7
+    uv: {x: 0.5891314, y: 0.2400609}
+  - id: 9c981394d36d4820869ecb280a19aff7
+    uv: {x: 0.6084832, y: 0.2623155}
+  - id: 2c9b0c251b21468683f159cf5a37c046
+    uv: {x: 0.6534762, y: 0.2613479}
+  - id: be6267a55a7c457fbc694e9a7fc1feea
+    uv: {x: 0.6757309, y: 0.27054003}
+  - id: adb60e2c1163409b982d1114e4dc0a98
+    uv: {x: 0.70621, y: 0.2869891}
+  - id: 3f877faccb564d6fbf8b735299b97538
+    uv: {x: 0.732335, y: 0.32085475}
+  - id: 511832bc3356413fb378c07ccd10439c
+    uv: {x: 0.7449136, y: 0.36488017}
+  - id: c7430ed6ad8e406b9ac277b1555fe5bd
+    uv: {x: 0.7419779, y: 0.44621333}
+  - id: 56d2344d86ff457bb81ba26a2a961520
+    uv: {x: 0.77870476, y: 0.47895068}
+  - id: 7d662c6f115343d7a917fb10a9ca0b05
+    uv: {x: 0.8457557, y: 0.5256211}
+  - id: 703ebb1e65c94370905060a150cf0356
+    uv: {x: 1, y: 0.5303383}
+  - id: df7a2c3d71404a4e9107491c47b001e6
+    uv: {x: 0.8258575, y: 0.59200376}
+  - id: 45012ef2250e48349d822fdf148aa712
+    uv: {x: 0.81847215, y: 0.6618808}
+  - id: a17e7a4009324cb7b1b1c09134fda861
+    uv: {x: 0.8360834, y: 0.6931267}
+  - id: a711924f075244c2bab8a9ec5eeb57fb
+    uv: {x: 0.8214728, y: 0.71630764}
+  - id: d7ce3d0bbf0047099de4bb44f4f8c0c6
+    uv: {x: 0.7969953, y: 0.73952997}
+  - id: 1da9bf8bf8f54e87bde6eb607800cc70
+    uv: {x: 0.76812434, y: 0.76149696}
+  - id: 7ff2878ca801466fb1deda1a867fee8d
+    uv: {x: 0.7379982, y: 0.8167283}
+  - id: ad0fc49fe6e74fd2abed22a52b5a5f88
+    uv: {x: 0.6921813, y: 0.84434396}
+  - id: 85754a8744074d23a3ede3138cd00df0
+    uv: {x: 0.6193763, y: 0.8688215}
+  - id: 23eb26371477433899524582533c4d4d
+    uv: {x: 0.5886225, y: 0.8794912}
+  - id: 87004d21940f458db63c2870edee8ade
+    uv: {x: 0.530253, y: 0.8600347}
+  - id: c00153d95d954b1ba47473e5b6c710ce
+    uv: {x: 0.47941506, y: 0.8688215}
+  - id: 8117f631d1ab482f8abc015cf6e32d10
+    uv: {x: 0.46497956, y: 0.9140108}
+  - id: aeb7eb883cea434bbcc68d6c0e6a3e02
+    uv: {x: 0.46435195, y: 0.95794487}
+  - id: 4f263bd98fe641ea930a2e7b90d40e45
+    uv: {x: 0.46372426, y: 1}
+  - id: 8a45a06bb6dd4d518fe1f0031b0c18f0
+    uv: {x: 0.56318814, y: 0.29239607}
+  - id: 2b0b4f7002244c0989e9924b0abb2902
+    uv: {x: 0.49910676, y: 0.3298265}
+  - id: 2b192ee08abb4d4eb192034277a2a94b
+    uv: {x: 0.4805061, y: 0.31866613}
+  - id: c81a41e4b49b4dd2ae32c600df3ea4b9
+    uv: {x: 0.44649354, y: 0.32079193}
+  - id: ca28b69bea9542c09f9ecbb04db07694
+    uv: {x: 0.37474823, y: 0.3218548}
+  - id: 5e1a3f4a85f34aaab47f324c56d9dbac
+    uv: {x: 0.306723, y: 0.30006552}
+  - id: b3f9b98d9699413aa141c317e36a1d42
+    uv: {x: 0.27961922, y: 0.2782762}
+  - id: 015410b575d343128d295ba3fa77e2d0
+    uv: {x: 0.18105733, y: 0.25568503}
+  - id: ff6be6f7d7cb41cda031dfd740d9c971
+    uv: {x: 0.07926388, y: 0.25701833}
+  - id: 81979eaee7634b138f3e16f916fb4ebd
+    uv: {x: 0, y: 0.2580812}
+  - id: c40938a534b74041a448120c79ed5278
+    uv: {x: 0.6633238, y: 0.46215674}
+  - id: ddb9c562bdf2446dba06320d714666ec
+    uv: {x: 0.56911767, y: 0.4764706}
+  - id: cb5193b2577b4899b8d2a9c032ed091d
+    uv: {x: 0.5054841, y: 0.4478077}
+  - id: 6dfb9d6409f044d9bb859ac718848268
+    uv: {x: 0.476786, y: 0.41645235}
+  - id: d32a083e36c54e4f82e2e4a9c7344740
+    uv: {x: 0.47476804, y: 0.38407698}
+  - id: 5688101f425d45ec828312506b962709
+    uv: {x: 0.48210043, y: 0.35852465}
+  - id: 368fdccb272d4be49c83d9e4a60b14c5
+    uv: {x: 0.49044117, y: 0.53455883}
+  - id: a8913fb2935b40609084d59cbbadb290
+    uv: {x: 0.45829305, y: 0.56927955}
+  - id: bbdafe65e1184cf9aed358a46414804b
+    uv: {x: 0.47590432, y: 0.60904694}
+  - id: 310e4105fb124ae9ac9a451b700d2098
+    uv: {x: 0.49181125, y: 0.6539273}
+  - id: ea3bef31418948089c7f9cb7d1e73326
+    uv: {x: 0.5270338, y: 0.68801373}
+  - id: 8f3efe900b804589a29ac828bbdc0c82
+    uv: {x: 0.5781634, y: 0.7061931}
+  - id: 326042bbf5dd4066b3139742146670a1
+    uv: {x: 0.6434955, y: 0.71016985}
+  - id: 6534ea99eb8d4afe90fbb677af312137
+    uv: {x: 0.7167812, y: 0.69426286}
+  - id: 80d51fb671374be69f60c7198232844b
+    uv: {x: 0.81847215, y: 0.63745224}
+  - id: 346732ce85354cd69a22bc4737c8a855
+    uv: {x: 0.93493384, y: 0.5368975}
+  - id: 20c9f80abfec402f8e53519fd493e32d
+    uv: {x: 0.8835404, y: 0.5333851}
+  - id: 6250f38591464004b65ba616523c2105
+    uv: {x: 0.82813, y: 0.54428285}
+  - id: eb70b90f67514b4cb1a23af51809d87e
+    uv: {x: 0.7724556, y: 0.6766516}
+  - id: 9c7e4dd6b8184039bda061ee6a11ebd3
+    uv: {x: 0.46454215, y: 0.6709705}
+  - id: 17d6d015e16644498ad77f18b8d48ba6
+    uv: {x: 0.39636943, y: 0.68574125}
+  - id: 1599aad8d7734e2e840928d710180e75
+    uv: {x: 0.37307715, y: 0.6772197}
+  - id: 7e7f4ef593bf4a248f73b8210b2e1bb6
+    uv: {x: 0.2889974, y: 0.67437917}
+  - id: 96940a4c64ed42f29d1b034471486439
+    uv: {x: 0.24070846, y: 0.6982396}
+  - id: afe39bcfd5d6494aa1b5ef4731720ce8
+    uv: {x: 0.19071518, y: 0.7067612}
+  - id: 686d2b6a57064a23aa3f51decf8b9a33
+    uv: {x: 0.099250086, y: 0.6959672}
+  - id: d30d8ed2d10841d0b2a4361d005da55b
+    uv: {x: 0.061755095, y: 0.7249406}
+  - id: 6d403d64fab140a8b193963ceb74a8f4
+    uv: {x: 0, y: 0.73346215}
+  - id: 62d55369e6dd4ab785d3c9e68a366e71
+    uv: {x: 0.5389653, y: 0.51211274}
+  - id: 612b649bd33e4372b9c1fa4fa78e7a01
+    uv: {x: 0.82505184, y: 0.5023292}
+  faces:
+  - id: root_face
+    displayName: Mt Awzruca
+    fillColor: {r: 0.95356363, g: 0.05853249, b: 0.9152188, a: 0.12}
+    borderColor: {r: 0.95356363, g: 0.05853249, b: 0.9152188, a: 1}
+    labelAnchorUv: {x: 0.23, y: 0.49}
+    outerVertexIds:
+    - bbdafe65e1184cf9aed358a46414804b
+    - a8913fb2935b40609084d59cbbadb290
+    - 368fdccb272d4be49c83d9e4a60b14c5
+    - 62d55369e6dd4ab785d3c9e68a366e71
+    - ddb9c562bdf2446dba06320d714666ec
+    - cb5193b2577b4899b8d2a9c032ed091d
+    - 6dfb9d6409f044d9bb859ac718848268
+    - d32a083e36c54e4f82e2e4a9c7344740
+    - 5688101f425d45ec828312506b962709
+    - 2b0b4f7002244c0989e9924b0abb2902
+    - 2b192ee08abb4d4eb192034277a2a94b
+    - c81a41e4b49b4dd2ae32c600df3ea4b9
+    - ca28b69bea9542c09f9ecbb04db07694
+    - 5e1a3f4a85f34aaab47f324c56d9dbac
+    - b3f9b98d9699413aa141c317e36a1d42
+    - 015410b575d343128d295ba3fa77e2d0
+    - ff6be6f7d7cb41cda031dfd740d9c971
+    - 81979eaee7634b138f3e16f916fb4ebd
+    - 6d403d64fab140a8b193963ceb74a8f4
+    - d30d8ed2d10841d0b2a4361d005da55b
+    - 686d2b6a57064a23aa3f51decf8b9a33
+    - afe39bcfd5d6494aa1b5ef4731720ce8
+    - 96940a4c64ed42f29d1b034471486439
+    - 7e7f4ef593bf4a248f73b8210b2e1bb6
+    - 1599aad8d7734e2e840928d710180e75
+    - 17d6d015e16644498ad77f18b8d48ba6
+    - 9c7e4dd6b8184039bda061ee6a11ebd3
+    - 310e4105fb124ae9ac9a451b700d2098
+    holeLoops: []
+  - id: 82a4ae6ad84c47f58a502f334c3334eb
+    displayName: Mt. Sublime
+    fillColor: {r: 0.47069415, g: 0.950954, b: 0.06814183, a: 0.18}
+    borderColor: {r: 0.47069415, g: 0.950954, b: 0.06814183, a: 1}
+    labelAnchorUv: {x: 0.8360294, y: 0.11911765}
+    outerVertexIds:
+    - e873071d8213486893c019238e64ba5a
+    - 0e1e9cd0e78f4719927e4ab3866211c9
+    - ceaf26b5bb4d4e09beac2b648a64dad7
+    - c190d3b357404416901076ded631a388
+    - 0dcffdcb618449e2ba2eaf20bf940c41
+    - b7196193e9a64b5ab905252f17999294
+    - 50ca8af7f9194b478ceac1c022d7ea08
+    - 9c150d4bee9a433a9289a0a05890fed1
+    - 8b9f20d0a7f441a3b86853ad705b39fd
+    - 5e5bf5a976c64858a336c07f8eefd763
+    - bbb2d1c0a47546ac9acedf3e640716d4
+    holeLoops: []
+  - id: 9d240c53437441bfb0ac485628c66ff2
+    displayName: The Valley
+    fillColor: {r: 0.19851308, g: 0.4188401, b: 0.8775617, a: 0.18}
+    borderColor: {r: 0.19851308, g: 0.4188401, b: 0.8775617, a: 1}
+    labelAnchorUv: {x: 0.75417715, y: 0.26775482}
+    outerVertexIds:
+    - 64c818f6bd4246f9b6f865407713a4e0
+    - bbfc7808f22a4b83938dedf0ec1fd781
+    - 979e55c39c8943d681ddeb55c6f46629
+    - 40fd8d3dafa04b49bba756e92de40069
+    - 743ca20df50247818f524dd8bcba41b7
+    - 9c981394d36d4820869ecb280a19aff7
+    - 2c9b0c251b21468683f159cf5a37c046
+    - be6267a55a7c457fbc694e9a7fc1feea
+    - adb60e2c1163409b982d1114e4dc0a98
+    - 3f877faccb564d6fbf8b735299b97538
+    - 511832bc3356413fb378c07ccd10439c
+    - c7430ed6ad8e406b9ac277b1555fe5bd
+    - 56d2344d86ff457bb81ba26a2a961520
+    - 612b649bd33e4372b9c1fa4fa78e7a01
+    - 7d662c6f115343d7a917fb10a9ca0b05
+    - 20c9f80abfec402f8e53519fd493e32d
+    - 346732ce85354cd69a22bc4737c8a855
+    - 703ebb1e65c94370905060a150cf0356
+    - bbb2d1c0a47546ac9acedf3e640716d4
+    - 5e5bf5a976c64858a336c07f8eefd763
+    - 8b9f20d0a7f441a3b86853ad705b39fd
+    - 9c150d4bee9a433a9289a0a05890fed1
+    - 50ca8af7f9194b478ceac1c022d7ea08
+    - b7196193e9a64b5ab905252f17999294
+    - 0dcffdcb618449e2ba2eaf20bf940c41
+    - c190d3b357404416901076ded631a388
+    - ceaf26b5bb4d4e09beac2b648a64dad7
+    - 0e1e9cd0e78f4719927e4ab3866211c9
+    holeLoops: []
+  - id: e77001009cdc493a88fd2e49d4d4e1c3
+    displayName: The Bluff
+    fillColor: {r: 0.54627043, g: 0.6752993, b: 0.12586448, a: 0.18}
+    borderColor: {r: 0.54627043, g: 0.6752993, b: 0.12586448, a: 1}
+    labelAnchorUv: {x: 0.82298136, y: 0.8486025}
+    outerVertexIds:
+    - 7d662c6f115343d7a917fb10a9ca0b05
+    - 6250f38591464004b65ba616523c2105
+    - df7a2c3d71404a4e9107491c47b001e6
+    - 80d51fb671374be69f60c7198232844b
+    - 45012ef2250e48349d822fdf148aa712
+    - a17e7a4009324cb7b1b1c09134fda861
+    - a711924f075244c2bab8a9ec5eeb57fb
+    - d7ce3d0bbf0047099de4bb44f4f8c0c6
+    - 1da9bf8bf8f54e87bde6eb607800cc70
+    - 7ff2878ca801466fb1deda1a867fee8d
+    - ad0fc49fe6e74fd2abed22a52b5a5f88
+    - 85754a8744074d23a3ede3138cd00df0
+    - 23eb26371477433899524582533c4d4d
+    - 87004d21940f458db63c2870edee8ade
+    - c00153d95d954b1ba47473e5b6c710ce
+    - 8117f631d1ab482f8abc015cf6e32d10
+    - aeb7eb883cea434bbcc68d6c0e6a3e02
+    - 4f263bd98fe641ea930a2e7b90d40e45
+    - 7d372ad77bde4becb968390c53526eb6
+    - 703ebb1e65c94370905060a150cf0356
+    - 346732ce85354cd69a22bc4737c8a855
+    - 20c9f80abfec402f8e53519fd493e32d
+    holeLoops: []
+  - id: ab649893eb934ee2bb3b9cd2c429c88a
+    displayName: The Shoulder
+    fillColor: {r: 0.8887417, g: 0.28431517, b: 0.17550252, a: 0.18}
+    borderColor: {r: 0.8887417, g: 0.28431517, b: 0.17550252, a: 1}
+    labelAnchorUv: {x: 0.29, y: 0.17}
+    outerVertexIds:
+    - 743ca20df50247818f524dd8bcba41b7
+    - 40fd8d3dafa04b49bba756e92de40069
+    - 979e55c39c8943d681ddeb55c6f46629
+    - bbfc7808f22a4b83938dedf0ec1fd781
+    - 64c818f6bd4246f9b6f865407713a4e0
+    - 4a2e862ee9f2468984834ecfd3399678
+    - 81979eaee7634b138f3e16f916fb4ebd
+    - ff6be6f7d7cb41cda031dfd740d9c971
+    - 015410b575d343128d295ba3fa77e2d0
+    - b3f9b98d9699413aa141c317e36a1d42
+    - 5e1a3f4a85f34aaab47f324c56d9dbac
+    - ca28b69bea9542c09f9ecbb04db07694
+    - c81a41e4b49b4dd2ae32c600df3ea4b9
+    - 2b192ee08abb4d4eb192034277a2a94b
+    - 2b0b4f7002244c0989e9924b0abb2902
+    - 8a45a06bb6dd4d518fe1f0031b0c18f0
+    - 9c981394d36d4820869ecb280a19aff7
+    holeLoops: []
+  - id: 089b60396e124b23a920b3f5a0593190
+    displayName: Hawk's Nest
+    fillColor: {r: 0.24993353, g: 0.69440174, b: 0.325279, a: 0.18}
+    borderColor: {r: 0.24993353, g: 0.69440174, b: 0.325279, a: 1}
+    labelAnchorUv: {x: 0.6067596, y: 0.35861957}
+    outerVertexIds:
+    - 511832bc3356413fb378c07ccd10439c
+    - 3f877faccb564d6fbf8b735299b97538
+    - adb60e2c1163409b982d1114e4dc0a98
+    - be6267a55a7c457fbc694e9a7fc1feea
+    - 2c9b0c251b21468683f159cf5a37c046
+    - 9c981394d36d4820869ecb280a19aff7
+    - 8a45a06bb6dd4d518fe1f0031b0c18f0
+    - 2b0b4f7002244c0989e9924b0abb2902
+    - 5688101f425d45ec828312506b962709
+    - d32a083e36c54e4f82e2e4a9c7344740
+    - 6dfb9d6409f044d9bb859ac718848268
+    - cb5193b2577b4899b8d2a9c032ed091d
+    - ddb9c562bdf2446dba06320d714666ec
+    - c40938a534b74041a448120c79ed5278
+    - c7430ed6ad8e406b9ac277b1555fe5bd
+    holeLoops: []
+  - id: 686a7b954dfc46149c28af75060c0863
+    displayName: Madcap
+    fillColor: {r: 0.8813905, g: 0.40656477, b: 0.3242194, a: 0.18}
+    borderColor: {r: 0.8813905, g: 0.40656477, b: 0.3242194, a: 1}
+    labelAnchorUv: {x: 0.63, y: 0.62}
+    outerVertexIds:
+    - ddb9c562bdf2446dba06320d714666ec
+    - 62d55369e6dd4ab785d3c9e68a366e71
+    - 368fdccb272d4be49c83d9e4a60b14c5
+    - a8913fb2935b40609084d59cbbadb290
+    - bbdafe65e1184cf9aed358a46414804b
+    - 310e4105fb124ae9ac9a451b700d2098
+    - ea3bef31418948089c7f9cb7d1e73326
+    - 8f3efe900b804589a29ac828bbdc0c82
+    - 326042bbf5dd4066b3139742146670a1
+    - 6534ea99eb8d4afe90fbb677af312137
+    - eb70b90f67514b4cb1a23af51809d87e
+    - 45012ef2250e48349d822fdf148aa712
+    - 80d51fb671374be69f60c7198232844b
+    - df7a2c3d71404a4e9107491c47b001e6
+    - 6250f38591464004b65ba616523c2105
+    - 7d662c6f115343d7a917fb10a9ca0b05
+    - 612b649bd33e4372b9c1fa4fa78e7a01
+    - 56d2344d86ff457bb81ba26a2a961520
+    - c7430ed6ad8e406b9ac277b1555fe5bd
+    - c40938a534b74041a448120c79ed5278
+    holeLoops: []
+  - id: 1805772c3b994fa7870efddb70368699
+    displayName: Wonderland
+    fillColor: {r: 0.2455965, g: 0.95225567, b: 0.93274695, a: 0.18}
+    borderColor: {r: 0.2455965, g: 0.95225567, b: 0.93274695, a: 1}
+    labelAnchorUv: {x: 0.38, y: 0.82}
+    outerVertexIds:
+    - 310e4105fb124ae9ac9a451b700d2098
+    - 9c7e4dd6b8184039bda061ee6a11ebd3
+    - 17d6d015e16644498ad77f18b8d48ba6
+    - 1599aad8d7734e2e840928d710180e75
+    - 7e7f4ef593bf4a248f73b8210b2e1bb6
+    - 96940a4c64ed42f29d1b034471486439
+    - afe39bcfd5d6494aa1b5ef4731720ce8
+    - 686d2b6a57064a23aa3f51decf8b9a33
+    - d30d8ed2d10841d0b2a4361d005da55b
+    - 6d403d64fab140a8b193963ceb74a8f4
+    - 76e19a5b783f47d7b83fc966cdeb70f4
+    - 4f263bd98fe641ea930a2e7b90d40e45
+    - aeb7eb883cea434bbcc68d6c0e6a3e02
+    - 8117f631d1ab482f8abc015cf6e32d10
+    - c00153d95d954b1ba47473e5b6c710ce
+    - 87004d21940f458db63c2870edee8ade
+    - 23eb26371477433899524582533c4d4d
+    - 85754a8744074d23a3ede3138cd00df0
+    - ad0fc49fe6e74fd2abed22a52b5a5f88
+    - 7ff2878ca801466fb1deda1a867fee8d
+    - 1da9bf8bf8f54e87bde6eb607800cc70
+    - d7ce3d0bbf0047099de4bb44f4f8c0c6
+    - a711924f075244c2bab8a9ec5eeb57fb
+    - a17e7a4009324cb7b1b1c09134fda861
+    - 45012ef2250e48349d822fdf148aa712
+    - eb70b90f67514b4cb1a23af51809d87e
+    - 6534ea99eb8d4afe90fbb677af312137
+    - 326042bbf5dd4066b3139742146670a1
+    - 8f3efe900b804589a29ac828bbdc0c82
+    - ea3bef31418948089c7f9cb7d1e73326
+    holeLoops: []

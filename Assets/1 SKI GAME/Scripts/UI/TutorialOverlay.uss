@@ -17,6 +17,7 @@
     border-right-color: rgba(255, 255, 255, 0.1);
     border-bottom-color: rgba(255, 255, 255, 0.1);
     border-left-color: rgba(255, 255, 255, 0.1);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .tutorial-panel-complete {
@@ -34,6 +35,7 @@
     font-size: 16px;
     -unity-font-style: bold;
     color: rgba(255, 255, 255, 0.82);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .tutorial-check {
@@ -41,18 +43,21 @@
     font-size: 34px;
     -unity-font-style: bold;
     color: rgb(219, 255, 219);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .tutorial-title {
     font-size: 30px;
     -unity-font-style: bold;
     margin-bottom: 8px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
 }
 
 .tutorial-instruction {
     white-space: normal;
     font-size: 18px;
     margin-bottom: 6px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .tutorial-hint {
@@ -60,6 +65,7 @@
     color: rgba(255, 255, 255, 0.76);
     font-size: 15px;
     margin-bottom: 14px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .tutorial-progress-bar {
@@ -81,6 +87,7 @@
     font-size: 14px;
     -unity-font-style: bold;
     color: rgba(255, 255, 255, 0.82);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .tutorial-modal {
@@ -101,12 +108,14 @@
     border-right-color: rgba(255, 255, 255, 0.1);
     border-bottom-color: rgba(255, 255, 255, 0.1);
     border-left-color: rgba(255, 255, 255, 0.1);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .tutorial-modal-title {
     font-size: 30px;
     -unity-font-style: bold;
     margin-bottom: 10px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
 }
 
 .tutorial-modal-body {
@@ -114,6 +123,7 @@
     font-size: 16px;
     margin-bottom: 16px;
     color: rgba(255, 255, 255, 0.86);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .tutorial-modal-hint {
@@ -121,6 +131,7 @@
     -unity-font-style: bold;
     color: rgb(255, 238, 160);
     margin-bottom: 6px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .tutorial-modal-actions {
@@ -135,6 +146,7 @@
     min-height: 40px;
     color: rgb(27, 27, 27);
     -unity-font-style: bold;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .tutorial-secondary-button {
@@ -142,6 +154,7 @@
     min-height: 40px;
     color: rgb(27, 27, 27);
     -unity-font-style: bold;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .tutorial-modal-blocker {
@@ -165,11 +178,13 @@
 .tutorial-primary-button {
     min-width: 150px;
     min-height: 40px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .tutorial-secondary-button {
     min-width: 140px;
     min-height: 40px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .movement-panel {
@@ -181,12 +196,14 @@
     border-radius: 16px;
     padding: 12px;
     color: rgb(245, 245, 245);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .movement-title {
     font-size: 16px;
     -unity-font-style: bold;
     margin-bottom: 8px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .movement-list {
@@ -199,12 +216,15 @@
     align-items: flex-start;
     min-height: 26px;
     margin-bottom: 4px;
+    transition-duration: 0.08s;
 }
 
 .input-row-name {
     color: rgba(255, 255, 255, 0.9);
     width: 44%;
     white-space: normal;
+    transition-duration: 0.08s;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .input-row-binding {
@@ -213,6 +233,7 @@
     width: 54%;
     white-space: normal;
     unity-text-align: upper-right;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .world-prompt-panel {
@@ -226,15 +247,18 @@
     padding: 10px 14px;
     align-items: center;
     color: white;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .world-prompt-action {
     -unity-font-style: bold;
     font-size: 16px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .world-prompt-description {
     color: rgba(255, 255, 255, 0.75);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .input-row-active {
@@ -248,184 +272,4 @@
 
 .input-row-binding-active {
     color: rgb(255, 238, 160);
-}
-
-.input-row {
-    transition-duration: 0.08s;
-}
-
-.input-row-name {
-    transition-duration: 0.08s;
-}
-
-.input-row-binding {
-    transition-duration: 0.08s;
-}
-
-.tutorial-objective-indicator {
-    position: absolute;
-    min-width: 180px;
-    background-color: rgba(6, 10, 16, 0.88);
-    border-radius: 16px;
-    padding: 8px 12px;
-    border-top-width: 2px;
-    border-right-width: 2px;
-    border-bottom-width: 2px;
-    border-left-width: 2px;
-    border-top-color: rgba(93, 190, 255, 0.45);
-    border-right-color: rgba(93, 190, 255, 0.45);
-    border-bottom-color: rgba(93, 190, 255, 0.45);
-    border-left-color: rgba(93, 190, 255, 0.45);
-}
-
-.tutorial-objective-label {
-    color: rgb(240, 248, 255);
-    -unity-font-style: bold;
-    font-size: 14px;
-    unity-text-align: middle-center;
-}
-
-    .nav-hud-root {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 18px;
-    align-items: center;
-}
-
-.nav-hud-panel {
-    min-width: 300px;
-    max-width: 420px;
-    background-color: rgba(6, 10, 16, 0.92);
-    border-radius: 18px;
-    padding: 10px 14px 12px 14px;
-    border-top-width: 2px;
-    border-right-width: 2px;
-    border-bottom-width: 2px;
-    border-left-width: 2px;
-    border-top-color: rgba(93, 190, 255, 0.45);
-    border-right-color: rgba(93, 190, 255, 0.45);
-    border-bottom-color: rgba(93, 190, 255, 0.45);
-    border-left-color: rgba(93, 190, 255, 0.45);
-}
-
-.nav-hud-title {
-    color: rgb(240, 248, 255);
-    -unity-font-style: bold;
-    font-size: 15px;
-    unity-text-align: middle-center;
-}
-
-.nav-hud-meta-row {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 4px;
-}
-
-.nav-hud-distance {
-    color: rgba(208, 224, 240, 0.95);
-    font-size: 12px;
-    -unity-font-style: bold;
-}
-
-.nav-hud-bearing {
-    color: rgba(208, 224, 240, 0.95);
-    font-size: 12px;
-    -unity-font-style: bold;
-    unity-text-align: middle-right;
-}
-
-.nav-hud-track {
-    flex-direction: row;
-    align-items: center;
-    margin-top: 8px;
-}
-
-.nav-hud-track-edge {
-    color: rgba(190, 214, 232, 0.80);
-    font-size: 12px;
-    min-width: 14px;
-    unity-text-align: middle-center;
-}
-
-.nav-hud-track-line {
-    position: relative;
-    flex-grow: 1;
-    height: 8px;
-    margin-left: 8px;
-    margin-right: 8px;
-    background-color: rgba(255, 255, 255, 0.08);
-    border-radius: 999px;
-}
-
-.nav-hud-needle {
-    position: absolute;
-    top: -4px;
-    left: 0;
-    width: 18px;
-    height: 16px;
-    background-color: rgb(93, 190, 255);
-    border-radius: 6px;
-    border-top-width: 1px;
-    border-right-width: 1px;
-    border-bottom-width: 1px;
-    border-left-width: 1px;
-    border-top-color: rgba(255, 255, 255, 0.55);
-    border-right-color: rgba(255, 255, 255, 0.55);
-    border-bottom-color: rgba(255, 255, 255, 0.55);
-    border-left-color: rgba(255, 255, 255, 0.55);
-}
-
-.navigation-indicator-root {
-    position: absolute;
-    left: 0;
-    top: 0;
-    right: 0;
-    bottom: 0;
-}
-
-.navigation-edge-indicator {
-    position: absolute;
-    min-width: 180px;
-    max-width: 260px;
-    flex-direction: row;
-    align-items: center;
-    background-color: rgba(6, 10, 16, 0.92);
-    border-radius: 18px;
-    padding: 8px 12px;
-    border-top-width: 2px;
-    border-right-width: 2px;
-    border-bottom-width: 2px;
-    border-left-width: 2px;
-    border-top-color: rgba(93, 190, 255, 0.45);
-    border-right-color: rgba(93, 190, 255, 0.45);
-    border-bottom-color: rgba(93, 190, 255, 0.45);
-    border-left-color: rgba(93, 190, 255, 0.45);
-}
-
-.navigation-arrow-label {
-    min-width: 22px;
-    margin-right: 10px;
-    color: rgb(93, 190, 255);
-    -unity-font-style: bold;
-    font-size: 20px;
-    unity-text-align: middle-center;
-}
-
-.navigation-indicator-labels {
-    flex-direction: column;
-    flex-grow: 1;
-}
-
-.navigation-indicator-title {
-    color: rgb(240, 248, 255);
-    -unity-font-style: bold;
-    font-size: 14px;
-}
-
-.navigation-indicator-distance {
-    color: rgba(208, 224, 240, 0.95);
-    font-size: 12px;
-    margin-top: 2px;
 }

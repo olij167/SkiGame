@@ -13,8 +13,7 @@ namespace SkiGame.UI
         [SerializeField] private int documentSortOrder = 2450;
 
         [Header("Behaviour")]
-        [SerializeField] private float edgePadding = 54f;
-        [SerializeField] private float centerHideRadiusPixels = 140f;
+        [SerializeField] private float edgePadding = 28f;
         [SerializeField] private float beaconWorldVerticalOffset = 12f;
 
         private VisualElement _root;
@@ -59,7 +58,7 @@ namespace SkiGame.UI
                 return;
             }
 
-            if (!NavigationTargetController.TryGetActiveState(out var state) || !state.request.showHud)
+            if (!NavigationTargetController.TryGetActiveState(out var state) || !state.request.showHud || state.request.preferMiniMapIndicator)
             {
                 SetVisible(false);
                 return;
@@ -71,53 +70,81 @@ namespace SkiGame.UI
                 return;
             }
 
-            float width = Mathf.Max(1f, _root.resolvedStyle.width);
-            float height = Mathf.Max(1f, _root.resolvedStyle.height);
-            if (width <= 1f || height <= 1f)
+            float rootWidth = Mathf.Max(1f, _root.resolvedStyle.width);
+            float rootHeight = Mathf.Max(1f, _root.resolvedStyle.height);
+            if (rootWidth <= 1f || rootHeight <= 1f)
             {
                 SetVisible(false);
                 return;
             }
+
+            float indicatorWidth = Mathf.Max(1f, _indicator.resolvedStyle.width);
+            float indicatorHeight = Mathf.Max(1f, _indicator.resolvedStyle.height);
+
+            float halfIndicatorWidth = indicatorWidth * 0.5f;
+            float halfIndicatorHeight = indicatorHeight * 0.5f;
+
+            float minX = edgePadding + halfIndicatorWidth;
+            float maxX = rootWidth - edgePadding - halfIndicatorWidth;
+            float minY = edgePadding + halfIndicatorHeight;
+            float maxY = rootHeight - edgePadding - halfIndicatorHeight;
 
             Vector3 beaconWorld = state.beaconWorldPosition + Vector3.up * beaconWorldVerticalOffset;
             Vector3 screen = targetCamera.WorldToScreenPoint(beaconWorld);
 
-            Vector2 center = new Vector2(width * 0.5f, height * 0.5f);
-            Vector2 screenPoint = new Vector2(screen.x, height - screen.y);
+            // Convert camera screen space (origin bottom-left) to UI Toolkit space (origin top-left).
+            Vector2 uiPoint = new Vector2(screen.x, rootHeight - screen.y);
+            Vector2 uiCenter = new Vector2(rootWidth * 0.5f, rootHeight * 0.5f);
 
             bool isInFront = screen.z > 0f;
             bool insideScreen =
-                screen.x >= 0f && screen.x <= width &&
-                screen.y >= 0f && screen.y <= height;
+                uiPoint.x >= 0f && uiPoint.x <= rootWidth &&
+                uiPoint.y >= 0f && uiPoint.y <= rootHeight;
 
-            Vector2 fromCenter = screenPoint - center;
-
-            if (!isInFront)
-                fromCenter = -fromCenter;
-
-            if (fromCenter.sqrMagnitude < 0.0001f)
-                fromCenter = Vector2.up;
-
-            bool lookingAtBeacon = isInFront && insideScreen && fromCenter.magnitude <= centerHideRadiusPixels;
-            if (lookingAtBeacon)
+            // Hide as soon as the beacon is actually visible on-screen.
+            if (isInFront && insideScreen)
             {
                 SetVisible(false);
                 return;
             }
 
-            Vector2 dir = fromCenter.normalized;
-            Vector2 edgePos = GetClampedEdgePosition(center, dir, width, height, edgePadding);
+            Vector2 targetIndicatorCenter;
+            Vector2 arrowDirection;
+
+            if (isInFront)
+            {
+                // Front-facing but off-screen:
+                // place the indicator on the closest point of the padded screen rect.
+                targetIndicatorCenter = new Vector2(
+                    Mathf.Clamp(uiPoint.x, minX, maxX),
+                    Mathf.Clamp(uiPoint.y, minY, maxY));
+
+                arrowDirection = (targetIndicatorCenter - uiCenter);
+                if (arrowDirection.sqrMagnitude < 0.0001f)
+                    arrowDirection = Vector2.up;
+            }
+            else
+            {
+                // Behind camera:
+                // mirror direction around center and intersect with padded rect.
+                Vector2 mirrored = uiCenter - (uiPoint - uiCenter);
+                Vector2 dirFromCenter = mirrored - uiCenter;
+
+                if (dirFromCenter.sqrMagnitude < 0.0001f)
+                    dirFromCenter = Vector2.up;
+
+                arrowDirection = dirFromCenter.normalized;
+                targetIndicatorCenter = GetRayRectIntersection(uiCenter, arrowDirection, minX, maxX, minY, maxY);
+            }
 
             SetVisible(true);
 
-            _indicator.style.left = edgePos.x - 90f;
-            _indicator.style.top = edgePos.y - 30f;
+            _indicator.style.left = targetIndicatorCenter.x - halfIndicatorWidth;
+            _indicator.style.top = targetIndicatorCenter.y - halfIndicatorHeight;
 
-            float displayDistance = GetDisplayDistance(state.beaconWorldPosition);
             _title.text = state.request.displayName;
-            _distance.text = $"{displayDistance:0} m";
-
-            _arrow.text = GetArrowGlyph(dir);
+            _distance.text = $"{GetDisplayDistance(state.beaconWorldPosition):0} m";
+            _arrow.text = GetArrowGlyph(arrowDirection.normalized);
 
             Color arrowColor = state.request.accentColor.a > 0f
                 ? state.request.accentColor
@@ -164,16 +191,31 @@ namespace SkiGame.UI
             return Vector3.Distance(origin, beaconWorldPosition);
         }
 
-        private static Vector2 GetClampedEdgePosition(Vector2 center, Vector2 dir, float width, float height, float padding)
+        private static Vector2 GetRayRectIntersection(Vector2 center, Vector2 dir, float minX, float maxX, float minY, float maxY)
         {
-            float halfW = Mathf.Max(1f, width * 0.5f - padding);
-            float halfH = Mathf.Max(1f, height * 0.5f - padding);
+            float tx = float.MaxValue;
+            float ty = float.MaxValue;
 
-            float scaleX = Mathf.Abs(dir.x) > 0.0001f ? halfW / Mathf.Abs(dir.x) : float.MaxValue;
-            float scaleY = Mathf.Abs(dir.y) > 0.0001f ? halfH / Mathf.Abs(dir.y) : float.MaxValue;
-            float scale = Mathf.Min(scaleX, scaleY);
+            if (Mathf.Abs(dir.x) > 0.0001f)
+            {
+                float targetX = dir.x > 0f ? maxX : minX;
+                tx = (targetX - center.x) / dir.x;
+            }
 
-            return center + dir * scale;
+            if (Mathf.Abs(dir.y) > 0.0001f)
+            {
+                float targetY = dir.y > 0f ? maxY : minY;
+                ty = (targetY - center.y) / dir.y;
+            }
+
+            float t = Mathf.Min(tx, ty);
+            if (float.IsInfinity(t) || float.IsNaN(t) || t < 0f)
+                t = 0f;
+
+            Vector2 hit = center + dir * t;
+            hit.x = Mathf.Clamp(hit.x, minX, maxX);
+            hit.y = Mathf.Clamp(hit.y, minY, maxY);
+            return hit;
         }
 
         private static string GetArrowGlyph(Vector2 dir)
@@ -187,7 +229,6 @@ namespace SkiGame.UI
             if (angle >= 157.5f || angle < -157.5f) return "◀";
             if (angle >= -157.5f && angle < -112.5f) return "◣";
             if (angle >= -112.5f && angle < -67.5f) return "▼";
-
             return "◢";
         }
 

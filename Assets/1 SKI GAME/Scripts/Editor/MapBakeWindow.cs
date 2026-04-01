@@ -320,11 +320,15 @@ public sealed class MapBakeWindow : EditorWindow
             worldOrigin = new Vector3((minXZ.x + maxXZ.x) * 0.5f, 0f, (minXZ.y + maxXZ.y) * 0.5f)
         };
 
-        // 3) Build polylines
+        // 3) Build polylines + baked run corridors
         var polylines = new List<MapPolyline>(runs.Length + lifts.Length);
+        var runCorridors = new List<MapRunCorridor>(runs.Length);
 
         if (includeSkiRuns)
+        {
             AppendRunPolylines(runs, polylines);
+            AppendRunCorridors(runs, runCorridors);
+        }
 
         if (includeLiftLines)
             AppendLiftPolylines(lifts, poiList, polylines);
@@ -362,6 +366,7 @@ public sealed class MapBakeWindow : EditorWindow
         targetMapData.ClearAll();
         targetMapData.SetProjection(projection);
         targetMapData.SetPolylines(polylines);
+        targetMapData.SetRunCorridors(runCorridors);
         targetMapData.SetMarkers(markers);
 
         // Projection policy:
@@ -542,6 +547,8 @@ public sealed class MapBakeWindow : EditorWindow
                 lineType = MapLineType.SkiRun,
                 color = r.RunColor,
                 widthMeters = Mathf.Max(0.01f, r.RunWidthMeters),
+                difficultyRank = (int)r.Difficulty,
+                difficultyLabel = r.Difficulty.ToString(),
                 pointsWorld = new List<Vector3>(pts.Count),
                 pointsWorldXZ = new List<Vector2>(pts.Count)
             };
@@ -553,6 +560,50 @@ public sealed class MapBakeWindow : EditorWindow
             }
 
             dst.Add(line);
+        }
+    }
+
+    private static void AppendRunCorridors(SkiRunLine[] runs, List<MapRunCorridor> dst)
+    {
+        if (runs == null || dst == null)
+            return;
+
+        List<Vector2> polygonBuffer = new List<Vector2>(128);
+
+        for (int i = 0; i < runs.Length; i++)
+        {
+            var r = runs[i];
+            if (r == null)
+                continue;
+
+            var pts = r.PointsWorld;
+            if (pts == null || pts.Count < 2)
+                continue;
+
+            polygonBuffer.Clear();
+            r.BuildMapCorridorPolygonWorldXZ(polygonBuffer);
+
+            if (polygonBuffer.Count < 3)
+                continue;
+
+            var corridor = new MapRunCorridor
+            {
+                id = r.RunId,
+                displayName = r.RunName,
+                color = r.RunColor,
+                difficultyRank = (int)r.Difficulty,
+                difficultyLabel = r.Difficulty.ToString(),
+                polygonWorldXZ = new List<Vector2>(polygonBuffer.Count),
+                centerlineWorldXZ = new List<Vector2>(pts.Count)
+            };
+
+            for (int p = 0; p < polygonBuffer.Count; p++)
+                corridor.polygonWorldXZ.Add(polygonBuffer[p]);
+
+            for (int p = 0; p < pts.Count; p++)
+                corridor.centerlineWorldXZ.Add(new Vector2(pts[p].x, pts[p].z));
+
+            dst.Add(corridor);
         }
     }
 
@@ -629,6 +680,7 @@ public sealed class MapBakeWindow : EditorWindow
                 id = p.id,
                 displayName = p.displayName,
                 type = p.type,
+                category = p.category,
                 color = p.color,
                 meta = p.meta,
                 worldPosition = p.position,

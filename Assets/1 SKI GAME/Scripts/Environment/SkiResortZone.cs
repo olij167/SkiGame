@@ -54,24 +54,37 @@ public class SkiResortZone : MonoBehaviour
     private bool TryResolvePlayerRoot(Collider other, out GameObject playerRoot)
     {
         playerRoot = null;
-        if (other == null) return false;
+        if (other == null)
+            return false;
 
-        if (!string.IsNullOrEmpty(requiredTag))
+        var t = other.transform;
+        while (t != null)
         {
-            var t = other.transform;
-            while (t != null)
+            if (t.CompareTag("NPC"))
+                return false;
+            t = t.parent;
+        }
+
+        t = other.transform;
+        while (t != null)
+        {
+            if (!string.IsNullOrEmpty(requiredTag))
             {
                 if (t.CompareTag(requiredTag))
                 {
                     playerRoot = t.gameObject;
                     return true;
                 }
-                t = t.parent;
             }
-            return false;
+            else if (t.CompareTag("Player"))
+            {
+                playerRoot = t.gameObject;
+                return true;
+            }
+
+            t = t.parent;
         }
 
-        playerRoot = other.transform.root.gameObject;
-        return true;
+        return false;
     }
 }

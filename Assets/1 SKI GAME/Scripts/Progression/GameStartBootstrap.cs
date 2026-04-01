@@ -153,6 +153,11 @@ namespace SkiGame.Progression
             ApplyDefaultCustomization(statsMgr.Profile);
             statsMgr.Profile.tutorial?.ResetForNewGame();
 
+            var skiPassManager = SkiPassManager.Instance != null ? SkiPassManager.Instance : FindObjectOfType<SkiPassManager>();
+
+            if (skiPassManager != null)
+                skiPassManager.ResetForNewGame();
+
             statsMgr.Save();
             GameSaveSystem.MarkSlotPlayed(GameSaveSystem.ActiveSlotId);
 

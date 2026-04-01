@@ -2,7 +2,7 @@
     <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/UI/CustomizationShopView.uss?fileID=7433441132597879392&amp;guid=6936539e6b892ca4c97124473bad740b&amp;type=3#CustomizationShopView" />
     <ui:VisualElement name="Root" class="shop-root">
         <ui:VisualElement class="shop-header">
-            <ui:Label name="Lbl_Title" text="Customization" class="shop-title" />
+            <ui:Label name="Lbl_Title" text="Customization" class="shop-title" style="-unity-font-definition: url(&quot;project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&amp;guid=281591823e5a02d439cd5679a23ed27e&amp;type=3#Slackey&quot;);" />
             <ui:VisualElement class="shop-header-right">
                 <ui:Label name="Lbl_Currency" text="0" class="shop-currency" />
                 <ui:Button name="Btn_Exit" text="Exit" class="shop-exit" />
