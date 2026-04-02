@@ -17,62 +17,39 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
     [SerializeField] private Collider[] playerCollidersToDisableWhileMounted;
 
     [Header("Driving")]
-    [SerializeField] private float acceleration = 28f;
-    [SerializeField] private float reverseAcceleration = 16f;
-    [SerializeField] private float maxForwardSpeed = 22f;
-    [SerializeField] private float maxReverseSpeed = 8f;
-    [SerializeField] private float steerSpeed = 85f;
-    [SerializeField] private float drag = 1.5f;
+    [SerializeField] private float maxForwardSpeed = 20f;
+    [SerializeField] private float maxReverseSpeed = 7f;
+    [SerializeField] private float forwardAcceleration = 18f;
+    [SerializeField] private float reverseAcceleration = 12f;
+    [SerializeField] private float brakingDeceleration = 20f;
+    [SerializeField] private float coastingDeceleration = 8f;
+    [SerializeField] private float steerDegreesPerSecond = 110f;
+    [SerializeField] private float standstillSteerFactor = 0.65f;
+    [SerializeField] private float slopeClimbAssist = 3.5f;
+    [SerializeField] private float airborneSpeedDecay = 6f;
 
-    [SerializeField] private float groundedDownforce = 35f;
-    [SerializeField] private float hoverRayLength = 1.8f;
-    [SerializeField] private float rideHeight = 0.9f;
-    [SerializeField] private float suspensionStrength = 90f;
-    [SerializeField] private float suspensionDamping = 12f;
-    [SerializeField] private float airSteerMultiplier = 0.2f;
+    [Header("Grounding")]
     [SerializeField] private LayerMask groundMask = ~0;
-
-    [SerializeField] private float uphillAssistForce = 30f;
-    [SerializeField] private float downhillBrakeFactor = 0.15f;
-    [SerializeField] private float activeThrottleDrag = 0.35f;
-    [SerializeField] private float coastDrag = 1.1f;
-    [SerializeField] private float reverseGripScale = 0.7f;
-
-    [Header("Ground Probes")]
     [SerializeField] private Transform frontLeftProbe;
     [SerializeField] private Transform frontRightProbe;
     [SerializeField] private Transform rearLeftProbe;
     [SerializeField] private Transform rearRightProbe;
+    [SerializeField] private float probeRayLength = 2.2f;
+    [SerializeField] private float rideHeight = 0.9f;
+    [SerializeField] private float rideHeightSnapStrength = 12f;
+    [SerializeField] private float maxGroundSampleAngle = 70f;
+    [SerializeField] private float maxDriveSlopeAngle = 42f;
+    [SerializeField] private float airborneGravityMultiplier = 1.4f;
+    [SerializeField] private float unmountedBrakeDrag = 6f;
 
     [Header("Tread Visuals")]
     [SerializeField] private Transform leftTreadRoot;
     [SerializeField] private Transform rightTreadRoot;
     [SerializeField] private Transform leftTreadVisual;
     [SerializeField] private Transform rightTreadVisual;
-    [SerializeField] private float treadVisualYOffset = 0.02f;
     [SerializeField] private float treadSpinDegreesPerMeter = 360f;
-    [SerializeField] private float treadSteerVisualYaw = 12f;
+    [SerializeField] private float treadSteerVisualYaw = 10f;
     [SerializeField] private float treadAlignLerpSpeed = 12f;
-
-    [Header("Vehicle Grounding")]
-    [SerializeField] private float probeRayLength = 2.2f;
-    [SerializeField] private float suspensionRestDistance = 0.9f;
-    [SerializeField] private float suspensionStrengthPerProbe = 55f;
-    [SerializeField] private float suspensionDampingPerProbe = 9f;
-    [SerializeField] private float maxClimbAngle = 65f;
-    [SerializeField] private float tractionForce = 36f;
-    [SerializeField] private float slopeStickForce = 4f;
-    [SerializeField] private float lateralGrip = 6f;
-    [SerializeField] private float alignToGroundSpeed = 10f;
-    [SerializeField] private float airborneGravityMultiplier = 1.4f;
-    [SerializeField] private float groundedSteerMultiplier = 1f;
-
-    [SerializeField] private float idleGroundBrake = 8f;
-    [SerializeField] private float maxSpringAccelPerProbe = 18f;
-    [SerializeField] private float maxDownforcePerProbe = 12f;
-    [SerializeField] private float maxAlignDegreesPerSecond = 180f;
-    [SerializeField] private float groundedSpeedDrag = 2.2f;
-    [SerializeField] private float unmountedBrakeDrag = 6f;
 
     [Header("Prompt")]
     [SerializeField] private string mountPrompt = "Ride Snowmobile";
@@ -81,28 +58,31 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
     [SerializeField] private Collider interactionTrigger;
 
     private Rigidbody _rb;
+
     private GameObject _playerRootInTrigger;
     private GameObject _mountedPlayer;
     private SkiController _mountedSki;
     private WalkingController _mountedWalk;
     private Rigidbody _mountedPlayerRb;
+
     private bool _wasPressed;
     private bool _enterArmed;
 
     private bool _isGrounded;
     private Vector3 _groundNormal = Vector3.up;
+    private Vector3 _groundPoint = Vector3.zero;
+    private int _groundedProbeCount;
+
+    private float _currentSpeed;
+    private Vector3 _lastGroundForward = Vector3.forward;
 
     private Quaternion _leftTreadBaseLocalRot;
     private Quaternion _rightTreadBaseLocalRot;
+    private Vector3 _leftTreadBaseLocalPos;
+    private Vector3 _rightTreadBaseLocalPos;
     private float _leftTreadSpin;
     private float _rightTreadSpin;
 
-    private int _groundedProbeCount;
-    private Vector3 _averagedGroundNormal = Vector3.up;
-    private Vector3 _averagedGroundPoint = Vector3.zero;
-
-    private Vector3 _leftTreadBaseLocalPos;
-    private Vector3 _rightTreadBaseLocalPos;
     public bool IsMounted => _mountedPlayer != null;
 
     private void Awake()
@@ -111,6 +91,7 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
 
         if (seatPoint == null)
             seatPoint = transform;
+
         if (dismountPoint == null)
             dismountPoint = transform;
 
@@ -133,12 +114,11 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
             rightTreadRoot = rightTreadVisual.parent;
 
         _rb.interpolation = RigidbodyInterpolation.Interpolate;
-        _rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         _rb.useGravity = true;
-
         _rb.mass = Mathf.Max(180f, _rb.mass);
-        _rb.linearDamping = 1.25f;
-        _rb.angularDamping = 4.5f;
+        _rb.linearDamping = 0.25f;
+        _rb.angularDamping = 8f;
     }
 
     private void OnEnable()
@@ -167,90 +147,187 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
 
         if (!IsMounted)
         {
-            ApplyPassiveStabilization();
-            ApplyGroundConform(false, 0f);
+            HandleUnmountedPhysics();
             UpdateTreadVisuals(0f, 0f, 0f);
             return;
         }
 
         if (moveAction == null || moveAction.action == null)
+        {
+            HandleMountedPhysics(0f, 0f);
+            UpdateTreadVisuals(0f, 0f, _currentSpeed);
             return;
+        }
 
         Vector2 move = moveAction.action.ReadValue<Vector2>();
-        float throttle = move.y;
-        float steer = move.x;
+        float steerInput = Mathf.Clamp(move.x, -1f, 1f);
+        float throttleInput = Mathf.Clamp(move.y, -1f, 1f);
 
-        ApplyGroundConform(true, steer);
+        HandleMountedPhysics(throttleInput, steerInput);
+        UpdateTreadVisuals(throttleInput, steerInput, _currentSpeed);
+    }
 
-        Vector3 driveForward = GetDriveForward();
-        Vector3 planarVel = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal);
-        float forwardSpeed = Vector3.Dot(planarVel, driveForward);
-
-        // Strong projected traction.
-        float baseAccel = throttle >= 0f ? acceleration : reverseAcceleration;
-        float throttleAbs = Mathf.Abs(throttle);
-
-        if (throttleAbs > 0.001f)
-        {
-            _rb.AddForce(driveForward * (throttle * baseAccel), ForceMode.Acceleration);
-
-            if (_isGrounded)
-            {
-                float tractionScale = throttle >= 0f ? 1f : reverseGripScale;
-                _rb.AddForce(driveForward * (throttle * tractionForce * tractionScale), ForceMode.Acceleration);
-
-                // Extra uphill assist so the snowmobile feels meaningfully better than skis.
-                float uphill01 = Mathf.Clamp01(Vector3.Dot(driveForward, Vector3.up));
-                if (throttle > 0f && uphill01 > 0f)
-                    _rb.AddForce(driveForward * (uphillAssistForce * uphill01 * throttle), ForceMode.Acceleration);
-            }
-        }
-
-        // Strong lateral grip while grounded so it does not feel like a sled drifting sideways.
+    private void HandleMountedPhysics(float throttleInput, float steerInput)
+    {
         if (_isGrounded)
         {
-            Vector3 lateral = planarVel - driveForward * forwardSpeed;
-            float gripScale = throttle >= 0f ? 1f : reverseGripScale;
-            _rb.AddForce(-lateral * lateralGrip * gripScale, ForceMode.Acceleration);
-        }
+            Vector3 up = _groundNormal;
+            Vector3 currentForward = GetPlanarForward(_rb.rotation * Vector3.forward, up);
 
-        // Passive braking only when not really accelerating.
-        float appliedBrake = 0f;
+            if (currentForward.sqrMagnitude < 0.0001f)
+                currentForward = _lastGroundForward;
+
+            float speed01 = Mathf.InverseLerp(0f, maxForwardSpeed, Mathf.Abs(_currentSpeed));
+            float steerFactor = Mathf.Lerp(standstillSteerFactor, 1f, speed01);
+            float steerStep = steerInput * steerDegreesPerSecond * steerFactor * Time.fixedDeltaTime;
+
+            Vector3 desiredForward = Quaternion.AngleAxis(steerStep, up) * currentForward;
+            desiredForward = GetPlanarForward(desiredForward, up);
+
+            if (desiredForward.sqrMagnitude < 0.0001f)
+                desiredForward = currentForward;
+
+            desiredForward.Normalize();
+            _lastGroundForward = desiredForward;
+
+            Quaternion targetRotation = Quaternion.LookRotation(desiredForward, up);
+            _rb.MoveRotation(targetRotation);
+
+            float slopeAngle = Vector3.Angle(up, Vector3.up);
+            bool movingUphill = Vector3.Dot(desiredForward, Vector3.up) > 0.01f;
+            bool slopeTooSteepToDrive = slopeAngle > maxDriveSlopeAngle && movingUphill;
+
+            float targetSpeed = throttleInput >= 0f
+                ? throttleInput * maxForwardSpeed
+                : throttleInput * maxReverseSpeed;
+
+            float accel;
+
+            if (Mathf.Abs(throttleInput) < 0.01f)
+            {
+                targetSpeed = 0f;
+                accel = coastingDeceleration;
+            }
+            else if (Mathf.Sign(throttleInput) != Mathf.Sign(_currentSpeed) && Mathf.Abs(_currentSpeed) > 0.1f)
+            {
+                targetSpeed = 0f;
+                accel = brakingDeceleration;
+            }
+            else
+            {
+                accel = throttleInput >= 0f ? forwardAcceleration : reverseAcceleration;
+            }
+
+            if (slopeTooSteepToDrive && throttleInput > 0.01f)
+            {
+                targetSpeed = 0f;
+                accel = brakingDeceleration;
+            }
+
+            _currentSpeed = Mathf.MoveTowards(_currentSpeed, targetSpeed, accel * Time.fixedDeltaTime);
+
+            if (!slopeTooSteepToDrive && throttleInput > 0.01f)
+            {
+                float uphill01 = Mathf.Clamp01(Vector3.Dot(desiredForward, Vector3.up));
+                _currentSpeed = Mathf.Min(
+                    maxForwardSpeed,
+                    _currentSpeed + uphill01 * slopeClimbAssist * Time.fixedDeltaTime);
+            }
+
+            Vector3 currentPosition = _rb.position;
+            Vector3 moveDelta = desiredForward * (_currentSpeed * Time.fixedDeltaTime);
+
+            float currentHeightAlongNormal = Vector3.Dot(currentPosition - _groundPoint, up);
+            float heightError = rideHeight - currentHeightAlongNormal;
+            Vector3 snapOffset = up * (heightError * Mathf.Clamp01(rideHeightSnapStrength * Time.fixedDeltaTime));
+
+            Vector3 targetPosition = currentPosition + moveDelta + snapOffset;
+            _rb.MovePosition(targetPosition);
+
+            _rb.linearVelocity = Vector3.zero;
+            _rb.angularVelocity = Vector3.zero;
+        }
+        else
+        {
+            _currentSpeed = Mathf.MoveTowards(_currentSpeed, 0f, airborneSpeedDecay * Time.fixedDeltaTime);
+
+            Vector3 forward = (_rb.rotation * Vector3.forward).normalized;
+            Vector3 planarVelocity = forward * _currentSpeed;
+            Vector3 verticalVelocity = Vector3.Project(_rb.linearVelocity, Vector3.up);
+
+            _rb.linearVelocity = planarVelocity + verticalVelocity;
+            _rb.AddForce(Physics.gravity * (airborneGravityMultiplier - 1f), ForceMode.Acceleration);
+        }
+    }
+
+    private void HandleUnmountedPhysics()
+    {
+        _currentSpeed = Mathf.MoveTowards(_currentSpeed, 0f, brakingDeceleration * Time.fixedDeltaTime);
+
+        Vector3 planar = Vector3.ProjectOnPlane(_rb.linearVelocity, Vector3.up);
+        _rb.AddForce(-planar * Mathf.Max(0f, unmountedBrakeDrag), ForceMode.Acceleration);
+
         if (_isGrounded)
         {
-            if (throttleAbs < 0.05f)
+            Vector3 up = _groundNormal;
+            Vector3 forward = GetPlanarForward(_rb.rotation * Vector3.forward, up);
+            if (forward.sqrMagnitude > 0.0001f)
             {
-                _rb.AddForce(-planarVel * idleGroundBrake, ForceMode.Acceleration);
-                appliedBrake = idleGroundBrake;
-            }
-            else if (throttle < 0f && forwardSpeed > 0.5f)
-            {
-                // Reverse input while still moving forward behaves like a brake.
-                float reverseBrake = idleGroundBrake * (1f + downhillBrakeFactor);
-                _rb.AddForce(-driveForward * reverseBrake, ForceMode.Acceleration);
-                appliedBrake = reverseBrake;
+                Quaternion targetRotation = Quaternion.LookRotation(forward, up);
+                _rb.MoveRotation(targetRotation);
             }
         }
+    }
 
-        // Recompute after forces for clamping and drag shaping.
-        planarVel = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal);
-        forwardSpeed = Vector3.Dot(planarVel, driveForward);
+    private void UpdateGrounding()
+    {
+        _isGrounded = false;
+        _groundNormal = Vector3.up;
+        _groundPoint = transform.position;
+        _groundedProbeCount = 0;
 
-        float maxForward = maxForwardSpeed;
-        float maxReverse = maxReverseSpeed;
-        float clampedForwardSpeed = Mathf.Clamp(forwardSpeed, -maxReverse, maxForward);
+        Vector3 normalSum = Vector3.zero;
+        Vector3 pointSum = Vector3.zero;
 
-        Vector3 lateralAfterGrip = planarVel - driveForward * forwardSpeed;
+        SampleProbe(frontLeftProbe, ref normalSum, ref pointSum);
+        SampleProbe(frontRightProbe, ref normalSum, ref pointSum);
+        SampleProbe(rearLeftProbe, ref normalSum, ref pointSum);
+        SampleProbe(rearRightProbe, ref normalSum, ref pointSum);
 
-        float dragFactor = throttleAbs > 0.05f ? activeThrottleDrag : coastDrag;
-        Vector3 dampedLateral = lateralAfterGrip * Mathf.Clamp01(1f - dragFactor * Time.fixedDeltaTime);
+        if (_groundedProbeCount <= 0)
+            return;
 
-        Vector3 newPlanar = driveForward * clampedForwardSpeed + dampedLateral;
+        _isGrounded = true;
+        _groundNormal = normalSum.normalized;
+        _groundPoint = pointSum / _groundedProbeCount;
+    }
 
-        Vector3 vertical = _rb.linearVelocity - Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal);
-        _rb.linearVelocity = newPlanar + vertical;
+    private void SampleProbe(Transform probe, ref Vector3 normalSum, ref Vector3 pointSum)
+    {
+        if (probe == null)
+            return;
 
-        UpdateTreadVisuals(throttle, steer, clampedForwardSpeed);
+        Vector3 rayOrigin = probe.position + Vector3.up * 0.2f;
+
+        if (!Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, probeRayLength, groundMask, QueryTriggerInteraction.Ignore))
+            return;
+
+        float slopeAngle = Vector3.Angle(hit.normal, Vector3.up);
+        if (slopeAngle > maxGroundSampleAngle)
+            return;
+
+        _groundedProbeCount++;
+        normalSum += hit.normal;
+        pointSum += hit.point;
+    }
+
+    private static Vector3 GetPlanarForward(Vector3 rawForward, Vector3 up)
+    {
+        Vector3 forward = Vector3.ProjectOnPlane(rawForward, up);
+        if (forward.sqrMagnitude < 0.0001f)
+            return Vector3.zero;
+
+        return forward.normalized;
     }
 
     private void HandleMountInput()
@@ -262,7 +339,9 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
 
         if (!_enterArmed)
         {
-            if (!pressed) _enterArmed = true;
+            if (!pressed)
+                _enterArmed = true;
+
             _wasPressed = false;
             return;
         }
@@ -294,13 +373,11 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
         _mountedWalk = playerRoot.GetComponentInParent<WalkingController>();
         _mountedPlayerRb = playerRoot.GetComponentInParent<Rigidbody>();
 
-        // Put the player into walk mode so skis/poles go to the back and ski systems are disabled.
         if (_mountedWalk != null)
             _mountedWalk.ForceEnterWalkMode();
         else if (_mountedSki != null)
             _mountedSki.enabled = false;
 
-        // Remove rider physics influence while mounted.
         if (_mountedPlayerRb != null)
         {
             _mountedPlayerRb.linearVelocity = Vector3.zero;
@@ -309,7 +386,6 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
             _mountedPlayerRb.detectCollisions = false;
         }
 
-        // Disable the rider colliders so they do not clip into the snowmobile / ground.
         if (playerCollidersToDisableWhileMounted != null)
         {
             for (int i = 0; i < playerCollidersToDisableWhileMounted.Length; i++)
@@ -323,6 +399,7 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
         _mountedPlayer.transform.localPosition = new Vector3(0f, riderSeatYOffset, 0f);
         _mountedPlayer.transform.localRotation = Quaternion.identity;
 
+        _currentSpeed = 0f;
         _playerRootInTrigger = playerRoot;
         _enterArmed = false;
         _wasPressed = true;
@@ -341,7 +418,7 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
         {
             _mountedPlayerRb.isKinematic = false;
             _mountedPlayerRb.detectCollisions = true;
-            _mountedPlayerRb.linearVelocity = _rb != null ? _rb.linearVelocity : Vector3.zero;
+            _mountedPlayerRb.linearVelocity = _rb != null ? (_rb.rotation * Vector3.forward) * _currentSpeed : Vector3.zero;
             _mountedPlayerRb.angularVelocity = Vector3.zero;
         }
 
@@ -354,7 +431,6 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
             }
         }
 
-        // Return the player to ski mode when leaving the snowmobile.
         if (_mountedWalk != null)
             _mountedWalk.ForceEnterSkiMode();
         else if (_mountedSki != null)
@@ -367,49 +443,6 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
 
         _enterArmed = false;
         _wasPressed = true;
-    }
-
-    private void UpdateGrounding()
-    {
-        _isGrounded = false;
-        _groundNormal = Vector3.up;
-        _averagedGroundNormal = Vector3.up;
-        _averagedGroundPoint = transform.position;
-        _groundedProbeCount = 0;
-
-        Vector3 normalSum = Vector3.zero;
-        Vector3 pointSum = Vector3.zero;
-
-        SampleProbe(frontLeftProbe, ref normalSum, ref pointSum);
-        SampleProbe(frontRightProbe, ref normalSum, ref pointSum);
-        SampleProbe(rearLeftProbe, ref normalSum, ref pointSum);
-        SampleProbe(rearRightProbe, ref normalSum, ref pointSum);
-
-        if (_groundedProbeCount > 0)
-        {
-            _isGrounded = true;
-            _averagedGroundNormal = normalSum.normalized;
-            _groundNormal = _averagedGroundNormal;
-            _averagedGroundPoint = pointSum / _groundedProbeCount;
-        }
-        else
-        {
-            _rb.AddForce(Physics.gravity * (airborneGravityMultiplier - 1f), ForceMode.Acceleration);
-        }
-    }
-
-
-    private Vector3 GetDriveForward()
-    {
-        Vector3 up = _isGrounded ? _groundNormal : Vector3.up;
-
-        Vector3 forward = Vector3.ProjectOnPlane(transform.forward, up);
-        if (forward.sqrMagnitude <= 0.0001f)
-            forward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
-
-        forward.Normalize();
-
-        return forward;
     }
 
     private void UpdateTreadVisuals(float throttle, float steer, float forwardSpeed)
@@ -436,14 +469,14 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
     }
 
     private void UpdateSingleTreadVisual(
-    Transform treadRoot,
-    Transform treadVisual,
-    bool isLeft,
-    float steer,
-    float forwardSpeed,
-    ref float spinDegrees,
-    Vector3 baseLocalPos,
-    Quaternion baseLocalRot)
+        Transform treadRoot,
+        Transform treadVisual,
+        bool isLeft,
+        float steer,
+        float forwardSpeed,
+        ref float spinDegrees,
+        Vector3 baseLocalPos,
+        Quaternion baseLocalRot)
     {
         if (treadRoot == null || treadVisual == null)
             return;
@@ -462,11 +495,8 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
 
         rootForward.Normalize();
 
-        // IMPORTANT:
-        // Do NOT move or rotate the tread root in world space.
-        // Only animate the tread visual locally.
         float steerYaw = steer * treadSteerVisualYaw * (isLeft ? 1f : -1f) * 0.35f;
-        spinDegrees += (forwardSpeed * treadSpinDegreesPerMeter) * Time.fixedDeltaTime;
+        spinDegrees += forwardSpeed * treadSpinDegreesPerMeter * Time.fixedDeltaTime;
 
         Quaternion terrainRelative =
             Quaternion.Inverse(treadRoot.rotation) *
@@ -486,66 +516,9 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
             treadAlignLerpSpeed * Time.deltaTime);
     }
 
-    private void SampleProbe(Transform probe, ref Vector3 normalSum, ref Vector3 pointSum)
-    {
-        if (probe == null)
-            return;
-
-        Vector3 origin = probe.position + Vector3.up * 0.2f;
-        if (!Physics.Raycast(origin, Vector3.down, out RaycastHit hit, probeRayLength, groundMask, QueryTriggerInteraction.Ignore))
-            return;
-
-        float slopeAngle = Vector3.Angle(hit.normal, Vector3.up);
-        if (slopeAngle > maxClimbAngle)
-            return;
-
-        _groundedProbeCount++;
-        normalSum += hit.normal;
-        pointSum += hit.point;
-    }
-
-    private void ApplyGroundConform(bool allowSteer, float steerInput)
-    {
-        if (!_isGrounded)
-            return;
-
-        Vector3 up = _groundNormal;
-
-        Vector3 forwardOnGround = Vector3.ProjectOnPlane(transform.forward, up);
-        if (forwardOnGround.sqrMagnitude < 0.0001f)
-            forwardOnGround = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
-
-        forwardOnGround.Normalize();
-
-        if (allowSteer)
-        {
-            float steerYaw = steerInput * steerSpeed * 0.35f * Time.fixedDeltaTime;
-            forwardOnGround = Quaternion.AngleAxis(steerYaw, up) * forwardOnGround;
-            forwardOnGround.Normalize();
-        }
-
-        Quaternion targetRot = Quaternion.LookRotation(forwardOnGround, up);
-        Quaternion nextRot = Quaternion.RotateTowards(_rb.rotation, targetRot, maxAlignDegreesPerSecond * Time.fixedDeltaTime);
-        _rb.MoveRotation(nextRot);
-
-        // No vertical lift correction here.
-        // Just add a small stick-to-ground force so it stays planted.
-        _rb.AddForce(-up * slopeStickForce, ForceMode.Acceleration);
-    }
-
-    private void ApplyPassiveStabilization()
-    {
-        Vector3 planar = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal);
-        _rb.AddForce(-planar * Mathf.Max(0f, unmountedBrakeDrag), ForceMode.Acceleration);
-
-        if (_isGrounded)
-            ApplyGroundConform(false, 0f);
-    }
-
-    
     private void OnTriggerEnter(Collider other)
     {
-        var root = ResolvePlayerRoot(other);
+        GameObject root = ResolvePlayerRoot(other);
         if (root == null)
             return;
 
@@ -555,7 +528,7 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
 
     private void OnTriggerExit(Collider other)
     {
-        var root = ResolvePlayerRoot(other);
+        GameObject root = ResolvePlayerRoot(other);
         if (root == null)
             return;
 
@@ -568,12 +541,12 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
         if (other == null)
             return null;
 
-        // Never allow NPCs to claim player interactions.
-        var t = other.transform;
+        Transform t = other.transform;
         while (t != null)
         {
             if (t.CompareTag("NPC"))
                 return null;
+
             t = t.parent;
         }
 
@@ -586,13 +559,14 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
                 playerTagged = t;
                 break;
             }
+
             t = t.parent;
         }
 
         if (playerTagged == null)
             return null;
 
-        var pi = other.GetComponentInParent<PlayerInput>();
+        PlayerInput pi = other.GetComponentInParent<PlayerInput>();
         if (pi != null)
             return pi.gameObject;
 

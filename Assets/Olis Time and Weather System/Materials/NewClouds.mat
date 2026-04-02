@@ -108,12 +108,13 @@ Material:
     - _AlphaToMask: 0
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
+    - _BottomDarkening: 1.1
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _CloudAlpha: 6
+    - _CloudAlpha: 16.67
     - _CloudCoverageBias: 0.02
-    - _CloudPower: 2.4
+    - _CloudPower: 3.11
     - _CloudScale: 140
     - _CloudSeperation: 5
     - _CloudSoftness: 0.16
@@ -121,26 +122,32 @@ Material:
     - _CloudWarpStrength: 0.18
     - _Cull: 2
     - _Cutoff: 0.5
+    - _DensityContrast: 1.7
     - _DepthFade: 6
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
     - _DetailScale: 260
+    - _DetailStrength: 0.7
     - _DistortScale: 120
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EdgeFade: 0.28
     - _EnvironmentReflections: 1
-    - _FresnelFade: 2
+    - _ErosionStrength: 0.8
+    - _FresnelFade: 2.2
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _HeightFade: 0.25
+    - _MacroRoundness: 0.9
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueOffset: 0
     - _RadialFade: 0.4
     - _ReceiveShadows: 1
+    - _SecondLayerStrength: 0.8
+    - _SilverLiningStrength: 0.45
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
@@ -153,12 +160,12 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
-    - _CloudColour: {r: 1, g: 1, b: 1, a: 1}
+    - _CloudColour: {r: 0.83623797, g: 0.86065465, b: 0.90599996, a: 1}
     - _CloudSpeed: {r: 0.003, g: 0.003, b: 0, a: 0}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _DistortSpeed: {r: 0.003, g: 0.003, b: 0, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _ShadowColour: {r: 0.72, g: 0.75, b: 0.8, a: 1}
+    - _ShadowColour: {r: 0.502578, g: 0.5849757, b: 0.73800004, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

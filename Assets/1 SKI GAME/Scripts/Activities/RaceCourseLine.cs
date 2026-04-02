@@ -149,11 +149,13 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
     [SerializeField] private List<CheckpointOverride> checkpointOverrides = new List<CheckpointOverride>();
 
     [Header("Checkpoint State Colours")]
-    [SerializeField] private Color checkpointUpcomingColor = Color.yellow;
-    [SerializeField] private Color checkpointCurrentColor = Color.green;
-    [SerializeField] private Color checkpointTriggeredColor = new Color(1f, 0.25f, 0.75f, 1f);
+    [SerializeField] private Color checkpointUpcomingColor = new Color(1f, 0.92f, 0.16f, 0.30f);
+    [SerializeField] private Color checkpointCurrentColor = new Color(0.12f, 0.95f, 0.25f, 0.32f);
+    [SerializeField] private Color checkpointTriggeredColor = new Color(1f, 0.25f, 0.75f, 0.30f);
+    [SerializeField] private Color checkpointFinalColor = new Color(1f, 0.15f, 0.15f, 0.35f);
 
     private readonly List<Renderer> _runtimeCheckpointRenderers = new List<Renderer>();
+    private readonly List<GameObject> _runtimeCheckpointObjects = new List<GameObject>();
 
     private readonly List<float> _cumDistCache = new List<float>(256);
     private float _totalLengthCache;
@@ -279,6 +281,7 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
                 _countdownRemaining = 0f;
                 _attemptTime = 0f;
                 _runtimeState = RaceRuntimeState.Racing;
+                RefreshCheckpointVisualStates();
             }
 
             return;
@@ -619,13 +622,36 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         if (other == null || _activePlayerRoot == null)
             return false;
 
-        var root = ResolvePlayerRoot(other);
-        if (root == null || root != _activePlayerRoot)
+        if (!ColliderBelongsToActivePlayer(other))
             return false;
 
         _nextCheckpointIndex++;
         RefreshCheckpointVisualStates();
         return true;
+    }
+
+    private bool ColliderBelongsToActivePlayer(Collider other)
+    {
+        if (other == null || _activePlayerRoot == null)
+            return false;
+
+        var resolvedRoot = ResolvePlayerRoot(other);
+        if (resolvedRoot != null && resolvedRoot == _activePlayerRoot)
+            return true;
+
+        if (other.transform.IsChildOf(_activePlayerRoot.transform))
+            return true;
+
+        var activeInput = _activePlayerRoot.GetComponentInParent<PlayerInput>();
+        var otherInput = other.GetComponentInParent<PlayerInput>();
+        if (activeInput != null && otherInput != null && activeInput == otherInput)
+            return true;
+
+        var activeRb = _activePlayerRoot.GetComponentInParent<Rigidbody>();
+        if (activeRb != null && other.attachedRigidbody != null && other.attachedRigidbody == activeRb)
+            return true;
+
+        return false;
     }
 
     private void CompleteRace()
@@ -1121,6 +1147,7 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
 
         var container = GetOrCreateGeneratedCheckpointContainerRuntime();
         _runtimeCheckpointRenderers.Clear();
+        _runtimeCheckpointObjects.Clear();
 
         int required = generatedCheckpoints != null ? generatedCheckpoints.Count : 0;
 
@@ -1152,6 +1179,7 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
             var box = go.GetComponent<BoxCollider>();
             if (box == null)
                 box = go.AddComponent<BoxCollider>();
+
             box.isTrigger = true;
             box.enabled = false;
             box.size = Vector3.one;
@@ -1159,16 +1187,23 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
             var trigger = go.GetComponent<RaceCheckpointTrigger>();
             if (trigger == null)
                 trigger = go.AddComponent<RaceCheckpointTrigger>();
+
             trigger.Initialize(this, i);
 
             var renderer = go.GetComponent<Renderer>();
             if (renderer != null)
             {
                 if (checkpointMaterial != null)
-                    renderer.sharedMaterial = checkpointMaterial;
+                    renderer.material = new Material(checkpointMaterial);
 
                 _runtimeCheckpointRenderers.Add(renderer);
             }
+            else
+            {
+                _runtimeCheckpointRenderers.Add(null);
+            }
+
+            _runtimeCheckpointObjects.Add(go);
         }
 
         for (int i = container.childCount - 1; i >= required; i--)
@@ -1196,18 +1231,37 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
 
         EnsureRuntimeCheckpointRendererCache();
 
-        for (int i = 0; i < _runtimeCheckpointRenderers.Count; i++)
+        int checkpointCount = generatedCheckpoints != null ? generatedCheckpoints.Count : 0;
+        int finalIndex = checkpointCount - 1;
+
+        for (int i = 0; i < checkpointCount; i++)
         {
-            Color c = checkpointUpcomingColor;
+            GameObject go = i < _runtimeCheckpointObjects.Count ? _runtimeCheckpointObjects[i] : null;
+            Renderer renderer = i < _runtimeCheckpointRenderers.Count ? _runtimeCheckpointRenderers[i] : null;
 
-            if (i < _nextCheckpointIndex)
-                c = checkpointTriggeredColor;
+            bool cleared = i < _nextCheckpointIndex;
+
+            if (go != null)
+                go.SetActive(_attemptActive && !cleared);
+
+            if (renderer == null || cleared)
+                continue;
+
+            Color c;
+            if (i == finalIndex)
+            {
+                c = checkpointFinalColor;
+            }
             else if (_attemptActive && i == _nextCheckpointIndex)
+            {
                 c = checkpointCurrentColor;
+            }
             else
+            {
                 c = checkpointUpcomingColor;
+            }
 
-            SetRendererColour(_runtimeCheckpointRenderers[i], c);
+            SetRendererColour(renderer, c);
         }
     }
 

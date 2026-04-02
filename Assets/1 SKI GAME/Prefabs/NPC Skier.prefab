@@ -422,7 +422,7 @@ MonoBehaviour:
   skiGroundClearance: 0.05
   skiGroundRayHeight: 2
   skiGroundRayDistance: 5
-  controlsEnabled: 1
+  controlsEnabled: 0
 --- !u!114 &3815614781584907458
 MonoBehaviour:
   m_ObjectHideFlags: 0

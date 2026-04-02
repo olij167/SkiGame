@@ -66,8 +66,40 @@ namespace TimeWeather
             [Range(0f, 1f)] public float cloudSunLightStrength = 0.60f;
 
             [Header("Scene Cloud Layer Controls")]
-            [Range(0f, 1f)] public float planeEdgeFade = 0.25f;
-            [Range(0f, 1f)] public float planeRadialFade = 0.35f;
+            public Vector2 sceneCloudAlphaRange = new Vector2(0.40f, 0.95f);
+            public Vector2 sceneCloudPowerRange = new Vector2(1.2f, 2.4f);
+
+            [Range(0.01f, 0.5f)] public float sceneCloudSoftness = 0.18f;
+            [Range(-0.5f, 0.5f)] public float sceneCloudCoverageBias = 0.04f;
+            [Range(0f, 1f)] public float sceneCloudTurbulence = 0.42f;
+            [Range(0f, 1f)] public float sceneCloudWarpStrength = 0.18f;
+
+            public Color sceneCloudTint = new Color(0.94f, 0.96f, 0.98f, 1f);
+            public Color sceneCloudShadowTint = new Color(0.58f, 0.63f, 0.70f, 1f);
+
+            [Range(0f, 1f)] public float planeEdgeFade = 0.10f;
+            [Range(0f, 1f)] public float planeRadialFade = 0.16f;
+            [Range(0f, 1f)] public float planeHeightFade = 0.10f;
+
+            [Range(0f, 8f)] public float sceneCloudFresnelFade = 1.75f;
+            [Range(0f, 2f)] public float sceneCloudMacroRoundness = 1.10f;
+            [Range(0f, 2f)] public float sceneCloudDetailStrength = 0.60f;
+            [Range(0.5f, 3f)] public float sceneCloudDensityContrast = 1.45f;
+
+            [Range(0f, 2f)] public float sceneCloudErosionStrength = 0.55f;
+            [Range(0f, 2f)] public float sceneCloudSecondLayerStrength = 0.60f;
+            [Range(0f, 2f)] public float sceneCloudSilverLiningStrength = 0.30f;
+            [Range(0f, 2f)] public float sceneCloudBottomDarkening = 0.85f;
+
+            [Range(0.25f, 2f)] public float sceneCloudDriftMultiplier = 1.0f;
+
+            [Header("Terrain Cloud Shadow Controls")]
+            [Range(0f, 1f)] public float terrainCloudShadowStrength = 0.22f;
+            [Range(20f, 1200f)] public float terrainCloudShadowScale = 320f;
+            [Range(0.01f, 0.5f)] public float terrainCloudShadowSoftness = 0.14f;
+            [Range(-0.5f, 0.5f)] public float terrainCloudShadowBias = 0.04f;
+            [Range(0.25f, 2f)] public float terrainCloudShadowDriftMultiplier = 1.0f;
+            public Color terrainCloudShadowTint = new Color(0.80f, 0.84f, 0.90f, 1f);
 
             [Header("Volumetric Cloud Controls")]
             [Range(0f, 2f)] public float volumeDensity = 0.65f;
@@ -236,9 +268,28 @@ namespace TimeWeather
         private static readonly int ID_VolEdgeFade = Shader.PropertyToID("_VolEdgeFade");
         private static readonly int ID_VolFieldOffset = Shader.PropertyToID("_VolFieldOffset");
 
+        private static readonly int ID_ShadowColour = Shader.PropertyToID("_ShadowColour");
+        private static readonly int ID_HeightFade = Shader.PropertyToID("_HeightFade");
+        private static readonly int ID_FresnelFade = Shader.PropertyToID("_FresnelFade");
+        private static readonly int ID_MacroRoundness = Shader.PropertyToID("_MacroRoundness");
+        private static readonly int ID_DetailStrength = Shader.PropertyToID("_DetailStrength");
+        private static readonly int ID_DensityContrast = Shader.PropertyToID("_DensityContrast");
+        private static readonly int ID_ErosionStrength = Shader.PropertyToID("_ErosionStrength");
+        private static readonly int ID_SecondLayerStrength = Shader.PropertyToID("_SecondLayerStrength");
+        private static readonly int ID_SilverLiningStrength = Shader.PropertyToID("_SilverLiningStrength");
+        private static readonly int ID_BottomDarkening = Shader.PropertyToID("_BottomDarkening");
+
+        private static readonly int ID_WeatherCloudShadowStrength = Shader.PropertyToID("_WeatherCloudShadowStrength");
+        private static readonly int ID_WeatherCloudShadowScale = Shader.PropertyToID("_WeatherCloudShadowScale");
+        private static readonly int ID_WeatherCloudShadowSoftness = Shader.PropertyToID("_WeatherCloudShadowSoftness");
+        private static readonly int ID_WeatherCloudShadowBias = Shader.PropertyToID("_WeatherCloudShadowBias");
+        private static readonly int ID_WeatherCloudShadowOffset = Shader.PropertyToID("_WeatherCloudShadowOffset");
+        private static readonly int ID_WeatherCloudShadowTint = Shader.PropertyToID("_WeatherCloudShadowTint");
+
         private Vector2 _lastCloudSpeed;
 
         private Vector2 _globalVolumetricFieldOffset;
+        private Vector2 _globalTerrainCloudShadowOffset;
 
         [Header("Cloud Drift Multipliers")]
         [Tooltip("Extra drift multiplier applied to the skybox cloud speed.")]
@@ -612,12 +663,12 @@ namespace TimeWeather
         {
             if (preset == null || hourly == null) return;
 
-            hourly.cloudPower = Random.Range(preset.cloudPowerRange.x, preset.cloudPowerRange.y);
-            hourly.cloudAlphaTarget = Random.Range(preset.cloudAlphaRange.x, preset.cloudAlphaRange.y);
+            // Shared wind / timing
             hourly.windSpeedTarget = Random.Range(preset.windSpeedRange.x, preset.windSpeedRange.y);
             hourly.windDirection = Random.Range(preset.windDirectionRange.x, preset.windDirectionRange.y);
             hourly.gustStrength = Random.Range(preset.gustStrengthRange.x, preset.gustStrengthRange.y);
 
+            // Skybox clouds
             hourly.skyCloudAlpha = Random.Range(preset.skyCloudAlphaRange.x, preset.skyCloudAlphaRange.y);
             hourly.skyCloudPower = Random.Range(preset.skyCloudPowerRange.x, preset.skyCloudPowerRange.y);
             hourly.cloudSoftness = preset.cloudSoftness;
@@ -628,8 +679,38 @@ namespace TimeWeather
             hourly.cloudShadowStrength = preset.cloudShadowStrength;
             hourly.cloudGreyStrength = preset.cloudGreyStrength;
             hourly.cloudSunLightStrength = preset.cloudSunLightStrength;
+
+            // Dedicated scene cloud layer
+            hourly.sceneCloudAlpha = Random.Range(preset.sceneCloudAlphaRange.x, preset.sceneCloudAlphaRange.y);
+            hourly.sceneCloudPower = Random.Range(preset.sceneCloudPowerRange.x, preset.sceneCloudPowerRange.y);
+            hourly.sceneCloudSoftness = preset.sceneCloudSoftness;
+            hourly.sceneCloudCoverageBias = preset.sceneCloudCoverageBias;
+            hourly.sceneCloudTurbulence = preset.sceneCloudTurbulence;
+            hourly.sceneCloudWarpStrength = preset.sceneCloudWarpStrength;
+            hourly.sceneCloudTint = preset.sceneCloudTint;
+            hourly.sceneCloudShadowTint = preset.sceneCloudShadowTint;
             hourly.planeEdgeFade = preset.planeEdgeFade;
             hourly.planeRadialFade = preset.planeRadialFade;
+            hourly.planeHeightFade = preset.planeHeightFade;
+            hourly.sceneCloudFresnelFade = preset.sceneCloudFresnelFade;
+            hourly.sceneCloudMacroRoundness = preset.sceneCloudMacroRoundness;
+            hourly.sceneCloudDetailStrength = preset.sceneCloudDetailStrength;
+            hourly.sceneCloudDensityContrast = preset.sceneCloudDensityContrast;
+            hourly.sceneCloudErosionStrength = preset.sceneCloudErosionStrength;
+            hourly.sceneCloudSecondLayerStrength = preset.sceneCloudSecondLayerStrength;
+            hourly.sceneCloudSilverLiningStrength = preset.sceneCloudSilverLiningStrength;
+            hourly.sceneCloudBottomDarkening = preset.sceneCloudBottomDarkening;
+            hourly.sceneCloudDriftMultiplier = preset.sceneCloudDriftMultiplier;
+
+            // Terrain cloud shadow field
+            hourly.terrainCloudShadowStrength = preset.terrainCloudShadowStrength;
+            hourly.terrainCloudShadowScale = preset.terrainCloudShadowScale;
+            hourly.terrainCloudShadowSoftness = preset.terrainCloudShadowSoftness;
+            hourly.terrainCloudShadowBias = preset.terrainCloudShadowBias;
+            hourly.terrainCloudShadowDriftMultiplier = preset.terrainCloudShadowDriftMultiplier;
+            hourly.terrainCloudShadowTint = preset.terrainCloudShadowTint;
+
+            // Volumetric clouds
             hourly.volumeDensity = preset.volumeDensity;
             hourly.volumeAbsorption = preset.volumeAbsorption;
             hourly.volumeLightingStrength = preset.volumeLightingStrength;
@@ -861,15 +942,50 @@ namespace TimeWeather
                 skyboxCloudSpeed = fallbackDir * minimumSkyboxDrift;
             }
 
-            float planeAlphaTarget = Mathf.Lerp(currentHour.cloudAlphaTarget, nextHour.cloudAlphaTarget, hourlyTimePercent);
-            float planePowerTarget = Mathf.Lerp(currentHour.cloudPower, nextHour.cloudPower, hourlyTimePercent);
-            float cloudSoftness = Mathf.Lerp(currentHour.cloudSoftness, nextHour.cloudSoftness, hourlyTimePercent);
-            float cloudCoverageBias = Mathf.Lerp(currentHour.cloudCoverageBias, nextHour.cloudCoverageBias, hourlyTimePercent);
-            float cloudTurbulence = Mathf.Lerp(currentHour.cloudTurbulence, nextHour.cloudTurbulence, hourlyTimePercent);
-            float cloudWarpStrength = Mathf.Lerp(currentHour.cloudWarpStrength, nextHour.cloudWarpStrength, hourlyTimePercent);
-            Color cloudTint = Color.Lerp(currentHour.cloudTint, nextHour.cloudTint, hourlyTimePercent);
+            // Skybox shaping (keep existing shared skybox controls)
+            float skyCloudSoftness = Mathf.Lerp(currentHour.cloudSoftness, nextHour.cloudSoftness, hourlyTimePercent);
+            float skyCloudCoverageBias = Mathf.Lerp(currentHour.cloudCoverageBias, nextHour.cloudCoverageBias, hourlyTimePercent);
+            float skyCloudTurbulence = Mathf.Lerp(currentHour.cloudTurbulence, nextHour.cloudTurbulence, hourlyTimePercent);
+            float skyCloudWarpStrength = Mathf.Lerp(currentHour.cloudWarpStrength, nextHour.cloudWarpStrength, hourlyTimePercent);
+            Color skyCloudTint = Color.Lerp(currentHour.cloudTint, nextHour.cloudTint, hourlyTimePercent);
+
+            // Dedicated scene cloud shaping
+            float sceneCloudAlphaTarget = Mathf.Lerp(currentHour.sceneCloudAlpha, nextHour.sceneCloudAlpha, hourlyTimePercent);
+            float sceneCloudPowerTarget = Mathf.Lerp(currentHour.sceneCloudPower, nextHour.sceneCloudPower, hourlyTimePercent);
+            float sceneCloudSoftness = Mathf.Lerp(currentHour.sceneCloudSoftness, nextHour.sceneCloudSoftness, hourlyTimePercent);
+            float sceneCloudCoverageBias = Mathf.Lerp(currentHour.sceneCloudCoverageBias, nextHour.sceneCloudCoverageBias, hourlyTimePercent);
+            float sceneCloudTurbulence = Mathf.Lerp(currentHour.sceneCloudTurbulence, nextHour.sceneCloudTurbulence, hourlyTimePercent);
+            float sceneCloudWarpStrength = Mathf.Lerp(currentHour.sceneCloudWarpStrength, nextHour.sceneCloudWarpStrength, hourlyTimePercent);
+            Color sceneCloudTint = Color.Lerp(currentHour.sceneCloudTint, nextHour.sceneCloudTint, hourlyTimePercent);
+            Color sceneCloudShadowTint = Color.Lerp(currentHour.sceneCloudShadowTint, nextHour.sceneCloudShadowTint, hourlyTimePercent);
+
             float planeEdgeFade = Mathf.Lerp(currentHour.planeEdgeFade, nextHour.planeEdgeFade, hourlyTimePercent);
             float planeRadialFade = Mathf.Lerp(currentHour.planeRadialFade, nextHour.planeRadialFade, hourlyTimePercent);
+            float planeHeightFade = Mathf.Lerp(currentHour.planeHeightFade, nextHour.planeHeightFade, hourlyTimePercent);
+            float sceneCloudFresnelFade = Mathf.Lerp(currentHour.sceneCloudFresnelFade, nextHour.sceneCloudFresnelFade, hourlyTimePercent);
+            float sceneCloudMacroRoundness = Mathf.Lerp(currentHour.sceneCloudMacroRoundness, nextHour.sceneCloudMacroRoundness, hourlyTimePercent);
+            float sceneCloudDetailStrength = Mathf.Lerp(currentHour.sceneCloudDetailStrength, nextHour.sceneCloudDetailStrength, hourlyTimePercent);
+            float sceneCloudDensityContrast = Mathf.Lerp(currentHour.sceneCloudDensityContrast, nextHour.sceneCloudDensityContrast, hourlyTimePercent);
+            float sceneCloudErosionStrength = Mathf.Lerp(currentHour.sceneCloudErosionStrength, nextHour.sceneCloudErosionStrength, hourlyTimePercent);
+            float sceneCloudSecondLayerStrength = Mathf.Lerp(currentHour.sceneCloudSecondLayerStrength, nextHour.sceneCloudSecondLayerStrength, hourlyTimePercent);
+            float sceneCloudSilverLiningStrength = Mathf.Lerp(currentHour.sceneCloudSilverLiningStrength, nextHour.sceneCloudSilverLiningStrength, hourlyTimePercent);
+            float sceneCloudBottomDarkening = Mathf.Lerp(currentHour.sceneCloudBottomDarkening, nextHour.sceneCloudBottomDarkening, hourlyTimePercent);
+            float sceneCloudDriftMultiplier = Mathf.Lerp(currentHour.sceneCloudDriftMultiplier, nextHour.sceneCloudDriftMultiplier, hourlyTimePercent);
+
+            // Terrain shadow field
+            float terrainCloudShadowStrength = Mathf.Lerp(currentHour.terrainCloudShadowStrength, nextHour.terrainCloudShadowStrength, hourlyTimePercent);
+            float terrainCloudShadowScale = Mathf.Lerp(currentHour.terrainCloudShadowScale, nextHour.terrainCloudShadowScale, hourlyTimePercent);
+            float terrainCloudShadowSoftness = Mathf.Lerp(currentHour.terrainCloudShadowSoftness, nextHour.terrainCloudShadowSoftness, hourlyTimePercent);
+            float terrainCloudShadowBias = Mathf.Lerp(currentHour.terrainCloudShadowBias, nextHour.terrainCloudShadowBias, hourlyTimePercent);
+            float terrainCloudShadowDriftMultiplier = Mathf.Lerp(currentHour.terrainCloudShadowDriftMultiplier, nextHour.terrainCloudShadowDriftMultiplier, hourlyTimePercent);
+            Color terrainCloudShadowTint = Color.Lerp(currentHour.terrainCloudShadowTint, nextHour.terrainCloudShadowTint, hourlyTimePercent);
+
+            // Per-system drift separation
+            sceneCloudSpeed = smoothedCloudDrift * sceneCloudDriftScale * sceneCloudDriftMultiplier;
+            Vector2 terrainCloudShadowSpeed = smoothedCloudDrift * sceneCloudDriftScale * terrainCloudShadowDriftMultiplier;
+
+            // Accumulate UV-space offset for cheap projected terrain shadows
+            _globalTerrainCloudShadowOffset += terrainCloudShadowSpeed * Time.deltaTime;
 
             for (int r = 0; r < cloudRenderer.Length; r++)
             {
@@ -879,8 +995,8 @@ namespace TimeWeather
 
                 bool isActive = _activeCloudSet.Contains(hc.cloudRenderer);
 
-                float desiredPlaneAlpha = isActive ? planeAlphaTarget : 0f;
-                float desiredPlanePower = isActive ? planePowerTarget : 5f;
+                float desiredPlaneAlpha = isActive ? sceneCloudAlphaTarget : 0f;
+                float desiredPlanePower = isActive ? sceneCloudPowerTarget : 5f;
 
                 hc.cloudAlpha = Mathf.Lerp(hc.cloudAlpha, desiredPlaneAlpha, hourlyTimePercent * (isActive ? 0.5f : 0.1f));
                 hc.cloudPower = Mathf.Lerp(hc.cloudPower, desiredPlanePower, hourlyTimePercent * (isActive ? 0.35f : 0.08f));
@@ -889,17 +1005,35 @@ namespace TimeWeather
                 hc.mpb.SetFloat(ID_CloudAlpha, hc.cloudAlpha);
                 hc.mpb.SetFloat(ID_CloudPower, hc.cloudPower);
                 hc.mpb.SetVector(ID_CloudSpeed, new Vector4(sceneCloudSpeed.x, sceneCloudSpeed.y, 0f, 0f));
-                hc.mpb.SetFloat(ID_CloudSoftness, cloudSoftness);
-                hc.mpb.SetFloat(ID_CloudCoverageBias, cloudCoverageBias);
-                hc.mpb.SetFloat(ID_CloudTurbulence, cloudTurbulence);
-                hc.mpb.SetFloat(ID_CloudWarpStrength, cloudWarpStrength);
+                hc.mpb.SetFloat(ID_CloudSoftness, sceneCloudSoftness);
+                hc.mpb.SetFloat(ID_CloudCoverageBias, sceneCloudCoverageBias);
+                hc.mpb.SetFloat(ID_CloudTurbulence, sceneCloudTurbulence);
+                hc.mpb.SetFloat(ID_CloudWarpStrength, sceneCloudWarpStrength);
                 hc.mpb.SetFloat(ID_EdgeFade, planeEdgeFade);
                 hc.mpb.SetFloat(ID_RadialFade, planeRadialFade);
-                hc.mpb.SetColor(ID_CloudColour, cloudTint);
+                hc.mpb.SetFloat(ID_HeightFade, planeHeightFade);
+                hc.mpb.SetFloat(ID_FresnelFade, sceneCloudFresnelFade);
+                hc.mpb.SetFloat(ID_MacroRoundness, sceneCloudMacroRoundness);
+                hc.mpb.SetFloat(ID_DetailStrength, sceneCloudDetailStrength);
+                hc.mpb.SetFloat(ID_DensityContrast, sceneCloudDensityContrast);
+                hc.mpb.SetFloat(ID_ErosionStrength, sceneCloudErosionStrength);
+                hc.mpb.SetFloat(ID_SecondLayerStrength, sceneCloudSecondLayerStrength);
+                hc.mpb.SetFloat(ID_SilverLiningStrength, sceneCloudSilverLiningStrength);
+                hc.mpb.SetFloat(ID_BottomDarkening, sceneCloudBottomDarkening);
+                hc.mpb.SetColor(ID_CloudColour, sceneCloudTint);
+                hc.mpb.SetColor(ID_ShadowColour, sceneCloudShadowTint);
                 hc.cloudRenderer.SetPropertyBlock(hc.mpb);
 
                 cloudRenderer[r] = hc;
             }
+
+            // Global terrain cloud-shadow controls for world-space ground shaders
+            Shader.SetGlobalFloat(ID_WeatherCloudShadowStrength, terrainCloudShadowStrength);
+            Shader.SetGlobalFloat(ID_WeatherCloudShadowScale, Mathf.Max(1f, terrainCloudShadowScale));
+            Shader.SetGlobalFloat(ID_WeatherCloudShadowSoftness, Mathf.Max(0.01f, terrainCloudShadowSoftness));
+            Shader.SetGlobalFloat(ID_WeatherCloudShadowBias, terrainCloudShadowBias);
+            Shader.SetGlobalVector(ID_WeatherCloudShadowOffset, new Vector4(_globalTerrainCloudShadowOffset.x, _globalTerrainCloudShadowOffset.y, 0f, 0f));
+            Shader.SetGlobalColor(ID_WeatherCloudShadowTint, terrainCloudShadowTint);
 
             var skyMat = RenderSettings.skybox;
             if (skyMat != null)
@@ -919,11 +1053,11 @@ namespace TimeWeather
                 if (skyMat.HasProperty("_CloudAlpha")) skyMat.SetFloat("_CloudAlpha", skyCloudAlpha);
                 if (skyMat.HasProperty("_CloudPower")) skyMat.SetFloat("_CloudPower", skyCloudPower);
                 if (skyMat.HasProperty("_CloudSpeed")) skyMat.SetVector("_CloudSpeed", new Vector4(skyboxCloudSpeed.x, skyboxCloudSpeed.y, 0f, 0f));
-                if (skyMat.HasProperty("_CloudSoftness")) skyMat.SetFloat("_CloudSoftness", cloudSoftness);
-                if (skyMat.HasProperty("_CloudCoverageBias")) skyMat.SetFloat("_CloudCoverageBias", cloudCoverageBias);
-                if (skyMat.HasProperty("_CloudTurbulence")) skyMat.SetFloat("_CloudTurbulence", cloudTurbulence);
-                if (skyMat.HasProperty("_CloudWarpStrength")) skyMat.SetFloat("_CloudWarpStrength", cloudWarpStrength);
-                if (skyMat.HasProperty("_CloudColor")) skyMat.SetColor("_CloudColor", cloudTint);
+                if (skyMat.HasProperty("_CloudSoftness")) skyMat.SetFloat("_CloudSoftness", skyCloudSoftness);
+                if (skyMat.HasProperty("_CloudCoverageBias")) skyMat.SetFloat("_CloudCoverageBias", skyCloudCoverageBias);
+                if (skyMat.HasProperty("_CloudTurbulence")) skyMat.SetFloat("_CloudTurbulence", skyCloudTurbulence);
+                if (skyMat.HasProperty("_CloudWarpStrength")) skyMat.SetFloat("_CloudWarpStrength", skyCloudWarpStrength);
+                if (skyMat.HasProperty("_CloudColor")) skyMat.SetColor("_CloudColor", skyCloudTint);
                 if (skyMat.HasProperty("_CloudShadowStrength")) skyMat.SetFloat("_CloudShadowStrength", skyShadowStrength);
                 if (skyMat.HasProperty("_CloudGreyStrength")) skyMat.SetFloat("_CloudGreyStrength", skyGreyStrength);
                 if (skyMat.HasProperty("_CloudSunLightStrength")) skyMat.SetFloat("_CloudSunLightStrength", skySunLightStrength);
@@ -1105,6 +1239,33 @@ namespace TimeWeather
         public float cloudSunLightStrength;
         public float planeEdgeFade;
         public float planeRadialFade;
+
+        public float sceneCloudAlpha;
+        public float sceneCloudPower;
+        public float sceneCloudSoftness;
+        public float sceneCloudCoverageBias;
+        public float sceneCloudTurbulence;
+        public float sceneCloudWarpStrength;
+        public Color sceneCloudTint = Color.white;
+        public Color sceneCloudShadowTint = new Color(0.58f, 0.63f, 0.70f, 1f);
+
+        public float planeHeightFade;
+        public float sceneCloudFresnelFade;
+        public float sceneCloudMacroRoundness;
+        public float sceneCloudDetailStrength;
+        public float sceneCloudDensityContrast;
+        public float sceneCloudErosionStrength;
+        public float sceneCloudSecondLayerStrength;
+        public float sceneCloudSilverLiningStrength;
+        public float sceneCloudBottomDarkening;
+        public float sceneCloudDriftMultiplier;
+
+        public float terrainCloudShadowStrength;
+        public float terrainCloudShadowScale;
+        public float terrainCloudShadowSoftness;
+        public float terrainCloudShadowBias;
+        public float terrainCloudShadowDriftMultiplier;
+        public Color terrainCloudShadowTint = Color.white;
 
         public float volumeDensity;
         public float volumeAbsorption;
