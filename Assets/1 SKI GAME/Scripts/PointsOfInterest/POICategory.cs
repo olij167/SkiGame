@@ -10,6 +10,9 @@ namespace SkiGame.POI
         Kiosk = 30,
         Landmark = 40,
         Service = 50,
+        Race = 60,
+        Medical = 70,
+        Vehicle = 80,
         Custom = 100
     }
 

@@ -1,0 +1,83 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/Activities/RaceActivityOverlay.uss?fileID=7433441132597879392&amp;guid=40b44350dab52a54fa505c900a7c071c&amp;type=3#RaceActivityOverlay" />
+    <ui:VisualElement name="RaceOverlayRoot" class="race-overlay-root">
+        <ui:VisualElement name="RaceCenterCallout" class="race-center-callout" style="display: flex;">
+            <ui:Label name="Lbl_RaceCenterCallout" text="VICTORY" class="race-center-callout-label" style="-unity-font-definition: url(&quot;project://database/Assets/Lots%20of%20fonts/1.%20More%20Fonts/GreatLakesNF.ttf?fileID=12800000&amp;guid=024312209a8fd7c44bcb99e43ad51938&amp;type=3#GreatLakesNF&quot;); display: none;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="RaceToastPanel" class="race-toast-panel race-panel" style="display: none;">
+            <ui:Label name="Lbl_RaceToast" text="Unlocked League 2" class="race-toast-text" />
+        </ui:VisualElement>
+        <ui:VisualElement name="RaceSelectPanel" class="race-select-panel race-panel" style="display: none; top: 20px; bottom: auto; left: 20px;">
+            <ui:VisualElement class="race-panel-header">
+                <ui:Label name="Lbl_RaceSelectTitle" text="Race Name" class="race-panel-title" />
+                <ui:Label name="Lbl_RaceSelectBadge" text="Race" class="race-panel-badge" />
+            </ui:VisualElement>
+            <ui:Label name="Lbl_RaceSelectSubtitle" text="Choose a league to enter." class="race-body-text race-muted-text" />
+            <ui:VisualElement class="race-league-card">
+                <ui:VisualElement class="race-league-row">
+                    <ui:Button name="Btn_RacePrevLeague" text="Q" class="race-league-cycle-button" />
+                    <ui:VisualElement class="race-league-copy">
+                        <ui:Label name="Lbl_RaceLeagueName" text="League 1" class="race-league-name" />
+                        <ui:Label name="Lbl_RaceLeagueStatus" text="Unlocked" class="race-league-status" />
+                    </ui:VisualElement>
+                    <ui:Button name="Btn_RaceNextLeague" text="E" class="race-league-cycle-button" />
+                </ui:VisualElement>
+                <ui:Label name="Lbl_RaceLeagueDescription" text="Beginner downhill event." class="race-body-text" />
+            </ui:VisualElement>
+            <ui:VisualElement class="race-stat-grid">
+                <ui:VisualElement class="race-stat-card">
+                    <ui:Label text="Best Result" class="race-stat-caption" />
+                    <ui:Label name="Lbl_RaceBestPlacement" text="--" class="race-stat-value" />
+                </ui:VisualElement>
+                <ui:VisualElement class="race-stat-card">
+                    <ui:Label text="Best Time" class="race-stat-caption" />
+                    <ui:Label name="Lbl_RaceBestTime" text="--" class="race-stat-value" />
+                </ui:VisualElement>
+                <ui:VisualElement class="race-stat-card">
+                    <ui:Label text="Reward" class="race-stat-caption" />
+                    <ui:Label name="Lbl_RaceReward" text="$75" class="race-stat-value" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label name="Lbl_RaceBonusSummary" text="1st +$50  •  2nd +$25  •  3rd +$10" class="race-body-text race-muted-text" />
+            <ui:Label name="Lbl_RaceStartHint" text="Tap E to cycle forward, tap Q to cycle back, hold Interact to begin." class="race-body-text race-hint-text" />
+        </ui:VisualElement>
+        <ui:VisualElement name="RaceActivePanel" class="race-active-panel race-panel" style="display: none; top: 20px; left: 20px;">
+            <ui:VisualElement class="race-panel-header">
+                <ui:VisualElement>
+                    <ui:Label name="Lbl_RaceActiveTitle" text="Race Name" class="race-panel-title" />
+                    <ui:Label name="Lbl_RaceActiveLeague" text="League 1" class="race-body-text race-muted-text" />
+                </ui:VisualElement>
+                <ui:Label name="Lbl_RaceStateChip" text="Racing" class="race-state-chip" />
+            </ui:VisualElement>
+            <ui:VisualElement class="race-active-row">
+                <ui:VisualElement class="race-active-stat">
+                    <ui:Label text="Time" class="race-stat-caption" />
+                    <ui:Label name="Lbl_RaceActiveTime" text="00:00.00" class="race-active-value" />
+                </ui:VisualElement>
+                <ui:VisualElement class="race-active-stat">
+                    <ui:Label text="Checkpoint" class="race-stat-caption" />
+                    <ui:Label name="Lbl_RaceCheckpoint" text="1 / 8" class="race-active-value" />
+                </ui:VisualElement>
+                <ui:VisualElement class="race-active-stat">
+                    <ui:Label text="NPC Finish" class="race-stat-caption" />
+                    <ui:Label name="Lbl_RaceNpcProgress" text="0 / 3" class="race-active-value" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="race-progress-track">
+                <ui:VisualElement name="RaceCheckpointProgressFill" class="race-progress-fill" />
+            </ui:VisualElement>
+            <ui:Label name="Lbl_RaceActiveHint" text="Checkpoints replace standard map markers while the race is active." class="race-body-text race-muted-text" style="display: flex;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="RaceFailedBlocker" class="race-modal-blocker" style="display: none;">
+            <ui:VisualElement name="RaceFailedModal" class="race-modal-panel">
+                <ui:Label name="Lbl_RaceFailTitle" text="Race Failed" class="race-modal-title" />
+                <ui:Label name="Lbl_RaceFailBody" text="You missed the next checkpoint." class="race-modal-body" />
+                <ui:Label name="Lbl_RaceFailHint" text="Restart from the start gate, or quit and continue skiing from your current position." class="race-body-text race-muted-text" />
+                <ui:VisualElement class="race-modal-actions">
+                    <ui:Button name="Btn_RaceRestart" text="Restart Race" class="race-primary-button" />
+                    <ui:Button name="Btn_RaceQuit" text="Quit Race" class="race-secondary-button" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

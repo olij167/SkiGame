@@ -194,6 +194,9 @@ namespace SkiGame.Progression
                     {
                         anyUnlocked = true;
                         OnAchievementUnlocked?.Invoke(def);
+
+                        if (def.autoClaimRewardOnUnlock)
+                            TryClaimAchievement(def.id, out _);
                     }
                 }
             }
@@ -487,67 +490,7 @@ namespace SkiGame.Progression
         // If you want daily unique POIs etc., add daily-specific accumulators later.
         private float ReadMetricValue(PlayerStatsProfile profile, ProgressionMetric metric)
         {
-            if (profile == null) return 0f;
-
-            // Reuse the Task/Achievement definitions for metric reading if you prefer,
-            // but keep this local and explicit to avoid asset dependency here.
-            switch (metric)
-            {
-                // Session
-                case ProgressionMetric.SessionDistanceMeters: return profile.session.distanceMeters;
-                case ProgressionMetric.SessionVerticalAscentMeters: return profile.session.verticalAscentMeters;
-                case ProgressionMetric.SessionVerticalDescentMeters: return profile.session.verticalDescentMeters;
-
-                case ProgressionMetric.SessionTopSpeedMps: return profile.session.topSpeedMps;
-                case ProgressionMetric.SessionAverageSpeedMps: return profile.session.AverageSpeedMps;
-
-                case ProgressionMetric.SessionAirTimeSeconds: return profile.session.airTimeSeconds;
-                case ProgressionMetric.SessionAirDistanceMeters: return profile.session.airDistanceMeters;
-
-                case ProgressionMetric.SessionGrindTimeSeconds: return profile.session.grindTimeSeconds;
-                case ProgressionMetric.SessionGrindDistanceMeters: return profile.session.grindDistanceMeters;
-
-                case ProgressionMetric.SessionStacks: return profile.session.stacks;
-                case ProgressionMetric.SessionRunsCompleted: return profile.session.runsCompleted;
-                case ProgressionMetric.SessionLiftsUsed: return profile.session.liftsUsed;
-
-                case ProgressionMetric.SessionPlacesVisited: return profile.sessionVisitedLandmarkIds != null ? profile.sessionVisitedLandmarkIds.Count : 0;
-
-                // Lifetime
-                case ProgressionMetric.LifetimeTotalDistanceMeters: return profile.lifetime.totalDistanceMeters;
-                case ProgressionMetric.LifetimeTotalVerticalAscentMeters: return profile.lifetime.totalVerticalAscentMeters;
-                case ProgressionMetric.LifetimeTotalVerticalDescentMeters: return profile.lifetime.totalVerticalDescentMeters;
-
-                case ProgressionMetric.LifetimeTopSpeedMps: return profile.lifetime.topSpeedMps;
-                case ProgressionMetric.LifetimeAverageSpeedMps: return profile.lifetime.AverageSpeedMps;
-
-                case ProgressionMetric.LifetimeAirTimeSeconds: return profile.lifetime.totalAirTimeSeconds;
-                case ProgressionMetric.LifetimeAirDistanceMeters: return profile.lifetime.totalAirDistanceMeters;
-
-                case ProgressionMetric.LifetimeGrindTimeSeconds: return profile.lifetime.totalGrindTimeSeconds;
-                case ProgressionMetric.LifetimeGrindDistanceMeters: return profile.lifetime.totalGrindDistanceMeters;
-
-                case ProgressionMetric.LifetimeStacks: return profile.lifetime.totalStacks;
-                case ProgressionMetric.LifetimeRunsCompleted: return profile.lifetime.totalRunsCompleted;
-                case ProgressionMetric.LifetimeLiftsUsed: return profile.lifetime.totalLiftsUsed;
-
-                case ProgressionMetric.LifetimePlacesVisited: return profile.visitedLandmarkIds != null ? profile.visitedLandmarkIds.Count : 0;
-                // --- Back-compat aliases (old enum names) ---
-                case ProgressionMetric.LifetimeDistanceMeters: return profile.lifetime.totalDistanceMeters;
-                //case ProgressionMetric.LifetimeVerticalAscentMeters: return profile.lifetime.totalVerticalAscentMeters;
-                case ProgressionMetric.LifetimeVerticalDescentMeters: return profile.lifetime.totalVerticalDescentMeters;
-
-                // --- Run Progress (Daily ladders) ---
-                case ProgressionMetric.SessionRunsVisited: return profile.sessionVisitedRunIds != null ? profile.sessionVisitedRunIds.Count : 0;
-                case ProgressionMetric.SessionRunsCompletedClean: return profile.session.runsCompletedClean;
-                case ProgressionMetric.SessionTopRunSpeedMps: return profile.session.topRunSpeedMps;
-
-                case ProgressionMetric.LifetimeRunsVisited: return profile.visitedRunIds != null ? profile.visitedRunIds.Count : 0;
-                case ProgressionMetric.LifetimeRunsCompletedClean: return profile.lifetime.totalRunsCompletedClean;
-                case ProgressionMetric.LifetimeTopRunSpeedMps: return profile.lifetime.topRunSpeedMps;
-            }
-
-            return 0f;
+            return ProgressionMetricUtility.ReadMetricValue(profile, metric);
         }
 
         // -------------------- Daily Claiming API --------------------
@@ -600,7 +543,7 @@ namespace SkiGame.Progression
             if (!ladder.TryGetTierReward(tierIndex, out rewardGranted))
                 rewardGranted = ComputeDerivedReward(row.metric, tier.target, explicitReward: 0);
 
-            profile.currency += rewardGranted;
+            ProgressionEventRecorder.AddCurrency(profile, rewardGranted);
 
             tier.claimed = true;
             tier.lastRewardGranted = rewardGranted;
@@ -611,7 +554,7 @@ namespace SkiGame.Progression
                 int bonus = ladder.rowBonusReward > 0 ? ladder.rowBonusReward : ComputeDerivedRowBonus(row.metric, row.tiers.Count);
                 if (bonus > 0)
                 {
-                    profile.currency += bonus;
+                    ProgressionEventRecorder.AddCurrency(profile, bonus);
                     row.rowBonusClaimed = true;
                     rowBonusGranted = true;
                     rowBonusAmount = bonus;
@@ -662,6 +605,88 @@ namespace SkiGame.Progression
 
             return total;
         }
+
+        public bool TryClaimAchievement(string achievementId, out string failReason)
+        {
+            failReason = null;
+
+            var mgr = PlayerStatsManager.Instance;
+            var profile = mgr != null ? mgr.Profile : null;
+
+            if (profile == null)
+            {
+                failReason = "No profile loaded.";
+                return false;
+            }
+
+            if (catalog == null || catalog.achievements == null)
+            {
+                failReason = "No achievement catalog.";
+                return false;
+            }
+
+            AchievementDefinitionSO def = null;
+            for (int i = 0; i < catalog.achievements.Count; i++)
+            {
+                var candidate = catalog.achievements[i];
+                if (candidate == null || string.IsNullOrWhiteSpace(candidate.id))
+                    continue;
+
+                if (candidate.id == achievementId)
+                {
+                    def = candidate;
+                    break;
+                }
+            }
+
+            if (def == null)
+            {
+                failReason = "Achievement not found.";
+                return false;
+            }
+
+            if (!profile.HasAchievement(def.id))
+            {
+                failReason = "Achievement not completed yet.";
+                return false;
+            }
+
+            if (profile.HasClaimedAchievement(def.id))
+            {
+                failReason = "Reward already claimed.";
+                return false;
+            }
+
+            if (def.currencyReward > 0)
+                ProgressionEventRecorder.AddCurrency(profile, def.currencyReward);
+
+            if (def.skiPassLevelReward >= 0 && SkiPassManager.Instance != null)
+                SkiPassManager.Instance.TryGrantMinimumLevel(def.skiPassLevelReward);
+
+            if (def.customizationUnlocks != null)
+            {
+                profile.customization ??= new PlayerStatsProfile.CustomizationState();
+
+                for (int i = 0; i < def.customizationUnlocks.Count; i++)
+                {
+                    var opt = def.customizationUnlocks[i];
+                    if (opt == null || string.IsNullOrWhiteSpace(opt.id))
+                        continue;
+
+                    profile.customization.Unlock(opt.id);
+                }
+            }
+
+            if (!profile.TryClaimAchievementReward(def.id))
+            {
+                failReason = "Failed to mark reward as claimed.";
+                return false;
+            }
+
+            mgr.Save();
+            return true;
+        }
+
         [SerializeField] private int currencyToAdd = 10;
         
         [ContextMenu("Add Currency")]
@@ -673,7 +698,7 @@ namespace SkiGame.Progression
             var profile = mgr.Profile;
             if (profile == null) return;
 
-            profile.currency += currencyToAdd;
+            ProgressionEventRecorder.AddCurrency(profile, currencyToAdd);
         }
 
         /// <summary>
@@ -1184,7 +1209,7 @@ namespace SkiGame.Progression
 
             rewardGranted = ComputeTaskReward(def);
 
-            profile.currency += rewardGranted;
+            ProgressionEventRecorder.AddCurrency(profile, rewardGranted);
 
             state.claimed = true;
             state.lastRewardGranted = rewardGranted;

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 940d7b75e9995c344a745660c30f6bb9
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 177244
+  packageName: MIGHTY PORTAL
+  packageVersion: 2.2.
+  assetPath: Assets/MightyDevOps/Core/Data/MightyWindowManagerStateful.asset
+  uploadId: 767126

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: b21eb487de5f12949997912c833f4a71
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 177244
+  packageName: MIGHTY PORTAL
+  packageVersion: 2.2.
+  assetPath: Assets/MightyDevOps/Core/Models/HeatmapBlend.shader
+  uploadId: 767126

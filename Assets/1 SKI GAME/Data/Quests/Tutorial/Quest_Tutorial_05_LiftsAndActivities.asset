@@ -1,0 +1,263 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 301e6494375742f4b98ef78f27b43667, type: 3}
+  m_Name: Quest_Tutorial_05_LiftsAndActivities
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.QuestDefinitionSO
+  id: tutorial.lifts_and_activities
+  title: Lifts and Activities
+  description: Ride the lift, try a race, and complete your first rescue mission.
+  autoAccept: 1
+  tutorialQuest: 1
+  stages:
+  - id: tutorial.activities.stage1
+    title: Ride a Lift
+    description: Use your new pass to get up the mountain.
+    objectives:
+    - id: tutorial.mountlift
+      title: Ride the lift
+      description: Board a lift from the base station.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 70
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 0
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 0
+      trickTarget: 0
+      interactionTarget: 20
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []
+    - id: tutorial.dismountlift
+      title: Dismount at the top
+      description: Press interact again at the top station.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 70
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 0
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 0
+      trickTarget: 0
+      interactionTarget: 30
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []
+  - id: tutorial.activities.stage2
+    title: Your First Race
+    description: Find the race kiosk, sign up, and finish a race.
+    objectives:
+    - id: tutorial.racekiosk
+      title: Open the race kiosk
+      description: 
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 80
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 0
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 0
+      trickTarget: 0
+      interactionTarget: 0
+      uiTarget: 80
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []
+    - id: tutorial.racestart
+      title: Start a race
+      description: Accept a race and head through the start gate.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 50
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 0
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 0
+      trickTarget: 0
+      interactionTarget: 0
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []
+    - id: tutorial.racecomplete
+      title: Complete a race
+      description: Compete in a race and cross the finish line.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 50
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 0
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 10
+      trickTarget: 0
+      interactionTarget: 0
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []
+  - id: tutorial.activities.stage3
+    title: Your First Rescue
+    description: Visit the medic tent, accept a dispatch, and bring the mission home.
+    objectives:
+    - id: tutorial.rescuestart
+      title: Visit the medic tent and start a rescue mission
+      description: Talk to the medic tent and accept a mission.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 50
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 0
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 20
+      trickTarget: 0
+      interactionTarget: 0
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []
+    - id: tutorial.rescuecomplete
+      title: Complete the rescue mission
+      description: Recover the casualty and finish the mission.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 50
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 0
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 30
+      trickTarget: 0
+      interactionTarget: 0
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []

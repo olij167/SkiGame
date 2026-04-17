@@ -16,8 +16,8 @@
                 <ui:Label text="Recovery" class="resort-section-title" />
                 <ui:Label name="Lbl_ResortSorenessValue" text="100% recovered" class="resort-section-value" />
             </ui:VisualElement>
-            <ui:VisualElement class="resort-progress-bar">
-                <ui:VisualElement name="ResortSorenessFill" class="resort-progress-fill" />
+            <ui:VisualElement class="resort-progress-bar" style="border-top-left-radius: 12px; border-top-right-radius: 12px; border-bottom-right-radius: 12px; border-bottom-left-radius: 12px;">
+                <ui:VisualElement name="ResortSorenessFill" class="resort-progress-fill" style="border-top-left-radius: 12px; border-top-right-radius: 12px; border-bottom-right-radius: 12px; border-bottom-left-radius: 12px;" />
             </ui:VisualElement>
             <ui:Label name="Lbl_ResortRecoveryDetail" text="Fully recovered" class="resort-body-text" />
         </ui:VisualElement>

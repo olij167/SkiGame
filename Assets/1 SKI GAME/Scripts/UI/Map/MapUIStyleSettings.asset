@@ -12,52 +12,416 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3e6da8b23f93bb54985c4456cb561c24, type: 3}
   m_Name: MapUIStyleSettings
   m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Map.UI.MapUIStyleSettings
+  revision: 1329
+  dataVersion: 2
   usePOIRegistryMarkerColors: 1
-  markerSize: 12
-  markerSizeSelected: 16
-  markerBorderWidth: 1
-  markerBorderColor: {r: 0, g: 0, b: 0, a: 0.65}
-  playerMarkerSize: 20
-  playerMarkerColor: {r: 0.5176471, g: 0.4392157, b: 1, a: 1}
-  playerBorderWidth: 1
-  playerBorderColor: {r: 0, g: 0, b: 0, a: 0.65}
-  waypointMarkerSize: 14
-  waypointMarkerSizeSelected: 18
-  waypointMarkerBorderWidth: 2
-  waypointMarkerBorderWidthActive: 2
-  waypointMarkerBorderColor: {r: 0, g: 0, b: 0, a: 0.7}
-  waypointMarkerBorderColorActive: {r: 1, g: 1, b: 1, a: 1}
-  runWidthPx: 3
-  liftWidthPx: 3.5
-  selectedWidthMultiplier: 2
-  outlineExtraPx: 0
-  outlineExtraSelectedPx: 2
-  outlineColor: {r: 1, g: 1, b: 1, a: 0.35}
-  outlineColorSelected: {r: 1, g: 1, b: 1, a: 0.55}
-  polylineWidthZoomExponent: 0.75
-  polylineWidthZoomMinMul: 0.7
-  polylineWidthZoomMaxMul: 1.6
-  labelFontSize: 10
-  labelFontStyle: 1
-  labelColor: {r: 1, g: 1, b: 1, a: 0.8}
-  labelFontSizeSelected: 12
-  labelFontStyleSelected: 1
-  labelColorSelected: {r: 0.99371064, g: 0.96856225, b: 0.6780981, a: 1}
-  markerLabelFontSize: 8
-  markerLabelFontStyle: 0
-  markerLabelColor: {r: 1, g: 1, b: 1, a: 0.95}
-  markerLabelFontSizeSelected: 10
-  markerLabelFontStyleSelected: 1
-  markerLabelColorSelected: {r: 0.9411765, g: 0.9019608, b: 0.5490196, a: 1}
-  polylineLabelFontSize: 8
-  polylineLabelFontStyle: 0
-  polylineLabelColor: {r: 1, g: 1, b: 1, a: 0.95}
-  polylineLabelFontSizeSelected: 10
-  polylineLabelFontStyleSelected: 1
-  polylineLabelColorSelected: {r: 0.94117653, g: 0.90196085, b: 0.54901963, a: 1}
-  labelZoomCompensation: 0.25
-  labelFontMin: 12
-  labelFontMax: 32
-  labelPlateAlpha: 0.8
-  labelAccentStripeWidth: 5
-  labelClutteredOpacity: 0.65
+  poiMarkers:
+    size: 30
+    selectedSize: 40
+    borderWidth: 3
+    activeBorderWidth: 3
+    borderColor: {r: 0, g: 0, b: 0, a: 1}
+    activeBorderColor: {r: 0, g: 0, b: 0, a: 1}
+    fillColor: {r: 1, g: 1, b: 1, a: 1}
+    sprite: {fileID: 0}
+    spriteRotationOffsetDegrees: 0
+  waypointMarkers:
+    size: 20
+    selectedSize: 25
+    borderWidth: 3
+    activeBorderWidth: 3
+    borderColor: {r: 0, g: 0, b: 0, a: 1}
+    activeBorderColor: {r: 0.6509804, g: 0.10196079, b: 0.45098042, a: 1}
+    fillColor: {r: 1, g: 1, b: 1, a: 1}
+    sprite: {fileID: 21300000, guid: 6dce9b8d23d9c78439cea519d5d3d486, type: 3}
+    spriteRotationOffsetDegrees: 0
+  playerMarker:
+    size: 30
+    selectedSize: 30
+    borderWidth: 5
+    activeBorderWidth: 5
+    borderColor: {r: 0.8156863, g: 0.1254902, b: 0.5647059, a: 1}
+    activeBorderColor: {r: 0.8156863, g: 0.1254902, b: 0.5647059, a: 1}
+    fillColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+    sprite: {fileID: 21300000, guid: 4386762104e39da41b7cc03e74b04279, type: 3}
+    spriteRotationOffsetDegrees: 90
+  legendMarkers:
+    size: 25
+    selectedSize: 25
+    borderWidth: 3
+    activeBorderWidth: 3
+    borderColor: {r: 0, g: 0, b: 0, a: 0.65}
+    activeBorderColor: {r: 0, g: 0, b: 0, a: 0.65}
+    fillColor: {r: 1, g: 1, b: 1, a: 1}
+    sprite: {fileID: 21300000, guid: 9874f1ec2986b4642b100aa4f990b6b6, type: 3}
+    spriteRotationOffsetDegrees: 0
+  navigationArrows:
+    size: 20
+    sprite: {fileID: 21300000, guid: cc4973bdd1221ec40b3f5e1318b4d1a8, type: 3}
+    spriteRotationOffsetDegrees: 180
+  standardLabelStyles:
+  - id: minor
+    displayName: Minor
+    labelDisplayMode: 2
+    revealDirection: 1
+    fadeStartZoom: 2.05
+    fadeEndZoom: 2.6
+    labelPriority: 12
+    maxContextCount: 4
+    style:
+      fontSize: 12
+      selectedFontSize: 14
+      fontStyle: 1
+      selectedFontStyle: 1
+      color: {r: 0, g: 0.07450981, b: 0.18431373, a: 0.95}
+      selectedColor: {r: 1, g: 1, b: 1, a: 1}
+      zoomCompensation: 0.65
+      fontMin: 14
+      fontMax: 24
+      plateAlpha: 0.3
+      accentStripeWidth: 5
+      clutteredOpacity: 0.6
+      paddingX: 5
+      paddingY: 2
+      offsetY: 18
+      cornerRadius: 5
+  - id: standard
+    displayName: Standard
+    labelDisplayMode: 2
+    revealDirection: 1
+    fadeStartZoom: 1.85
+    fadeEndZoom: 2.4
+    labelPriority: 8
+    maxContextCount: 8
+    style:
+      fontSize: 12
+      selectedFontSize: 13
+      fontStyle: 1
+      selectedFontStyle: 1
+      color: {r: 0, g: 0.072955936, b: 0.18238991, a: 1}
+      selectedColor: {r: 1, g: 1, b: 1, a: 1}
+      zoomCompensation: 0.65
+      fontMin: 8
+      fontMax: 18
+      plateAlpha: 0.3
+      accentStripeWidth: 5
+      clutteredOpacity: 0.65
+      paddingX: 6
+      paddingY: 2.5
+      offsetY: 18
+      cornerRadius: 6
+  - id: major
+    displayName: Major
+    labelDisplayMode: 1
+    revealDirection: 1
+    fadeStartZoom: 1.2
+    fadeEndZoom: 1.9
+    labelPriority: 4
+    maxContextCount: 6
+    style:
+      fontSize: 14
+      selectedFontSize: 15
+      fontStyle: 1
+      selectedFontStyle: 1
+      color: {r: 0, g: 0.07450981, b: 0.18431373, a: 0.98}
+      selectedColor: {r: 1, g: 1, b: 1, a: 1}
+      zoomCompensation: 1
+      fontMin: 10
+      fontMax: 22
+      plateAlpha: 0.3
+      accentStripeWidth: 5
+      clutteredOpacity: 0.72
+      paddingX: 8
+      paddingY: 3
+      offsetY: 20
+      cornerRadius: 7
+  - id: region-major
+    displayName: Region Major
+    labelDisplayMode: 1
+    revealDirection: 2
+    fadeStartZoom: 1.1
+    fadeEndZoom: 2.2
+    labelPriority: 2
+    maxContextCount: 12
+    style:
+      fontSize: 14
+      selectedFontSize: 16
+      fontStyle: 1
+      selectedFontStyle: 1
+      color: {r: 0, g: 0.07450981, b: 0.18431373, a: 0.98}
+      selectedColor: {r: 1, g: 1, b: 1, a: 1}
+      zoomCompensation: 0.62
+      fontMin: 10
+      fontMax: 22
+      plateAlpha: 0.5
+      accentStripeWidth: 4
+      clutteredOpacity: 0.72
+      paddingX: 8
+      paddingY: 3
+      offsetY: 20
+      cornerRadius: 7
+  - id: waypoint-editable
+    displayName: Waypoint Editable
+    labelDisplayMode: 1
+    revealDirection: 1
+    fadeStartZoom: 1.2
+    fadeEndZoom: 1.9
+    labelPriority: 1
+    maxContextCount: 0
+    style:
+      fontSize: 8
+      selectedFontSize: 16
+      fontStyle: 1
+      selectedFontStyle: 1
+      color: {r: 0, g: 0.07450981, b: 0.18431373, a: 0.98}
+      selectedColor: {r: 1, g: 1, b: 1, a: 1}
+      zoomCompensation: 0.65
+      fontMin: 8
+      fontMax: 18
+      plateAlpha: 0.3
+      accentStripeWidth: 5
+      clutteredOpacity: 0
+      paddingX: 6
+      paddingY: 2.5
+      offsetY: 30
+      cornerRadius: 6
+  poiPolylines:
+    widthPx: 3
+    selectedWidthMultiplier: 2
+    outlineExtraPx: 1
+    outlineExtraSelectedPx: 2
+    outlineColor: {r: 1, g: 1, b: 1, a: 0.35}
+    outlineColorSelected: {r: 1, g: 1, b: 1, a: 0.55}
+    widthZoomExponent: 0.75
+    widthZoomMinMul: 0.7
+    widthZoomMaxMul: 1.6
+  trailLine:
+    widthPx: 8
+    selectedWidthMultiplier: 1
+    outlineExtraPx: 2
+    outlineExtraSelectedPx: 2
+    outlineColor: {r: 0.8156863, g: 0.1254902, b: 0.5647059, a: 1}
+    outlineColorSelected: {r: 0.8156863, g: 0.1254902, b: 0.5647059, a: 1}
+    widthZoomExponent: 0
+    widthZoomMinMul: 1
+    widthZoomMaxMul: 1
+  runAreas:
+    outlineWidthPx: 0.1
+    outlineWidthSelectedPx: 1
+    fillOpacity: 0.24
+    fillOpacitySelected: 0.42
+    outlineOpacity: 0.92
+    outlineOpacitySelected: 1
+  regions:
+    outlineWidthPx: 0
+    outlineWidthSelectedPx: 1
+    fillOpacity: 0.24
+    fillOpacitySelected: 0.42
+    outlineOpacity: 0.92
+    outlineOpacitySelected: 1
+  runLabelAnchorMode: 1
+  visibilityRules:
+  - elementName: Region
+    semantic: 1
+    poiType: 0
+    poiCategory: 0
+    matchAnySemantic: 0
+    matchAnyType: 1
+    matchAnyCategory: 1
+    markerDisplayMode: 1
+    labelStyleId: region-major
+    labelSizeMultiplier: 1
+    overrideMarkerSprite: 0
+    markerSprite: {fileID: 0}
+    overrideMarkerSizeMultiplier: 0
+    markerSizeMultiplier: 1
+    overrideMarkerDefaultColor: 0
+    markerDefaultColor: {r: 0, g: 0, b: 0, a: 0}
+    markerColorIsFallbackOnly: 1
+  - elementName: Ski Run
+    semantic: 10
+    poiType: 10
+    poiCategory: 0
+    matchAnySemantic: 0
+    matchAnyType: 0
+    matchAnyCategory: 1
+    markerDisplayMode: 0
+    labelStyleId: minor
+    labelSizeMultiplier: 0.75
+    overrideMarkerSprite: 1
+    markerSprite: {fileID: 21300000, guid: ada3f29e6973f6d4ca61ea8adc98548f, type: 3}
+    overrideMarkerSizeMultiplier: 1
+    markerSizeMultiplier: 0.8
+    overrideMarkerDefaultColor: 0
+    markerDefaultColor: {r: 0, g: 0, b: 0, a: 0}
+    markerColorIsFallbackOnly: 1
+  - elementName: Ski Lift
+    semantic: 20
+    poiType: 20
+    poiCategory: 0
+    matchAnySemantic: 0
+    matchAnyType: 0
+    matchAnyCategory: 1
+    markerDisplayMode: 0
+    labelStyleId: standard
+    labelSizeMultiplier: 0.75
+    overrideMarkerSprite: 1
+    markerSprite: {fileID: 21300000, guid: 2f89586f67a7fcc4b8c17e7f08b2adec, type: 3}
+    overrideMarkerSizeMultiplier: 0
+    markerSizeMultiplier: 1
+    overrideMarkerDefaultColor: 1
+    markerDefaultColor: {r: 0, g: 0, b: 0, a: 0}
+    markerColorIsFallbackOnly: 1
+  - elementName: Resort
+    semantic: 30
+    poiType: 90
+    poiCategory: 10
+    matchAnySemantic: 0
+    matchAnyType: 1
+    matchAnyCategory: 0
+    markerDisplayMode: 0
+    labelStyleId: standard
+    labelSizeMultiplier: 0.75
+    overrideMarkerSprite: 1
+    markerSprite: {fileID: 21300000, guid: a4d61ebbe6bc9654fa1e242b576e1f37, type: 3}
+    overrideMarkerSizeMultiplier: 0
+    markerSizeMultiplier: 1
+    overrideMarkerDefaultColor: 0
+    markerDefaultColor: {r: 0, g: 0, b: 0, a: 0}
+    markerColorIsFallbackOnly: 1
+  - elementName: Shop
+    semantic: 40
+    poiType: 90
+    poiCategory: 20
+    matchAnySemantic: 0
+    matchAnyType: 1
+    matchAnyCategory: 0
+    markerDisplayMode: 0
+    labelStyleId: standard
+    labelSizeMultiplier: 0.75
+    overrideMarkerSprite: 1
+    markerSprite: {fileID: 21300000, guid: 0b6ba6a8ab04194498edeafa3c23dad3, type: 3}
+    overrideMarkerSizeMultiplier: 0
+    markerSizeMultiplier: 1
+    overrideMarkerDefaultColor: 0
+    markerDefaultColor: {r: 0, g: 0, b: 0, a: 0}
+    markerColorIsFallbackOnly: 1
+  - elementName: Kiosk
+    semantic: 50
+    poiType: 90
+    poiCategory: 30
+    matchAnySemantic: 0
+    matchAnyType: 1
+    matchAnyCategory: 0
+    markerDisplayMode: 0
+    labelStyleId: minor
+    labelSizeMultiplier: 0.5
+    overrideMarkerSprite: 1
+    markerSprite: {fileID: 21300000, guid: 7b71c76c57191e4479a19a133211bd9b, type: 3}
+    overrideMarkerSizeMultiplier: 1
+    markerSizeMultiplier: 0.75
+    overrideMarkerDefaultColor: 0
+    markerDefaultColor: {r: 0, g: 0, b: 0, a: 0}
+    markerColorIsFallbackOnly: 1
+  - elementName: Service
+    semantic: 60
+    poiType: 90
+    poiCategory: 50
+    matchAnySemantic: 0
+    matchAnyType: 1
+    matchAnyCategory: 0
+    markerDisplayMode: 0
+    labelStyleId: minor
+    labelSizeMultiplier: 0.5
+    overrideMarkerSprite: 1
+    markerSprite: {fileID: 21300000, guid: af265b2fbc97a2045ac7f630d1214705, type: 3}
+    overrideMarkerSizeMultiplier: 0
+    markerSizeMultiplier: 1
+    overrideMarkerDefaultColor: 0
+    markerDefaultColor: {r: 0, g: 0, b: 0, a: 0}
+    markerColorIsFallbackOnly: 1
+  - elementName: Race
+    semantic: 80
+    poiType: 90
+    poiCategory: 60
+    matchAnySemantic: 0
+    matchAnyType: 1
+    matchAnyCategory: 0
+    markerDisplayMode: 0
+    labelStyleId: standard
+    labelSizeMultiplier: 0.75
+    overrideMarkerSprite: 1
+    markerSprite: {fileID: 21300000, guid: 320aa043613b20848b24440a0fd254b1, type: 3}
+    overrideMarkerSizeMultiplier: 0
+    markerSizeMultiplier: 1.5
+    overrideMarkerDefaultColor: 0
+    markerDefaultColor: {r: 0, g: 0, b: 0, a: 0}
+    markerColorIsFallbackOnly: 1
+  - elementName: Medical
+    semantic: 90
+    poiType: 90
+    poiCategory: 70
+    matchAnySemantic: 0
+    matchAnyType: 1
+    matchAnyCategory: 0
+    markerDisplayMode: 0
+    labelStyleId: standard
+    labelSizeMultiplier: 0.75
+    overrideMarkerSprite: 1
+    markerSprite: {fileID: 21300000, guid: 4fb10d78a49253246880a851928e2f11, type: 3}
+    overrideMarkerSizeMultiplier: 0
+    markerSizeMultiplier: 1
+    overrideMarkerDefaultColor: 0
+    markerDefaultColor: {r: 0, g: 0, b: 0, a: 0}
+    markerColorIsFallbackOnly: 1
+  - elementName: Vehicle
+    semantic: 100
+    poiType: 90
+    poiCategory: 80
+    matchAnySemantic: 0
+    matchAnyType: 1
+    matchAnyCategory: 0
+    markerDisplayMode: 0
+    labelStyleId: minor
+    labelSizeMultiplier: 0.5
+    overrideMarkerSprite: 1
+    markerSprite: {fileID: 21300000, guid: c3f6d1d9e749c304fbed322ba33b225b, type: 3}
+    overrideMarkerSizeMultiplier: 0
+    markerSizeMultiplier: 1
+    overrideMarkerDefaultColor: 0
+    markerDefaultColor: {r: 0, g: 0, b: 0, a: 0}
+    markerColorIsFallbackOnly: 1
+  - elementName: Custom POI
+    semantic: 110
+    poiType: 90
+    poiCategory: 100
+    matchAnySemantic: 0
+    matchAnyType: 1
+    matchAnyCategory: 0
+    markerDisplayMode: 0
+    labelStyleId: standard
+    labelSizeMultiplier: 0.75
+    overrideMarkerSprite: 1
+    markerSprite: {fileID: 21300000, guid: ba8929519e411824bb6c276437ef08cb, type: 3}
+    overrideMarkerSizeMultiplier: 0
+    markerSizeMultiplier: 1
+    overrideMarkerDefaultColor: 0
+    markerDefaultColor: {r: 0, g: 0, b: 0, a: 0}
+    markerColorIsFallbackOnly: 1
+  - elementName: Generic POI
+    semantic: 120
+    poiType: 0
+    poiCategory: 0
+    matchAnySemantic: 0
+    matchAnyType: 1
+    matchAnyCategory: 1
+    markerDisplayMode: 0
+    labelStyleId: minor
+    labelSizeMultiplier: 1
+    overrideMarkerSprite: 1
+    markerSprite: {fileID: 21300000, guid: 6dce9b8d23d9c78439cea519d5d3d486, type: 3}
+    overrideMarkerSizeMultiplier: 0
+    markerSizeMultiplier: 1
+    overrideMarkerDefaultColor: 0
+    markerDefaultColor: {r: 0, g: 0, b: 0, a: 0}
+    markerColorIsFallbackOnly: 1

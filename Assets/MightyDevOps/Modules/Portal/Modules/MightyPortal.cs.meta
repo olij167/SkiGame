@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: c9a0faae8babb2d4fa38d6329990ccfd
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 177244
+  packageName: MIGHTY PORTAL
+  packageVersion: 2.2.
+  assetPath: Assets/MightyDevOps/Modules/Portal/Modules/MightyPortal.cs
+  uploadId: 767126

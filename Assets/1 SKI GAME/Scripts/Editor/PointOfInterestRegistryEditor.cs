@@ -309,8 +309,14 @@ public sealed class PointOfInterestRegistryEditor : Editor
         if (now - _lastInspectorRefreshTime < seconds) return;
         _lastInspectorRefreshTime = now;
 
-        // Avoid spamming expensive BakeMetrics in AppendSkiRuns via constant refreshes.
-        reg.Refresh();
+        try
+        {
+            reg.Refresh();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogException(ex);
+        }
     }
 
     private bool TryGetHit(Vector2 mousePos, out RaycastHit hit)

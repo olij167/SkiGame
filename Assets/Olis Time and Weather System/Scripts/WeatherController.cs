@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
@@ -28,6 +28,8 @@ namespace TimeWeather
         {
             [Tooltip("The name of the weather condition used for identification. \n Ensure each condition has a unique name to avoid errors")]
             public string weatherCondition;
+            [Tooltip("Glyph shown in UI for this weather preset, e.g. ☀, ☁, ❄, 🌧, ⛈")]
+            public string weatherGlyph = "◌";
 
             [Header("Requirements for Weather Selection")]
             [Tooltip("The temperature range required for this condition. \n This can be used to differentiate between weather conditions")]
@@ -350,7 +352,7 @@ namespace TimeWeather
             }
 
             // If a preset is assigned in the inspector, prime the active-cloud set now
-            // so cloud planes don�t all fade out on the very first update.
+            // so cloud planes don’t all fade out on the very first update.
             if (currentWeatherPreset != null)
             {
                 _lastAppliedPreset = currentWeatherPreset;
@@ -812,7 +814,7 @@ namespace TimeWeather
             rainChance = Mathf.Lerp(currentHour.rainChance, nextHour.rainChance, hourlyTimePercent);
 
             if (toggleTempUI && tempText != null)
-                tempText.text = temperature.ToString("00") + "�C";
+                tempText.text = temperature.ToString("00") + "°C";
 
             int resolvedIdx = currentHour.presetIndex >= 0
                 ? currentHour.presetIndex

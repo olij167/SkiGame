@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2903414803073728595}
   m_Layer: 3
-  m_Name: Body Anchor
+  m_Name: Jacket Anchor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -45,6 +45,7 @@ GameObject:
   - component: {fileID: 8355405585811782512}
   - component: {fileID: 7126888283588053628}
   - component: {fileID: 64565487599071535}
+  - component: {fileID: 2208993281175718851}
   - component: {fileID: 5130916524721657879}
   - component: {fileID: 3963808273882245270}
   - component: {fileID: 2015925916295891446}
@@ -77,7 +78,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 3477672529516182850}
+  - {fileID: 7588150188216473418}
   - {fileID: 1500085997925863974}
   - {fileID: 8235596220883930978}
   - {fileID: 2147094007822374373}
@@ -149,6 +150,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SorenessMeter
   soreness01: 0
+  blackoutDepth01: 0
   isResting: 0
   recoveryPerSecond: 0
   restRecoveryPerSecond: 0.1
@@ -205,6 +207,9 @@ MonoBehaviour:
     m_RotationOrder: 4
   postFXMaxWeight: 1
   postFXWeightLerpSpeed: 4
+  criticalWarningStartSoreness01: 0.75
+  warningPulseSpeed: 1.15
+  warningPulseAmplitude: 0.08
   impactSorenessMin: 0.001
   impactSorenessMax: 0.2
   impactSeverityCurve:
@@ -259,6 +264,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  autoBlackoutAtCriticalLimit: 1
+  blackoutTransition: {fileID: 0}
   recoveryEnabled: 1
 --- !u!114 &7126888283588053628
 MonoBehaviour:
@@ -345,6 +352,58 @@ MonoBehaviour:
   polesColor: {r: 1, g: 1, b: 1, a: 1}
   skisPattern: {fileID: 0}
   polesPattern: {fileID: 0}
+--- !u!114 &2208993281175718851
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 891564543262492690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f835b088bcbf3a243a4a39e6e03549ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkierTrickTracker
+  skiController: {fileID: 5130916524721657879}
+  directionReverseDeadzoneDegrees: 20
+  minSegmentAirTime: 0.12
+  motionPauseTime: 0.16
+  spinStepDegrees: 180
+  spinLeniencyDegrees: 30
+  flipStepDegrees: 360
+  flipLeniencyDegrees: 60
+  minAirtimeForTrick: 0.18
+  minAngleDeltaToCount: 2
+  tuckLabelThreshold: 0.55
+  groundedComboGraceTime: 0.9
+  bounceTouchTime: {x: 0.05, y: 0.15}
+  minLandingOnlyPeakHeight: 0.45
+  minLandingOnlyDownwardSpeed: 3
+  minLandingOnlyPlanarSpeed: 4
+  minLandingOnlyAirTime: 0.18
+  minLandingOnlyHorizontalTravel: 1.2
+  minEndContactBaseAlignment: 0.82
+  maxOpposingEndContactBaseAlignment: 0.92
+  allowSingleSkiEndContactForLandingTags: 1
+  enableTipBounces: 1
+  minTipBouncePlanarSpeed: 3.5
+  maxTipBounceBaseAlignment: 0.82
+  minTipBounceDownwardSpeed: 1.75
+  slideStartMaxBaseAlignment: 0.88
+  slideKeepMaxBaseAlignment: 0.94
+  slideCoyoteTime: 0.08
+  minPoseHoldTime: 0.2
+  poseRetriggerCooldown: 0.2
+  minAirTimeForPoseOnlySegment: 0.3
+  minGroundedTimeToStartNewCombo: 0.18
+  requireRotationOrOrientationForPoseOnlySegment: 1
+  minSlideSpeed: 3
+  minSlideDistance: 1.5
+  maxSlideBaseAlignment: 0.72
+  minGrindDistance: 1.5
+  minNoseTailGrindDistance: 0.8
+  grindSwitchAngle: 135
+  recoveryDisplayMinDelay: 0.05
 --- !u!114 &5130916524721657879
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -358,6 +417,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SkiController
   bodyTransform: {fileID: 3477672529516182850}
+  bodyMotionTransform: {fileID: 7588150188216473418}
+  bodyScaleTransform: {fileID: 2027966653788776518}
+  headAnchorTransform: {fileID: 5607062432558094121}
   leftSki: {fileID: 1500085997925863974}
   leftSkiContact: {fileID: 5191879904404988712}
   leftSkiVisual: {fileID: 5477471834623578040}
@@ -374,6 +436,8 @@ MonoBehaviour:
   leanAction: {fileID: -920512616523522315, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   polesAction: {fileID: 4017610858538729280, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   jumpAction: {fileID: -2099379676528639254, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  tuckAction: {fileID: -7471211009204490832, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  poseAction: {fileID: 0}
   externalInputSourceBehaviour: {fileID: 0}
   forwardLeanLerpSpeed: 4
   stanceLerpSpeed: 6
@@ -383,6 +447,16 @@ MonoBehaviour:
   maxSkiEdgeAngle: 35
   maxForwardLeanAngle: 8
   maxSideLeanAngle: 13
+  tuckLerpSpeed: 10
+  tuckFrictionReductionExtra: 0.22
+  tuckTurnReduction: 0.18
+  tuckQuickStopReduction: 0.25
+  tuckBodyPitchExtra: 18
+  tuckBodyDrop: 0.22
+  tuckBodyYScale: 0.78
+  tuckBodyZScale: 0.92
+  tuckHeadDown: 0.1
+  tuckHeadForward: 0.04
   groundLayers:
     serializedVersion: 2
     m_Bits: 64
@@ -450,6 +524,12 @@ MonoBehaviour:
   poleBrakeStrength: 5
   minPoleSpeedFactor: 0.1
   poleUphillEffectiveness: 1.25
+  tipBalanceLeanThreshold: 0.35
+  tipBalanceMinSpeed: 3
+  tipBalanceFullSpeed: 8
+  tipBalanceEmergencyMinBaseAlignment: 0.08
+  tipBalanceGraceMultiplier: 1.8
+  tipBalancePitchBias: 9
   jumpForceRange: {x: 3, y: 6}
   jumpCoyoteTime: 0.2
   jumpBufferTime: 12
@@ -472,43 +552,71 @@ MonoBehaviour:
   airControlBlendInTime: 0.18
   airPitchUseDeltaFromTakeoff: 0.6
   airPitchDeadzone: 0.05
-  grindCoyoteTime: 0.06
-  grindCaptureRadius: 0.45
+  airStyleBlendSpeed: 10
+  airStyleBodyYaw: 14
+  airStyleBodyRoll: 10
+  airStyleOpenPitch: 10
+  airStyleBodyDrop: 0.06
+  airStyleBodySideOffset: 0.05
+  airStyleBodyBackOffset: 0.04
+  airStyleHeadUp: 0.03
+  trickPoseProfile: {fileID: 0}
+  debugAuthoredTrickPose: 0
+  enablePassiveAirDrift: 1
+  passiveAirDriftMaxPosition: 0.05
+  passiveAirDriftMaxRotation: 7
+  passiveAirDriftVelocityInfluence: 0.06
+  passiveAirDriftLerpSpeed: 6
+  passiveAirDriftWhilePoseMultiplier: 0.2
+  grindCoyoteTime: 0.02
+  grindCaptureRadius: 0.1
+  grindAcquireRadius: 0.18
   grindableLayers:
     serializedVersion: 2
     m_Bits: 1
-  grindMinPlanarSpeed: 0
-  grindSidewaysDotBegin: 0.5
-  grindSpring: 20
-  grindSupportOffset: 0.07
-  grindNormalDamping: 14
-  grindSlopeGravityScale: 1.6
-  grindAirControlMultiplier: 0.65
-  grindStrengthResponse: 5
-  grindReattachCooldown: 0.1
+  grindMinPlanarSpeed: 5.5
+  grindSidewaysDotBegin: 0.88
+  grindSpring: 28
+  grindLateralCorrection: 0.35
+  grindSideSlipDamping: 12
+  grindImplicitMinUpDot: 0.2
+  grindEdgeNormalDeltaDegrees: 18
+  grindEndProbeBias: 0.035
+  grindOrientationBias: 0.55
+  grindGravityUpBias: 0.7
+  grindStanceLeanThreshold: 0.3
+  grindStanceHoldTime: 0.08
+  grindStanceReleaseTime: 0.06
+  grindSupportOffset: 0.03
+  grindNormalDamping: 10
+  grindSlopeGravityScale: 1.15
+  grindAirControlMultiplier: 0.2
+  grindStrengthResponse: 8
+  grindReattachCooldown: 0.45
   grindDriveScale: 1.5
+  grindTuckDriveBoost: 0.4
   grindBalanceUpDotBegin: 0.3
-  landingSteepSlopeStartAngle: 40
-  landingVerySteepSlopeAngle: 70
+  landingSteepSlopeStartAngle: 35
+  landingVerySteepSlopeAngle: 65
   landingAlignBoostDuration: 0.1
   landingAlignBoostMultiplier: 0.5
   landingProjectionStrength: 0.5
-  landingVelocityRetention: 0.963
-  maxLandingTiltAngle: 40
-  maxLandingMisalignmentAngle: 40
-  minLandingSpeedForStackCheck: 8
-  minLandingAirTime: 0.16
-  minLandingDownwardSpeed: 6
-  hardLandingMinFallHeight: 5
-  hardLandingMinDownwardSpeed: 6
-  hardLandingMinImpactAngleFromPlane: 50
-  heavyTipStackAngle: 60
+  landingVelocityRetention: 0.8
+  maxLandingTiltAngle: 22
+  maxLandingMisalignmentAngle: 28
+  minLandingSpeedForStackCheck: 3
+  minLandingAirTime: 0.08
+  minLandingDownwardSpeed: 1.5
+  hardLandingMinFallHeight: 1
+  hardLandingMinDownwardSpeed: 4
+  hardLandingMinImpactAngleFromPlane: 26
+  heavyTipStackAngle: 12
   stackTorqueImpulse: 6
-  stackPlanarVelocityRetention: 1
+  stackPlanarVelocityRetention: 0.5
   showDebugHUD: 0
-  debugShowInputs: 1
-  debugShowTraverseHold: 1
-  debugShowGrinding: 1
+  debugShowInputs: 0
+  debugShowTraverseHold: 0
+  debugShowGrinding: 0
   debugShowJumpLanding: 1
   debugShowSkiContacts: 1
   debugDrawGizmosSelected: 1
@@ -1035,6 +1143,9 @@ MonoBehaviour:
   eyeDecalBaseMaterial: {fileID: 2100000, guid: 1909739c3d2e22d4cb54ff47d79b400f, type: 2}
   eyeBaseMapPropertyName: Base_Map
   eyeBaseColorPropertyName: Base_Color
+  eyeSizeScale: 1
+  eyeOutlineColour: {r: 0, g: 0, b: 0, a: 0}
+  eyeOutlineScaleMultiplier: 1.18
   selectedEyeOption: 1
   eyeColour: {r: 0, g: 0, b: 0, a: 1}
   eyeOptions:
@@ -1091,6 +1202,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SkiResortHoldInteractor
   resortAction: {fileID: 1189063969923822077, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   walkingController: {fileID: 6544998573832570742}
+  requireHold: 0
   holdSeconds: 0.6
   controller: {fileID: 0}
   currentZone: {fileID: 0}
@@ -1427,7 +1539,7 @@ GameObject:
   m_Component:
   - component: {fileID: 965288470275852523}
   m_Layer: 3
-  m_Name: Head Anchor
+  m_Name: Hat Anchor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1564,14 +1676,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3582090055818081307}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1853195655560901651}
   - {fileID: 2903414803073728595}
-  m_Father: {fileID: 5407680099972465189}
+  m_Father: {fileID: 2027966653788776518}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &8564669164816448982
 MeshFilter:
@@ -6576,6 +6687,38 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ParticleWindAdapter
   forceMultiplier: 0.5
   turbulenceMultiplier: 0.2
+--- !u!1 &4607199000050138082
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5607062432558094121}
+  m_Layer: 3
+  m_Name: Head Anchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5607062432558094121
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4607199000050138082}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1853195655560901651}
+  m_Father: {fileID: 7588150188216473418}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5076352325262080862
 GameObject:
   m_ObjectHideFlags: 0
@@ -7157,6 +7300,12 @@ MonoBehaviour:
   entryTilt: 0
   dragTilt: -15
   followTilt: -15
+  styleYaw: 18
+  styleOutwardOffset: 0.09
+  styleUpOffset: 0.05
+  styleBackOffset: 0.06
+  tweakedPitchOpen: -8
+  stretchedPitchOpen: -14
   carveMinSpeed: 3
   carveMaxSpeed: 20
   insideCarvePitchDelta: -12
@@ -7171,6 +7320,15 @@ MonoBehaviour:
   dragDownOffset: 0.6
   followBackOffset: 0.4
   followUpOffset: 0.2
+  tuckPitchDelta: 24
+  tuckTiltReduction: 10
+  tuckInwardOffset: 0.08
+  tuckUpOffset: 0.04
+  tuckBackOffset: 0.1
+  enablePassiveAirDrift: 1
+  passiveDriftMaxPosition: 0.04
+  passiveDriftMaxRotation: 8
+  passiveDriftVelocityInfluence: 0.06
 --- !u!1 &6992940900646855172
 GameObject:
   m_ObjectHideFlags: 0
@@ -7397,14 +7555,14 @@ Transform:
   m_GameObject: {fileID: 7148174402021408478}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.3999939, z: 0}
+  m_LocalPosition: {x: 0, y: 1.4000244, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1322590514777686618}
   - {fileID: 3723192845941617465}
   - {fileID: 965288470275852523}
-  m_Father: {fileID: 3477672529516182850}
+  m_Father: {fileID: 5607062432558094121}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &3827991066752285092
 MeshFilter:
@@ -7483,6 +7641,38 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &7283916708478804548
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2027966653788776518}
+  m_Layer: 3
+  m_Name: Body Scale Node
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2027966653788776518
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7283916708478804548}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 3477672529516182850}
+  m_Father: {fileID: 7588150188216473418}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8611631801762312503
 GameObject:
   m_ObjectHideFlags: 0
@@ -7569,6 +7759,39 @@ MonoBehaviour:
   hardResetAirTime: 0.15
   contactSmoothSpeed: 5
   contactCoyoteTime: 0.1
+--- !u!1 &8894029597942311216
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7588150188216473418}
+  m_Layer: 3
+  m_Name: Body Motion Pivot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7588150188216473418
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8894029597942311216}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 5607062432558094121}
+  - {fileID: 2027966653788776518}
+  m_Father: {fileID: 5407680099972465189}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &198920397926897361
 PrefabInstance:
   m_ObjectHideFlags: 0

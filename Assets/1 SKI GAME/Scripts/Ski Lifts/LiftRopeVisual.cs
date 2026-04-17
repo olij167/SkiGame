@@ -46,8 +46,6 @@ public class LiftRopeVisual : MonoBehaviour
     private bool _editorForceRebuild;
 #endif
 
-    private float _texOffset;
-
     private bool _configDirty = true;
 
     private bool _lastLoop;
@@ -55,7 +53,6 @@ public class LiftRopeVisual : MonoBehaviour
     private Material _lastRopeMaterial;
     // Cached config to avoid dirtying the inspector every frame
     private bool _lrConfigInitialized;
-    private Material _lastRopeMat;
 
     private static readonly int MainTexST = Shader.PropertyToID("_MainTex_ST");
     private static readonly int BaseMapST = Shader.PropertyToID("_BaseMap_ST");
@@ -204,9 +201,9 @@ public class LiftRopeVisual : MonoBehaviour
 
         // Only apply config when it actually changed
         if (!_lrConfigInitialized ||
-            _lastLoop != loop ||
-            !Mathf.Approximately(_lastRopeWidth, ropeWidth) ||
-            _lastRopeMat != ropeMaterial)
+    _lastLoop != loop ||
+    !Mathf.Approximately(_lastRopeWidth, ropeWidth) ||
+    _lastRopeMaterial != ropeMaterial)
         {
             lineRenderer.enabled = true;
             lineRenderer.useWorldSpace = true;
@@ -216,13 +213,12 @@ public class LiftRopeVisual : MonoBehaviour
             if (ropeMaterial != null && lineRenderer.sharedMaterial != ropeMaterial)
                 lineRenderer.sharedMaterial = ropeMaterial;
 
-            // IMPORTANT: do not allocate a new curve every frame
             if (lineRenderer.widthCurve == null || lineRenderer.widthCurve.length != 2)
                 lineRenderer.widthCurve = ConstantWidthCurve;
 
             _lastLoop = loop;
             _lastRopeWidth = ropeWidth;
-            _lastRopeMat = ropeMaterial;
+            _lastRopeMaterial = ropeMaterial;
             _lrConfigInitialized = true;
         }
 
@@ -244,7 +240,7 @@ public class LiftRopeVisual : MonoBehaviour
             return;
 
         // Ensure LiftLine's analytic path is up to date
-        line.RebuildAnalyticLoop();
+        line.RebuildNow(refreshRopeVisuals: false);
         float totalLength = line.BandLength;
 
         if (totalLength <= 0f)

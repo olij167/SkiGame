@@ -1,5 +1,6 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
 using SkiGame.POI;
+using UnityEngine;
 
 namespace SkiGame.Progression
 {
@@ -11,6 +12,9 @@ namespace SkiGame.Progression
             Metric = 0,
             VisitPOIsInGroup = 10,
             VisitRunsInGroup = 20,
+            CompleteQuest = 30,
+            OwnPass = 40,
+            CompleteRace = 50,
         }
 
         public enum VisitScope
@@ -77,12 +81,26 @@ namespace SkiGame.Progression
         [Tooltip("If enabled, target is kept equal to runGroup.Count in the editor.")]
         public bool autoTargetFromRunGroup = true;
 
+        [Header("Requirement: Specific Content")]
+        public string questId;
+        public string passId;
+        public string raceId;
+
+        [Header("Rewards")]
+        [Min(0)] public int currencyReward = 0;
+
+        [Tooltip("If >= 0, grant at least this ski pass level when the reward is claimed.")]
+        public int skiPassLevelReward = -1;
+
+        [Tooltip("Customization items unlocked when the reward is claimed.")]
+        public List<CustomizationOptionSO> customizationUnlocks = new();
+
+        [Tooltip("If enabled, this reward is claimed immediately when the achievement completes.")]
+        public bool autoClaimRewardOnUnlock = false;
+
         public float ReadCurrent(PlayerStatsProfile profile)
         {
             if (profile == null) return 0f;
-
-            var s = profile.session;
-            var l = profile.lifetime;
 
             if (requirementKind == RequirementKind.VisitPOIsInGroup)
             {
@@ -158,55 +176,18 @@ namespace SkiGame.Progression
                 return count;
             }
 
+            if (requirementKind == RequirementKind.CompleteQuest)
+                return ProgressionMetricUtility.HasCompletedQuest(profile, questId) ? 1f : 0f;
+
+            if (requirementKind == RequirementKind.OwnPass)
+                return ProgressionMetricUtility.HasOwnedPass(profile, passId) ? 1f : 0f;
+
+            if (requirementKind == RequirementKind.CompleteRace)
+                return ProgressionMetricUtility.HasCompletedRace(profile, raceId) ? 1f : 0f;
+
 
             // Default: Metric
-            return metric switch
-            {
-                // Session stats
-                ProgressionMetric.SessionDistanceMeters => s.distanceMeters,
-                ProgressionMetric.SessionTopSpeedMps => s.topSpeedMps,
-                ProgressionMetric.SessionAirTimeSeconds => s.airTimeSeconds,
-                ProgressionMetric.SessionAirDistanceMeters => s.airDistanceMeters,
-                ProgressionMetric.SessionVerticalDescentMeters => s.verticalDescentMeters,
-                ProgressionMetric.SessionStacks => s.stacks,
-                ProgressionMetric.SessionRunsCompleted => s.runsCompleted,
-                ProgressionMetric.SessionLiftsUsed => s.liftsUsed,
-
-                // NEW: Session POI + Grind
-                ProgressionMetric.SessionPlacesVisited => profile.sessionVisitedLandmarkIds != null ? profile.sessionVisitedLandmarkIds.Count : 0,
-                ProgressionMetric.SessionGrindTimeSeconds => s.grindTimeSeconds,
-                ProgressionMetric.SessionGrindDistanceMeters => s.grindDistanceMeters,
-
-                // Lifetime stats
-                ProgressionMetric.LifetimeDistanceMeters => l.totalDistanceMeters,
-                ProgressionMetric.LifetimeTopSpeedMps => l.topSpeedMps,
-                ProgressionMetric.LifetimeAirTimeSeconds => l.totalAirTimeSeconds,
-                ProgressionMetric.LifetimeAirDistanceMeters => l.totalAirDistanceMeters,
-                ProgressionMetric.LifetimeVerticalDescentMeters => l.totalVerticalDescentMeters,
-                ProgressionMetric.LifetimeStacks => l.totalStacks,
-                ProgressionMetric.LifetimeRunsCompleted => l.totalRunsCompleted,
-                ProgressionMetric.LifetimeLiftsUsed => l.totalLiftsUsed,
-
-                // NEW: Lifetime POI + Grind
-                ProgressionMetric.LifetimePlacesVisited => profile.visitedLandmarkIds != null ? profile.visitedLandmarkIds.Count : 0,
-                ProgressionMetric.LifetimeGrindTimeSeconds => l.totalGrindTimeSeconds,
-                ProgressionMetric.LifetimeGrindDistanceMeters => l.totalGrindDistanceMeters,
-
-                ProgressionMetric.SessionRunsVisited => profile.sessionVisitedRunIds != null ? profile.sessionVisitedRunIds.Count : 0,
-                ProgressionMetric.SessionRunsCompletedClean => s.runsCompletedClean,
-                ProgressionMetric.SessionTopRunSpeedMps => s.topRunSpeedMps,
-
-                ProgressionMetric.LifetimeRunsVisited => profile.visitedRunIds != null ? profile.visitedRunIds.Count : 0,
-                ProgressionMetric.LifetimeRunsCompletedClean => l.totalRunsCompletedClean,
-                ProgressionMetric.LifetimeTopRunSpeedMps => l.topRunSpeedMps,
-
-                ProgressionMetric.LifetimeRunVisited => (!string.IsNullOrEmpty(runId) && profile.visitedRunIds != null && profile.visitedRunIds.Contains(runId)) ? 1f : 0f,
-                ProgressionMetric.LifetimeRunCompletedCount => ReadRunRecordValue(profile, runId, cleanOnly: false),
-                ProgressionMetric.LifetimeRunCompletedCleanCount => ReadRunRecordValue(profile, runId, cleanOnly: true),
-
-
-                _ => 0f
-            };
+            return ProgressionMetricUtility.ReadMetricValue(profile, metric, runId);
         }
 
         public string GetRequirementText()
@@ -223,61 +204,16 @@ namespace SkiGame.Progression
                 return $"{verb} {Mathf.FloorToInt(target)} runs";
             }
 
-            return metric switch
-            {
-                ProgressionMetric.SessionDistanceMeters or
-                ProgressionMetric.LifetimeDistanceMeters or
-                ProgressionMetric.SessionAirDistanceMeters or
-                ProgressionMetric.LifetimeAirDistanceMeters or
-                ProgressionMetric.SessionVerticalDescentMeters or
-                ProgressionMetric.LifetimeVerticalDescentMeters
-                    => $"Reach {FormatMeters(target)}",
+            if (requirementKind == RequirementKind.CompleteQuest)
+                return string.IsNullOrWhiteSpace(questId) ? "Complete quest" : $"Complete {questId}";
 
-                ProgressionMetric.SessionTopSpeedMps or
-                ProgressionMetric.LifetimeTopSpeedMps
-                    => $"Reach {target:0.0} m/s",
+            if (requirementKind == RequirementKind.OwnPass)
+                return string.IsNullOrWhiteSpace(passId) ? "Own pass" : $"Own {passId}";
 
-                ProgressionMetric.SessionAirTimeSeconds or
-                ProgressionMetric.LifetimeAirTimeSeconds
-                    => $"Reach {target:0.0} s",
+            if (requirementKind == RequirementKind.CompleteRace)
+                return string.IsNullOrWhiteSpace(raceId) ? "Complete race" : $"Complete {raceId}";
 
-                ProgressionMetric.SessionGrindTimeSeconds or
-                ProgressionMetric.LifetimeGrindTimeSeconds
-                    => $"Reach {target:0.0} s",
-
-                ProgressionMetric.SessionGrindDistanceMeters or
-                ProgressionMetric.LifetimeGrindDistanceMeters
-                    => $"Reach {FormatMeters(target)}",
-
-                ProgressionMetric.SessionRunsCompleted or
-                ProgressionMetric.LifetimeRunsCompleted
-                    => $"Complete {Mathf.FloorToInt(target)} runs",
-
-                ProgressionMetric.SessionLiftsUsed or
-                ProgressionMetric.LifetimeLiftsUsed
-                    => $"Ride {Mathf.FloorToInt(target)} lifts",
-
-                ProgressionMetric.SessionRunsVisited => $"Visit {Mathf.FloorToInt(target)} runs",
-                ProgressionMetric.LifetimeRunsVisited => $"Visit {Mathf.FloorToInt(target)} runs",
-
-                ProgressionMetric.SessionRunsCompletedClean => $"Complete {Mathf.FloorToInt(target)} clean runs",
-                ProgressionMetric.LifetimeRunsCompletedClean => $"Complete {Mathf.FloorToInt(target)} clean runs",
-
-                ProgressionMetric.SessionTopRunSpeedMps or
-                ProgressionMetric.LifetimeTopRunSpeedMps
-                    => $"Reach {target:0.0} m/s",
-
-                ProgressionMetric.LifetimeRunVisited
-                    => string.IsNullOrEmpty(runId) ? $"Visit run" : $"Visit {runId}",
-
-                ProgressionMetric.LifetimeRunCompletedCount
-                    => string.IsNullOrEmpty(runId) ? $"Complete {Mathf.FloorToInt(target)} runs" : $"Complete {runId} x{Mathf.FloorToInt(target)}",
-
-                ProgressionMetric.LifetimeRunCompletedCleanCount
-                    => string.IsNullOrEmpty(runId) ? $"Complete {Mathf.FloorToInt(target)} clean runs" : $"Clean-complete {runId} x{Mathf.FloorToInt(target)}",
-
-                _ => $"Target {target:0.##}"
-            };
+            return ProgressionMetricUtility.BuildRequirementText(metric, target, runId);
         }
 
         public MountainHudCategory GetMountainHudCategory()
@@ -290,6 +226,13 @@ namespace SkiGame.Progression
 
             if (requirementKind == RequirementKind.VisitRunsInGroup)
                 return MountainHudCategory.MountainMastery;
+
+            if (requirementKind == RequirementKind.CompleteQuest ||
+                requirementKind == RequirementKind.OwnPass ||
+                requirementKind == RequirementKind.CompleteRace)
+            {
+                return MountainHudCategory.MountainMastery;
+            }
 
             if (IsExplorationMetric(metric))
                 return MountainHudCategory.Exploration;
@@ -326,37 +269,15 @@ namespace SkiGame.Progression
             float goal = Mathf.Max(0.0001f, target);
 
             if (requirementKind == RequirementKind.VisitPOIsInGroup ||
-                requirementKind == RequirementKind.VisitRunsInGroup)
+                requirementKind == RequirementKind.VisitRunsInGroup ||
+                requirementKind == RequirementKind.CompleteQuest ||
+                requirementKind == RequirementKind.OwnPass ||
+                requirementKind == RequirementKind.CompleteRace)
             {
                 return $"{Mathf.FloorToInt(current)}/{Mathf.FloorToInt(goal)}";
             }
 
-            return metric switch
-            {
-                ProgressionMetric.SessionDistanceMeters or
-                ProgressionMetric.LifetimeDistanceMeters or
-                ProgressionMetric.SessionAirDistanceMeters or
-                ProgressionMetric.LifetimeAirDistanceMeters or
-                ProgressionMetric.SessionVerticalDescentMeters or
-                ProgressionMetric.LifetimeVerticalDescentMeters or
-                ProgressionMetric.SessionGrindDistanceMeters or
-                ProgressionMetric.LifetimeGrindDistanceMeters
-                    => $"{FormatMeters(current)} / {FormatMeters(goal)}",
-
-                ProgressionMetric.SessionTopSpeedMps or
-                ProgressionMetric.LifetimeTopSpeedMps or
-                ProgressionMetric.SessionTopRunSpeedMps or
-                ProgressionMetric.LifetimeTopRunSpeedMps
-                    => $"{current:0.0} / {goal:0.0} m/s",
-
-                ProgressionMetric.SessionAirTimeSeconds or
-                ProgressionMetric.LifetimeAirTimeSeconds or
-                ProgressionMetric.SessionGrindTimeSeconds or
-                ProgressionMetric.LifetimeGrindTimeSeconds
-                    => $"{current:0.0} / {goal:0.0} s",
-
-                _ => $"{Mathf.FloorToInt(current)}/{Mathf.FloorToInt(goal)}"
-            };
+            return ProgressionMetricUtility.BuildProgressText(metric, current, goal);
         }
 
         private static bool IsExplorationMetric(ProgressionMetric metric)
@@ -379,7 +300,38 @@ namespace SkiGame.Progression
                    metric == ProgressionMetric.LifetimeTopRunSpeedMps ||
                    metric == ProgressionMetric.LifetimeRunVisited ||
                    metric == ProgressionMetric.LifetimeRunCompletedCount ||
-                   metric == ProgressionMetric.LifetimeRunCompletedCleanCount;
+                   metric == ProgressionMetric.LifetimeRunCompletedCleanCount ||
+                   metric == ProgressionMetric.LifetimeRaceStarts ||
+                   metric == ProgressionMetric.LifetimeRaceCompletions ||
+                   metric == ProgressionMetric.LifetimeRaceWins ||
+                   metric == ProgressionMetric.LifetimeRacePodiums ||
+                   metric == ProgressionMetric.LifetimeUniqueRacesCompleted ||
+                   metric == ProgressionMetric.LifetimeRaceChampionshipsCompleted ||
+                   metric == ProgressionMetric.LifetimeRacePersonalBestImprovements ||
+                   metric == ProgressionMetric.LifetimeRescueStarts ||
+                   metric == ProgressionMetric.LifetimeRescueCompletions ||
+                   metric == ProgressionMetric.LifetimeRescueFailures ||
+                   metric == ProgressionMetric.LifetimeRescueRank ||
+                   metric == ProgressionMetric.LifetimeRescueUtilityUses ||
+                   metric == ProgressionMetric.LifetimeQuestsAccepted ||
+                   metric == ProgressionMetric.LifetimeQuestsCompleted ||
+                   metric == ProgressionMetric.LifetimeQuestStagesCompleted ||
+                   metric == ProgressionMetric.LifetimeTutorialQuestsCompleted ||
+                   metric == ProgressionMetric.SessionTricksLanded ||
+                   metric == ProgressionMetric.LifetimeTricksLanded ||
+                   metric == ProgressionMetric.LifetimeNamedTricksLanded ||
+                   metric == ProgressionMetric.LifetimeUniqueTrickNamesLanded ||
+                   metric == ProgressionMetric.LifetimeTrickFails ||
+                   metric == ProgressionMetric.LifetimeBestTrickTier ||
+                   metric == ProgressionMetric.LifetimePassesPurchased ||
+                   metric == ProgressionMetric.LifetimePassExtensions ||
+                   metric == ProgressionMetric.LifetimePermanentPassesUnlocked ||
+                   metric == ProgressionMetric.LifetimeUniquePassesOwned ||
+                   metric == ProgressionMetric.LifetimeCustomizationPurchases ||
+                   metric == ProgressionMetric.LifetimeCustomizationUnlocks ||
+                   metric == ProgressionMetric.LifetimeCurrencyEarned ||
+                   metric == ProgressionMetric.LifetimeCurrencySpent ||
+                   metric == ProgressionMetric.LargestSingleCurrencyReward;
         }
 
         private static string FormatMeters(float meters)
@@ -404,6 +356,32 @@ namespace SkiGame.Progression
             return 0f;
         }
 
+        public string GetRewardSummary()
+        {
+            var parts = new System.Collections.Generic.List<string>();
+
+            if (currencyReward > 0)
+                parts.Add($"${currencyReward}");
+
+            if (skiPassLevelReward >= 0)
+                parts.Add($"Pass L{skiPassLevelReward}");
+
+            if (customizationUnlocks != null)
+            {
+                for (int i = 0; i < customizationUnlocks.Count; i++)
+                {
+                    var opt = customizationUnlocks[i];
+                    if (opt == null) continue;
+                    parts.Add(string.IsNullOrWhiteSpace(opt.displayName) ? opt.id : opt.displayName);
+                }
+            }
+
+            if (parts.Count == 0)
+                return "No reward";
+
+            return "Reward: " + string.Join(" • ", parts);
+        }
+
 #if UNITY_EDITOR
         private void OnValidate()
         {
@@ -417,6 +395,13 @@ namespace SkiGame.Progression
             if (autoTargetFromRunGroup && requirementKind == RequirementKind.VisitRunsInGroup && runGroup != null)
             {
                 target = Mathf.Max(1f, runGroup.Count);
+            }
+
+            if (requirementKind == RequirementKind.CompleteQuest ||
+                requirementKind == RequirementKind.OwnPass ||
+                requirementKind == RequirementKind.CompleteRace)
+            {
+                target = 1f;
             }
         }
 #endif

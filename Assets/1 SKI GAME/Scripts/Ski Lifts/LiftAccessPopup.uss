@@ -7,6 +7,7 @@
     padding-right: 24px;
     pointer-events: none;
     -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgb(244, 248, 255);
 }
 
 .lift-access-popup-panel {
@@ -14,29 +15,31 @@
     max-width: 620px;
     flex-direction: row;
     align-items: center;
-    background-color: rgba(10, 14, 22, 0.94);
-    border-top-left-radius: 18px;
-    border-top-right-radius: 18px;
-    border-bottom-left-radius: 18px;
-    border-bottom-right-radius: 18px;
-    border-left-width: 5px;
-    border-right-width: 0px;
-    border-top-width: 0px;
-    border-bottom-width: 0px;
     padding-top: 12px;
     padding-bottom: 12px;
     padding-left: 14px;
     padding-right: 16px;
+    background-color: rgba(10, 16, 28, 0.95);
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+    border-left-width: 4px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
     -unity-text-align: upper-left;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .lift-access-popup-negative {
-    border-left-color: rgb(234, 87, 87);
+    border-left-color: rgba(230, 189, 61, 0.96);
 }
 
 .lift-access-popup-positive {
-    border-left-color: rgb(72, 194, 118);
+    border-left-color: rgba(91, 196, 255, 0.95);
 }
 
 .lift-access-popup-icon-wrap {
@@ -45,19 +48,49 @@
     margin-right: 12px;
     align-items: center;
     justify-content: center;
-    background-color: rgba(255,255,255,0.08);
+    background-color: rgba(24, 36, 58, 0.92);
     border-top-left-radius: 20px;
     border-top-right-radius: 20px;
     border-bottom-left-radius: 20px;
     border-bottom-right-radius: 20px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.lift-access-popup-negative .lift-access-popup-icon-wrap {
+    background-color: rgba(230, 189, 61, 0.16);
+    border-left-color: rgba(230, 189, 61, 0.22);
+    border-right-color: rgba(230, 189, 61, 0.22);
+    border-top-color: rgba(230, 189, 61, 0.22);
+    border-bottom-color: rgba(230, 189, 61, 0.22);
+}
+
+.lift-access-popup-positive .lift-access-popup-icon-wrap {
+    background-color: rgba(91, 196, 255, 0.16);
+    border-left-color: rgba(91, 196, 255, 0.24);
+    border-right-color: rgba(91, 196, 255, 0.24);
+    border-top-color: rgba(91, 196, 255, 0.24);
+    border-bottom-color: rgba(91, 196, 255, 0.24);
 }
 
 .lift-access-popup-icon {
     font-size: 20px;
-    -unity-font-style: bold;
-    color: rgb(245, 247, 250);
+    color: rgb(245, 249, 255);
     unity-text-align: middle-center;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.lift-access-popup-negative .lift-access-popup-icon {
+    color: rgb(247, 224, 140);
+}
+
+.lift-access-popup-positive .lift-access-popup-icon {
+    color: rgb(176, 229, 255);
 }
 
 .lift-access-popup-copy {
@@ -65,16 +98,13 @@
 }
 
 .lift-access-popup-title {
-    color: rgb(245, 247, 250);
-    font-size: 15px;
-    -unity-font-style: bold;
     margin-bottom: 2px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    font-size: 15px;
+    color: rgb(248, 251, 255);
 }
 
 .lift-access-popup-body {
-    color: rgba(230, 236, 244, 0.92);
     font-size: 13px;
+    color: rgba(226, 235, 246, 0.78);
     white-space: normal;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }

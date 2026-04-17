@@ -1,0 +1,52 @@
+// PathClusteringComputeShader.compute
+
+#pragma kernel CSMain
+
+struct ClusterData
+{
+    float2 position;
+    float2 direction;
+    uint count;
+};
+
+RWStructuredBuffer<float2> coordsList;
+RWStructuredBuffer<ClusterData> clusteredData;
+
+[numthreads(256, 1, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    uint index = id.x;
+    uint clusterCount = 0;
+
+    float clusterDistance = 10.0f; // Same as clusterDistance in your C# code
+    float2 currentClusterCenter = coordsList[0];
+    float2 currentDirection = float2(0.0f, 0.0f);
+    uint currentClusterSize = 1;
+
+    for (uint i = 1; i < coordsList.Length; i++)
+    {
+        float2 direction = normalize(coordsList[i] - coordsList[i - 1]);
+        if (distance(coordsList[i], currentClusterCenter) < clusterDistance)
+        {
+            currentClusterCenter = (currentClusterCenter * currentClusterSize + coordsList[i]) / (currentClusterSize + 1);
+            currentDirection = (currentDirection * currentClusterSize + direction) / (currentClusterSize + 1);
+            currentClusterSize++;
+        }
+        else
+        {
+            clusteredData[clusterCount].position = currentClusterCenter;
+            clusteredData[clusterCount].direction = currentDirection;
+            clusteredData[clusterCount].count = currentClusterSize;
+
+            clusterCount++;
+
+            currentClusterCenter = coordsList[i];
+            currentDirection = direction;
+            currentClusterSize = 1;
+        }
+    }
+
+    clusteredData[clusterCount].position = currentClusterCenter;
+    clusteredData[clusterCount].direction = currentDirection;
+    clusteredData[clusterCount].count = currentClusterSize;
+}

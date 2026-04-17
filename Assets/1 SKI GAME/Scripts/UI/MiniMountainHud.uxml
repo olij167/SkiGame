@@ -1,6 +1,12 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/UI/MiniMountainHud.uss?fileID=7433441132597879392&amp;guid=34f320af78033a44ea14cfe00fa27725&amp;type=3#MiniMountainHud" />
     <ui:VisualElement name="MiniHudRoot" class="mini-root" style="top: 21px; left: 20px; right: 20px; bottom: 20px; position: absolute; align-content: flex-start; align-self: auto; justify-content: flex-end;">
+        <ui:VisualElement name="QuestTrackerPanel" class="mini-panel quest-tracker-panel" style="left: 20px; top: 20px; position: absolute; bottom: auto;">
+            <ui:VisualElement name="QuestPrimaryCardHost" class="quest-primary-host" />
+            <ui:Button name="Btn_QuestSummaryToggle" class="quest-summary-toggle" />
+            <ui:VisualElement name="QuestTrackerList" class="quest-tracker-list" />
+            <ui:Label name="Lbl_QuestTrackerHint" class="quest-tracker-footer" />
+        </ui:VisualElement>
         <ui:VisualElement name="RunBannerAnchor" class="run-banner-anchor">
             <ui:VisualElement name="RunBanner" class="run-banner is-hidden" style="display: none;">
                 <ui:VisualElement class="run-banner-header">
@@ -15,15 +21,15 @@
         </ui:VisualElement>
         <ui:VisualElement name="MiniHudShell" class="mini-shell" style="position: relative; justify-content: flex-end; top: auto; left: auto; align-content: auto; align-items: auto; align-self: flex-end;">
             <ui:VisualElement name="MiniMapColumn" class="mini-map-column" style="width: auto;">
-                <ui:VisualElement name="MiniHeader" class="mini-panel mini-header" style="margin-bottom: 0; border-top-left-radius: 6px; border-top-right-radius: 6px; border-bottom-right-radius: 6px; border-bottom-left-radius: 6px; border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0;">
+                <ui:VisualElement name="MiniHeader" class="mini-panel mini-header" style="margin-bottom: 0; border-top-left-radius: 6px; border-top-right-radius: 6px; border-bottom-right-radius: 0; border-bottom-left-radius: 0; border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0;">
                     <ui:Label name="Lbl_MiniTime" text="--:--" class="mini-time" />
                     <ui:Label name="Lbl_MiniWeather" text="Weather" class="mini-weather" style="-unity-text-align: upper-right;" />
                     <ui:Button name="Btn_OpenOverlay" text="Map" class="mini-open-button" style="display: none;" />
                 </ui:VisualElement>
                 <ui:VisualElement name="MiniInfoColumn" class="mini-info-column" style="width: auto; flex-direction: row; flex-grow: 1; align-self: stretch; align-content: stretch; justify-content: space-around; align-items: stretch;">
-                    <ui:VisualElement name="MiniMapHost" class="mini-map-host" style="background-color: rgba(8, 12, 18, 0.78); flex-grow: 1;" />
+                    <ui:VisualElement name="MiniMapHost" class="mini-map-host" style="background-color: rgba(8, 12, 18, 0.78); flex-grow: 1; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0;" />
                 </ui:VisualElement>
-                <ui:VisualElement name="MiniRunPanel" class="mini-panel mini-run-panel" style="position: relative; justify-content: space-around; align-content: flex-end; align-self: stretch; align-items: stretch; border-left-color: rgba(255, 255, 255, 0); border-right-color: rgba(255, 255, 255, 0); border-top-color: rgba(255, 255, 255, 0); border-bottom-color: rgba(255, 255, 255, 0); border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; border-top-left-radius: 6px; border-top-right-radius: 6px; border-bottom-right-radius: 0; border-bottom-left-radius: 0;">
+                <ui:VisualElement name="MiniRunPanel" class="mini-panel mini-run-panel" style="position: relative; justify-content: space-around; align-content: flex-end; align-self: stretch; align-items: stretch; border-left-color: rgba(255, 255, 255, 0); border-right-color: rgba(255, 255, 255, 0); border-top-color: rgba(255, 255, 255, 0); border-bottom-color: rgba(255, 255, 255, 0); border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0;">
                     <ui:Label text="Current Region" class="mini-region-kicker" />
                     <ui:Label name="Lbl_MiniRunTitle" text="Unknown Region" class="mini-run-title" style="-unity-font-definition: url(&quot;project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&amp;guid=281591823e5a02d439cd5679a23ed27e&amp;type=3#Slackey&quot;);" />
                     <ui:Label name="Lbl_MiniRunBody" text="Move around the mountain to discover named areas" class="mini-run-body" />

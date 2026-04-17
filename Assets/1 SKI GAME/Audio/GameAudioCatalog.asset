@@ -1,0 +1,366 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eac7734364d54d94b92d766d932aa34d, type: 3}
+  m_Name: GameAudioCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Audio.GameAudioCatalogSO
+  cues:
+  - id: 10
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    spatialBlend: 0
+    minDistance: 1
+    maxDistance: 20
+    cooldownSeconds: 0
+    mixerGroup: {fileID: -5675655906450040454, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 11
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    spatialBlend: 0
+    minDistance: 1
+    maxDistance: 20
+    cooldownSeconds: 0
+    mixerGroup: {fileID: -5675655906450040454, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 12
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    spatialBlend: 0
+    minDistance: 1
+    maxDistance: 20
+    cooldownSeconds: 0
+    mixerGroup: {fileID: -5675655906450040454, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 13
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    spatialBlend: 0
+    minDistance: 1
+    maxDistance: 20
+    cooldownSeconds: 0
+    mixerGroup: {fileID: -5675655906450040454, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 14
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    spatialBlend: 0
+    minDistance: 1
+    maxDistance: 20
+    cooldownSeconds: 0
+    mixerGroup: {fileID: -5675655906450040454, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 15
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    spatialBlend: 0
+    minDistance: 1
+    maxDistance: 20
+    cooldownSeconds: 0
+    mixerGroup: {fileID: -5675655906450040454, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 16
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    spatialBlend: 0
+    minDistance: 1
+    maxDistance: 20
+    cooldownSeconds: 0
+    mixerGroup: {fileID: -5675655906450040454, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 17
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    spatialBlend: 0
+    minDistance: 1
+    maxDistance: 20
+    cooldownSeconds: 0
+    mixerGroup: {fileID: -5675655906450040454, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 18
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    spatialBlend: 0
+    minDistance: 1
+    maxDistance: 20
+    cooldownSeconds: 0
+    mixerGroup: {fileID: -5675655906450040454, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 19
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    spatialBlend: 0
+    minDistance: 1
+    maxDistance: 20
+    cooldownSeconds: 0
+    mixerGroup: {fileID: -5675655906450040454, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 100
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 101
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 102
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 200
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 201
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 220
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 221
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 300
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 301
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 302
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 303
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 304
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 305
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 306
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 400
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0.03
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 401
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 402
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 403
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 404
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 405
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 500
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 501
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 502
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 600
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 601
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 700
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 701
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 800
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}
+  - id: 801
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.98, y: 1.02}
+    spatialBlend: 1
+    minDistance: 5
+    maxDistance: 40
+    cooldownSeconds: 0
+    mixerGroup: {fileID: 3800521811472125547, guid: c3baece4462544e4186d188da1551388, type: 2}

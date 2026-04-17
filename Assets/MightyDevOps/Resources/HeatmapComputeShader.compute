@@ -1,0 +1,57 @@
+#pragma kernel CSMain
+
+RWTexture2D<float4> Result;
+
+cbuffer HeatmapParams {
+    float2 screenToWorldScale;
+    float2 screenToWorldOffset;
+    float2 gridOrigin;
+    float cellSize;
+    int gridWidth;
+    int gridHeight;
+    float3 lowFPSColor;
+    float3 highFPSColor;
+    float minFPS;
+    float maxFPS;
+    float targetFPS;
+    float globalOpacity;
+};
+
+StructuredBuffer<float> GridData;
+
+[numthreads(8, 8, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    uint width, height;
+    Result.GetDimensions(width, height);
+
+    uint x = id.x;
+    uint y = id.y;
+    if (x >= width || y >= height) return;
+
+    float worldX = screenToWorldScale.x * x + screenToWorldOffset.x;
+    float worldY = screenToWorldScale.y * y + screenToWorldOffset.y;
+    int gridX = (int)((worldX - gridOrigin.x) / cellSize);
+    int gridY = (int)((worldY - gridOrigin.y) / cellSize);
+
+    // Initialize to transparent black
+    float3 rgb = float3(0, 0, 0);
+    float opacity = 0;
+
+    if (gridX >= 0 && gridX < gridWidth && gridY >= 0 && gridY < gridHeight)
+    {
+        int index = (gridY * gridWidth + gridX) * 2;
+        float isAboveTarget = GridData[index]; // Now a binary value: 1.0 = above target, 0.0 = below
+        opacity = GridData[index + 1];
+        
+        // Only set color if we have actual data (opacity > 0)
+        if (opacity > 0)
+        {
+            // Use the binary value directly - simpler and more reliable
+            rgb = isAboveTarget > 0.5f ? highFPSColor : lowFPSColor;
+        }
+    }
+
+    float alpha = opacity * globalOpacity;
+    Result[int2(x, y)] = float4(rgb, alpha);
+}

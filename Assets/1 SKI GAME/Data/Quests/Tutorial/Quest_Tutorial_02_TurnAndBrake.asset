@@ -1,0 +1,127 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 301e6494375742f4b98ef78f27b43667, type: 3}
+  m_Name: Quest_Tutorial_02_TurnAndBrake
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.QuestDefinitionSO
+  id: tutorial.turn_and_brake
+  title: Turn and Brake
+  description: A and D steer your skis. Those same inputs also become your main braking
+    tools.
+  autoAccept: 0
+  tutorialQuest: 1
+  stages:
+  - id: tutorial.turn_and_brake.stage1
+    title: One Pair of Inputs, Three Uses
+    description: Use single-ski pressure to carve, both skis together to wedge, and
+      S plus a hard turn to stop quickly.
+    objectives:
+    - id: tutorial.turn_and_brake.turn
+      title: Carve with A or D
+      description: Press A or D while moving to arc across the slope and feel the
+        edge bite.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 20
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 0
+      distanceStat: 40
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 0
+      trickTarget: 0
+      interactionTarget: 0
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []
+    - id: tutorial.turn_and_brake.wedge
+      title: Wedge to brake
+      description: Press A + D together to point the skis inward and brake harder.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 10
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 0
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 0
+      trickTarget: 0
+      interactionTarget: 0
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []
+    - id: tutorial.turn_and_brake.quickstop
+      title: Quick stop
+      description: Build a little speed, then press S with a sharp A or D turn to
+        scrub speed fast.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 10
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 20
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 0
+      trickTarget: 0
+      interactionTarget: 0
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []

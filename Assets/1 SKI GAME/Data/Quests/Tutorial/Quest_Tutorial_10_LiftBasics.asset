@@ -1,0 +1,92 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 301e6494375742f4b98ef78f27b43667, type: 3}
+  m_Name: Quest_Tutorial_10_LiftBasics
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.QuestDefinitionSO
+  id: tutorial.lift_basics
+  title: Lift Basics
+  description: Now that you have a pass, use the lift to move uphill instead of hiking
+    or skating back up.
+  autoAccept: 0
+  tutorialQuest: 1
+  stages:
+  - id: tutorial.lift_basics.stage1
+    title: Ride the Lift
+    description: Follow the lift route, board at the base, then step off smoothly
+      at the top station.
+    objectives:
+    - id: tutorial.lift_basics.mount
+      title: Board a lift
+      description: Follow the beacon to the base station and press E to board.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 70
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 0
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 0
+      trickTarget: 0
+      interactionTarget: 20
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []
+    - id: tutorial.lift_basics.dismount
+      title: Dismount at the top
+      description: When you reach the top station, press E again to step off cleanly.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 70
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 0
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 0
+      trickTarget: 0
+      interactionTarget: 30
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []

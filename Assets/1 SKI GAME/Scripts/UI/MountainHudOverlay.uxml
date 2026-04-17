@@ -4,19 +4,20 @@
         <ui:VisualElement name="MapHost" class="map-host" />
         <ui:VisualElement name="TopStrip" class="top-strip panel" style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 16px; border-top-right-radius: 16px;">
             <ui:Label name="Lbl_TopTime" text="--:--" class="top-strip-time" />
-            <ui:VisualElement name="TopWeatherGroup" class="top-weather-group">
+            <ui:VisualElement name="TopWeatherGroup" class="top-weather-group" style="flex-direction: row; justify-content: space-between;">
                 <ui:Label name="Lbl_TopWeatherIcon" text="☀" class="top-strip-weather-icon" style="-unity-font-style: bold; font-size: 24px;" />
-                <ui:Label name="Lbl_TopWeather" text="Weather" class="top-strip-weather" />
+                <ui:Label name="Lbl_TopWeather" text="Weather" class="top-strip-weather" style="-unity-text-align: middle-center;" />
             </ui:VisualElement>
-            <ui:Label name="Lbl_TopLocation" text="Mountain Overview" class="top-strip-location" />
+            <ui:Label name="Lbl_TopLocation" text="Mountain Overview" class="top-strip-location" style="font-size: 24px; -unity-font-style: bold; -unity-font-definition: url(&quot;project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&amp;guid=281591823e5a02d439cd5679a23ed27e&amp;type=3#Slackey&quot;); -unity-text-align: upper-center;" />
+            <ui:Label name="Lbl_TopCurrency" text="Currency $0" class="top-strip-currency" />
             <ui:Label name="Lbl_TopHint" text="Runs 0 complete" class="top-strip-hint" />
-            <ui:Button name="Btn_CloseOverlay" text="Close" class="mini-button" />
+            <ui:Button name="Btn_CloseOverlay" text="Close" class="header-close-button" />
         </ui:VisualElement>
-        <ui:VisualElement name="LeftRail" class="left-rail" style="top: 90px;">
+        <ui:VisualElement name="LeftRail" class="left-rail" style="top: 124px;">
             <ui:VisualElement name="ContextPanel" class="panel dock-panel context-panel" style="border-top-left-radius: 16px; border-top-right-radius: 16px; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-bottom-right-radius: 16px; border-bottom-left-radius: 16px;">
-                <ui:VisualElement class="panel-header">
+                <ui:VisualElement class="panel-header" style="top: 0;">
                     <ui:Label text="Context" class="panel-title" />
-                    <ui:Button name="Btn_ContextExpand" text="Show History" class="mini-button" />
+                    <ui:Button name="Btn_ContextExpand" text="Show History" class="context-history-button" />
                 </ui:VisualElement>
                 <ui:VisualElement name="ContextHero" class="context-hero">
                     <ui:Label name="Lbl_ContextIcon" text="★" class="context-icon" style="background-color: rgba(83, 170, 255, 0); display: none;" />
@@ -29,50 +30,103 @@
                     </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:VisualElement name="ContextGuidanceBox" class="context-guidance-box">
-                    <ui:Label name="Lbl_ContextGuidance" text="Use the map to inspect routes, plan a waypoint, or find your next descent." class="context-guidance" />
+                    <ui:Label name="Lbl_ContextGuidance" text="Use the map to inspect routes, plan a waypoint, or find your next descent." class="context-guidance" style="white-space: normal;" />
                 </ui:VisualElement>
-                <ui:VisualElement name="ContextMetaRow" class="context-meta-row" style="flex-wrap: nowrap;" />
+                
+                <ui:VisualElement name="ContextMetaRow" class="context-meta-row" />
                 <ui:VisualElement name="ContextHighlights" class="context-highlights" />
                 <ui:ScrollView name="ContextAttemptsList" class="attempts-list" />
             </ui:VisualElement>
             <ui:VisualElement name="StatsPanel" class="panel dock-panel stats-panel">
-                <ui:VisualElement class="panel-header" style="margin-bottom: 4px;">
+                <ui:VisualElement class="panel-header" style="margin-bottom: 4px; top: 0;">
                     <ui:Label text="Stats" class="panel-title" />
-                    <ui:VisualElement class="segmented-row">
+                    <ui:VisualElement class="segmented-row" style="flex-direction: row;">
                         <ui:Button name="Btn_StatsToday" text="Today" class="segment-button is-selected" />
                         <ui:Button name="Btn_StatsLifetime" text="Lifetime" class="segment-button" />
                     </ui:VisualElement>
                 </ui:VisualElement>
-                <ui:Label name="Lbl_StatsModeSummary" text="Session totals for this outing." class="stats-mode-summary" style="display: none;" />
+                <ui:Label name="Lbl_StatsModeSummary" text="Session totals for this outing." class="stats-mode-summary" />
                 <ui:VisualElement name="StatsGrid" class="stats-grid" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="RightRail" class="right-rail" style="top: 90px;">
-            <ui:VisualElement name="GoalsPanel" class="panel dock-panel goals-panel" style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+        <ui:VisualElement name="RightRail" class="right-rail" style="top: 124px;">
+            <ui:VisualElement name="GoalsPanel" class="panel dock-panel goals-panel">
                 <ui:VisualElement class="panel-header">
                     <ui:Label text="Goals" class="panel-title" />
                     <ui:VisualElement class="segmented-row">
+                        <ui:Button name="Btn_GoalsQuests" text="Quests" class="segment-button" />
                         <ui:Button name="Btn_GoalsTasks" text="Tasks" class="segment-button is-selected" />
                         <ui:Button name="Btn_GoalsAchievements" text="Achievements" class="segment-button" />
                     </ui:VisualElement>
                 </ui:VisualElement>
+
                 <ui:ScrollView name="GoalsList" class="goals-list" />
-                <ui:VisualElement name="AchievementCategoryRow" class="achievement-category-row" style="display: none; flex-wrap: nowrap; justify-content: space-around;" />
-                <ui:ScrollView name="AchievementScroll" class="achievement-scroll" style="display: none;">
-                    <ui:VisualElement name="AchievementGrid" class="achievement-grid" />
+
+                <ui:VisualElement name="QuestPanel" class="quest-panel" style="display: none;">
+                    <ui:VisualElement class="goal-subtab-row">
+                        <ui:Button name="Btn_QuestCurrent" text="Current" class="goal-subtab-button is-selected" />
+                        <ui:Button name="Btn_QuestCompleted" text="Completed" class="goal-subtab-button" />
+                    </ui:VisualElement>
+                    <ui:ScrollView name="QuestList" class="quest-list" />
+                </ui:VisualElement>
+
+                <ui:VisualElement name="AchievementPanel" class="achievement-panel">
+                    <ui:VisualElement name="AchievementHeaderShell" class="achievement-header-shell">
+                        <ui:VisualElement name="AchievementCategoryRow" class="achievement-category-row" />
+                    </ui:VisualElement>
+
+                    <ui:ScrollView name="AchievementScroll" class="achievement-scroll">
+                        <ui:VisualElement name="AchievementGrid" class="achievement-grid" />
+                    </ui:ScrollView>
+                </ui:VisualElement>
+            </ui:VisualElement>
+           <ui:VisualElement name="PassPanel" class="panel dock-panel pass-panel">
+                <ui:VisualElement class="panel-header pass-panel-header">
+                    <ui:Label text="Mountain Access" class="panel-title" />
+                    <ui:VisualElement class="segmented-row pass-tab-row">
+                        <ui:Button name="Btn_PassTabInfo" text="Ski Pass" class="segment-button pass-tab-button is-selected" />
+                        <ui:Button name="Btn_PassTabRescue" text="Rescue" class="segment-button pass-tab-button" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement name="PassInfoView" class="pass-info-view">
+                    <ui:ScrollView name="PassCurrentList" class="pass-current-list" />
+
+                    <ui:ScrollView name="PassOverviewList" class="pass-overview-list" />
+                </ui:VisualElement>
+
+                <ui:VisualElement name="PassLiftDetailView" class="pass-lift-detail-view" style="display: none;">
+                    <ui:VisualElement class="pass-detail-header">
+                        <ui:Button name="Btn_PassBack" text="Back" class="mini-button pass-back-button" />
+                        <ui:Label name="Lbl_PassDetailTitle" text="Pass Access" class="pass-detail-title" />
+                    </ui:VisualElement>
+
+                    <ui:Label name="Lbl_PassDetailMeta" text="Select a pass to inspect its lift access." class="pass-detail-meta" />
+                    <ui:ScrollView name="PassLiftList" class="pass-lift-list" />
+                </ui:VisualElement>
+
+                <ui:ScrollView name="RescueUtilitiesView" class="rescue-dispatch-panel rescue-dispatch-scroll" style="display: none;">
+                    <ui:VisualElement class="rescue-dispatch-content">
+                        <ui:VisualElement class="rescue-dispatch-summary-card">
+                            <ui:Label name="Lbl_RescueDispatchRank" text="Reach rescue rank 2 to unlock field support." class="rescue-dispatch-meta rescue-dispatch-rank" />
+                            <ui:Label name="Lbl_RescueDispatchRefresh" text="Weekly allowances unavailable." class="rescue-dispatch-meta" />
+                            <ui:Label name="Lbl_RescueDispatchBeacon" text="No active rescue beacon." class="rescue-dispatch-meta" />
+                        </ui:VisualElement>
+
+                        <ui:VisualElement class="rescue-dispatch-actions">
+                            <ui:Button name="Btn_RescueMedicalDrop" text="Medical Drop" class="rescue-dispatch-button" />
+                            <ui:Button name="Btn_RescueBeacon" text="Place Beacon" class="rescue-dispatch-button" />
+                            <ui:Button name="Btn_RescueSnowmobile" text="Dispatch Snowmobile" class="rescue-dispatch-button" />
+                            <ui:Button name="Btn_RescueSOS" text="SOS Return to Resort" class="rescue-dispatch-button rescue-sos-button" />
+                        </ui:VisualElement>
+
+                        <ui:VisualElement class="rescue-dispatch-status-card">
+                            <ui:Label name="Lbl_RescueDispatchStatus" text="Complete rescue missions to unlock mountain-wide support utilities." class="rescue-dispatch-status" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
                 </ui:ScrollView>
             </ui:VisualElement>
-            <ui:VisualElement name="PassPanel" class="panel dock-panel pass-panel" style="justify-content: space-between;">
-                <ui:VisualElement class="panel-header">
-                    <ui:Label text="Ski Pass" class="panel-title" />
-                </ui:VisualElement>
-                <ui:Label name="Lbl_PassCurrent" text="Basic Pass (L0)" class="pass-current" style="-unity-text-align: upper-center; font-size: 20px; white-space: normal;" />
-                <ui:Label name="Lbl_PassExpiryMeta" text="No expiry" class="pass-expiry-meta" style="-unity-font-style: bold; font-size: 14px;" />
-                <ui:VisualElement name="PassExpiryBar" class="pass-expiry-bar" style="border-top-left-radius: 20px; border-top-right-radius: 20px; border-bottom-right-radius: 20px; border-bottom-left-radius: 20px;">
-                    <ui:VisualElement name="PassExpiryFill" class="pass-expiry-fill" style="border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0;" />
-                </ui:VisualElement>
-                <ui:Button name="Btn_PassCurrent" text="Highlight Lifts" class="mini-button" />
-            </ui:VisualElement>
         </ui:VisualElement>
+        <ui:VisualElement name="OverlayScreenFade" class="overlay-screen-fade" style="display: none;" />
     </ui:VisualElement>
 </ui:UXML>

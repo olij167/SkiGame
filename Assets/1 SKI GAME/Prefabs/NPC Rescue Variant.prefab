@@ -148,9 +148,14 @@ MonoBehaviour:
   skiController: {fileID: 8572825039590221281}
   rb: {fileID: 288632424989369219}
   behavioursToDisableAfterInit: []
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 64
   spawnHeightAboveGround: 1.5
   settleSeconds: 0.75
+  maxGroundSnapDistance: 6
   proneRollRange: {x: 70, y: 110}
+  freezeRotationAfterSettle: 1
 --- !u!114 &-8419477688769671846
 MonoBehaviour:
   m_ObjectHideFlags: 0

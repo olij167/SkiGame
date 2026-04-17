@@ -1,0 +1,34 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/Activities/RescueMissionOverlay.uss?fileID=7433441132597879392&amp;guid=2d9b147404008204a8dbd6e8bc666ca6&amp;type=3#RescueMissionOverlay" />
+    <ui:VisualElement name="RescueOverlayRoot" class="rescue-overlay-root">
+        <ui:VisualElement name="RescueCenterCallout" class="rescue-center-callout" style="display: none;">
+            <ui:Label name="Lbl_RescueCenterCallout" text="COMPLETE" class="rescue-center-callout-label" />
+        </ui:VisualElement>
+        <ui:VisualElement name="RescueMissionPanel" class="rescue-mission-panel" style="left: 24px; right: auto;">
+            <ui:Label name="Lbl_RescueKicker" text="Mountain Activity" class="rescue-kicker" style="display: none;" />
+            <ui:Label name="Lbl_RescueTitle" text="Medic Tent Rescue" class="rescue-title" />
+            <ui:VisualElement class="rescue-chip-row">
+                <ui:Label name="Lbl_RescueModeChip" text="Search Area" class="rescue-chip" />
+                <ui:Label name="Lbl_RescueTargetChip" text="Injured Casualty" class="rescue-chip" />
+                <ui:Label name="Lbl_RescueStageChip" text="Recover" class="rescue-chip rescue-chip-accent" />
+            </ui:VisualElement>
+            <ui:Label name="Lbl_RescueObjective" text="Search the marked area and secure the casualty." class="rescue-objective" />
+            <ui:Label name="Lbl_RescueDetail" text="Bring the snowmobile and stretcher close enough to load the casualty." class="rescue-detail" />
+            <ui:VisualElement class="rescue-stat-grid">
+                <ui:Label name="Lbl_RescueTimer" text="Time left 03:00" class="rescue-stat-card" />
+                <ui:Label name="Lbl_RescueCasualties" text="Casualties 1/1 remaining" class="rescue-stat-card" />
+                <ui:Label name="Lbl_RescueVehicle" text="Transport Snowmobile + rescue carrier" class="rescue-stat-card rescue-stat-wide" style="display: none;" />
+                <ui:Label name="Lbl_RescueSearchRadius" text="Search radius 60m" class="rescue-stat-card rescue-stat-wide" style="display: none;" />
+            </ui:VisualElement>
+            <ui:VisualElement class="rescue-progress-block">
+                <ui:VisualElement class="rescue-progress-track">
+                    <ui:VisualElement name="RescueMissionProgressFill" class="rescue-progress-fill" style="border-top-left-radius: 12px; border-top-right-radius: 12px; border-bottom-right-radius: 12px; border-bottom-left-radius: 12px;" />
+                </ui:VisualElement>
+                <ui:Label name="Lbl_RescueProgressText" text="Recovered 0/1" class="rescue-progress-text" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="RescueToastPanel" class="rescue-toast-panel" style="display: none; bottom: auto; top: 24px; left: auto; align-self: center;">
+            <ui:Label name="Lbl_RescueToast" text="Medic Tent Rescue completed" class="rescue-toast-text" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

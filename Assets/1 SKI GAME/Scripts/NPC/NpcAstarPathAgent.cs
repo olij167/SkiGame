@@ -24,6 +24,7 @@ public class NpcAstarPathAgent : MonoBehaviour
     [SerializeField] private float stuckDistanceThreshold = 0.35f;
     [SerializeField] private float stuckTime = 2.25f;
     [SerializeField] private float repathInterval = 0.75f;
+    [SerializeField] private bool logBindingWarnings = true;
 
     private Vector3 _destination;
     private bool _hasDestination;
@@ -42,10 +43,13 @@ public class NpcAstarPathAgent : MonoBehaviour
     private PropertyInfo _propCanMove;
     private PropertyInfo _propIsStopped;
     private MethodInfo _methodSearchPath;
+    private bool _loggedMissingBindingWarning;
+    private bool _loggedSearchPathWarning;
 
     public bool HasDestination => _hasDestination;
     public Vector3 Destination => _destination;
     public bool IsStuck => _hasDestination && _isStuck;
+    public bool HasUsableAstarBinding => astarAgentBehaviour != null && (_propDestination != null || _propSteeringTarget != null || _propDesiredVelocity != null);
 
     public bool ReachedDestination
     {
@@ -116,7 +120,15 @@ public class NpcAstarPathAgent : MonoBehaviour
         if (astarAgentBehaviour != null && Time.time >= _nextRepathTime)
         {
             _nextRepathTime = Time.time + repathInterval;
-            _methodSearchPath?.Invoke(astarAgentBehaviour, null);
+            if (_methodSearchPath != null)
+            {
+                _methodSearchPath.Invoke(astarAgentBehaviour, null);
+            }
+            else if (logBindingWarnings && !_loggedSearchPathWarning)
+            {
+                _loggedSearchPathWarning = true;
+                Debug.LogWarning($"[{nameof(NpcAstarPathAgent)}] A* agent on {name} has no SearchPath() method. Falling back to direct steering only.", this);
+            }
         }
     }
 
@@ -199,6 +211,12 @@ public class NpcAstarPathAgent : MonoBehaviour
 
             if (_propIsStopped != null)
                 SafeSet(_propIsStopped, astarAgentBehaviour, false);
+        }
+
+        if (logBindingWarnings && !_loggedMissingBindingWarning && !HasUsableAstarBinding)
+        {
+            _loggedMissingBindingWarning = true;
+            Debug.LogWarning($"[{nameof(NpcAstarPathAgent)}] A* bindings on {name} are incomplete. Walking support will use destination fallback steering.", this);
         }
     }
 

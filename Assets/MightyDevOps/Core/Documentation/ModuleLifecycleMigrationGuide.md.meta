@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 3ba3451f3e82a7a4696a494636b9ff03
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 177244
+  packageName: MIGHTY PORTAL
+  packageVersion: 2.2.
+  assetPath: Assets/MightyDevOps/Core/Documentation/ModuleLifecycleMigrationGuide.md
+  uploadId: 767126

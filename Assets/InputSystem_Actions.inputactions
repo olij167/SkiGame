@@ -124,6 +124,24 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "Tuck",
+                    "type": "Button",
+                    "id": "847234b4-f03c-44a6-9ca8-61d7925ccc06",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Pose",
+                    "type": "Button",
+                    "id": "d62a81af-c142-4e86-b990-eb830358b5ee",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Interact",
                     "type": "Button",
                     "id": "6c4f4055-07ec-406c-b2d8-4d9cb32f9287",
@@ -641,7 +659,7 @@
                 {
                     "name": "",
                     "id": "89f5eddc-42ab-4a9e-b181-4c74a112eae3",
-                    "path": "<Keyboard>/shift",
+                    "path": "<Keyboard>/ctrl",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
@@ -668,6 +686,28 @@
                     "processors": "",
                     "groups": "",
                     "action": "Pause",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "88a7a357-d322-44d6-bf57-667306bd5d4f",
+                    "path": "<Keyboard>/shift",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Tuck",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "e4c1c0d6-cf64-42fb-acac-07277cc10bc2",
+                    "path": "<Keyboard>/ctrl",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Pose",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
@@ -771,6 +811,24 @@
                     "name": "Toggle",
                     "type": "Button",
                     "id": "137959dd-d0ce-4bef-b837-557fdfb14660",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "CycleUILeft",
+                    "type": "Button",
+                    "id": "fc54945d-e074-4dc6-b1dc-608737f510aa",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "CycleUIRight",
+                    "type": "Button",
+                    "id": "23940c16-09bd-4ce4-a48b-da9fdd6886ce",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -1204,6 +1262,28 @@
                     "processors": "",
                     "groups": "",
                     "action": "Toggle",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "7fbacefe-c99d-4490-9ba0-5b6e585b7824",
+                    "path": "<Keyboard>/q",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "CycleUILeft",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "600c5bd7-b838-48e4-b649-891024f5c8e9",
+                    "path": "<Keyboard>/e",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "CycleUIRight",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

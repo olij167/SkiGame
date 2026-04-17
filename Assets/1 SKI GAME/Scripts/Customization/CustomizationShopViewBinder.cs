@@ -47,26 +47,26 @@ public class CustomizationShopViewBinder : MonoBehaviour
     private VisualElement _swatchSkin;
     private VisualElement _slotEyeIcon;
     private VisualElement _swatchEye;
+    private VisualElement _swatchEyeOutline;
 
     private VisualElement _slotSkisGear;
-    private Button _slotSkisPattern;
-    
+    private VisualElement _slotSkisPattern;
     private VisualElement _swatchSkisColor;
     //private Button _slotSkisPattern;
 
 
     private VisualElement _slotPolesGear;
-    private Button _slotPolesPattern;
+    private VisualElement _slotPolesPattern;
     private VisualElement _swatchPolesColor;
     //private Button _slotPolesPattern;
 
     private VisualElement _slotHatGear;
-    private Button _slotHatPattern;
+    private VisualElement _slotHatPattern;
     private VisualElement _swatchHatColor;
     //private Button _slotHatPattern;
 
     private VisualElement _slotJacketGear;
-    private Button _slotJacketPattern;
+    private VisualElement _slotJacketPattern;
     private VisualElement _swatchJacketColor;
     //private Button _slotJacketPattern;
 
@@ -79,12 +79,13 @@ public class CustomizationShopViewBinder : MonoBehaviour
     private Label _lblEyeName;
     private Image _imgEyeIcon;
 
-    private Button _iconSkisPattern, _iconPolesPattern, _iconHatPattern, _iconJacketPattern;
+    private VisualElement _iconSkisPattern, _iconPolesPattern, _iconHatPattern, _iconJacketPattern;
 
     // Loadout state badges
     private Label _lblEyeState, _lblSkisState, _lblPolesState, _lblHatState, _lblJacketState;
 
     private Button _btnResetSkisColor, _btnResetPolesColor, _btnResetHatColor, _btnResetJacketColor;
+    private Button _btnResetSkisSecondaryColor, _btnResetPolesSecondaryColor, _btnResetHatSecondaryColor, _btnResetJacketSecondaryColor;
     private Button _btnResetSkisPattern, _btnResetPolesPattern, _btnResetHatPattern, _btnResetJacketPattern;
 
     private Button _btnClearEyePreview;
@@ -92,6 +93,23 @@ public class CustomizationShopViewBinder : MonoBehaviour
     private Button _btnClearPolesPreview;
     private Button _btnClearHatPreview;
     private Button _btnClearJacketPreview;
+
+    private VisualElement _rowEyesPurchaseActions, _rowSkisPurchaseActions, _rowPolesPurchaseActions, _rowHatPurchaseActions, _rowJacketPurchaseActions;
+
+    private Button _btnBuyEyePreview;
+
+    private Button _btnBuySkisPreviewItem, _btnBuySkisPreviewPattern, _btnBuySkisPreviewBoth;
+    private Button _btnBuyPolesPreviewItem, _btnBuyPolesPreviewPattern, _btnBuyPolesPreviewBoth;
+    private Button _btnBuyHatPreviewItem, _btnBuyHatPreviewPattern, _btnBuyHatPreviewBoth;
+    private Button _btnBuyJacketPreviewItem, _btnBuyJacketPreviewPattern, _btnBuyJacketPreviewBoth;
+
+    private SliderInt _sldEyeSize;
+    private Label _lblEyeSizeValue;
+
+    private VisualElement _rowSkisExtraColors;
+    private VisualElement _rowPolesExtraColors;
+    private VisualElement _rowHatExtraColors;
+    private VisualElement _rowJacketExtraColors;
 
     // Color popover
     private VisualElement _colorOverlay;
@@ -167,8 +185,10 @@ public class CustomizationShopViewBinder : MonoBehaviour
     private IReadOnlyList<CustomizationOptionSO> _shopSource;
     private IReadOnlyList<CustomizationOptionSO> _inventorySource;
 
-    private enum ColorTarget { None, Skin, Eye, Skis, Poles, Hat, Jacket }
+    private enum ColorTarget { None, Skin, Eye, EyeOutline, Skis, Poles, Hat, Jacket, ExtraChannel }
     private ColorTarget _colorTarget = ColorTarget.None;
+    private PatternTarget _extraColorPatternTarget;
+    private string _extraColorChannelId;
 
     private void Awake()
     {
@@ -254,14 +274,8 @@ public class CustomizationShopViewBinder : MonoBehaviour
         _rowEyes = QAny<VisualElement>(_root, "Slot_EyeIcon", "Row_Eyes", "Row_Eye", "Row_EyeIcon");
         _slotEyeIcon = QAny<VisualElement>(_root, "Slot_EyeIcon");
 
-        // Make sure children don't steal the click.
-        if (_rowEyes != null)
-        {
-            foreach (var child in _rowEyes.Children())
-                child.pickingMode = PickingMode.Ignore;
-        }
-
         _swatchEye = _root.Q<VisualElement>("Swatch_EyeColor");
+        _swatchEyeOutline = _root.Q<VisualElement>("Swatch_EyeOutlineColor");
 
         _rowSkis = _root.Q<VisualElement>("Row_Skis");
         _rowPoles = _root.Q<VisualElement>("Row_Poles");
@@ -269,22 +283,22 @@ public class CustomizationShopViewBinder : MonoBehaviour
         _rowJacket = _root.Q<VisualElement>("Row_Jacket");
 
         _slotSkisGear = _root.Q<VisualElement>("Slot_SkisGear");
-        _slotSkisPattern = _root.Q<Button>("Slot_SkisPattern");
+        _slotSkisPattern = _root.Q<VisualElement>("Slot_SkisPattern");
         _swatchSkisColor = _root.Q<VisualElement>("Swatch_SkisColor");
         //_slotSkisPattern = _root.Q<Button>("Slot_SkisPattern");
 
         _slotPolesGear = _root.Q<VisualElement>("Slot_PolesGear");
-        _slotPolesPattern = _root.Q<Button>("Slot_PolesPattern");
+        _slotPolesPattern = _root.Q<VisualElement>("Slot_PolesPattern");
         _swatchPolesColor = _root.Q<VisualElement>("Swatch_PolesColor");
         //_slotPolesPattern = _root.Q<Button>("Slot_PolesPattern");
 
         _slotHatGear = _root.Q<VisualElement>("Slot_HatGear");
-        _slotHatPattern = _root.Q<Button>("Slot_HatPattern");
+        _slotHatPattern = _root.Q<VisualElement>("Slot_HatPattern");
         _swatchHatColor = _root.Q<VisualElement>("Swatch_HatColor");
         //_slotHatPattern = _root.Q<Button>("Slot_HatPattern");
 
         _slotJacketGear = _root.Q<VisualElement>("Slot_JacketGear");
-        _slotJacketPattern = _root.Q<Button>("Slot_JacketPattern");
+        _slotJacketPattern = _root.Q<VisualElement>("Slot_JacketPattern");
         _swatchJacketColor = _root.Q<VisualElement>("Swatch_JacketColor");
         //_slotJacketPattern = _root.Q<Button>("Slot_JacketPattern");
 
@@ -301,10 +315,10 @@ public class CustomizationShopViewBinder : MonoBehaviour
         _lblEyeName = _root.Q<Label>("Lbl_EyeName");
         _imgEyeIcon = _root.Q<Image>("Icon_EyeIcon");
 
-        _iconSkisPattern = _root.Q<Button>("Icon_SkisPattern");
-        _iconPolesPattern = _root.Q<Button>("Icon_PolesPattern");
-        _iconHatPattern = _root.Q<Button>("Icon_HatPattern");
-        _iconJacketPattern = _root.Q<Button>("Icon_JacketPattern");
+        _iconSkisPattern = _root.Q<VisualElement>("Icon_SkisPattern");
+        _iconPolesPattern = _root.Q<VisualElement>("Icon_PolesPattern");
+        _iconHatPattern = _root.Q<VisualElement>("Icon_HatPattern");
+        _iconJacketPattern = _root.Q<VisualElement>("Icon_JacketPattern");
 
         _lblEyeState = _root.Q<Label>("Lbl_EyeState");
         _lblSkisState = _root.Q<Label>("Lbl_SkisState");
@@ -317,6 +331,11 @@ public class CustomizationShopViewBinder : MonoBehaviour
         _btnResetHatColor = _root.Q<Button>("Btn_ResetHatColor");
         _btnResetJacketColor = _root.Q<Button>("Btn_ResetJacketColor");
 
+        _btnResetSkisSecondaryColor = _root.Q<Button>("Btn_ResetSkisSecondaryColor");
+        _btnResetPolesSecondaryColor = _root.Q<Button>("Btn_ResetPolesSecondaryColor");
+        _btnResetHatSecondaryColor = _root.Q<Button>("Btn_ResetHatSecondaryColor");
+        _btnResetJacketSecondaryColor = _root.Q<Button>("Btn_ResetJacketSecondaryColor");
+
         _btnResetSkisPattern = _root.Q<Button>("Btn_ResetSkisPattern");
         _btnResetPolesPattern = _root.Q<Button>("Btn_ResetPolesPattern");
         _btnResetHatPattern = _root.Q<Button>("Btn_ResetHatPattern");
@@ -327,6 +346,38 @@ public class CustomizationShopViewBinder : MonoBehaviour
         _btnClearPolesPreview = _root.Q<Button>("Btn_ClearPolesPreview");
         _btnClearHatPreview = _root.Q<Button>("Btn_ClearHatPreview");
         _btnClearJacketPreview = _root.Q<Button>("Btn_ClearJacketPreview");
+
+        _rowEyesPurchaseActions = _root.Q<VisualElement>("Row_EyesPurchaseActions");
+        _rowSkisPurchaseActions = _root.Q<VisualElement>("Row_SkisPurchaseActions");
+        _rowPolesPurchaseActions = _root.Q<VisualElement>("Row_PolesPurchaseActions");
+        _rowHatPurchaseActions = _root.Q<VisualElement>("Row_HatPurchaseActions");
+        _rowJacketPurchaseActions = _root.Q<VisualElement>("Row_JacketPurchaseActions");
+
+        _btnBuyEyePreview = _root.Q<Button>("Btn_BuyEyePreview");
+
+        _btnBuySkisPreviewItem = _root.Q<Button>("Btn_BuySkisPreviewItem");
+        _btnBuySkisPreviewPattern = _root.Q<Button>("Btn_BuySkisPreviewPattern");
+        _btnBuySkisPreviewBoth = _root.Q<Button>("Btn_BuySkisPreviewBoth");
+
+        _btnBuyPolesPreviewItem = _root.Q<Button>("Btn_BuyPolesPreviewItem");
+        _btnBuyPolesPreviewPattern = _root.Q<Button>("Btn_BuyPolesPreviewPattern");
+        _btnBuyPolesPreviewBoth = _root.Q<Button>("Btn_BuyPolesPreviewBoth");
+
+        _btnBuyHatPreviewItem = _root.Q<Button>("Btn_BuyHatPreviewItem");
+        _btnBuyHatPreviewPattern = _root.Q<Button>("Btn_BuyHatPreviewPattern");
+        _btnBuyHatPreviewBoth = _root.Q<Button>("Btn_BuyHatPreviewBoth");
+
+        _btnBuyJacketPreviewItem = _root.Q<Button>("Btn_BuyJacketPreviewItem");
+        _btnBuyJacketPreviewPattern = _root.Q<Button>("Btn_BuyJacketPreviewPattern");
+        _btnBuyJacketPreviewBoth = _root.Q<Button>("Btn_BuyJacketPreviewBoth");
+
+        _sldEyeSize = _root.Q<SliderInt>("Sld_EyeSize");
+        _lblEyeSizeValue = _root.Q<Label>("Lbl_EyeSizeValue");
+
+        _rowSkisExtraColors = _root.Q<VisualElement>("Row_SkisExtraColors");
+        _rowPolesExtraColors = _root.Q<VisualElement>("Row_PolesExtraColors");
+        _rowHatExtraColors = _root.Q<VisualElement>("Row_HatExtraColors");
+        _rowJacketExtraColors = _root.Q<VisualElement>("Row_JacketExtraColors");
 
         // Color popover
         _colorOverlay = _root.Q<VisualElement>("ColorOverlay");
@@ -430,9 +481,20 @@ public class CustomizationShopViewBinder : MonoBehaviour
             }
 
             bool owned = controller != null && controller.IsOwned(opt);
+            bool previewed = IsOptionPreviewed(opt);
+            bool equipped = IsOptionEquipped(opt);
+            bool selected = IsOptionSelected(opt);
+
+            ve.RemoveFromClassList("is-selected");
+            ve.RemoveFromClassList("is-preview");
+            ve.RemoveFromClassList("is-equipped");
+
+            if (selected) ve.AddToClassList("is-selected");
+            if (previewed) ve.AddToClassList("is-preview");
+            else if (equipped) ve.AddToClassList("is-equipped");
 
             if (price != null)
-                price.text = isShopList && !owned ? opt.cost.ToString() : "";
+                price.text = isShopList && !owned ? $"{opt.cost}" : "";
 
             if (badge != null)
             {
@@ -440,7 +502,17 @@ public class CustomizationShopViewBinder : MonoBehaviour
                 badge.RemoveFromClassList("is-equipped");
                 badge.RemoveFromClassList("is-preview");
 
-                if (owned)
+                if (previewed)
+                {
+                    badge.text = "PREVIEW";
+                    badge.AddToClassList("is-preview");
+                }
+                else if (equipped)
+                {
+                    badge.text = "EQUIPPED";
+                    badge.AddToClassList("is-equipped");
+                }
+                else if (owned)
                 {
                     badge.text = "OWNED";
                     badge.AddToClassList("is-owned");
@@ -479,6 +551,11 @@ public class CustomizationShopViewBinder : MonoBehaviour
         if (_btnResetHatColor != null) _btnResetHatColor.clicked += () => { controller.ResetHatColorToDefault(); RefreshAll(); };
         if (_btnResetJacketColor != null) _btnResetJacketColor.clicked += () => { controller.ResetJacketColorToDefault(); RefreshAll(); };
 
+        if (_btnResetSkisSecondaryColor != null) _btnResetSkisSecondaryColor.clicked += () => { controller.ResetGearExtraColorsToDefault(PatternTarget.Skis); RefreshAll(); };
+        if (_btnResetPolesSecondaryColor != null) _btnResetPolesSecondaryColor.clicked += () => { controller.ResetGearExtraColorsToDefault(PatternTarget.Poles); RefreshAll(); };
+        if (_btnResetHatSecondaryColor != null) _btnResetHatSecondaryColor.clicked += () => { controller.ResetGearExtraColorsToDefault(PatternTarget.Hat); RefreshAll(); };
+        if (_btnResetJacketSecondaryColor != null) _btnResetJacketSecondaryColor.clicked += () => { controller.ResetGearExtraColorsToDefault(PatternTarget.Jacket); RefreshAll(); };
+
         if (_btnResetSkisPattern != null) _btnResetSkisPattern.clicked += () => { controller.ResetPatternToDefault(CustomizationUIController.PatternTarget.Skis); RefreshAll(); };
         if (_btnResetPolesPattern != null) _btnResetPolesPattern.clicked += () => { controller.ResetPatternToDefault(CustomizationUIController.PatternTarget.Poles); RefreshAll(); };
         if (_btnResetHatPattern != null) _btnResetHatPattern.clicked += () => { controller.ResetPatternToDefault(CustomizationUIController.PatternTarget.Hat); RefreshAll(); };
@@ -506,72 +583,128 @@ public class CustomizationShopViewBinder : MonoBehaviour
 
 
         // Loadout: patterns (also selects pattern target)
-        if (_iconSkisPattern != null) _iconSkisPattern.clicked += () =>
+        MakeClickable(_iconSkisPattern, () =>
         {
             controller.SetPatternTarget(CustomizationUIController.PatternTarget.Skis);
             controller.SetCategory(CustomizationOptionType.SkinPattern);
             RefreshAll();
-        };
+        });
 
-        if (_iconPolesPattern != null) _iconPolesPattern.clicked += () =>
+        MakeClickable(_iconPolesPattern, () =>
         {
             controller.SetPatternTarget(CustomizationUIController.PatternTarget.Poles);
             controller.SetCategory(CustomizationOptionType.SkinPattern);
             RefreshAll();
-        };
+        });
 
-        if (_iconHatPattern != null) _iconHatPattern.clicked += () =>
+        MakeClickable(_iconHatPattern, () =>
         {
             controller.SetPatternTarget(CustomizationUIController.PatternTarget.Hat);
             controller.SetCategory(CustomizationOptionType.SkinPattern);
             RefreshAll();
-        };
+        });
 
-        if (_iconJacketPattern != null) _iconJacketPattern.clicked += () =>
+        MakeClickable(_iconJacketPattern, () =>
         {
             controller.SetPatternTarget(CustomizationUIController.PatternTarget.Jacket);
             controller.SetCategory(CustomizationOptionType.SkinPattern);
             RefreshAll();
-        };
+        });
 
-        // Loadout: patterns - clicking anywhere on the pattern slot should open pattern list
-        if (_slotSkisPattern != null) _slotSkisPattern.clicked += () =>
+        MakeClickable(_slotSkisPattern, () =>
         {
             controller.SetPatternTarget(CustomizationUIController.PatternTarget.Skis);
             controller.SetCategory(CustomizationOptionType.SkinPattern);
             RefreshAll();
-        };
+        });
 
-        if (_slotPolesPattern != null) _slotPolesPattern.clicked += () =>
+        MakeClickable(_slotPolesPattern, () =>
         {
             controller.SetPatternTarget(CustomizationUIController.PatternTarget.Poles);
             controller.SetCategory(CustomizationOptionType.SkinPattern);
             RefreshAll();
-        };
+        });
 
-        if (_slotHatPattern != null) _slotHatPattern.clicked += () =>
+        MakeClickable(_slotHatPattern, () =>
         {
             controller.SetPatternTarget(CustomizationUIController.PatternTarget.Hat);
             controller.SetCategory(CustomizationOptionType.SkinPattern);
             RefreshAll();
-        };
+        });
 
-        if (_slotJacketPattern != null) _slotJacketPattern.clicked += () =>
+        MakeClickable(_slotJacketPattern, () =>
         {
             controller.SetPatternTarget(CustomizationUIController.PatternTarget.Jacket);
             controller.SetCategory(CustomizationOptionType.SkinPattern);
             RefreshAll();
-        };
+        });
+
+        if (_btnBuyEyePreview != null)
+            _btnBuyEyePreview.clicked += () => { controller.TryBuyPreviewedEye(); RefreshAll(); };
+
+        if (_btnBuySkisPreviewItem != null)
+            _btnBuySkisPreviewItem.clicked += () => { controller.TryBuyPreviewedGear(PatternTarget.Skis); RefreshAll(); };
+        if (_btnBuySkisPreviewPattern != null)
+            _btnBuySkisPreviewPattern.clicked += () => { controller.TryBuyPreviewedPattern(PatternTarget.Skis); RefreshAll(); };
+        if (_btnBuySkisPreviewBoth != null)
+            _btnBuySkisPreviewBoth.clicked += () => { controller.TryBuyPreviewedGearAndPattern(PatternTarget.Skis); RefreshAll(); };
+
+        if (_btnBuyPolesPreviewItem != null)
+            _btnBuyPolesPreviewItem.clicked += () => { controller.TryBuyPreviewedGear(PatternTarget.Poles); RefreshAll(); };
+        if (_btnBuyPolesPreviewPattern != null)
+            _btnBuyPolesPreviewPattern.clicked += () => { controller.TryBuyPreviewedPattern(PatternTarget.Poles); RefreshAll(); };
+        if (_btnBuyPolesPreviewBoth != null)
+            _btnBuyPolesPreviewBoth.clicked += () => { controller.TryBuyPreviewedGearAndPattern(PatternTarget.Poles); RefreshAll(); };
+
+        if (_btnBuyHatPreviewItem != null)
+            _btnBuyHatPreviewItem.clicked += () => { controller.TryBuyPreviewedGear(PatternTarget.Hat); RefreshAll(); };
+        if (_btnBuyHatPreviewPattern != null)
+            _btnBuyHatPreviewPattern.clicked += () => { controller.TryBuyPreviewedPattern(PatternTarget.Hat); RefreshAll(); };
+        if (_btnBuyHatPreviewBoth != null)
+            _btnBuyHatPreviewBoth.clicked += () => { controller.TryBuyPreviewedGearAndPattern(PatternTarget.Hat); RefreshAll(); };
+
+        if (_btnBuyJacketPreviewItem != null)
+            _btnBuyJacketPreviewItem.clicked += () => { controller.TryBuyPreviewedGear(PatternTarget.Jacket); RefreshAll(); };
+        if (_btnBuyJacketPreviewPattern != null)
+            _btnBuyJacketPreviewPattern.clicked += () => { controller.TryBuyPreviewedPattern(PatternTarget.Jacket); RefreshAll(); };
+        if (_btnBuyJacketPreviewBoth != null)
+            _btnBuyJacketPreviewBoth.clicked += () => { controller.TryBuyPreviewedGearAndPattern(PatternTarget.Jacket); RefreshAll(); };
 
         // Color swatches open popover
         MakeClickable(_swatchSkin, () => OpenColor(ColorTarget.Skin, controller.GetSkinColor()));
         MakeClickable(_swatchEye, () => OpenColor(ColorTarget.Eye, controller.GetEyeColor()));
+        MakeClickable(_swatchEyeOutline, () => OpenColor(ColorTarget.EyeOutline, controller.GetEyeOutlineColor()));
         MakeClickable(_swatchSkisColor, () => OpenColor(ColorTarget.Skis, controller.GetSkisColor()));
         MakeClickable(_swatchPolesColor, () => OpenColor(ColorTarget.Poles, controller.GetPolesColor()));
         MakeClickable(_swatchHatColor, () => OpenColor(ColorTarget.Hat, controller.GetHatColor()));
         MakeClickable(_swatchJacketColor, () => OpenColor(ColorTarget.Jacket, controller.GetJacketColor()));
 
+        if (_sldEyeSize != null)
+        {
+            _sldEyeSize.lowValue = 1;
+            _sldEyeSize.highValue = 5;
+            _sldEyeSize.RegisterValueChangedCallback(evt =>
+            {
+                if (controller == null) return;
+                controller.SetEyeSize(evt.newValue);
+                RefreshAll();
+            });
+        }
+
         if (_btnCloseColor != null) _btnCloseColor.clicked += CloseColor;
+
+        if (_colorOverlay != null)
+        {
+            _colorOverlay.RegisterCallback<ClickEvent>(evt =>
+            {
+                if (evt.target == _colorOverlay)
+                    CloseColor();
+            });
+        }
+
+        var colorPanel = _root.Q<VisualElement>("ColorPanel");
+        if (colorPanel != null)
+            colorPanel.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
 
         if (_sldH != null) _sldH.RegisterValueChangedCallback(_ => OnColorSlidersChanged());
         if (_sldS != null) _sldS.RegisterValueChangedCallback(_ => OnColorSlidersChanged());
@@ -608,7 +741,7 @@ public class CustomizationShopViewBinder : MonoBehaviour
         if (controllerReady)
         {
             // Header
-            if (_lblCurrency != null) _lblCurrency.text = controller.GetCurrency().ToString();
+            if (_lblCurrency != null) _lblCurrency.text = $"${controller.GetCurrency():N0}";
 
             if (_lblShopListTitle != null)
                 _lblShopListTitle.text = "Shop Offers (Buy / Preview)";
@@ -652,6 +785,11 @@ public class CustomizationShopViewBinder : MonoBehaviour
             // Loadout swatches
             if (_swatchSkin != null) _swatchSkin.style.backgroundColor = controller.GetSkinColor();
             if (_swatchEye != null) _swatchEye.style.backgroundColor = controller.GetEyeColor();
+            if (_swatchEyeOutline != null) _swatchEyeOutline.style.backgroundColor = controller.GetEyeOutlineColor();
+            int eyeSizeStep = Mathf.RoundToInt(controller.GetEyeSize());
+            if (_sldEyeSize != null && _sldEyeSize.value != eyeSizeStep)
+                _sldEyeSize.SetValueWithoutNotify(eyeSizeStep);
+            if (_lblEyeSizeValue != null) _lblEyeSizeValue.text = eyeSizeStep.ToString();
             if (_swatchSkisColor != null) _swatchSkisColor.style.backgroundColor = controller.GetSkisColor();
             if (_swatchPolesColor != null) _swatchPolesColor.style.backgroundColor = controller.GetPolesColor();
             if (_swatchHatColor != null) _swatchHatColor.style.backgroundColor = controller.GetHatColor();
@@ -673,7 +811,7 @@ public class CustomizationShopViewBinder : MonoBehaviour
         if (sel == null)
         {
             if (_lblSelectedName != null) _lblSelectedName.text = "Select an item";
-            if (_lblSelectedDesc != null) _lblSelectedDesc.text = "";
+            if (_lblSelectedDesc != null) _lblSelectedDesc.text = "Preview items from the shop, then buy them once you're happy with the look.";
             if (_lblSelectedCost != null) _lblSelectedCost.text = "";
             if (_lblSelectedOwned != null) _lblSelectedOwned.text = "";
 
@@ -684,26 +822,35 @@ public class CustomizationShopViewBinder : MonoBehaviour
         }
 
         bool owned = controller.IsOwned(sel);
-        bool isShop = !owned;
+        bool previewed = IsOptionPreviewed(sel);
+        bool equipped = IsOptionEquipped(sel);
+        bool isPattern = sel.type == CustomizationOptionType.SkinPattern;
+        string targetLabel = GetPatternTargetLabel();
 
-        if (_lblSelectedName != null) _lblSelectedName.text = string.IsNullOrEmpty(sel.displayName) ? sel.name : sel.displayName;
-        if (_lblSelectedDesc != null) _lblSelectedDesc.text = sel.description;
-        if (_lblSelectedOwned != null) _lblSelectedOwned.text = owned ? "Owned" : "Not owned";
+        if (_lblSelectedName != null)
+            _lblSelectedName.text = string.IsNullOrEmpty(sel.displayName) ? sel.name : sel.displayName;
 
-        if (_btnBuy != null)
+        if (_lblSelectedDesc != null)
         {
-            if (!owned)
-                _btnBuy.RemoveFromClassList("is-hidden");
-            else
-                _btnBuy.AddToClassList("is-hidden");
+            string desc = string.IsNullOrEmpty(sel.description) ? "No description." : sel.description;
+
+            if (isPattern)
+                desc += $"\nCurrently targeting: {targetLabel}";
+
+            _lblSelectedDesc.text = desc;
         }
 
-        if (_btnEquip != null)
+        if (_lblSelectedCost != null)
+            _lblSelectedCost.text = owned ? "" : $"Price: {sel.cost}";
+
+        if (_lblSelectedOwned != null)
         {
-            if (owned)
-                _btnEquip.RemoveFromClassList("is-hidden");
+            if (previewed)
+                _lblSelectedOwned.text = isPattern ? $"Previewing on {targetLabel}" : "Previewing";
+            else if (equipped)
+                _lblSelectedOwned.text = isPattern ? $"Applied to {targetLabel}" : "Equipped";
             else
-                _btnEquip.AddToClassList("is-hidden");
+                _lblSelectedOwned.text = owned ? "Owned" : "Not owned";
         }
 
         if (_iconSelected != null)
@@ -715,23 +862,30 @@ public class CustomizationShopViewBinder : MonoBehaviour
                 _iconSelected.style.backgroundImage = StyleKeyword.None;
         }
 
-        // Actions
         if (_btnBuy != null)
         {
-            if (isShop && !owned)
+            if (!owned)
+            {
+                _btnBuy.text = isPattern ? $"Buy & Apply to {targetLabel}" : "Buy & Equip";
                 _btnBuy.RemoveFromClassList("is-hidden");
+            }
             else
+            {
                 _btnBuy.AddToClassList("is-hidden");
+            }
         }
 
         if (_btnEquip != null)
         {
-            // Equip button is mostly redundant now (owned auto equips on select),
-            // but keep it visible in inventory for clarity.
-            if (!isShop && owned)
+            if (owned)
+            {
+                _btnEquip.text = isPattern ? $"Apply to {targetLabel}" : "Equip";
                 _btnEquip.RemoveFromClassList("is-hidden");
+            }
             else
+            {
                 _btnEquip.AddToClassList("is-hidden");
+            }
         }
     }
 
@@ -775,6 +929,63 @@ public class CustomizationShopViewBinder : MonoBehaviour
         return null;
     }
 
+    private static bool SameOption(CustomizationOptionSO a, CustomizationOptionSO b)
+    {
+        if (a == null || b == null) return false;
+        return string.Equals(a.id ?? string.Empty, b.id ?? string.Empty, StringComparison.Ordinal);
+    }
+
+    private string GetPatternTargetLabel()
+    {
+        if (controller == null) return "Pattern";
+        return controller.GetPatternTarget() switch
+        {
+            CustomizationUIController.PatternTarget.Skis => "Skis",
+            CustomizationUIController.PatternTarget.Poles => "Poles",
+            CustomizationUIController.PatternTarget.Hat => "Hat",
+            CustomizationUIController.PatternTarget.Jacket => "Jacket",
+            _ => "Pattern"
+        };
+    }
+
+    private bool IsOptionPreviewed(CustomizationOptionSO opt)
+    {
+        if (controller == null || opt == null) return false;
+
+        return opt.type switch
+        {
+            CustomizationOptionType.EyeIcon => SameOption(opt, controller.GetPreviewEyeOption()),
+            CustomizationOptionType.Skis => SameOption(opt, controller.GetPreviewSkisOption()),
+            CustomizationOptionType.Poles => SameOption(opt, controller.GetPreviewPolesOption()),
+            CustomizationOptionType.Hat => SameOption(opt, controller.GetPreviewHatOption()),
+            CustomizationOptionType.Jacket => SameOption(opt, controller.GetPreviewJacketOption()),
+            CustomizationOptionType.SkinPattern => SameOption(opt, controller.GetPreviewPatternOption(controller.GetPatternTarget())),
+            _ => false
+        };
+    }
+
+    private bool IsOptionEquipped(CustomizationOptionSO opt)
+    {
+        if (controller == null || opt == null) return false;
+
+        return opt.type switch
+        {
+            CustomizationOptionType.EyeIcon => SameOption(opt, controller.GetEquippedEyeOption()),
+            CustomizationOptionType.Skis => SameOption(opt, controller.GetEquippedSkisOption()),
+            CustomizationOptionType.Poles => SameOption(opt, controller.GetEquippedPolesOption()),
+            CustomizationOptionType.Hat => SameOption(opt, controller.GetEquippedHatOption()),
+            CustomizationOptionType.Jacket => SameOption(opt, controller.GetEquippedJacketOption()),
+            CustomizationOptionType.SkinPattern => SameOption(opt, controller.GetEquippedPatternOption(controller.GetPatternTarget())),
+            _ => false
+        };
+    }
+
+    private bool IsOptionSelected(CustomizationOptionSO opt)
+    {
+        if (controller == null || opt == null) return false;
+        return SameOption(opt, controller.GetSelected());
+    }
+
     private void UpdatePatternTargetHighlight()
     {
         ClearTarget(_iconSkisPattern);
@@ -782,14 +993,44 @@ public class CustomizationShopViewBinder : MonoBehaviour
         ClearTarget(_iconHatPattern);
         ClearTarget(_iconJacketPattern);
 
-        if (controller.GetActiveCategory() != CustomizationOptionType.SkinPattern) return;
+        ClearTarget(_slotSkisPattern);
+        ClearTarget(_slotPolesPattern);
+        ClearTarget(_slotHatPattern);
+        ClearTarget(_slotJacketPattern);
+
+        ClearTarget(_rowSkis);
+        ClearTarget(_rowPoles);
+        ClearTarget(_rowHat);
+        ClearTarget(_rowJacket);
+
+        if (controller.GetActiveCategory() != CustomizationOptionType.SkinPattern)
+            return;
 
         switch (controller.GetPatternTarget())
         {
-            case CustomizationUIController.PatternTarget.Skis: SetTarget(_iconSkisPattern); break;
-            case CustomizationUIController.PatternTarget.Poles: SetTarget(_iconPolesPattern); break;
-            case CustomizationUIController.PatternTarget.Hat: SetTarget(_iconHatPattern); break;
-            case CustomizationUIController.PatternTarget.Jacket: SetTarget(_iconJacketPattern); break;
+            case CustomizationUIController.PatternTarget.Skis:
+                SetTarget(_iconSkisPattern);
+                SetTarget(_slotSkisPattern);
+                SetTarget(_rowSkis);
+                break;
+
+            case CustomizationUIController.PatternTarget.Poles:
+                SetTarget(_iconPolesPattern);
+                SetTarget(_slotPolesPattern);
+                SetTarget(_rowPoles);
+                break;
+
+            case CustomizationUIController.PatternTarget.Hat:
+                SetTarget(_iconHatPattern);
+                SetTarget(_slotHatPattern);
+                SetTarget(_rowHat);
+                break;
+
+            case CustomizationUIController.PatternTarget.Jacket:
+                SetTarget(_iconJacketPattern);
+                SetTarget(_slotJacketPattern);
+                SetTarget(_rowJacket);
+                break;
         }
     }
 
@@ -827,6 +1068,209 @@ public class CustomizationShopViewBinder : MonoBehaviour
         thumb.style.borderLeftColor = c;
     }
 
+    private void SetPurchaseButtonState(Button button, bool visible, string text, bool enabled)
+    {
+        if (button == null) return;
+
+        if (visible)
+        {
+            button.text = text;
+            button.RemoveFromClassList("is-hidden");
+            button.style.display = DisplayStyle.Flex;
+            button.SetEnabled(enabled);
+        }
+        else
+        {
+            button.AddToClassList("is-hidden");
+            button.style.display = DisplayStyle.None;
+        }
+    }
+
+    private void RefreshEyePurchaseActions()
+    {
+        var eye = controller.GetPreviewedPurchasableEyeOption();
+        bool show = eye != null;
+
+        if (_rowEyesPurchaseActions != null)
+            _rowEyesPurchaseActions.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
+
+        if (!show)
+            return;
+
+        bool canAfford = controller.CanAffordCost(eye.cost);
+        SetPurchaseButtonState(_btnBuyEyePreview, true, $"Buy Icon · {eye.cost}", canAfford);
+    }
+
+    private void RefreshGearPurchaseActions(
+        PatternTarget target,
+        VisualElement row,
+        Button btnItem,
+        Button btnPattern,
+        Button btnBoth,
+        string itemLabel)
+    {
+        var gear = controller.GetPreviewedPurchasableGearOption(target);
+        var pattern = controller.GetPreviewedPurchasablePatternOption(target);
+
+        bool showGear = gear != null;
+        bool showPattern = pattern != null;
+        bool showAny = showGear || showPattern;
+        bool showBoth = showGear && showPattern;
+
+        if (row != null)
+            row.style.display = showAny ? DisplayStyle.Flex : DisplayStyle.None;
+
+        if (!showAny)
+            return;
+
+        if (showGear)
+            SetPurchaseButtonState(btnItem, true, $"Buy {itemLabel} · {gear.cost}", controller.CanAffordCost(gear.cost));
+        else
+            SetPurchaseButtonState(btnItem, false, string.Empty, false);
+
+        if (showPattern)
+            SetPurchaseButtonState(btnPattern, true, $"Buy Pattern · {pattern.cost}", controller.CanAffordCost(pattern.cost));
+        else
+            SetPurchaseButtonState(btnPattern, false, string.Empty, false);
+
+        if (showBoth)
+        {
+            int combined = gear.cost + pattern.cost;
+            SetPurchaseButtonState(btnBoth, true, $"Buy Both · {combined}", controller.CanAffordCost(combined));
+        }
+        else
+        {
+            SetPurchaseButtonState(btnBoth, false, string.Empty, false);
+        }
+    }
+
+    private void RefreshLoadoutPurchaseActions()
+    {
+        if (controller == null) return;
+
+        RefreshEyePurchaseActions();
+
+        RefreshGearPurchaseActions(
+            PatternTarget.Skis,
+            _rowSkisPurchaseActions,
+            _btnBuySkisPreviewItem,
+            _btnBuySkisPreviewPattern,
+            _btnBuySkisPreviewBoth,
+            "Skis");
+
+        RefreshGearPurchaseActions(
+            PatternTarget.Poles,
+            _rowPolesPurchaseActions,
+            _btnBuyPolesPreviewItem,
+            _btnBuyPolesPreviewPattern,
+            _btnBuyPolesPreviewBoth,
+            "Poles");
+
+        RefreshGearPurchaseActions(
+            PatternTarget.Hat,
+            _rowHatPurchaseActions,
+            _btnBuyHatPreviewItem,
+            _btnBuyHatPreviewPattern,
+            _btnBuyHatPreviewBoth,
+            "Hat");
+
+        RefreshGearPurchaseActions(
+            PatternTarget.Jacket,
+            _rowJacketPurchaseActions,
+            _btnBuyJacketPreviewItem,
+            _btnBuyJacketPreviewPattern,
+            _btnBuyJacketPreviewBoth,
+            "Jacket");
+    }
+
+    private void OpenExtraChannelColor(PatternTarget target, string channelId, Color current)
+    {
+        _extraColorPatternTarget = target;
+        _extraColorChannelId = channelId;
+        OpenColor(ColorTarget.ExtraChannel, current);
+    }
+
+    private void ApplyColorToCurrentTarget(Color c)
+    {
+        if (controller == null || _colorTarget == ColorTarget.None)
+            return;
+
+        switch (_colorTarget)
+        {
+            case ColorTarget.Skin: controller.SetSkinColor(c); break;
+            case ColorTarget.Eye: controller.SetEyeColor(c); break;
+            case ColorTarget.EyeOutline: controller.SetEyeOutlineColor(c); break;
+            case ColorTarget.Skis: controller.SetSkisColor(c); break;
+            case ColorTarget.Poles: controller.SetPolesColor(c); break;
+            case ColorTarget.Hat: controller.SetHatColor(c); break;
+            case ColorTarget.Jacket: controller.SetJacketColor(c); break;
+
+            case ColorTarget.ExtraChannel:
+                if (!string.IsNullOrEmpty(_extraColorChannelId))
+                    controller.SetGearChannelColor(_extraColorPatternTarget, _extraColorChannelId, c);
+                break;
+        }
+    }
+
+    private void SetExtraColorAvailability(VisualElement container, Button resetButton, bool isAvailable)
+    {
+        if (container != null)
+        {
+            container.EnableInClassList("is-unavailable", !isAvailable);
+            container.pickingMode = isAvailable ? PickingMode.Position : PickingMode.Ignore;
+        }
+
+        if (resetButton != null)
+        {
+            resetButton.SetEnabled(isAvailable);
+            resetButton.EnableInClassList("is-unavailable", !isAvailable);
+            resetButton.style.opacity = isAvailable ? 1f : 0.35f;
+        }
+    }
+
+    private void RebuildExtraColorSwatches(PatternTarget target, VisualElement container, Button resetButton)
+    {
+        if (container == null)
+            return;
+
+        container.Clear();
+
+        if (controller == null)
+        {
+            SetExtraColorAvailability(container, resetButton, false);
+            return;
+        }
+
+        var channels = controller.GetActiveExtraColorChannels(target);
+        bool hasChannels = channels != null && channels.Count > 0;
+
+        SetExtraColorAvailability(container, resetButton, hasChannels);
+
+        if (!hasChannels)
+            return;
+
+        for (int i = 0; i < channels.Count; i++)
+        {
+            var channel = channels[i];
+            if (channel == null || string.IsNullOrEmpty(channel.id))
+                continue;
+
+            var swatch = new VisualElement();
+            swatch.AddToClassList("gear-mini-extra-color");
+            swatch.tooltip = channel.displayName;
+            swatch.style.backgroundColor = controller.GetGearChannelColor(target, channel.id);
+
+            var localTarget = target;
+            var localChannelId = channel.id;
+
+            MakeClickable(swatch, () =>
+            {
+                OpenExtraChannelColor(localTarget, localChannelId, controller.GetGearChannelColor(localTarget, localChannelId));
+            });
+
+            container.Add(swatch);
+        }
+    }
     private void RefreshLoadoutEquipped()
     {
         if (controller == null) return;
@@ -841,6 +1285,10 @@ public class CustomizationShopViewBinder : MonoBehaviour
         // Eye icon: prefer icon, then eyeSprite (your option SO supports both)
         if (_imgEyeIcon != null)
             _imgEyeIcon.sprite = eye != null ? (eye.icon != null ? eye.icon : eye.eyeSprite) : null;
+
+        if (_swatchEye != null) _swatchEye.style.backgroundColor = controller.GetEyeColor();
+        if (_swatchEyeOutline != null) _swatchEyeOutline.style.backgroundColor = controller.GetEyeOutlineColor();
+        if (_lblEyeSizeValue != null) _lblEyeSizeValue.text = $"{Mathf.RoundToInt(controller.GetEyeSize() * 100f)}%";
 
         SetLoadoutBadge(_lblEyeState, eyePrev);
         if (_btnClearEyePreview != null)
@@ -904,6 +1352,13 @@ public class CustomizationShopViewBinder : MonoBehaviour
         ApplyPattern(CustomizationUIController.PatternTarget.Poles, _iconPolesPattern, _lblPolesPatternName);
         ApplyPattern(CustomizationUIController.PatternTarget.Hat, _iconHatPattern, _lblHatPatternName);
         ApplyPattern(CustomizationUIController.PatternTarget.Jacket, _iconJacketPattern, _lblJacketPatternName);
+
+        RebuildExtraColorSwatches(PatternTarget.Skis, _rowSkisExtraColors, _btnResetSkisSecondaryColor);
+        RebuildExtraColorSwatches(PatternTarget.Poles, _rowPolesExtraColors, _btnResetPolesSecondaryColor);
+        RebuildExtraColorSwatches(PatternTarget.Hat, _rowHatExtraColors, _btnResetHatSecondaryColor);
+        RebuildExtraColorSwatches(PatternTarget.Jacket, _rowJacketExtraColors, _btnResetJacketSecondaryColor);
+
+        RefreshLoadoutPurchaseActions();
     }
 
     private void AutoSelectEquippedRow()
@@ -971,7 +1426,12 @@ public class CustomizationShopViewBinder : MonoBehaviour
         _colorTarget = target;
         if (_colorOverlay != null) _colorOverlay.RemoveFromClassList("is-hidden");
 
-        
+        if (target != ColorTarget.ExtraChannel)
+        {
+            _extraColorPatternTarget = PatternTarget.Skis;
+            _extraColorChannelId = null;
+        }
+
         Color.RGBToHSV(current, out float h, out float s, out float v);
         _sldH?.SetValueWithoutNotify(h);
         _sldS?.SetValueWithoutNotify(s);
@@ -986,6 +1446,8 @@ public class CustomizationShopViewBinder : MonoBehaviour
     private void CloseColor()
     {
         _colorTarget = ColorTarget.None;
+        _extraColorPatternTarget = PatternTarget.Skis;
+        _extraColorChannelId = null;
         if (_colorOverlay != null) _colorOverlay.AddToClassList("is-hidden");
     }
 
@@ -1090,19 +1552,10 @@ public class CustomizationShopViewBinder : MonoBehaviour
         Color c = Color.HSVToRGB(h, s, v);
         if (_colorPreview != null) _colorPreview.style.backgroundColor = c;
 
-        // NEW: keep UI intuitive
         RefreshSVGradients();
         RefreshDraggerColors(c);
 
-        switch (_colorTarget)
-        {
-            case ColorTarget.Skin: controller.SetSkinColor(c); break;
-            case ColorTarget.Eye: controller.SetEyeColor(c); break;
-            case ColorTarget.Skis: controller.SetSkisColor(c); break;
-            case ColorTarget.Poles: controller.SetPolesColor(c); break;
-            case ColorTarget.Hat: controller.SetHatColor(c); break;
-            case ColorTarget.Jacket: controller.SetJacketColor(c); break;
-        }
+        ApplyColorToCurrentTarget(c);
 
         RefreshAll();
     }
@@ -1126,28 +1579,16 @@ public class CustomizationShopViewBinder : MonoBehaviour
 
             sw.AddManipulator(new Clickable(() =>
             {
-                // Apply preset to current active target (only if overlay is open / target chosen)
                 if (controller == null || _colorTarget == ColorTarget.None)
                     return;
 
-                // Update sliders + preview
                 Color.RGBToHSV(c, out float h, out float s, out float v);
                 _sldH?.SetValueWithoutNotify(h);
                 _sldS?.SetValueWithoutNotify(s);
                 _sldV?.SetValueWithoutNotify(v);
                 if (_colorPreview != null) _colorPreview.style.backgroundColor = c;
 
-                // Apply to controller
-                switch (_colorTarget)
-                {
-                    case ColorTarget.Skin: controller.SetSkinColor(c); break;
-                    case ColorTarget.Eye: controller.SetEyeColor(c); break;
-                    case ColorTarget.Skis: controller.SetSkisColor(c); break;
-                    case ColorTarget.Poles: controller.SetPolesColor(c); break;
-                    case ColorTarget.Hat: controller.SetHatColor(c); break;
-                    case ColorTarget.Jacket: controller.SetJacketColor(c); break;
-                }
-
+                ApplyColorToCurrentTarget(c);
                 RefreshAll();
             }));
 

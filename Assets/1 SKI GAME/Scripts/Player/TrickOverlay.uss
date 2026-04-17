@@ -1,0 +1,110 @@
+.trick-overlay-root {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 18px;
+    align-items: flex-start;
+    justify-content: flex-end;
+    pointer-events: none;
+}
+
+.trick-list {
+    width: 100%;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.trick-entry {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 2px;
+    padding-bottom: 4px;
+    background-color: rgba(0, 0, 0, 0);
+    opacity: 0;
+}
+
+.trick-score-row {
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 10px;
+    margin-bottom: 2px;
+}
+
+.trick-combo-score {
+    unity-text-align: middle-left;
+    white-space: nowrap;
+    -unity-text-outline-color: rgba(24, 18, 4, 1);
+    -unity-text-outline-width: 4px;
+    letter-spacing: 1px;
+}
+
+.trick-combo-increment {
+    unity-text-align: middle-left;
+    white-space: nowrap;
+    -unity-text-outline-color: rgba(52, 22, 0, 1);
+    -unity-text-outline-width: 3px;
+    letter-spacing: 1px;
+}
+
+.trick-adjective {
+    unity-text-align: middle-left;
+    white-space: nowrap;
+    flex-shrink: 0;
+    max-width: none;
+    margin-bottom: 2px;
+    -unity-text-outline-color: rgba(8, 14, 26, 1);
+    -unity-text-outline-width: 3px;
+    letter-spacing: 1px;
+}
+
+.trick-combo-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    width: 100%;
+    gap: 3px;
+}
+
+.trick-segment {
+    unity-text-align: middle-left;
+    white-space: normal;
+    -unity-text-outline-color: rgba(8, 14, 26, 1);
+    -unity-text-outline-width: 3px;
+}
+
+.trick-plus {
+    unity-text-align: middle-left;
+    white-space: nowrap;
+    -unity-text-outline-color: rgba(8, 14, 26, 1);
+    -unity-text-outline-width: 2px;
+    margin-left: 2px;
+    margin-right: 2px;
+}
+
+.trick-strike {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 58%;
+    height: 4px;
+    background-color: rgba(255, 245, 245, 1);
+    display: none;
+}
+
+.trick-failed {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -6px;
+    unity-text-align: middle-left;
+    font-size: 28px;
+    color: rgba(255, 250, 250, 1);
+    -unity-text-outline-color: rgba(60, 0, 0, 1);
+    -unity-text-outline-width: 3px;
+    letter-spacing: 1px;
+    display: none;
+}

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 303a49377964b7e498781c860c8649d9
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 177244
+  packageName: MIGHTY PORTAL
+  packageVersion: 2.2.
+  assetPath: Assets/MightyDevOps/Core/Models/BasePopOutWindow.cs
+  uploadId: 767126

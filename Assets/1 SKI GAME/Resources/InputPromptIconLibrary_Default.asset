@@ -1,0 +1,174 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85f52c4d80ee9864a9acc542682f80a8, type: 3}
+  m_Name: InputPromptIconLibrary_Default
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.UI.InputPromptIconLibrary
+  entries:
+  - key: keyboard:shift
+    sprite: {fileID: 21300000, guid: 16c9cb53000d5ab4f817609c2b3227d6, type: 3}
+    textFallback: Shift
+  - key: keyboard:ctrl
+    sprite: {fileID: 21300000, guid: d9fae4f1f9a57334e8466b0fed6cf1d5, type: 3}
+    textFallback: Ctrl
+  - key: keyboard:alt
+    sprite: {fileID: 21300000, guid: 0bab853a642a70041a8cdee3fae21c6f, type: 3}
+    textFallback: Alt
+  - key: keyboard:esc
+    sprite: {fileID: 21300000, guid: 7234c366470cb9c4fb697c1050f78628, type: 3}
+    textFallback: Esc
+  - key: keyboard:space
+    sprite: {fileID: 21300000, guid: b2a784b6d9a009048b62e01f373ec4e9, type: 3}
+    textFallback: Space
+  - key: keyboard:enter
+    sprite: {fileID: 21300000, guid: b029f3d017d97a44989f8e283c0ab7f7, type: 3}
+    textFallback: Enter
+  - key: keyboard:tab
+    sprite: {fileID: 21300000, guid: bb09968fff837f048afa19a51c0045a5, type: 3}
+    textFallback: Tab
+  - key: keyboard:pause
+    sprite: {fileID: 21300000, guid: 9648187fe24d1374ba3ac58cd3c04069, type: 3}
+    textFallback: Pause
+  - key: keyboard:arrow-up
+    sprite: {fileID: 21300000, guid: 764669c5ed0537147b335cdb4ee888e3, type: 3}
+    textFallback: Up
+  - key: keyboard:arrow-down
+    sprite: {fileID: 21300000, guid: e75ac8c35380caa44ab7ecbadcfaeb45, type: 3}
+    textFallback: Down
+  - key: keyboard:arrow-left
+    sprite: {fileID: 21300000, guid: 17760f9e1b48ec3448520e717d358d52, type: 3}
+    textFallback: Left
+  - key: keyboard:arrow-right
+    sprite: {fileID: 21300000, guid: fc7cc6af66ebe0840921aa4ea7253660, type: 3}
+    textFallback: Right
+  - key: mouse:left
+    sprite: {fileID: 21300000, guid: fd1a0dff4c167f04898c69eedd2b810c, type: 3}
+    textFallback: LMB
+  - key: mouse:right
+    sprite: {fileID: 21300000, guid: e9f7c8ceedece8c4abe9800d8ff7a7ee, type: 3}
+    textFallback: RMB
+  - key: mouse:middle
+    sprite: {fileID: 21300000, guid: abb64a2ae8539bc4592b83f47eaa7a96, type: 3}
+    textFallback: MMB
+  - key: mouse:move-hor
+    sprite: {fileID: 21300000, guid: 19e92c7d5176d4746857871cc0876a43, type: 3}
+    textFallback: Mouse X
+  - key: mouse:move-vert
+    sprite: {fileID: 21300000, guid: 556d913a80e795e4ebf1240eb66f7cb3, type: 3}
+    textFallback: Mouse Y
+  - key: keyboard:a
+    sprite: {fileID: 21300000, guid: f1dbccfd651b49a438d4645df3ba4062, type: 3}
+    textFallback: A
+  - key: keyboard:b
+    sprite: {fileID: 21300000, guid: 9267ace75113a5d43b21a289a6c43806, type: 3}
+    textFallback: B
+  - key: keyboard:c
+    sprite: {fileID: 21300000, guid: 67c48c55f7c3185499c0abf4c3e51e19, type: 3}
+    textFallback: C
+  - key: keyboard:d
+    sprite: {fileID: 21300000, guid: 56f1002c9c66c894cb96ca4fb7172c97, type: 3}
+    textFallback: D
+  - key: keyboard:e
+    sprite: {fileID: 21300000, guid: 6245ef681e7d5004ba343f7b05c31754, type: 3}
+    textFallback: E
+  - key: keyboard:f
+    sprite: {fileID: 21300000, guid: fa78b52c3e5e1d14ca72533afd2692ac, type: 3}
+    textFallback: F
+  - key: keyboard:g
+    sprite: {fileID: 21300000, guid: 1a9f40c9924a2d1439d3c783982f3612, type: 3}
+    textFallback: G
+  - key: keyboard:h
+    sprite: {fileID: 21300000, guid: a69575350c23f7e49bcce0e8597960cf, type: 3}
+    textFallback: H
+  - key: keyboard:i
+    sprite: {fileID: 21300000, guid: f9f8638f8e1e84443961eddb9c16b487, type: 3}
+    textFallback: I
+  - key: keyboard:j
+    sprite: {fileID: 21300000, guid: 47b37b46cddb0d64abb938dadb6be40f, type: 3}
+    textFallback: J
+  - key: keyboard:k
+    sprite: {fileID: 21300000, guid: 9f2001b2a2e14b247bb410469dbbc93c, type: 3}
+    textFallback: K
+  - key: keyboard:l
+    sprite: {fileID: 21300000, guid: c49744142942322429bd124aac1594c0, type: 3}
+    textFallback: L
+  - key: keyboard:m
+    sprite: {fileID: 21300000, guid: 65cf642839799114eb6bcbbca9b8f793, type: 3}
+    textFallback: M
+  - key: keyboard:n
+    sprite: {fileID: 21300000, guid: 1d0b99ae6fc86e7488eae96ca314bef7, type: 3}
+    textFallback: N
+  - key: keyboard:o
+    sprite: {fileID: 21300000, guid: d653d92d823cd284c8de261847483e10, type: 3}
+    textFallback: O
+  - key: keyboard:p
+    sprite: {fileID: 21300000, guid: 04d91239aa523074498444130fbee495, type: 3}
+    textFallback: P
+  - key: keyboard:q
+    sprite: {fileID: 21300000, guid: 704dc657e111f524e82a844d98ab5b38, type: 3}
+    textFallback: Q
+  - key: keyboard:r
+    sprite: {fileID: 21300000, guid: 44c2d0f09fa1bfd4da516e3c1dd20491, type: 3}
+    textFallback: R
+  - key: keyboard:s
+    sprite: {fileID: 21300000, guid: af856ace946144443ab99a512ce0590d, type: 3}
+    textFallback: S
+  - key: keyboard:t
+    sprite: {fileID: 21300000, guid: 01c5f388cb51db642bed9bc3e2ffa59e, type: 3}
+    textFallback: T
+  - key: keyboard:u
+    sprite: {fileID: 21300000, guid: edbc05a287c228d439ad6156de7be89c, type: 3}
+    textFallback: U
+  - key: keyboard:v
+    sprite: {fileID: 21300000, guid: 4151815ae27cfd449b9e45c647fa09ab, type: 3}
+    textFallback: V
+  - key: keyboard:w
+    sprite: {fileID: 21300000, guid: 080e9c0f37c820a4ba5f661d8c493a4d, type: 3}
+    textFallback: W
+  - key: keyboard:x
+    sprite: {fileID: 21300000, guid: 46f5569d8ec15754aa3e28e0ae729583, type: 3}
+    textFallback: X
+  - key: keyboard:y
+    sprite: {fileID: 21300000, guid: 22ac7a51eb88a70439026805d15f58f5, type: 3}
+    textFallback: Y
+  - key: keyboard:z
+    sprite: {fileID: 21300000, guid: 49b06c20fc956a845aec08ad49443d91, type: 3}
+    textFallback: Z
+  - key: keyboard:0
+    sprite: {fileID: 21300000, guid: ad7c4131e1bbc5a42965337c577605b5, type: 3}
+    textFallback: 0
+  - key: keyboard:1
+    sprite: {fileID: 21300000, guid: a1be7975f18288b47a4e708f647fa2dc, type: 3}
+    textFallback: 1
+  - key: keyboard:2
+    sprite: {fileID: 21300000, guid: a39b165706d3e694e80f13338cdd537f, type: 3}
+    textFallback: 2
+  - key: keyboard:3
+    sprite: {fileID: 21300000, guid: f30a27395fa5a8449af8c57acc037815, type: 3}
+    textFallback: 3
+  - key: keyboard:4
+    sprite: {fileID: 21300000, guid: b0409c7d7f0dce44a80dbbf354691d67, type: 3}
+    textFallback: 4
+  - key: keyboard:5
+    sprite: {fileID: 21300000, guid: 841345cae8499494580f8320fa548a04, type: 3}
+    textFallback: 5
+  - key: keyboard:6
+    sprite: {fileID: 21300000, guid: 8d35b7198bd51e44381eb267c7bc1579, type: 3}
+    textFallback: 6
+  - key: keyboard:7
+    sprite: {fileID: 21300000, guid: f53a567306359d345beae5bdb15d965e, type: 3}
+    textFallback: 7
+  - key: keyboard:8
+    sprite: {fileID: 21300000, guid: 53afce4c5f5e5ab43b5e59bb7f58554f, type: 3}
+    textFallback: 8
+  - key: keyboard:9
+    sprite: {fileID: 21300000, guid: 4ca07e376f2533746975806d0351d2f5, type: 3}
+    textFallback: 9

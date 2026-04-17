@@ -183,6 +183,8 @@ public class PlayerCustomizationApplier : MonoBehaviour
         {
             characterCustomizer.SetSkinColor(state.skinColor);
             characterCustomizer.SetEyeColor(state.eyeColor);
+            characterCustomizer.SetEyeOutlineColor(state.eyeOutlineColor);
+            characterCustomizer.SetEyeSize(state.eyeSize);
 
             // Eyes always resolve via catalog
             ApplyCosmetic(state.equippedEyeIconId);
@@ -201,6 +203,9 @@ public class PlayerCustomizationApplier : MonoBehaviour
 
             characterCustomizer.SetHatColor(hatApplied);
             characterCustomizer.SetJacketColor(jacketApplied);
+
+            ApplyWearableExtraColors(state, CustomizationUIController.PatternTarget.Hat);
+            ApplyWearableExtraColors(state, CustomizationUIController.PatternTarget.Jacket);
         }
 
         // Apply gear prefabs
@@ -418,5 +423,70 @@ public class PlayerCustomizationApplier : MonoBehaviour
             return characterCustomizer.GetSkinPatternTexture2D(opt.customizerIndex);
 
         return null;
+    }
+
+    private void ApplyWearableExtraColors(PlayerStatsProfile.CustomizationState state, CustomizationUIController.PatternTarget target)
+    {
+        if (state == null || characterCustomizer == null)
+            return;
+
+        string slotKey;
+        string equippedId;
+
+        switch (target)
+        {
+            case CustomizationUIController.PatternTarget.Hat:
+                slotKey = "Hat";
+                equippedId = state.equippedHatId;
+                break;
+
+            case CustomizationUIController.PatternTarget.Jacket:
+                slotKey = "Jacket";
+                equippedId = state.equippedJacketId;
+                break;
+
+            default:
+                return;
+        }
+
+        if (string.IsNullOrEmpty(equippedId) || catalog == null)
+            return;
+
+        var opt = catalog.FindById(equippedId);
+        if (opt == null) return;
+
+        GameObject prefab = null;
+        if (target == CustomizationUIController.PatternTarget.Hat)
+        {
+            prefab = opt.hatPrefab != null
+                ? opt.hatPrefab
+                : characterCustomizer.GetHatPrefabAtIndex(opt.customizerIndex);
+        }
+        else
+        {
+            prefab = opt.jacketPrefab != null
+                ? opt.jacketPrefab
+                : characterCustomizer.GetJacketPrefabAtIndex(opt.customizerIndex);
+        }
+
+        var wearable = prefab != null ? prefab.GetComponent<WearableAttachment>() : null;
+        var channels = wearable != null ? wearable.GetExtraChannels() : null;
+        if (channels == null) return;
+
+        for (int i = 0; i < channels.Count; i++)
+        {
+            var channel = channels[i];
+            if (channel == null || string.IsNullOrEmpty(channel.id))
+                continue;
+
+            var color = channel.defaultColor;
+            if (state.TryGetExtraColor(slotKey, channel.id, out var saved))
+                color = saved;
+
+            if (target == CustomizationUIController.PatternTarget.Hat)
+                characterCustomizer.SetHatChannelColor(channel.id, color);
+            else
+                characterCustomizer.SetJacketChannelColor(channel.id, color);
+        }
     }
 }

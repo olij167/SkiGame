@@ -12,6 +12,17 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
         FollowRun
     }
 
+    private enum SkiMicroIntent
+    {
+        None,
+        HoldLine,
+        DriftLeftEdge,
+        DriftRightEdge,
+        FastDescent,
+        CautiousEntry,
+        PullOver
+    }
+
     [Header("References")]
     [SerializeField] private SkiController skiController;
     [SerializeField] private NpcSkierProfile profile;
@@ -53,10 +64,12 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
     [SerializeField] private float uphillWalkDelay = 1.2f;
 
     [Header("Recovery")]
+    [SerializeField] private float moderateOffRunWalkDistance = 22f;
     [SerializeField] private float severeOffRunRespawnDistance = 45f;
     [SerializeField] private float progressStallSpeedThreshold = 0.9f;
     [SerializeField] private float progressStallTime = 5f;
     [SerializeField] private float noGroundRespawnTime = 4f;
+    [SerializeField] private float noGroundWalkRecoveryTime = 1.8f;
 
     [Header("Completion")]
     [SerializeField] private float finishDistanceRemainingMeters = 10f;
@@ -79,6 +92,19 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
     [SerializeField] private float scenicPauseSpeedMax = 6f;
     [SerializeField] private float steepHesitationSlopeMinDeg = 20f;
 
+    [Header("Micro Intents")]
+    [SerializeField] private float microIntentDecisionMinSeconds = 2f;
+    [SerializeField] private float microIntentDecisionMaxSeconds = 6f;
+    [SerializeField] private float microIntentEdgeOffsetScale = 0.72f;
+    [SerializeField] private float microIntentPullOverPauseMinSeconds = 1.1f;
+    [SerializeField] private float microIntentPullOverPauseMaxSeconds = 3f;
+
+    [Header("Ski Settle")]
+    [SerializeField] private float skiModeSettleSeconds = 0.8f;
+    [SerializeField] private float lowSpeedLeanDampenThreshold = 3.4f;
+    [SerializeField] private float shallowSlopeLeanDampenMaxDeg = 11f;
+    [SerializeField] private float settledForwardLeanCap = 0.22f;
+
     private float _distanceAlongMeters;
     private float _distanceToCenterXZ;
     private float _halfWidthMeters;
@@ -98,6 +124,14 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
 
     private float _noiseSeed;
     private float _pauseUntil;
+    private SkiMicroIntent _microIntent;
+    private float _microIntentUntil;
+    private float _speedIntentMultiplier = 1f;
+    private float _lastLocalCrowdPressure;
+    private Vector3 _runCenterPoint;
+    private Vector3 _runTangent;
+    private float _respawnSuppressedUntil;
+    private float _skiModeSettleUntil;
 
     public SkiRunLine CurrentRun => currentRun;
     public SkiMode CurrentMode => skiMode;
@@ -109,6 +143,9 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
     public Quaternion SuggestedRespawnRotation => _suggestedRespawnRotation;
 
     private float _visibleFastForwardMultiplier = 1f;
+    private readonly Collider[] _avoidanceHits = new Collider[24];
+    private readonly Collider[] _crowdProbeHits = new Collider[24];
+    private Rigidbody _ownRigidbody;
     public bool HasCompletedRun =>
         inputEnabled &&
         currentRun != null &&
@@ -120,6 +157,7 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
     private void Awake()
     {
         _noiseSeed = Random.Range(0f, 1000f);
+        _ownRigidbody = GetComponent<Rigidbody>();
     }
 
     public void ConfigureRuns(IEnumerable<SkiRunLine> runs)
@@ -150,6 +188,10 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
             _wantsRespawn = false;
             hasBroadTarget = false;
             _pauseUntil = 0f;
+            _microIntent = SkiMicroIntent.None;
+            _microIntentUntil = 0f;
+            _speedIntentMultiplier = 1f;
+            _skiModeSettleUntil = 0f;
         }
     }
 
@@ -159,6 +201,17 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
         _wantsRespawn = false;
     }
 
+    public void SuppressRespawnRequests(float seconds)
+    {
+        if (seconds <= 0f)
+        {
+            _respawnSuppressedUntil = 0f;
+            return;
+        }
+
+        _respawnSuppressedUntil = Mathf.Max(_respawnSuppressedUntil, Time.time + seconds);
+    }
+
     public void SetRun(SkiRunLine run)
     {
         currentRun = run;
@@ -166,6 +219,7 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
         inputEnabled = run != null;
         hasBroadTarget = false;
         ResetProgressState();
+        _skiModeSettleUntil = Time.time + skiModeSettleSeconds;
         BuildRespawnPoseFromRun();
     }
 
@@ -177,6 +231,7 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
         broadTargetPoint = broadTarget;
         hasBroadTarget = true;
         ResetProgressState();
+        _skiModeSettleUntil = Time.time + skiModeSettleSeconds;
         _suggestedRespawnPoint = transform.position + Vector3.up * 0.35f;
         _suggestedRespawnRotation = transform.rotation;
     }
@@ -242,6 +297,7 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
         }
 
         desiredDirection = ApplyPersonalityVariation(desiredDirection, downhill, groundNormal);
+        desiredDirection = ApplyMicroIntent(desiredDirection, downhill, groundNormal, slopeDeg, speed);
         desiredDirection = ApplyLocalAvoidance(desiredDirection, groundNormal);
 
         UpdateRecoveryState(slopeDeg, speed, downhill, desiredDirection);
@@ -259,6 +315,8 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
         _halfWidthMeters = 0f;
         _completion01 = 0f;
         _distanceRemainingMeters = 0f;
+        _runCenterPoint = transform.position;
+        _runTangent = transform.forward;
 
         _lastProgressMeters = 0f;
         _lastMeaningfulProgressTime = Time.time;
@@ -268,6 +326,12 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
         _wantsWalkingRecovery = false;
         _wantsRespawn = false;
         _suggestedRecoveryPoint = transform.position;
+        _microIntent = SkiMicroIntent.None;
+        _microIntentUntil = 0f;
+        _speedIntentMultiplier = 1f;
+        _lastLocalCrowdPressure = 0f;
+        _respawnSuppressedUntil = 0f;
+        _skiModeSettleUntil = Time.time + skiModeSettleSeconds;
     }
 
     private void MaybeTriggerAmbientPause(float slopeDeg, float speed)
@@ -337,6 +401,7 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
 
         _completion01 = Mathf.Clamp01(_distanceAlongMeters / runLength);
         _distanceRemainingMeters = Mathf.Max(0f, runLength - _distanceAlongMeters);
+        _runCenterPoint = SamplePointAtDistance(currentRun.PointsWorld, _distanceAlongMeters);
 
         float profileLookahead = profile != null ? profile.ReactionLookaheadMeters : 14f;
         float dynamicLookahead = Mathf.Lerp(
@@ -348,6 +413,7 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
         float lookaheadDistance = Mathf.Clamp(_distanceAlongMeters + dynamicLookahead, 0f, runLength);
         Vector3 lookaheadPoint = SamplePointAtDistance(currentRun.PointsWorld, lookaheadDistance);
         Vector3 runTangent = SampleTangentAtDistance(currentRun.PointsWorld, lookaheadDistance, groundNormal);
+        _runTangent = runTangent;
 
         Vector3 toLookahead = Vector3.ProjectOnPlane(lookaheadPoint - transform.position, groundNormal);
         if (toLookahead.sqrMagnitude > 0.0001f)
@@ -368,7 +434,16 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
         }
 
         if (_distanceToCenterXZ >= severeOffRunRespawnDistance)
-            _wantsRespawn = true;
+        {
+            if (Time.time < _respawnSuppressedUntil)
+                _wantsWalkingRecovery = true;
+            else
+                _wantsRespawn = true;
+        }
+        else if (_distanceToCenterXZ >= moderateOffRunWalkDistance)
+        {
+            _wantsWalkingRecovery = true;
+        }
 
         BuildRespawnPoseFromRun();
         return true;
@@ -468,9 +543,19 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
         _wantsWalkingRecovery = false;
         _wantsRespawn = false;
 
-        if (!skiController.IsRiderGrounded && (Time.time - _lastGroundedTime) >= noGroundRespawnTime)
+        float ungroundedTime = Time.time - _lastGroundedTime;
+        if (!skiController.IsRiderGrounded && ungroundedTime >= noGroundRespawnTime)
         {
-            _wantsRespawn = true;
+            if (Time.time < _respawnSuppressedUntil)
+                _wantsWalkingRecovery = true;
+            else
+                _wantsRespawn = true;
+            return;
+        }
+
+        if (!skiController.IsRiderGrounded && ungroundedTime >= noGroundWalkRecoveryTime)
+        {
+            _wantsWalkingRecovery = true;
             return;
         }
 
@@ -514,8 +599,172 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
 
         if (stalled && currentRun == null && !hasBroadTarget)
         {
-            _wantsRespawn = true;
+            if (Time.time < _respawnSuppressedUntil)
+                _wantsWalkingRecovery = true;
+            else
+                _wantsRespawn = true;
         }
+    }
+
+    private Vector3 ApplyMicroIntent(Vector3 desiredDirection, Vector3 downhill, Vector3 groundNormal, float slopeDeg, float speed)
+    {
+        _speedIntentMultiplier = 1f;
+        _lastLocalCrowdPressure = EstimateLocalCrowdPressure(groundNormal);
+
+        if (Time.time >= _microIntentUntil)
+            ChooseNextMicroIntent(slopeDeg, speed);
+
+        if (_microIntent == SkiMicroIntent.None || skiMode != SkiMode.FollowRun || currentRun == null)
+            return desiredDirection;
+
+        Vector3 centerToSelf = Vector3.ProjectOnPlane(transform.position - _runCenterPoint, groundNormal);
+        Vector3 courseRight = Vector3.Cross(groundNormal, _runTangent).normalized;
+        if (courseRight.sqrMagnitude <= 0.0001f)
+            courseRight = Vector3.Cross(groundNormal, downhill).normalized;
+
+        switch (_microIntent)
+        {
+            case SkiMicroIntent.HoldLine:
+                desiredDirection = Vector3.Slerp(desiredDirection, _runTangent, 0.18f);
+                break;
+
+            case SkiMicroIntent.DriftLeftEdge:
+            case SkiMicroIntent.DriftRightEdge:
+                {
+                    float side = _microIntent == SkiMicroIntent.DriftLeftEdge ? -1f : 1f;
+                    Vector3 desiredOffset = courseRight * side * (_halfWidthMeters * microIntentEdgeOffsetScale);
+                    Vector3 edgeDir = Vector3.ProjectOnPlane((_runCenterPoint + desiredOffset) - transform.position, groundNormal);
+                    if (edgeDir.sqrMagnitude > 0.0001f)
+                        desiredDirection = Vector3.Slerp(desiredDirection, edgeDir.normalized, 0.34f);
+
+                    _speedIntentMultiplier = Mathf.Lerp(0.92f, 1.02f, profile != null ? profile.EdgePreference01 : 0.5f);
+                    break;
+                }
+
+            case SkiMicroIntent.FastDescent:
+                desiredDirection = Vector3.Slerp(desiredDirection, downhill, 0.22f);
+                _speedIntentMultiplier = Mathf.Lerp(1.08f, 1.24f, profile != null ? profile.OvertakeTendency01 : 0.35f);
+                break;
+
+            case SkiMicroIntent.CautiousEntry:
+                desiredDirection = Vector3.Slerp(desiredDirection, downhill, 0.12f);
+                _speedIntentMultiplier = Mathf.Lerp(0.72f, 0.9f, 1f - (profile != null ? profile.MergeCaution01 : 0.5f));
+                break;
+
+            case SkiMicroIntent.PullOver:
+                {
+                    float side = centerToSelf.sqrMagnitude > 0.01f && Vector3.Dot(centerToSelf, courseRight) >= 0f ? 1f : -1f;
+                    Vector3 edgeTarget = _runCenterPoint + courseRight * side * (_halfWidthMeters * 0.82f);
+                    Vector3 shoulderDir = Vector3.ProjectOnPlane(edgeTarget - transform.position, groundNormal);
+                    if (shoulderDir.sqrMagnitude > 0.0001f)
+                        desiredDirection = Vector3.Slerp(desiredDirection, shoulderDir.normalized, 0.42f);
+
+                    _speedIntentMultiplier = 0.55f;
+                    if (speed <= Mathf.Max(1.6f, scenicPauseSpeedMax * 0.65f) && slopeDeg <= scenicPauseSlopeMaxDeg + 3f)
+                    {
+                        _pauseUntil = Mathf.Max(
+                            _pauseUntil,
+                            Time.time + Random.Range(microIntentPullOverPauseMinSeconds, microIntentPullOverPauseMaxSeconds) / Mathf.Max(1f, _visibleFastForwardMultiplier));
+                        _microIntent = SkiMicroIntent.None;
+                    }
+                    break;
+                }
+        }
+
+        desiredDirection = Vector3.ProjectOnPlane(desiredDirection, groundNormal);
+        if (desiredDirection.sqrMagnitude <= 0.0001f)
+            desiredDirection = downhill;
+
+        return desiredDirection.normalized;
+    }
+
+    private void ChooseNextMicroIntent(float slopeDeg, float speed)
+    {
+        _microIntentUntil = Time.time + Random.Range(microIntentDecisionMinSeconds, microIntentDecisionMaxSeconds) / Mathf.Max(1f, _visibleFastForwardMultiplier);
+        _microIntent = SkiMicroIntent.HoldLine;
+
+        if (profile == null || skiMode != SkiMode.FollowRun || currentRun == null)
+            return;
+
+        float caution = profile.Caution01;
+        float assertiveness = profile.Assertiveness01;
+        float edgeBias = profile.EdgePreference01;
+        float overtake = profile.OvertakeTendency01;
+        float mergeCaution = profile.MergeCaution01;
+
+        float steepness01 = Mathf.InverseLerp(12f, 28f, slopeDeg);
+
+        if (_lastLocalCrowdPressure > Mathf.Lerp(0.55f, 0.8f, profile.CrowdTolerance01))
+        {
+            _microIntent = Random.value < 0.5f ? SkiMicroIntent.DriftLeftEdge : SkiMicroIntent.DriftRightEdge;
+            return;
+        }
+
+        if (steepness01 > 0.55f && Random.value < Mathf.Lerp(0.15f, 0.65f, Mathf.Max(caution, profile.HesitationOnSteeps01)))
+        {
+            _microIntent = SkiMicroIntent.CautiousEntry;
+            return;
+        }
+
+        if (Random.value < Mathf.Lerp(0.1f, 0.45f, edgeBias))
+        {
+            _microIntent = Random.value < 0.5f ? SkiMicroIntent.DriftLeftEdge : SkiMicroIntent.DriftRightEdge;
+            return;
+        }
+
+        if (speed > 4f && Random.value < Mathf.Lerp(0.08f, 0.38f, overtake * Mathf.Lerp(0.65f, 1.2f, assertiveness)))
+        {
+            _microIntent = SkiMicroIntent.FastDescent;
+            return;
+        }
+
+        if (speed < scenicPauseSpeedMax && slopeDeg < scenicPauseSlopeMaxDeg && Random.value < profile.ScenicPauseBias01 * 0.25f)
+        {
+            _microIntent = SkiMicroIntent.PullOver;
+            return;
+        }
+
+        if (Random.value < Mathf.Lerp(0.08f, 0.3f, mergeCaution))
+        {
+            _microIntent = SkiMicroIntent.CautiousEntry;
+            return;
+        }
+    }
+
+    private float EstimateLocalCrowdPressure(Vector3 groundNormal)
+    {
+        Vector3 probeForward = skiController != null ? skiController.SkiForwardOnPlane : transform.forward;
+        Vector3 origin = transform.position + probeForward * avoidanceProbeForward;
+        int hitCount = Physics.OverlapSphereNonAlloc(origin, avoidanceRadius, _crowdProbeHits, avoidanceMask, QueryTriggerInteraction.Ignore);
+        if (hitCount <= 0)
+            return 0f;
+
+        float pressure = 0f;
+        int count = 0;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            Collider hit = _crowdProbeHits[i];
+            if (hit == null || hit.transform.IsChildOf(transform))
+                continue;
+
+            Rigidbody hitRb = hit.attachedRigidbody;
+            if (hitRb != null && _ownRigidbody != null && hitRb == _ownRigidbody)
+                continue;
+
+            Vector3 planar = Vector3.ProjectOnPlane(hit.ClosestPoint(transform.position) - transform.position, groundNormal);
+            float dist = planar.magnitude;
+            if (dist < 0.01f || dist > avoidanceRadius)
+                continue;
+
+            pressure += 1f - Mathf.Clamp01(dist / avoidanceRadius);
+            count++;
+        }
+
+        if (count == 0)
+            return 0f;
+
+        return Mathf.Clamp01(pressure / Mathf.Max(1f, count * 0.65f));
     }
 
     private SkiInputFrame BuildInputFromDesiredDirection(Vector3 desiredDirection, Vector3 downhill, Vector3 groundNormal, float slopeDeg, float speed)
@@ -524,7 +773,7 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
         float turnSignal = Mathf.Clamp(localDesired.x * turnSensitivity, -1f, 1f);
         float forwardSignal = Mathf.Clamp(localDesired.z, -1f, 1f);
 
-        float desiredSpeed = (profile != null ? profile.CruiseSpeedMps : 10f) * Mathf.Max(1f, _visibleFastForwardMultiplier);
+        float desiredSpeed = (profile != null ? profile.CruiseSpeedMps : 10f) * Mathf.Max(1f, _visibleFastForwardMultiplier) * _speedIntentMultiplier;
         float caution = profile != null ? profile.Caution01 : 0.5f;
         float confidence = profile != null ? profile.Confidence01 : 0.5f;
         float assertiveness = profile != null ? profile.Assertiveness01 : 0.5f;
@@ -535,6 +784,26 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
 
         float speedError = desiredSpeed - speed;
         float lean = Mathf.Clamp((speedError / 8f) + (neutralLeanForwardBias * forwardSignal), -1f, 1f);
+
+        float settle01 = 0f;
+        if (Time.time < _skiModeSettleUntil && skiModeSettleSeconds > 0.01f)
+        {
+            float settleStart = _skiModeSettleUntil - skiModeSettleSeconds;
+            settle01 = 1f - Mathf.InverseLerp(settleStart, _skiModeSettleUntil, Time.time);
+        }
+
+        float lowSpeed01 = 1f - Mathf.Clamp01(speed / Mathf.Max(0.01f, lowSpeedLeanDampenThreshold));
+        float shallowSlope01 = 1f - Mathf.Clamp01(slopeDeg / Mathf.Max(0.01f, shallowSlopeLeanDampenMaxDeg));
+        float forwardLeanDampen01 = Mathf.Max(settle01, lowSpeed01 * shallowSlope01);
+
+        if (forwardLeanDampen01 > 0f)
+        {
+            float forwardLeanCap = Mathf.Lerp(0.85f, settledForwardLeanCap, forwardLeanDampen01);
+            if (lean > 0f)
+                lean = Mathf.Min(lean, forwardLeanCap);
+
+            turnSignal *= Mathf.Lerp(1f, 0.58f, settle01);
+        }
 
         float brake01 = 0f;
         if (speed > desiredSpeed)
@@ -639,22 +908,20 @@ public class NpcSkierRunFollower : MonoBehaviour, ISkiInputSource
     private Vector3 ApplyLocalAvoidance(Vector3 desiredDirection, Vector3 groundNormal)
     {
         Vector3 origin = transform.position + (skiController.SkiForwardOnPlane * avoidanceProbeForward);
-        Collider[] hits = Physics.OverlapSphere(origin, avoidanceRadius, avoidanceMask, QueryTriggerInteraction.Ignore);
-
-        if (hits == null || hits.Length == 0)
+        int hitCount = Physics.OverlapSphereNonAlloc(origin, avoidanceRadius, _avoidanceHits, avoidanceMask, QueryTriggerInteraction.Ignore);
+        if (hitCount <= 0)
             return desiredDirection;
 
-        Rigidbody ownRb = GetComponent<Rigidbody>();
         Vector3 avoidance = Vector3.zero;
 
-        for (int i = 0; i < hits.Length; i++)
+        for (int i = 0; i < hitCount; i++)
         {
-            Collider hit = hits[i];
+            Collider hit = _avoidanceHits[i];
             if (hit == null) continue;
             if (hit.transform.IsChildOf(transform)) continue;
 
             Rigidbody hitRb = hit.attachedRigidbody;
-            if (hitRb != null && ownRb != null && hitRb == ownRb)
+            if (hitRb != null && _ownRigidbody != null && hitRb == _ownRigidbody)
                 continue;
 
             Vector3 toOther = hit.ClosestPoint(transform.position) - transform.position;

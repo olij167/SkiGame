@@ -1,288 +1,471 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 public class SkiAudioController : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private SkiController controller;
+    [SerializeField] private SkierAudioConfigSO config;
+    [SerializeField] private AudioInteractionMatrixSO interactionMatrix;
+    [SerializeField] private TerrainAudioMaterialProfileSO terrainProfile;
 
-    [Header("Looping Layers")]
-    [Tooltip("Base snow / ski scrape loop.")]
-    public AudioSource snowLoop;
+    [Header("Loop Sources")]
+    [FormerlySerializedAs("snowLoop")]
+    [SerializeField] private AudioSource baseSkiSource;
+    [FormerlySerializedAs("carveLoop")]
+    [SerializeField] private AudioSource carveSource;
+    [FormerlySerializedAs("windLoop")]
+    [SerializeField] private AudioSource windSource;
+    [FormerlySerializedAs("poleLoop")]
+    [SerializeField] private AudioSource poleDragSource;
+    [SerializeField] private AudioSource bodyDragSource;
+    [SerializeField] private AudioSource oneShotSource;
 
-    [Tooltip("Extra harsh carve / edge scrape loop.")]
-    public AudioSource carveLoop;
+    [Header("Internal Materials")]
+    [SerializeField] private AudioSurfaceMaterialSO skiEdgeMaterial;
+    [SerializeField] private AudioSurfaceMaterialSO skiBaseMaterial;
+    [SerializeField] private AudioSurfaceMaterialSO poleTipMaterial;
+    [SerializeField] private AudioSurfaceMaterialSO bodyMaterial;
 
-    [Tooltip("Wind rushing past at speed.")]
-    public AudioSource windLoop;
+    [Header("LOD")]
+    [SerializeField] private bool isNpc;
+    [SerializeField] private Transform listenerTarget;
 
-    [Tooltip("Continuous pole drag loop when poles are dug in.")]
-    public AudioSource poleLoop;
+    [Header("Legacy Fallback")]
+    [SerializeField] private AudioClip footstepClip;
+    [SerializeField, Min(0.1f)] private float legacyMaxSpeedForAudio = 30f;
+    [SerializeField, Min(1f)] private float legacyMaxCarveAngleForAudio = 45f;
+    [SerializeField] private AnimationCurve legacySpeedToSnowVolume = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+    [SerializeField] private AnimationCurve legacySpeedToSnowPitch = AnimationCurve.Linear(0f, 0.8f, 1f, 1.2f);
+    [SerializeField] private AnimationCurve legacySpeedToWindVolume = AnimationCurve.Linear(0.2f, 0f, 1f, 1f);
+    [SerializeField] private AnimationCurve legacySpeedToWindPitch = AnimationCurve.Linear(0f, 0.9f, 1f, 1.4f);
+    [SerializeField] private AnimationCurve legacyCarveToVolume = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+    [SerializeField] private AnimationCurve legacyCarveToPitch = AnimationCurve.Linear(0f, 0.9f, 1f, 1.1f);
+    [SerializeField] private AnimationCurve legacyPoleDragToVolume = AnimationCurve.Linear(0f, 0f, 1f, 0.8f);
+    [SerializeField] private AnimationCurve legacyPoleSpeedToPitch = AnimationCurve.Linear(0f, 0.9f, 1f, 1.1f);
+    [FormerlySerializedAs("polePlantClip")]
+    [SerializeField] private AudioClip legacyPolePlantClip;
+    [FormerlySerializedAs("poleReleaseClip")]
+    [SerializeField] private AudioClip legacyPoleReleaseClip;
+    [SerializeField, Min(0f)] private float legacyVolumeLerpSpeed = 8f;
+    [SerializeField, Min(0f)] private float legacyPitchLerpSpeed = 8f;
 
-    [Header("Speed Mapping")]
-    [Tooltip("Speed at which audio curves hit their max.")]
-    public float maxSpeedForAudio = 30f;
+    private readonly System.Random _rng = new System.Random();
 
-    public AnimationCurve speedToSnowVolume = AnimationCurve.Linear(0f, 0f, 1f, 1f);
-    public AnimationCurve speedToSnowPitch = AnimationCurve.Linear(0f, 0.8f, 1f, 1.2f);
-
-    public AnimationCurve speedToWindVolume = AnimationCurve.Linear(0.2f, 0f, 1f, 1f);
-    public AnimationCurve speedToWindPitch = AnimationCurve.Linear(0f, 0.9f, 1f, 1.4f);
-
-    [Header("Carve Mapping")]
-    [Tooltip("Maximum angle (deg) between ski direction and velocity that maps to full carve intensity.")]
-    public float maxCarveAngleForAudio = 45f;
-
-    [Tooltip("Carve intensity (0..1) -> carve loop volume multiplier.")]
-    public AnimationCurve carveToVolume = AnimationCurve.Linear(0f, 0f, 1f, 1f);
-
-    [Tooltip("Carve intensity (0..1) -> carve loop pitch.")]
-    public AnimationCurve carveToPitch = AnimationCurve.Linear(0f, 0.9f, 1f, 1.1f);
-
-    [Header("Pole Mapping")]
-    [Tooltip("0..1 intensity -> pole drag loop volume.")]
-    public AnimationCurve poleDragToVolume = AnimationCurve.Linear(0f, 0f, 1f, 0.8f);
-
-    [Tooltip("Speed -> pole drag pitch.")]
-    public AnimationCurve poleSpeedToPitch = AnimationCurve.Linear(0f, 0.9f, 1f, 1.1f);
-
-    [Header("One-Shot SFX")]
-    [Tooltip("Used for jump/land, pole plant, pole release, footsteps, etc.")]
-    public AudioSource oneShotSource;
-
-    public AudioClip polePlantClip;
-    public AudioClip poleReleaseClip;
-    public AudioClip footstepClip; // for future walking controller
-
-    [Header("Blend / Smoothing")]
-    public float volumeLerpSpeed = 8f;
-    public float pitchLerpSpeed = 8f;
-
+    private SkierAudioTelemetry _telemetry;
+    private SkierAudioTelemetry _previousTelemetry;
     private SkiController.PoleStrokePhase _prevPolePhase;
-    private bool _prevGrounded;
+    private float _lastCarveAccentTime = -999f;
+    private float _lastCarveSign;
+    private float _baseDuckAmount;
+    private float _lastNpcUpdateTime = -999f;
+    private bool _muteForNpcDistance;
+    private float _airborneStartTime = -1f;
+    private float _maxAirborneDownSpeed;
+    private bool _stackedThisFrameFromEvent;
+    private float _stackSeverityFromEvent;
+
+    public SkierAudioTelemetry Telemetry => _telemetry;
+    public AudioSurfaceMaterialSO SkiEdgeMaterial => skiEdgeMaterial;
+    public AudioSurfaceMaterialSO SkiBaseMaterial => skiBaseMaterial;
+    public AudioSurfaceMaterialSO PoleTipMaterial => poleTipMaterial;
+    public AudioSurfaceMaterialSO BodyMaterial => bodyMaterial;
+    public TerrainAudioMaterialProfileSO TerrainProfile => terrainProfile;
 
     private void Awake()
     {
-        if (!controller)
+        if (controller == null)
             controller = GetComponent<SkiController>();
 
-        InitLoop(snowLoop);
-        InitLoop(carveLoop);
-        InitLoop(windLoop);
-        InitLoop(poleLoop);
+        ConfigureLoopSource(baseSkiSource, GetBaseSkiLoopClip());
+        ConfigureLoopSource(carveSource, GetCarveLoopClip());
+        ConfigureLoopSource(windSource, GetWindLoopClip());
+        ConfigureLoopSource(poleDragSource, GetPoleLoopClip());
+        ConfigureLoopSource(bodyDragSource, GetBodyDragLoopClip());
 
         if (controller != null)
         {
             _prevPolePhase = controller.CurrentPolePhase;
-            _prevGrounded = controller.IsRiderGrounded;
+            _telemetry.ReadFrom(controller, config);
+            _previousTelemetry = _telemetry;
         }
     }
 
-    private void InitLoop(AudioSource src)
+    private void OnEnable()
     {
-        if (!src) return;
-        src.loop = true;
-        src.playOnAwake = false;
-        if (!src.isPlaying)
-            src.Play();
+        if (controller != null)
+            controller.OnStacked += HandleStacked;
+    }
+
+    private void OnDisable()
+    {
+        if (controller != null)
+            controller.OnStacked -= HandleStacked;
     }
 
     private void Update()
     {
-        if (!controller)
+        if (controller == null)
             return;
 
-        // --- Core motion telemetry ---
-        Vector3 velocity = controller.Velocity;
-        Vector3 groundNormal = controller.GroundNormal;
+        if (ShouldThrottleNpcUpdate())
+            return;
 
-        Vector3 velOnPlane = Vector3.ProjectOnPlane(velocity, groundNormal);
-        float planarSpeed = velOnPlane.magnitude;
-        float normSpeed = maxSpeedForAudio > 0f
-            ? Mathf.Clamp01(planarSpeed / maxSpeedForAudio)
-            : 0f;
+        UpdateTelemetry();
+        UpdateLoopLayers();
+        UpdateLandingAndStackTransients();
 
-        bool grounded = controller.IsRiderGrounded;
+        _prevPolePhase = _telemetry.polePhase;
+        _previousTelemetry = _telemetry;
+        _stackedThisFrameFromEvent = false;
+        _stackSeverityFromEvent = 0f;
+    }
 
-        // --- Carve intensity + side (left/right) based on slip angle ---
-        float carveAmount = 0f; // 0..1
-        float carveSide = 0f; // -1..1 (left/right carve pan)
+    private void HandleStacked(SkiController.StackEventInfo info)
+    {
+        _stackedThisFrameFromEvent = true;
+        _stackSeverityFromEvent = info.severity01;
+    }
 
-        Vector3 skiForward = controller.SkiForwardOnPlane;
-        if (planarSpeed > 0.1f && skiForward.sqrMagnitude > 0.0001f)
+    private bool ShouldThrottleNpcUpdate()
+    {
+        if (!isNpc || config == null || !config.EnableNpcDistanceMute)
+            return false;
+
+        Transform listener = listenerTarget != null
+            ? listenerTarget
+            : (Camera.main != null ? Camera.main.transform : null);
+
+        if (listener != null)
         {
-            Vector3 planeDir = velOnPlane.normalized;
-            Vector3 skiDir = skiForward.normalized;
-
-            float signedAngle = Vector3.SignedAngle(skiDir, planeDir, groundNormal);
-            float angleAbs = Mathf.Abs(signedAngle);
-            float maxAngle = Mathf.Max(1f, maxCarveAngleForAudio);
-
-            carveAmount = Mathf.InverseLerp(0f, maxAngle, Mathf.Clamp(angleAbs, 0f, maxAngle));
-            carveSide = Mathf.Sign(signedAngle); // -1 left, +1 right (approx)
-        }
-
-        // --- Update layers ---
-        UpdateSnowLayer(grounded, normSpeed);
-        UpdateWindLayer(grounded, normSpeed);
-        UpdateCarveLayer(grounded, normSpeed, carveAmount, carveSide);
-        UpdatePoleLayer(grounded, normSpeed);
-
-        // --- One-shots ---
-        HandlePoleOneShots(grounded);
-
-        _prevPolePhase = controller.CurrentPolePhase;
-        _prevGrounded = grounded;
-    }
-
-    // ---------------------------------------------------------------------
-    // LAYERS
-    // ---------------------------------------------------------------------
-
-    private void UpdateSnowLayer(bool grounded, float normSpeed)
-    {
-        if (!snowLoop) return;
-
-        float targetVol = grounded ? speedToSnowVolume.Evaluate(normSpeed) : 0f;
-        float targetPitch = speedToSnowPitch.Evaluate(normSpeed);
-
-        Apply(snowLoop, targetVol, targetPitch);
-    }
-
-    private void UpdateWindLayer(bool grounded, float normSpeed)
-    {
-        if (!windLoop) return;
-
-        float targetVol = speedToWindVolume.Evaluate(normSpeed);
-        if (grounded)
-            targetVol *= 0.8f; // bias wind louder in air
-
-        float targetPitch = speedToWindPitch.Evaluate(normSpeed);
-
-        Apply(windLoop, targetVol, targetPitch);
-    }
-
-    private void UpdateCarveLayer(bool grounded, float normSpeed, float carveAmount, float carveSide)
-    {
-        if (!carveLoop) return;
-
-        if (!grounded)
-            carveAmount = 0f;
-
-        float baseVol = speedToSnowVolume.Evaluate(normSpeed);
-        float targetVol = baseVol * carveToVolume.Evaluate(carveAmount);
-        float targetPitch = carveToPitch.Evaluate(carveAmount);
-
-        Apply(carveLoop, targetVol, targetPitch);
-
-        // Pan left/right based on carve side
-        if (Mathf.Abs(carveSide) > 0.01f)
-        {
-            carveLoop.panStereo = Mathf.Clamp(carveSide * 0.7f, -1f, 1f);
+            float sqrDistance = (listener.position - transform.position).sqrMagnitude;
+            _muteForNpcDistance = sqrDistance > config.NpcMuteDistance * config.NpcMuteDistance;
         }
         else
         {
-            carveLoop.panStereo = Mathf.MoveTowards(carveLoop.panStereo, 0f, Time.deltaTime * 2f);
+            _muteForNpcDistance = false;
         }
+
+        float interval = Mathf.Max(0.01f, config.NpcUpdateInterval);
+        if (Time.time - _lastNpcUpdateTime < interval)
+            return true;
+
+        _lastNpcUpdateTime = Time.time;
+        return false;
     }
 
-    private void UpdatePoleLayer(bool grounded, float normSpeed)
+    public void UpdateTelemetry()
     {
-        if (!poleLoop || controller == null) return;
+        _telemetry = _previousTelemetry;
+        _telemetry.ReadFrom(controller, config);
+        _telemetry.didStackThisFrame = _stackedThisFrameFromEvent;
 
-        float intensity = 0f;
-
-        var phase = controller.CurrentPolePhase;
-
-        bool leftContact = controller.LeftPoleContact != null && controller.LeftPoleContact.IsInContact;
-        bool rightContact = controller.RightPoleContact != null && controller.RightPoleContact.IsInContact;
-        bool anyContact = leftContact || rightContact;
-
-        // Continuous drag noise only when poles are actually digging into snow
-        if (grounded && anyContact && phase == SkiController.PoleStrokePhase.Drag)
+        if (!_telemetry.groundedState)
         {
-            intensity = normSpeed;
+            if (_previousTelemetry.groundedState)
+            {
+                _airborneStartTime = Time.time;
+                _maxAirborneDownSpeed = 0f;
+            }
+
+            _maxAirborneDownSpeed = Mathf.Max(_maxAirborneDownSpeed, Mathf.Max(0f, -_telemetry.verticalSpeed));
         }
 
-        float targetVol = poleDragToVolume.Evaluate(intensity);
-        float targetPitch = poleSpeedToPitch.Evaluate(normSpeed);
+        bool didLand = !_previousTelemetry.groundedState && _telemetry.groundedState;
+        _telemetry.didLandThisFrame = didLand;
 
-        Apply(poleLoop, targetVol, targetPitch);
+        if (didLand)
+        {
+            float airTime = _airborneStartTime >= 0f ? Mathf.Max(0f, Time.time - _airborneStartTime) : 0f;
+            float minAirTime = config != null ? config.LandingMinAirTime : 0.08f;
+            float minDownSpeed = config != null ? config.LandingMinDownSpeed : 1.5f;
+            bool validLanding = airTime >= minAirTime || _maxAirborneDownSpeed >= minDownSpeed;
+            _telemetry.didLandThisFrame = validLanding;
+
+            float hardDown = config != null ? Mathf.Max(minDownSpeed + 0.01f, config.HardLandingDownSpeed) : 9f;
+            _telemetry.landingSeverity = validLanding
+                ? Mathf.Clamp01(Mathf.InverseLerp(minDownSpeed, hardDown, _maxAirborneDownSpeed))
+                : 0f;
+        }
+        else
+        {
+            _telemetry.landingSeverity = 0f;
+        }
     }
 
-    // ---------------------------------------------------------------------
-    // POLE ONE-SHOTS (plant + release)
-    // ---------------------------------------------------------------------
-
-    private void HandlePoleOneShots(bool grounded)
+    public void UpdateLoopLayers()
     {
-        if (!oneShotSource || controller == null)
+        UpdateBaseSkiLayer();
+        UpdateCarveLayer();
+        UpdateWindLayer();
+        UpdatePoleLayer();
+        UpdateBodyDragLayer();
+    }
+
+    public void UpdateBaseSkiLayer()
+    {
+        if (baseSkiSource == null)
             return;
 
-        var phase = controller.CurrentPolePhase;
-
-        bool leftContact = controller.LeftPoleContact != null && controller.LeftPoleContact.IsInContact;
-        bool rightContact = controller.RightPoleContact != null && controller.RightPoleContact.IsInContact;
-        bool anyContact = leftContact || rightContact;
-
-        // Plant: Idle -> Entry while grounded and the pole actually hits snow
-        if (_prevPolePhase == SkiController.PoleStrokePhase.Idle &&
-            phase == SkiController.PoleStrokePhase.Entry &&
-            grounded &&
-            anyContact &&
-            polePlantClip)
-        {
-            PlayOneShot(polePlantClip, controller.Velocity.magnitude);
-        }
-
-        // Release: Drag -> FollowThrough while grounded
-        if (_prevPolePhase == SkiController.PoleStrokePhase.Drag &&
-            phase == SkiController.PoleStrokePhase.FollowThrough &&
-            grounded &&
-            poleReleaseClip)
-        {
-            PlayOneShot(poleReleaseClip, controller.Velocity.magnitude);
-        }
-    }
-
-    private void PlayOneShot(AudioClip clip, float speed)
-    {
-        if (!clip || !oneShotSource)
-            return;
-
-        float normSpeed = maxSpeedForAudio > 0f
-            ? Mathf.Clamp01(speed / maxSpeedForAudio)
+        float targetVolume = _telemetry.groundedState
+            ? EvaluateCurve(GetBaseVolumeCurve(), _telemetry.normalizedSpeed)
             : 0f;
 
-        oneShotSource.pitch = Mathf.Lerp(0.9f, 1.1f, normSpeed);
+        if (_telemetry.carve01 > 0f)
+        {
+            float duckTarget = EvaluateCurve(GetBaseDuckCurve(), _telemetry.carve01);
+            _baseDuckAmount = Mathf.MoveTowards(_baseDuckAmount, duckTarget, GetBaseDuckRecoverSpeed() * Time.deltaTime);
+            targetVolume *= 1f - Mathf.Clamp01(_baseDuckAmount);
+        }
+        else
+        {
+            _baseDuckAmount = Mathf.MoveTowards(_baseDuckAmount, 0f, GetBaseDuckRecoverSpeed() * Time.deltaTime);
+            targetVolume *= 1f - Mathf.Clamp01(_baseDuckAmount);
+        }
+
+        if (_muteForNpcDistance)
+            targetVolume = 0f;
+
+        float targetPitch = EvaluateCurve(GetBasePitchCurve(), _telemetry.normalizedSpeed);
+        Apply(baseSkiSource, targetVolume, targetPitch);
+    }
+
+    public void UpdateCarveLayer()
+    {
+        if (carveSource == null)
+            return;
+
+        float carve01 = _telemetry.groundedState ? _telemetry.carve01 : 0f;
+        float targetVolume = EvaluateCurve(GetCarveVolumeCurve(), carve01) *
+                             EvaluateCurve(GetBaseVolumeCurve(), _telemetry.normalizedSpeed);
+
+        if (_muteForNpcDistance)
+            targetVolume = 0f;
+
+        float targetPitch = EvaluateCurve(GetCarvePitchCurve(), carve01);
+        Apply(carveSource, targetVolume, targetPitch);
+
+        if (Mathf.Abs(_telemetry.signedCarve) > 0.01f)
+            carveSource.panStereo = Mathf.Clamp(Mathf.Sign(_telemetry.signedCarve) * 0.7f, -1f, 1f);
+        else
+            carveSource.panStereo = Mathf.MoveTowards(carveSource.panStereo, 0f, Time.deltaTime * 2f);
+
+        if (ShouldTriggerCarveEntryAccent())
+            TriggerCarveEntryAccent();
+    }
+
+    public void UpdateWindLayer()
+    {
+        if (windSource == null)
+            return;
+
+        float targetVolume = EvaluateCurve(GetWindVolumeCurve(), _telemetry.normalizedSpeed);
+        if (_telemetry.groundedState)
+            targetVolume *= 0.8f;
+        if (_muteForNpcDistance)
+            targetVolume = 0f;
+
+        float targetPitch = EvaluateCurve(GetWindPitchCurve(), _telemetry.normalizedSpeed);
+        Apply(windSource, targetVolume, targetPitch);
+    }
+
+    public void UpdatePoleLayer()
+    {
+        if (poleDragSource == null)
+            return;
+
+        float targetVolume = EvaluateCurve(GetPoleVolumeCurve(), _telemetry.poleDragAmount);
+        if (_muteForNpcDistance)
+            targetVolume = 0f;
+
+        float targetPitch = EvaluateCurve(GetPolePitchCurve(), _telemetry.normalizedSpeed);
+        Apply(poleDragSource, targetVolume, targetPitch);
+
+        if (_prevPolePhase == SkiController.PoleStrokePhase.Idle &&
+            _telemetry.polePhase == SkiController.PoleStrokePhase.Entry &&
+            (_telemetry.leftPoleContact || _telemetry.rightPoleContact))
+        {
+            AudioClipSetSO plantSet = GetPolePlantClipSet();
+            if (plantSet != null)
+                PlayOneShot(plantSet, _telemetry.normalizedSpeed);
+            else
+                PlayOneShot(legacyPolePlantClip, _telemetry.normalizedSpeed);
+        }
+
+        if (_prevPolePhase == SkiController.PoleStrokePhase.Drag &&
+            _telemetry.polePhase == SkiController.PoleStrokePhase.FollowThrough)
+        {
+            AudioClipSetSO releaseSet = GetPoleReleaseClipSet();
+            if (releaseSet != null)
+                PlayOneShot(releaseSet, _telemetry.normalizedSpeed);
+            else
+                PlayOneShot(legacyPoleReleaseClip, _telemetry.normalizedSpeed);
+        }
+    }
+
+    public void UpdateBodyDragLayer()
+    {
+        if (bodyDragSource == null)
+            return;
+
+        float speed01 = Mathf.Clamp01(_telemetry.planarSpeed / Mathf.Max(0.1f, GetMaxSpeedForAudio()));
+        bool shouldPlay = _telemetry.stackedState && _telemetry.planarSpeed >= GetStackMinBodyDragSpeed();
+        float targetVolume = shouldPlay ? EvaluateCurve(GetStackVolumeCurve(), Mathf.Max(speed01, _stackSeverityFromEvent)) : 0f;
+        if (_muteForNpcDistance)
+            targetVolume = 0f;
+
+        float targetPitch = EvaluateCurve(GetBodyDragPitchCurve(), speed01);
+        Apply(bodyDragSource, targetVolume, targetPitch);
+    }
+
+    public void UpdateLandingAndStackTransients()
+    {
+        if (_telemetry.didLandThisFrame)
+            TriggerLandingAccent();
+
+        if (_telemetry.didStackThisFrame)
+            TriggerStackAccent();
+    }
+
+    public bool ShouldTriggerCarveEntryAccent()
+    {
+        if (!_telemetry.groundedState)
+            return false;
+
+        float threshold = config != null ? config.CarveEntryThreshold : 0.55f;
+        bool crossedThreshold = _previousTelemetry.carve01 < threshold && _telemetry.carve01 >= threshold;
+        bool signFlip = DidCarveSignFlip() && _telemetry.carve01 >= threshold * 0.8f;
+        bool cooldownReady = (Time.time - _lastCarveAccentTime) >= (config != null ? config.CarveEntryCooldown : 0.18f);
+        return cooldownReady && (crossedThreshold || signFlip);
+    }
+
+    public bool DidCarveSignFlip()
+    {
+        float currentSign = Mathf.Abs(_telemetry.signedCarve) > 0.01f ? Mathf.Sign(_telemetry.signedCarve) : 0f;
+        float previousSign = Mathf.Abs(_previousTelemetry.signedCarve) > 0.01f ? Mathf.Sign(_previousTelemetry.signedCarve) : _lastCarveSign;
+        bool flipped = currentSign != 0f && previousSign != 0f && currentSign != previousSign;
+        if (currentSign != 0f)
+            _lastCarveSign = currentSign;
+        return flipped;
+    }
+
+    public void TriggerCarveEntryAccent()
+    {
+        _lastCarveAccentTime = Time.time;
+        _baseDuckAmount = Mathf.Max(_baseDuckAmount, 0.5f);
+        PlayOneShot(GetCarveEntryClipSet(), Mathf.Clamp01(_telemetry.carve01));
+    }
+
+    public void TriggerLandingAccent()
+    {
+        AudioClipSetSO clipSet = _telemetry.landingSeverity >= 0.55f
+            ? GetLandingHardClipSet()
+            : GetLandingSoftClipSet();
+
+        PlayOneShot(clipSet, _telemetry.landingSeverity);
+    }
+
+    public void TriggerStackAccent()
+    {
+        PlayOneShot(GetStackImpactClipSet(), Mathf.Clamp01(_stackSeverityFromEvent));
+    }
+
+    public void PlayOneShot(AudioClipSetSO clipSet, float intensity01)
+    {
+        if (oneShotSource == null || clipSet == null)
+            return;
+
+        int clipIndex = clipSet.GetNextClip(_rng, Time.time);
+        if (clipIndex < 0 || clipIndex >= clipSet.Clips.Length)
+            return;
+
+        AudioClip clip = clipSet.Clips[clipIndex].clip;
+        if (clip == null)
+            return;
+
+        oneShotSource.pitch = Mathf.Lerp(clipSet.PitchRange.x, clipSet.PitchRange.y, Mathf.Clamp01(intensity01));
+        oneShotSource.volume = Mathf.Lerp(clipSet.VolumeRange.x, clipSet.VolumeRange.y, Mathf.Clamp01(intensity01));
+        oneShotSource.PlayOneShot(clip);
+        clipSet.NotifyPlayed(clipIndex, Time.time);
+    }
+
+    public void PlayOneShot(AudioClip clip, float intensity01)
+    {
+        if (clip == null || oneShotSource == null)
+            return;
+
+        oneShotSource.pitch = Mathf.Lerp(0.9f, 1.1f, Mathf.Clamp01(intensity01));
         oneShotSource.PlayOneShot(clip);
     }
 
-    // ---------------------------------------------------------------------
-    // Helpers
-    // ---------------------------------------------------------------------
-
-    private void Apply(AudioSource src, float targetVol, float targetPitch)
-    {
-        float dt = Time.deltaTime;
-        src.volume = Mathf.MoveTowards(src.volume, targetVol, volumeLerpSpeed * dt);
-        src.pitch = Mathf.MoveTowards(src.pitch, targetPitch, pitchLerpSpeed * dt);
-    }
-
-    // ---------------------------------------------------------------------
-    // FUTURE: footsteps (when skis are off)
-    // ---------------------------------------------------------------------
-
-    /// <summary>
-    /// Call this from a future walking controller whenever a footstep occurs.
-    /// </summary>
     public void PlayFootstep(Vector3 worldPosition, float footSpeed = 1f)
     {
-        if (!footstepClip || !oneShotSource)
+        if (footstepClip == null || oneShotSource == null)
             return;
 
         oneShotSource.transform.position = worldPosition;
         oneShotSource.pitch = Mathf.Lerp(0.9f, 1.1f, Mathf.Clamp01(footSpeed));
         oneShotSource.PlayOneShot(footstepClip);
     }
+
+    private void ConfigureLoopSource(AudioSource source, AudioClip desiredClip)
+    {
+        if (source == null)
+            return;
+
+        if (desiredClip != null)
+            source.clip = desiredClip;
+
+        source.loop = true;
+        source.playOnAwake = false;
+        if (source.clip != null && !source.isPlaying)
+            source.Play();
+    }
+
+    private void Apply(AudioSource src, float targetVol, float targetPitch)
+    {
+        if (src == null)
+            return;
+
+        float dt = Time.deltaTime;
+        src.volume = Mathf.MoveTowards(src.volume, targetVol, GetVolumeLerpSpeed() * dt);
+        src.pitch = Mathf.MoveTowards(src.pitch, targetPitch, GetPitchLerpSpeed() * dt);
+    }
+
+    private float EvaluateCurve(AnimationCurve curve, float t)
+    {
+        return curve != null ? curve.Evaluate(Mathf.Clamp01(t)) : 0f;
+    }
+
+    private float GetMaxSpeedForAudio() => config != null ? config.MaxSpeedForAudio : legacyMaxSpeedForAudio;
+    private float GetVolumeLerpSpeed() => config != null ? config.VolumeLerpSpeed : legacyVolumeLerpSpeed;
+    private float GetPitchLerpSpeed() => config != null ? config.PitchLerpSpeed : legacyPitchLerpSpeed;
+    private float GetBaseDuckRecoverSpeed() => config != null ? config.BaseDuckRecoverSpeed : 3.5f;
+    private float GetStackMinBodyDragSpeed() => config != null ? config.StackMinBodyDragSpeed : 2f;
+
+    private AnimationCurve GetBaseVolumeCurve() => config != null ? config.SpeedToBaseVolume : legacySpeedToSnowVolume;
+    private AnimationCurve GetBasePitchCurve() => config != null ? config.SpeedToBasePitch : legacySpeedToSnowPitch;
+    private AnimationCurve GetWindVolumeCurve() => config != null ? config.SpeedToWindVolume : legacySpeedToWindVolume;
+    private AnimationCurve GetWindPitchCurve() => config != null ? config.SpeedToWindPitch : legacySpeedToWindPitch;
+    private AnimationCurve GetCarveVolumeCurve() => config != null ? config.Carve01ToVolume : legacyCarveToVolume;
+    private AnimationCurve GetCarvePitchCurve() => config != null ? config.Carve01ToPitch : legacyCarveToPitch;
+    private AnimationCurve GetBaseDuckCurve() => config != null ? config.Carve01ToBaseDuck : AnimationCurve.Linear(0f, 0f, 1f, 0.35f);
+    private AnimationCurve GetPoleVolumeCurve() => config != null ? config.PoleDragAmountToVolume : legacyPoleDragToVolume;
+    private AnimationCurve GetPolePitchCurve() => config != null ? config.SpeedToPolePitch : legacyPoleSpeedToPitch;
+    private AnimationCurve GetStackVolumeCurve() => config != null ? config.StackSeverityToVolume : AnimationCurve.Linear(0f, 0.35f, 1f, 1f);
+    private AnimationCurve GetBodyDragPitchCurve() => config != null ? config.BodyDragSpeedToPitch : AnimationCurve.Linear(0f, 0.85f, 1f, 1.1f);
+
+    private AudioClip GetBaseSkiLoopClip() => config != null ? config.BaseSkiLoopClip : (baseSkiSource != null ? baseSkiSource.clip : null);
+    private AudioClip GetCarveLoopClip() => config != null ? config.CarveLoopClip : (carveSource != null ? carveSource.clip : null);
+    private AudioClip GetWindLoopClip() => config != null ? config.WindLoopClip : (windSource != null ? windSource.clip : null);
+    private AudioClip GetPoleLoopClip() => config != null ? config.PoleDragLoopClip : (poleDragSource != null ? poleDragSource.clip : null);
+    private AudioClip GetBodyDragLoopClip() => config != null ? config.BodyDragLoopClip : (bodyDragSource != null ? bodyDragSource.clip : null);
+
+    private AudioClipSetSO GetCarveEntryClipSet() => config != null ? config.CarveEntryAccentClipSet : null;
+    private AudioClipSetSO GetPolePlantClipSet() => config != null ? config.PolePlantAccentClipSet : null;
+    private AudioClipSetSO GetPoleReleaseClipSet() => config != null ? config.PoleReleaseAccentClipSet : null;
+    private AudioClipSetSO GetLandingSoftClipSet() => config != null ? config.LandingSoftAccentClipSet : null;
+    private AudioClipSetSO GetLandingHardClipSet() => config != null ? config.LandingHardAccentClipSet : null;
+    private AudioClipSetSO GetStackImpactClipSet() => config != null ? config.StackImpactAccentClipSet : null;
 }

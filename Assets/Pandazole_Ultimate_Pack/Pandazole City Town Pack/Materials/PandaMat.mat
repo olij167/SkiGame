@@ -231,7 +231,7 @@ Material:
     - _MapID: 0
     - _MaskCoverageByAlpha: 1
     - _MaskCoverageByAlphaOverride: 0
-    - _Metallic: 0
+    - _Metallic: 0.748
     - _Mode: 0
     - _OcclusionStrength: 1
     - _PaintableCoverage: 0
@@ -246,7 +246,7 @@ Material:
     - _SSS_intensityOverride: 0
     - _ScreenSpaceSparklesTiling: 2
     - _ScreenSpaceSparklesTilingOverride: 0
-    - _Smoothness: 0.5
+    - _Smoothness: 0.171
     - _SmoothnessTextureChannel: 0
     - _Sparkle: 1
     - _SparkleDistFalloff: 50

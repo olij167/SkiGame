@@ -13,18 +13,70 @@ MonoBehaviour:
   m_Name: SkiPassConfig
   m_EditorClassIdentifier: Assembly-CSharp::SkiPassConfigSO
   levels:
-  - displayName: Basic
+  - passId: Sublime
+    regionId: Sublime
+    displayName: Mt. Sublime
     levelIndex: 0
+    isDefaultPass: 1
+    grantedAccessPassIds: []
     dayPrice: 0
-    mapColor: {r: 0, g: 0.7490196, b: 1, a: 1}
-  - displayName: Explorer
+    mapColor: {r: 0.47058827, g: 0.9490197, b: 0.06666667, a: 1}
+  - passId: Bluff
+    regionId: Bluff
+    displayName: The Bluff
     levelIndex: 1
-    dayPrice: 10
-    mapColor: {r: 0.9333334, g: 0.509804, b: 0.9333334, a: 1}
-  - displayName: Daredevil
-    levelIndex: 2
+    isDefaultPass: 0
+    grantedAccessPassIds: []
     dayPrice: 25
-    mapColor: {r: 0.4, g: 0.2, b: 0.6, a: 1}
+    mapColor: {r: 0.54509807, g: 0.6745098, b: 0.1254902, a: 1}
+  - passId: Valley
+    regionId: Valley
+    displayName: The Valley
+    levelIndex: 2
+    isDefaultPass: 0
+    grantedAccessPassIds: []
+    dayPrice: 25
+    mapColor: {r: 0.20000002, g: 0.41960788, b: 0.87843144, a: 1}
+  - passId: Nest
+    regionId: Nest
+    displayName: Hawk's Nest
+    levelIndex: 3
+    isDefaultPass: 0
+    grantedAccessPassIds: []
+    dayPrice: 25
+    mapColor: {r: 0.2509804, g: 0.69411767, b: 0.3254902, a: 1}
+  - passId: Madcap
+    regionId: Madcap
+    displayName: Madcap
+    levelIndex: 4
+    isDefaultPass: 0
+    grantedAccessPassIds: []
+    dayPrice: 25
+    mapColor: {r: 0.882353, g: 0.40784317, b: 0.3254902, a: 1}
+  - passId: Shoulder
+    regionId: Shoulder
+    displayName: The Shoulder
+    levelIndex: 5
+    isDefaultPass: 0
+    grantedAccessPassIds: []
+    dayPrice: 25
+    mapColor: {r: 0.89019614, g: 0.28627452, b: 0.1764706, a: 1}
+  - passId: Wonderland
+    regionId: Wonderland
+    displayName: Wonderland
+    levelIndex: 6
+    isDefaultPass: 0
+    grantedAccessPassIds: []
+    dayPrice: 25
+    mapColor: {r: 0.24705884, g: 0.95294124, b: 0.9333334, a: 1}
+  - passId: Awzruca
+    regionId: Awzruca
+    displayName: Mt. Awzruca
+    levelIndex: 7
+    isDefaultPass: 0
+    grantedAccessPassIds: []
+    dayPrice: 25
+    mapColor: {r: 0.95294124, g: 0.058823533, b: 0.91372555, a: 1}
   defaultLevelIndex: 0
   durations:
   - label: 3 Days

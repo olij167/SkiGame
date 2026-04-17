@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections.Generic;
 
 /// <summary>
 /// Minimal walk controller + ski toggle:
@@ -154,6 +155,11 @@ public class WalkingController : MonoBehaviour
     private Vector2 _lastUserMoveRaw;
     private bool _lastUserSprintRaw;
 
+    private bool _runtimeSetupComplete;
+    private readonly Dictionary<Collider, bool> _equipmentColliderEnabledStates = new Dictionary<Collider, bool>();
+
+    private bool _walkPresentationKeepsSkisEquipped;
+
     public Vector2 LastUserMoveRaw => _lastUserMoveRaw;
     public float LastUserMoveMagnitude => _lastUserMoveRaw.magnitude;
     public bool LastUserSprintRaw => _lastUserSprintRaw;
@@ -172,6 +178,10 @@ public class WalkingController : MonoBehaviour
     private bool _externalMoveActive;
     private Vector2 _externalMove;
     private bool _externalSprint;
+    private bool _externalWorldMoveActive;
+    private Vector3 _externalWorldMoveDirection;
+    private float _externalWorldMoveStrength = 1f;
+    private float _externalWorldMoveFacingGateDot = -1f;
 
     public bool ControlsEnabled
     {
@@ -184,27 +194,64 @@ public class WalkingController : MonoBehaviour
     public void SetExternalMove(Vector2 move01, bool sprint = false)
     {
         _externalMoveActive = true;
+        _externalWorldMoveActive = false;
         _externalMove = Vector2.ClampMagnitude(move01, 1f);
+        _externalSprint = sprint;
+    }
+
+    public void SetExternalMoveToward(Vector3 worldDirection, float strength01 = 1f, bool sprint = false, float facingGateDot = 0.35f)
+    {
+        Vector3 planarDirection = Vector3.ProjectOnPlane(worldDirection, Vector3.up);
+        if (planarDirection.sqrMagnitude <= 0.0001f)
+        {
+            ClearExternalMove();
+            return;
+        }
+
+        _externalMoveActive = false;
+        _externalWorldMoveActive = true;
+        _externalWorldMoveDirection = planarDirection.normalized;
+        _externalWorldMoveStrength = Mathf.Clamp01(strength01);
+        _externalWorldMoveFacingGateDot = Mathf.Clamp(facingGateDot, -1f, 0.999f);
         _externalSprint = sprint;
     }
 
     public void ClearExternalMove()
     {
         _externalMoveActive = false;
+        _externalWorldMoveActive = false;
         _externalMove = Vector2.zero;
+        _externalWorldMoveDirection = Vector3.zero;
+        _externalWorldMoveStrength = 1f;
+        _externalWorldMoveFacingGateDot = -1f;
         _externalSprint = false;
     }
 
     public void ForceEnterWalkMode()
     {
+        EnsureRuntimeSetup();
+
         if (_skisOn)
             EnterWalkMode();
+        else
+            RefreshEquipmentPresentation();
     }
 
     public void ForceEnterSkiMode()
     {
+        EnsureRuntimeSetup();
+
         if (!_skisOn)
             EnterSkiMode();
+        else
+            RefreshEquipmentPresentation();
+    }
+
+    public void SetWalkPresentationKeepsSkisEquipped(bool keepSkisEquipped)
+    {
+        EnsureRuntimeSetup();
+        _walkPresentationKeepsSkisEquipped = keepSkisEquipped;
+        RefreshEquipmentPresentation();
     }
 
     public void GetMoveBasis(out Vector3 forward, out Vector3 right)
@@ -242,13 +289,24 @@ public class WalkingController : MonoBehaviour
 
     private void Awake()
     {
-        _rb = GetComponent<Rigidbody>();
+        EnsureRuntimeSetup();
+        ApplyModeInitial();
+    }
 
-        // Setup input wrapper
-        _input = new InputSystem_Actions();
-        _player = _input.Player;
+    private void EnsureRuntimeSetup()
+    {
+        if (_rb == null)
+            _rb = GetComponent<Rigidbody>();
 
-        // Cache original ski/pole parents & local transforms
+        if (_input == null)
+        {
+            _input = new InputSystem_Actions();
+            _player = _input.Player;
+        }
+
+        if (_runtimeSetupComplete)
+            return;
+
         if (leftSki != null)
         {
             _leftSkiOriginalParent = leftSki.parent;
@@ -277,19 +335,20 @@ public class WalkingController : MonoBehaviour
             _rightPoleOriginalLocalRot = rightPoleRoot.localRotation;
         }
 
-        // Initial mode based on SkiController enabled state
         _skisOn = skiController == null || skiController.enabled;
-        ApplyModeInitial();
+        _runtimeSetupComplete = true;
     }
 
     private void OnEnable()
     {
+        EnsureRuntimeSetup();
         _input.Enable();
     }
 
     private void OnDisable()
     {
-        _input.Disable();
+        if (_input != null)
+            _input.Disable();
     }
 
     private void Update()
@@ -348,14 +407,12 @@ public class WalkingController : MonoBehaviour
 
     private void ToggleSkisMode()
     {
+        _walkPresentationKeepsSkisEquipped = false;
+
         if (_skisOn)
-        {
             EnterWalkMode();
-        }
         else
-        {
             EnterSkiMode();
-        }
     }
 
     private void ApplyModeInitial()
@@ -363,51 +420,53 @@ public class WalkingController : MonoBehaviour
         if (_skisOn)
         {
             NudgeUpForSkis();
-            ForceSkiPose();
             EnableSkiSystems(true);
         }
         else
         {
-            MoveSkisToBack();
             EnableSkiSystems(false);
         }
+
+        RefreshEquipmentPresentation();
     }
 
     private void EnterWalkMode()
     {
+        if (skiController != null)
+            skiController.ResetStackStateSilently(snapUpright: true);
+
         if (_rb.useGravity != true) _rb.useGravity = true;
         _skisOn = false;
 
-        // Kill sliding when entering walk mode but preserve vertical motion.
         Vector3 vel = _rb.linearVelocity;
         vel.x = 0f;
         vel.z = 0f;
         _rb.linearVelocity = vel;
 
-        MoveSkisToBack();
         EnableSkiSystems(false);
+        RefreshEquipmentPresentation();
     }
 
     private void EnterSkiMode()
     {
         _skisOn = true;
+        _walkPresentationKeepsSkisEquipped = false;
+
         if (_rb.useGravity == true) _rb.useGravity = false;
 
-        // When going back to skiing, ensure we're slightly above the snow
-        // so the skis don't clip, then restore their idle pose.
         NudgeUpForSkis();
-        ForceSkiPose();
 
-        // Extra safety: let SkiController do a terrain-normal-aware clearance snap on enable.
         if (skiController != null)
             skiController.SnapToGroundClearance(resetDownwardVelocity: true);
 
         EnableSkiSystems(true);
-
+        RefreshEquipmentPresentation();
     }
 
     private void EnableSkiSystems(bool enabled)
     {
+        SetEquipmentCollidersEnabled(enabled);
+
         if (skiController != null)
             skiController.enabled = enabled;
 
@@ -422,6 +481,59 @@ public class WalkingController : MonoBehaviour
 
         if (rightPoleContact != null)
             rightPoleContact.enabled = enabled;
+    }
+
+    public void RefreshEquipmentPresentation()
+    {
+        EnsureRuntimeSetup();
+
+        if (_skisOn)
+        {
+            ForceSkiPose();
+            return;
+        }
+
+        if (_walkPresentationKeepsSkisEquipped)
+            ForceSkiPose();
+        else
+            MoveSkisToBack();
+    }
+
+    private void SetEquipmentCollidersEnabled(bool enabled)
+    {
+        SetCollidersEnabledForRoot(leftSki, enabled);
+        SetCollidersEnabledForRoot(rightSki, enabled);
+        SetCollidersEnabledForRoot(leftPoleRoot, enabled);
+        SetCollidersEnabledForRoot(rightPoleRoot, enabled);
+    }
+
+    private void SetCollidersEnabledForRoot(Transform root, bool enabled)
+    {
+        if (root == null)
+            return;
+
+        Collider[] colliders = root.GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            Collider c = colliders[i];
+            if (c == null)
+                continue;
+
+            if (!_equipmentColliderEnabledStates.ContainsKey(c))
+                _equipmentColliderEnabledStates[c] = c.enabled;
+
+            if (enabled)
+            {
+                if (_equipmentColliderEnabledStates.TryGetValue(c, out bool wasEnabled))
+                    c.enabled = wasEnabled;
+                else
+                    c.enabled = true;
+            }
+            else
+            {
+                c.enabled = false;
+            }
+        }
     }
 
     // Gently nudge the player up so skis are not embedded in the ground.
@@ -578,16 +690,42 @@ public class WalkingController : MonoBehaviour
         _lastUserMoveRaw = rawInput;
         _lastUserSprintRaw = rawSprint;
 
-        // External override wins for movement, but raw input remains available.
-        Vector2 moveInput = _externalMoveActive ? _externalMove : rawInput;
-        bool sprintHeld = _externalMoveActive ? _externalSprint : rawSprint;
+        bool usingExternalWorldMove = _externalWorldMoveActive &&
+                                      _externalWorldMoveDirection.sqrMagnitude > 0.0001f;
 
-        // Use the same basis we expose for auto-walk.
-        GetMoveBasis(out Vector3 forward, out Vector3 right);
+        Vector3 desiredDir;
+        float inputMagnitude;
+        bool sprintHeld;
 
-        Vector3 desiredDir = forward * moveInput.y + right * moveInput.x;
-        float inputMagnitude = desiredDir.magnitude;
-        if (inputMagnitude > 1f) desiredDir /= inputMagnitude;
+        if (usingExternalWorldMove)
+        {
+            desiredDir = _externalWorldMoveDirection;
+            inputMagnitude = _externalWorldMoveStrength;
+
+            Vector3 currentForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+            if (currentForward.sqrMagnitude > 0.0001f)
+            {
+                currentForward.Normalize();
+                float facingDot = Vector3.Dot(currentForward, desiredDir);
+                float facing01 = Mathf.InverseLerp(_externalWorldMoveFacingGateDot, 1f, facingDot);
+                inputMagnitude *= Mathf.Clamp01(facing01);
+            }
+
+            sprintHeld = _externalSprint;
+        }
+        else
+        {
+            // External override wins for movement, but raw input remains available.
+            Vector2 moveInput = _externalMoveActive ? _externalMove : rawInput;
+            sprintHeld = _externalMoveActive ? _externalSprint : rawSprint;
+
+            // Use the same basis we expose for auto-walk.
+            GetMoveBasis(out Vector3 forward, out Vector3 right);
+
+            desiredDir = forward * moveInput.y + right * moveInput.x;
+            inputMagnitude = desiredDir.magnitude;
+            if (inputMagnitude > 1f) desiredDir /= inputMagnitude;
+        }
 
         float targetSpeed = (sprintHeld ? runSpeed : walkSpeed) * inputMagnitude;
 

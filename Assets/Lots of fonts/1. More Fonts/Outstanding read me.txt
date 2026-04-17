@@ -1,0 +1,37 @@
+Outstanding is © 2012 by bobistheowl for Metaphase Brothel Graphix. All rights reserved. This font was made using ScanFont 3.13 and MS Paint, with source graphics from monochrome bitmap.
+
+Outstanding is based on Big Vintage Letters by bigletters.org. You can download the original source graphics used to make this font, (1000 x 800 pixel .jpg files), at: http://bigletters.org/big-decorative-vintage-letters.html
+The small caps lower case is based on the capitals with the shadows removed. Some letters are unaltered; most are significantly different from the capitals. 
+I reduced the width of the wide stem on a number of letters, (B, D, E, F, H. I, J, K, L, M, P, R, T, and U), to 30 pixels in my source graphics, compared to 39-42 pixels width in the capitals. A smaller number of pixels was removed from the wide diagonal stem on the V and W - I was able to remove 4-6 pixels in the vertical section between the curvatures of upper and lower serifs. If I had tried to narrow the X or Y, it would have altered straight line slopes. They don't look overly big. The left and right sides of the O were made thinner by increasing the size of the white interior. Both sides of the Q were made equal in the small caps, but the left side is wider than the right in the capitals, by design.
+
+Commercial Use: This font is free. Please use it for creative purposes without restriction. It would be very nice if you were to send me an image link if you design something good using it. - bobistheowl@hotmail.com
+
+If you like this font, please leave a comment on the site where you downloaded it.
+
+Some additional files, such as Type 1, (.pfa and .pfb), versions of this font, and source graphics will be available on my home page:
+
+http://luc.devroye.org/bobistheowl.html
+
+or through related links elsewhere on Luc Devroye's font site.
+
+So, I found this great alphabet, and thought it would look even better as a font. I downloaded the graphics from bigletters.org, cropped them, reduced the size, (36%, less for the W), and redrew the images to monochrome.
+
+My first .ttf test version, with the 52 glyphs unaltered, was 83 kb. By the time it was complete, it was down to 21 kb, (15 kb for the .otf). I had it under 20 and 14 kb until I made some changes to the header at the very end. Most of the editing in Scanfont involved removing vector nodes, and keeping only the minimum number that are necessary to define the lines and curves, so tension keeps the curves in place, rather than a 'connect the dots' outline. 
+Outstanding is designed to be used often at larger than 72 points, so even the smallest errors would be noticeable. I think this would be a great font for titling, signage, and athletic wear, like University sweat shirts. The small caps would probably be great in children's books.
+
+I usually do dingbat fonts, so if you aren't familiar with my previous work, yes, the glyphs are much larger than in everyone else's fonts, as they are in all of my fonts. I haven't yet found a limit to the maximum size of a glyph that can be made with ScanFont. I haven't found a need to make them larger than a printed page yet. I try to do fonts that can't be done if the glyphs are smaller. Outstanding looks great down to 14 points in the capitals, and the small caps can be read easily at 6 points, but they don't have a uniform size when they're that small.
+
+Other 2012 fonts by bobistheowl:
+
+MockingjayXL, (April), an extra large single glyph font of the Mockingjay symbol from The Hunger Games, available at fontspace: http://www.fontspace.com/metaphase-brothel-graphix/mockingjayxl
+
+BeautyMarks, (August), an erotic dingbat font available at dafont: http://www.dafont.com/bobistheowl.d1682
+and on my homepage
+
+I didn't make any fonts in 2011.
+
+Coming in 2013: King's Ransom, a ransom note font composed of individual letters from 26 different decorative initial sets. I have twelve letters completed, and was working on it when I found the alphabet used for Outstanding.
+
+Best regards,
+
+~bobistheowl

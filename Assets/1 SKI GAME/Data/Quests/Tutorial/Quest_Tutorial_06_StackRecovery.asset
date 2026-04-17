@@ -1,0 +1,125 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 301e6494375742f4b98ef78f27b43667, type: 3}
+  m_Name: Quest_Tutorial_06_StackRecovery
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.QuestDefinitionSO
+  id: tutorial.stack_recovery
+  title: Recover from a Stack
+  description: If you topple into a stacked state, switch to walking, reset yourself,
+    and put the skis back on.
+  autoAccept: 0
+  tutorialQuest: 1
+  stages:
+  - id: tutorial.stack_recovery.stage1
+    title: Reset Yourself
+    description: A stack means you are no longer in a clean skiing stance. Remove
+      the skis, get upright, then put them back on.
+    objectives:
+    - id: tutorial.stack_recovery.stacked
+      title: Stack once
+      description: Crash or land awkwardly enough to topple into a stacked state.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 70
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 0
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 0
+      trickTarget: 0
+      interactionTarget: 70
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []
+    - id: tutorial.stack_recovery.unequip
+      title: Remove your skis
+      description: Hold Q to enter walking mode and reset your orientation.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 70
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 0
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 0
+      trickTarget: 0
+      interactionTarget: 50
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []
+    - id: tutorial.stack_recovery.equip
+      title: Put your skis back on
+      description: Once you are upright again, hold Q to re-equip your skis.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 70
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 0
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 0
+      trickTarget: 0
+      interactionTarget: 40
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []

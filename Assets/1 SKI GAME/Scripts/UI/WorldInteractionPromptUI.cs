@@ -11,12 +11,13 @@ namespace SkiGame.UI
     {
         [SerializeField] private UIDocument document;
         [SerializeField] private InputActionAsset inputActions;
+        [SerializeField] private InputPromptIconLibrary iconLibrary;
         [SerializeField] private string interactActionName = "Interact";
         [SerializeField] private float refreshInterval = 0.1f;
 
         private VisualElement _root;
         private VisualElement _panel;
-        private Label _labelAction;
+        private VisualElement _actionHost;
         private Label _labelDescription;
 
         private float _nextRefreshTime;
@@ -26,6 +27,12 @@ namespace SkiGame.UI
         {
             if (document == null)
                 document = GetComponent<UIDocument>();
+
+            if (inputActions == null)
+                inputActions = new InputSystem_Actions().asset;
+
+            if (iconLibrary == null)
+                iconLibrary = InputPromptResolver.LoadDefaultLibrary();
 
             if (document == null || document.rootVisualElement == null)
             {
@@ -50,8 +57,20 @@ namespace SkiGame.UI
         private void Bind()
         {
             _panel = _root.Q<VisualElement>("WorldPromptPanel");
-            _labelAction = _root.Q<Label>("Lbl_WorldPromptAction");
             _labelDescription = _root.Q<Label>("Lbl_WorldPromptDescription");
+
+            var existingLabel = _root.Q<Label>("Lbl_WorldPromptAction");
+            if (existingLabel != null)
+            {
+                var parent = existingLabel.parent;
+                if (parent != null)
+                {
+                    _actionHost = InputPromptVisualBuilder.CreatePrompt(InputPromptTokens.Text(existingLabel.text), "world-prompt-action");
+                    _actionHost.name = "WorldPromptActionHost";
+                    parent.Insert(parent.IndexOf(existingLabel), _actionHost);
+                    parent.Remove(existingLabel);
+                }
+            }
         }
 
         private void Refresh()
@@ -87,13 +106,15 @@ namespace SkiGame.UI
                 return;
             }
 
-            string binding = GetBindingDisplay(interactActionName);
-            string actionText = string.IsNullOrWhiteSpace(binding)
-                ? best.PromptActionText
-                : $"{(best.PromptUsesHold ? "Hold" : "Press")} {binding}";
+            if (_actionHost != null)
+            {
+                var actionTokens = InputPromptResolver.ResolveActionTokens(inputActions, interactActionName, iconLibrary);
+                var promptTokens = string.IsNullOrWhiteSpace(best.PromptActionText)
+                    ? InputPromptTokens.Phrase(best.PromptUsesHold ? "Hold" : "Press", actionTokens)
+                    : InputPromptTokens.Phrase(best.PromptUsesHold ? "Hold" : "Press", actionTokens);
 
-            if (_labelAction != null)
-                _labelAction.text = actionText;
+                InputPromptVisualBuilder.Populate(_actionHost, promptTokens);
+            }
 
             if (_labelDescription != null)
                 _labelDescription.text = best.PromptDescriptionText;
@@ -124,34 +145,5 @@ namespace SkiGame.UI
                 _panel.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
-        private string GetBindingDisplay(string actionName)
-        {
-            if (inputActions == null || string.IsNullOrWhiteSpace(actionName))
-                return string.Empty;
-
-            foreach (var map in inputActions.actionMaps)
-            {
-                var action = map.FindAction(actionName, throwIfNotFound: false);
-                if (action == null)
-                    continue;
-
-                int bindingIndex = FindPrimaryBindingIndex(action);
-                return action.GetBindingDisplayString(bindingIndex, InputBinding.DisplayStringOptions.DontUseShortDisplayNames);
-            }
-
-            return string.Empty;
-        }
-
-        private static int FindPrimaryBindingIndex(InputAction action)
-        {
-            for (int i = 0; i < action.bindings.Count; i++)
-            {
-                var b = action.bindings[i];
-                if (b.isComposite || b.isPartOfComposite) continue;
-                if (!string.IsNullOrEmpty(b.path)) return i;
-            }
-
-            return 0;
-        }
     }
 }

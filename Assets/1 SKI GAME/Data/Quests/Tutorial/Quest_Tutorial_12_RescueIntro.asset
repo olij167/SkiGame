@@ -1,0 +1,94 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 301e6494375742f4b98ef78f27b43667, type: 3}
+  m_Name: Quest_Tutorial_12_RescueIntro
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.QuestDefinitionSO
+  id: tutorial.rescue_intro
+  title: Rescue Introduction
+  description: Rescues start from the medic tent, then hand you over to mission guidance
+    in the world.
+  autoAccept: 0
+  tutorialQuest: 1
+  stages:
+  - id: tutorial.rescue_intro.stage1
+    title: Take a Rescue Dispatch
+    description: Visit the medic tent, accept a dispatch, then follow the rescue
+      guidance to completion.
+    objectives:
+    - id: tutorial.rescue_intro.start
+      title: Visit the medic tent and start a rescue mission
+      description: Follow the medic tent beacon, interact with the tent, and accept
+        a rescue mission.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 50
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 0
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 20
+      trickTarget: 0
+      interactionTarget: 0
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []
+    - id: tutorial.rescue_intro.complete
+      title: Complete the rescue mission
+      description: Use the mission guidance to find the casualty, finish the task,
+        and return successfully.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 50
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 0
+      movementSkill: 0
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 30
+      trickTarget: 0
+      interactionTarget: 0
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []

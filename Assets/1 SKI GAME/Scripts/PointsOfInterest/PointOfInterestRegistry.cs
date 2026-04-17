@@ -1,8 +1,8 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 using SkiGame.Runs;
+using SkiGame.Map.UI;
 
 namespace SkiGame.POI
 {
@@ -21,9 +21,12 @@ namespace SkiGame.POI
         public string id;
         public POIType type;
         public POICategory category;
-        public bool alwaysShowLabel;
+        public bool hasLabelDisplayOverride;
+        public MapUIStyleSettings.MapLabelDisplayMode labelDisplayOverride;
         public Vector3 position;
         public Color color;
+        public Sprite markerSprite;
+        public float markerSizeMultiplier;
         public string meta;
         public UnityEngine.Object source; // SkiRunLine / LiftLine / MapPOIAnchor / null
 
@@ -65,9 +68,13 @@ namespace SkiGame.POI
         [Header("Custom POIs (Stored)")]
         [SerializeField] private List<CustomPOIEntry> customPoints = new();
 
+        [Header("Run POI Identity (Stored)")]
+        [SerializeField] private List<RunPOIEntry> runEntries = new();
+
         [Header("Lift POI Identity (Stored)")]
         [SerializeField] private List<LiftPOIEntry> liftEntries = new();
 
+       
         // Cached, rebuilt on Refresh()
         [NonSerialized] private readonly List<POIInfo> _cache = new();
         public IReadOnlyList<POIInfo> Current => _cache;
@@ -88,17 +95,32 @@ namespace SkiGame.POI
         private readonly System.Collections.Generic.Dictionary<int, double> _lastRunBakeTime = new();
 #endif
 
+        private const string ActivityRaceMetaToken = "activity:race";
+        private const string ActivityMedicMetaToken = "activity:medic";
+        private const string ActivitySnowmobileMetaToken = "activity:snowmobile";
 
         [Serializable]
         private class CustomPOIEntry
         {
             public string id;
             public string name;
-            public bool alwaysShowLabel;
+            public bool overrideLabelDisplayMode;
+            public MapUIStyleSettings.MapLabelDisplayMode labelDisplayModeOverride = MapUIStyleSettings.MapLabelDisplayMode.Contextual;
+            [HideInInspector] public bool alwaysShowLabel;
 
             public Vector3 position;
             public Color color = Color.yellow;
+            public Sprite markerSprite;
+            [Min(0.1f)] public float markerSizeMultiplier = 1f;
             [TextArea] public string meta;
+        }
+
+        [Serializable]
+        private class RunPOIEntry
+        {
+            public SkiRunLine run;
+            public Sprite markerSprite;
+            [Min(0.1f)] public float markerSizeMultiplier = 1f;
         }
 
         [Serializable]
@@ -108,6 +130,8 @@ namespace SkiGame.POI
             public string id;
             public string nameOverride;
             public Color color = Color.cyan;
+            public Sprite markerSprite;
+            [Min(0.1f)] public float markerSizeMultiplier = 1f;
             [TextArea] public string metaOverride;
         }
 
@@ -123,8 +147,16 @@ namespace SkiGame.POI
 
         private void OnEnable()
         {
+            UpgradeSerializedDataIfNeeded();
             Refresh();
         }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            UpgradeSerializedDataIfNeeded();
+        }
+#endif
 
         /// <summary>
         /// Rebuild the POI cache and notify listeners.
@@ -141,7 +173,10 @@ namespace SkiGame.POI
                 AppendLiftLines(_cache);
 
             if (includeWorldPOIs)
-                AppendWorldPOIs(_cache);
+            {
+                var anchoredInstanceIds = AppendWorldPOIs(_cache);
+                AppendActivityPOIs(_cache, anchoredInstanceIds);
+            }
 
             AppendCustom(_cache);
 
@@ -170,8 +205,12 @@ namespace SkiGame.POI
                 displayName = entry.name,
                 type = POIType.Custom,
                 category = POICategory.Custom,
+                hasLabelDisplayOverride = entry.overrideLabelDisplayMode,
+                labelDisplayOverride = entry.labelDisplayModeOverride,
                 position = entry.position,
                 color = entry.color,
+                markerSprite = ResolveMarkerSprite(entry.id, POIType.Custom, POICategory.Custom, entry.markerSprite),
+                markerSizeMultiplier = ResolveMarkerSizeMultiplier(entry.id, POIType.Custom, POICategory.Custom, entry.markerSizeMultiplier),
                 meta = POIMetaUtility.EnsureToken(entry.meta, POIMetaUtility.BuildCategoryToken(POICategory.Custom)),
                 source = null
             };
@@ -305,7 +344,8 @@ namespace SkiGame.POI
                 }
 
                 // Marker ID is stable and explicit.
-                string id = $"{r.RunId}__top";
+                string id = BuildRunPoiId(r);
+                var entry = GetOrCreateRunEntry(r);
 
                 dst.Add(new POIInfo
                 {
@@ -315,9 +355,17 @@ namespace SkiGame.POI
                     category = POICategory.None,
                     position = pos,
                     color = r.RunColor,
+                    markerSprite = ResolveMarkerSprite(id, POIType.SkiRun, POICategory.None, entry.markerSprite),
+                    markerSizeMultiplier = ResolveMarkerSizeMultiplier(id, POIType.SkiRun, POICategory.None, entry.markerSizeMultiplier),
                     meta = r.Difficulty.ToString(),
                     source = r
                 });
+            }
+
+            for (int i = runEntries.Count - 1; i >= 0; i--)
+            {
+                if (runEntries[i] == null || runEntries[i].run == null)
+                    runEntries.RemoveAt(i);
             }
         }
 
@@ -356,6 +404,8 @@ namespace SkiGame.POI
                         category = POICategory.None,
                         position = lift.bottomStation.position,
                         color = entry.color,
+                        markerSprite = ResolveMarkerSprite($"{entry.id}__bottom", POIType.SkiLift, POICategory.None, entry.markerSprite),
+                        markerSizeMultiplier = ResolveMarkerSizeMultiplier($"{entry.id}__bottom", POIType.SkiLift, POICategory.None, entry.markerSizeMultiplier),
                         meta = metaBase,
                         source = lift
                     });
@@ -372,6 +422,8 @@ namespace SkiGame.POI
                         category = POICategory.None,
                         position = lift.topStation.position,
                         color = entry.color,
+                        markerSprite = ResolveMarkerSprite($"{entry.id}__top", POIType.SkiLift, POICategory.None, entry.markerSprite),
+                        markerSizeMultiplier = ResolveMarkerSizeMultiplier($"{entry.id}__top", POIType.SkiLift, POICategory.None, entry.markerSizeMultiplier),
                         meta = metaBase,
                         source = lift
                     });
@@ -388,6 +440,8 @@ namespace SkiGame.POI
                         category = POICategory.None,
                         position = lift.transform.position,
                         color = entry.color,
+                        markerSprite = ResolveMarkerSprite($"{entry.id}__mid", POIType.SkiLift, POICategory.None, entry.markerSprite),
+                        markerSizeMultiplier = ResolveMarkerSizeMultiplier($"{entry.id}__mid", POIType.SkiLift, POICategory.None, entry.markerSizeMultiplier),
                         meta = metaBase,
                         source = lift
                     });
@@ -400,6 +454,26 @@ namespace SkiGame.POI
                 if (liftEntries[i] == null || liftEntries[i].lift == null)
                     liftEntries.RemoveAt(i);
             }
+        }
+
+        private RunPOIEntry GetOrCreateRunEntry(SkiRunLine run)
+        {
+            for (int i = 0; i < runEntries.Count; i++)
+            {
+                var e = runEntries[i];
+                if (e != null && e.run == run)
+                    return e;
+            }
+
+            var created = new RunPOIEntry
+            {
+                run = run,
+                markerSprite = null,
+                markerSizeMultiplier = 1f
+            };
+
+            runEntries.Add(created);
+            return created;
         }
 
         private LiftPOIEntry GetOrCreateLiftEntry(LiftLine lift)
@@ -421,6 +495,8 @@ namespace SkiGame.POI
                 id = Guid.NewGuid().ToString("N"),
                 nameOverride = "",
                 color = Color.cyan,
+                markerSprite = null,
+                markerSizeMultiplier = 1f,
                 metaOverride = ""
             };
 
@@ -428,14 +504,63 @@ namespace SkiGame.POI
             return created;
         }
 
-        private void AppendWorldPOIs(List<POIInfo> dst)
+        private static bool HasRelatedComponent<T>(GameObject go) where T : Component
+        {
+            if (go == null)
+                return false;
+
+            return go.GetComponent<T>() != null ||
+                   go.GetComponentInParent<T>() != null ||
+                   go.GetComponentInChildren<T>(true) != null;
+        }
+
+        private static POICategory ResolveEffectiveAnchorCategory(MapPOIAnchor anchor)
+        {
+            if (anchor == null)
+                return POICategory.Custom;
+
+            POICategory authoredCategory = anchor.Category;
+            if (authoredCategory != POICategory.None && authoredCategory != POICategory.Custom)
+                return authoredCategory;
+
+            GameObject go = anchor.gameObject;
+            if (HasRelatedComponent<SkiPassKiosk>(go) || HasRelatedComponent<RaceKiosk>(go))
+                return POICategory.Kiosk;
+
+            if (HasRelatedComponent<SkiResortZone>(go))
+                return POICategory.Resort;
+
+            if (HasRelatedComponent<CustomizationPortal>(go))
+                return POICategory.Shop;
+
+            if (HasRelatedComponent<RaceCourseLine>(go))
+                return POICategory.Race;
+
+            if (HasRelatedComponent<MedicTentActivityHub>(go))
+                return POICategory.Medical;
+
+            if (HasRelatedComponent<SnowmobileController>(go))
+                return POICategory.Vehicle;
+
+            return authoredCategory == POICategory.None ? POICategory.Custom : authoredCategory;
+        }
+
+        private HashSet<int> AppendWorldPOIs(List<POIInfo> dst)
         {
             HashSet<int> anchoredInstanceIds = new HashSet<int>();
 
 #if UNITY_2023_1_OR_NEWER
             var anchors = UnityEngine.Object.FindObjectsByType<MapPOIAnchor>(FindObjectsSortMode.None);
+            var resorts = UnityEngine.Object.FindObjectsByType<SkiResortZone>(FindObjectsSortMode.None);
+            var portals = UnityEngine.Object.FindObjectsByType<CustomizationPortal>(FindObjectsSortMode.None);
+            var kiosks = UnityEngine.Object.FindObjectsByType<SkiPassKiosk>(FindObjectsSortMode.None);
+            var raceKiosks = UnityEngine.Object.FindObjectsByType<RaceKiosk>(FindObjectsSortMode.None);
 #else
     var anchors = UnityEngine.Object.FindObjectsOfType<MapPOIAnchor>(true);
+    var resorts = UnityEngine.Object.FindObjectsOfType<SkiResortZone>(true);
+    var portals = UnityEngine.Object.FindObjectsOfType<CustomizationPortal>(true);
+    var kiosks = UnityEngine.Object.FindObjectsOfType<SkiPassKiosk>(true);
+    var raceKiosks = UnityEngine.Object.FindObjectsOfType<RaceKiosk>(true);
 #endif
 
             for (int i = 0; i < anchors.Length; i++)
@@ -448,34 +573,29 @@ namespace SkiGame.POI
 
                 string id = !string.IsNullOrWhiteSpace(anchor.CustomId)
                     ? anchor.CustomId.Trim()
-                    : $"anchor__{anchor.gameObject.scene.name}__{anchor.gameObject.GetInstanceID()}";
+                    : BuildStableScenePoiId("anchor", anchor.gameObject);
+
+                POICategory resolvedCategory = ResolveEffectiveAnchorCategory(anchor);
 
                 string meta = anchor.Meta;
-                meta = POIMetaUtility.EnsureToken(meta, POIMetaUtility.BuildCategoryToken(anchor.Category));
+                meta = POIMetaUtility.EnsureToken(meta, POIMetaUtility.BuildCategoryToken(resolvedCategory));
 
                 dst.Add(new POIInfo
                 {
                     id = id,
                     displayName = anchor.DisplayName,
                     type = POIType.Custom,
-                    category = anchor.Category,
-                    alwaysShowLabel = anchor.AlwaysShowLabel,
+                    category = resolvedCategory,
+                    hasLabelDisplayOverride = anchor.OverrideLabelDisplayMode,
+                    labelDisplayOverride = anchor.LabelDisplayModeOverride,
                     position = anchor.WorldPosition,
                     color = anchor.Color,
+                    markerSprite = ResolveMarkerSprite(id, POIType.Custom, resolvedCategory, anchor.MarkerSprite),
+                    markerSizeMultiplier = ResolveMarkerSizeMultiplier(id, POIType.Custom, resolvedCategory, anchor.MarkerSizeMultiplier),
                     meta = meta,
                     source = anchor
                 });
             }
-
-#if UNITY_2023_1_OR_NEWER
-            var resorts = UnityEngine.Object.FindObjectsByType<SkiResortZone>(FindObjectsSortMode.None);
-            var portals = UnityEngine.Object.FindObjectsByType<CustomizationPortal>(FindObjectsSortMode.None);
-            var kiosks = UnityEngine.Object.FindObjectsByType<SkiPassKiosk>(FindObjectsSortMode.None);
-#else
-    var resorts = UnityEngine.Object.FindObjectsOfType<SkiResortZone>(true);
-    var portals = UnityEngine.Object.FindObjectsOfType<CustomizationPortal>(true);
-    var kiosks = UnityEngine.Object.FindObjectsOfType<SkiPassKiosk>(true);
-#endif
 
             AppendAutoWorldPOIs(
                 resorts,
@@ -503,16 +623,130 @@ namespace SkiGame.POI
                 new Color(1f, 0.75f, 0.2f, 1f),
                 "Ski Pass Kiosk",
                 c => c != null ? c.transform.position : Vector3.zero);
+
+            AppendAutoWorldPOIs(
+                raceKiosks,
+                anchoredInstanceIds,
+                dst,
+                POICategory.Kiosk,
+                new Color(0.86f, 0.35f, 1.00f, 1f),
+                "Race Kiosk",
+                c => c != null ? c.transform.position : Vector3.zero);
+
+            return anchoredInstanceIds;
+        }
+
+        private void AppendActivityPOIs(List<POIInfo> dst, HashSet<int> anchoredInstanceIds)
+        {
+#if UNITY_2023_1_OR_NEWER
+            var races = UnityEngine.Object.FindObjectsByType<RaceCourseLine>(FindObjectsSortMode.None);
+            var tents = UnityEngine.Object.FindObjectsByType<MedicTentActivityHub>(FindObjectsSortMode.None);
+            var snowmobiles = UnityEngine.Object.FindObjectsByType<SnowmobileController>(FindObjectsSortMode.None);
+#else
+    var races = UnityEngine.Object.FindObjectsOfType<RaceCourseLine>(true);
+    var tents = UnityEngine.Object.FindObjectsOfType<MedicTentActivityHub>(true);
+    var snowmobiles = UnityEngine.Object.FindObjectsOfType<SnowmobileController>(true);
+#endif
+
+            for (int i = 0; i < races.Length; i++)
+            {
+                var race = races[i];
+                if (race == null)
+                    continue;
+
+                if (anchoredInstanceIds != null && anchoredInstanceIds.Contains(race.gameObject.GetInstanceID()))
+                    continue;
+
+                string id = !string.IsNullOrWhiteSpace(race.RaceId)
+                    ? $"activity-race:{race.RaceId}"
+                    : BuildStableScenePoiId("activity-race", race.gameObject);
+
+                string meta = POIMetaUtility.EnsureToken(string.Empty, ActivityRaceMetaToken);
+
+                Color fallback = new Color(1.00f, 0.55f, 0.20f, 1f);
+                Color resolvedColor = race.GetResolvedMapLineColor(fallback);
+
+                dst.Add(new POIInfo
+                {
+                    id = id,
+                    displayName = string.IsNullOrWhiteSpace(race.RaceName) ? race.name : race.RaceName,
+                    type = POIType.Custom,
+                    category = POICategory.Race,
+                    position = race.StartWorldPosition,
+                    color = resolvedColor,
+                    markerSprite = ResolveMarkerSprite(id, POIType.Custom, POICategory.Race),
+                    markerSizeMultiplier = ResolveMarkerSizeMultiplier(id, POIType.Custom, POICategory.Race),
+                    meta = meta,
+                    source = race
+                });
+            }
+
+            for (int i = 0; i < tents.Length; i++)
+            {
+                var tent = tents[i];
+                if (tent == null)
+                    continue;
+
+                if (anchoredInstanceIds != null && anchoredInstanceIds.Contains(tent.gameObject.GetInstanceID()))
+                    continue;
+
+                string id = !string.IsNullOrWhiteSpace(tent.TentId)
+                    ? $"activity-medic:{tent.TentId}"
+                    : BuildStableScenePoiId("activity-medic", tent.gameObject);
+
+                string meta = POIMetaUtility.EnsureToken(string.Empty, ActivityMedicMetaToken);
+
+                dst.Add(new POIInfo
+                {
+                    id = id,
+                    displayName = tent.TentName,
+                    type = POIType.Custom,
+                    category = POICategory.Medical,
+                    position = tent.transform.position,
+                    color = new Color(0.20f, 1.00f, 1.00f, 1f),
+                    markerSprite = ResolveMarkerSprite(id, POIType.Custom, POICategory.Medical),
+                    markerSizeMultiplier = ResolveMarkerSizeMultiplier(id, POIType.Custom, POICategory.Medical),
+                    meta = meta,
+                    source = tent
+                });
+            }
+
+            for (int i = 0; i < snowmobiles.Length; i++)
+            {
+                var snowmobile = snowmobiles[i];
+                if (snowmobile == null)
+                    continue;
+
+                if (anchoredInstanceIds != null && anchoredInstanceIds.Contains(snowmobile.gameObject.GetInstanceID()))
+                    continue;
+
+                string id = BuildStableScenePoiId("activity-snowmobile", snowmobile.gameObject);
+                string meta = POIMetaUtility.EnsureToken(string.Empty, ActivitySnowmobileMetaToken);
+
+                dst.Add(new POIInfo
+                {
+                    id = id,
+                    displayName = "Snowmobile",
+                    type = POIType.Custom,
+                    category = POICategory.Vehicle,
+                    position = snowmobile.transform.position,
+                    color = new Color(1.00f, 0.90f, 0.25f, 1f),
+                    markerSprite = ResolveMarkerSprite(id, POIType.Custom, POICategory.Vehicle),
+                    markerSizeMultiplier = ResolveMarkerSizeMultiplier(id, POIType.Custom, POICategory.Vehicle),
+                    meta = meta,
+                    source = snowmobile
+                });
+            }
         }
 
         private void AppendAutoWorldPOIs<T>(
-            T[] objects,
-            HashSet<int> anchoredInstanceIds,
-            List<POIInfo> dst,
-            POICategory category,
-            Color color,
-            string fallbackName,
-            Func<T, Vector3> worldPosResolver) where T : Component
+    T[] objects,
+    HashSet<int> anchoredInstanceIds,
+    List<POIInfo> dst,
+    POICategory category,
+    Color color,
+    string fallbackName,
+    Func<T, Vector3> worldPosResolver) where T : Component
         {
             if (objects == null || dst == null)
                 return;
@@ -523,22 +757,25 @@ namespace SkiGame.POI
                 if (obj == null)
                     continue;
 
-                int id = obj.gameObject.GetInstanceID();
-                if (anchoredInstanceIds.Contains(id))
+                int instanceId = obj.gameObject.GetInstanceID();
+                if (anchoredInstanceIds != null && anchoredInstanceIds.Contains(instanceId))
                     continue;
+
+                string stableId = BuildStableScenePoiId($"auto-{category.ToString().ToLowerInvariant()}", obj.gameObject);
 
                 string displayName = ResolveDisplayName(obj.gameObject, fallbackName);
                 string meta = POIMetaUtility.BuildCategoryToken(category);
 
                 dst.Add(new POIInfo
                 {
-                    id = $"auto__{category.ToString().ToLowerInvariant()}__{id}",
+                    id = stableId,
                     displayName = displayName,
                     type = POIType.Custom,
                     category = category,
-                    alwaysShowLabel = true,
                     position = worldPosResolver(obj),
                     color = color,
+                    markerSprite = ResolveMarkerSprite(stableId, POIType.Custom, category),
+                    markerSizeMultiplier = ResolveMarkerSizeMultiplier(stableId, POIType.Custom, category),
                     meta = meta,
                     source = obj
                 });
@@ -585,13 +822,86 @@ namespace SkiGame.POI
                     displayName = string.IsNullOrWhiteSpace(c.name) ? "POI" : c.name,
                     type = POIType.Custom,
                     category = POICategory.Custom,
+                    hasLabelDisplayOverride = c.overrideLabelDisplayMode,
+                    labelDisplayOverride = c.labelDisplayModeOverride,
                     position = c.position,
                     color = c.color,
+                    markerSprite = ResolveMarkerSprite(c.id, POIType.Custom, POICategory.Custom, c.markerSprite),
+                    markerSizeMultiplier = ResolveMarkerSizeMultiplier(c.id, POIType.Custom, POICategory.Custom, c.markerSizeMultiplier),
                     meta = POIMetaUtility.EnsureToken(c.meta, POIMetaUtility.BuildCategoryToken(POICategory.Custom)),
-                    source = null,
-                    alwaysShowLabel = c.alwaysShowLabel
+                    source = null
                 });
             }
+        }
+
+        private void UpgradeSerializedDataIfNeeded()
+        {
+            if (customPoints == null)
+                return;
+
+            for (int i = 0; i < customPoints.Count; i++)
+            {
+                CustomPOIEntry entry = customPoints[i];
+                if (entry == null)
+                    continue;
+
+                if (entry.alwaysShowLabel && !entry.overrideLabelDisplayMode)
+                {
+                    entry.overrideLabelDisplayMode = true;
+                    entry.labelDisplayModeOverride = MapUIStyleSettings.MapLabelDisplayMode.Always;
+                }
+            }
+        }
+
+        private static string BuildRunPoiId(SkiRunLine run)
+        {
+            if (run == null)
+                return null;
+
+            if (!string.IsNullOrWhiteSpace(run.RunId))
+                return $"{run.RunId}__top";
+
+            return $"{BuildStableScenePoiId("run", run.gameObject)}__top";
+        }
+
+        private Sprite ResolveMarkerSprite(string poiId, POIType type, POICategory category, Sprite explicitSprite = null)
+        {
+            return explicitSprite;
+        }
+
+        private float ResolveMarkerSizeMultiplier(string poiId, POIType type, POICategory category, float explicitSizeMultiplier = 1f)
+        {
+            return SanitizeMarkerSizeMultiplier(explicitSizeMultiplier);
+        }
+
+        private static float SanitizeMarkerSizeMultiplier(float value)
+        {
+            return value > 0f ? Mathf.Max(0.1f, value) : 1f;
+        }
+
+        private static string BuildStableHierarchyPath(Transform t)
+        {
+            if (t == null)
+                return "null";
+
+            var stack = new Stack<string>();
+            while (t != null)
+            {
+                stack.Push(t.name);
+                t = t.parent;
+            }
+
+            return string.Join("/", stack);
+        }
+
+        private static string BuildStableScenePoiId(string prefix, GameObject go)
+        {
+            if (go == null)
+                return $"{prefix}:null";
+
+            string sceneName = go.scene.IsValid() ? go.scene.name : "noscene";
+            string path = BuildStableHierarchyPath(go.transform);
+            return $"{prefix}:{sceneName}:{path}";
         }
 
         private void OnDrawGizmos()

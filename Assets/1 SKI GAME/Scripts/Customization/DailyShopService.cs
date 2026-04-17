@@ -28,6 +28,12 @@ public static class DailyShopService
         return (d.Year * 10000) + (d.Month * 100) + d.Day;
     }
 
+    public static void ClearSavedOffers()
+    {
+        PlayerPrefs.DeleteKey(PrefKey);
+        PlayerPrefs.Save();
+    }
+
     public static void EnsureDailyOffers(
         CustomizationCatalogSO catalog,
         int dayKey,

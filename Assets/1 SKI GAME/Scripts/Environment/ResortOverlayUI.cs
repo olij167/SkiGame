@@ -138,9 +138,18 @@ namespace SkiGame.UI
 
             if (_title != null)
             {
-                string zoneName = resortController.ActiveZone != null
-                    ? resortController.ActiveZone.name
-                    : "Ski Resort";
+                SkiResortAccessManager resortAccessManager = SkiResortAccessManager.Instance != null
+                    ? SkiResortAccessManager.Instance
+                    : FindObjectOfType<SkiResortAccessManager>();
+
+                string zoneName = "Ski Resort";
+                if (resortController.ActiveZone != null)
+                {
+                    if (resortAccessManager != null && !string.IsNullOrWhiteSpace(resortController.ActiveZone.ResortId))
+                        zoneName = resortAccessManager.GetDisplayName(resortController.ActiveZone.ResortId);
+                    else
+                        zoneName = resortController.ActiveZone.name;
+                }
 
                 _title.text = zoneName;
             }
@@ -167,10 +176,32 @@ namespace SkiGame.UI
                 _scheduleStatus.text = resortController.GetScheduledExitSummary();
 
             if (_hint != null)
-                _hint.text = "Choose when to leave so time passes intentionally rather than drifting.";
+                _hint.text = BuildAccessHint();
 
             if (_btnCancelSchedule != null)
                 _btnCancelSchedule.SetEnabled(resortController.HasScheduledExit);
+        }
+
+        private string BuildAccessHint()
+        {
+            SkiResortZone zone = resortController != null ? resortController.ActiveZone : null;
+            if (zone == null || string.IsNullOrWhiteSpace(zone.ResortId))
+                return "Choose when to leave so time passes intentionally rather than drifting.";
+
+            SkiResortAccessManager resortAccessManager = SkiResortAccessManager.Instance != null
+                ? SkiResortAccessManager.Instance
+                : FindObjectOfType<SkiResortAccessManager>();
+
+            if (resortAccessManager == null)
+                return "Choose when to leave so time passes intentionally rather than drifting.";
+
+            if (resortAccessManager.IsResortPermanentlyUnlocked(zone.ResortId))
+                return "This resort is permanently available.";
+
+            if (resortAccessManager.TryGetRentalTimeRemainingText(zone.ResortId, out string timeRemaining))
+                return $"Rental active: {timeRemaining}.";
+
+            return "Choose when to leave so time passes intentionally rather than drifting.";
         }
 
         private string BuildRecoveryDetail()

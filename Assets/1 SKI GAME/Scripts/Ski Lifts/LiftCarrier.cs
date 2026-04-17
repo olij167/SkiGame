@@ -33,15 +33,19 @@ public class LiftCarrier : MonoBehaviour
         if (!CanAttach(rider))
             return false;
 
+        if (line != null && rider != null && rider.RequiresBoardAuthorization(line))
+        {
+            if (!rider.HasBoardAuthorizationFor(line))
+                return false;
+        }
+
         // --- Ski Pass gate (authoritative) ---
         var passMgr = SkiPassManager.Instance;
-        if (passMgr != null)
+        if (passMgr != null && line != null)
         {
-            int req = line != null ? line.RequiredPassLevel : 0;
-
-            if (!passMgr.CanUseLift(req))
+            if (!passMgr.CanUseLift(line))
             {
-                string requiredName = GetPassDisplayNameForLevel(req);
+                string requiredName = line.GetRequiredPassDisplayName();
                 LiftAccessPopupBus.RaiseDenied(requiredName);
                 return false;
             }
@@ -50,6 +54,10 @@ public class LiftCarrier : MonoBehaviour
         }
 
         riders.Add(rider);
+
+        if (line != null)
+            rider.ConsumeBoardAuthorization(line);
+
         rider.OnAttachedToCarrier(this);
         return true;
     }

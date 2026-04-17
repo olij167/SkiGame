@@ -22,7 +22,7 @@ MonoBehaviour:
   eyeSprite: {fileID: 0}
   hatPrefab: {fileID: 0}
   jacketPrefab: {fileID: 4522362532236912940, guid: d940769eedd86c04d97fc2680b1d670f, type: 3}
-  customizerIndex: 1
+  customizerIndex: 0
   gearProfile: {fileID: 0}
   defaultPatternOption: {fileID: 0}
   defaultPatternId: 
@@ -32,6 +32,6 @@ MonoBehaviour:
   defaultPatternOffset: {x: 0, y: 0}
   defaultPatternRotation: 0
   hasTint: 1
-  defaultTint: {r: 0.6470588, g: 0.1647059, b: 0.1647059, a: 1}
+  defaultTint: {r: 0.8784314, g: 1, b: 1, a: 1}
   alwaysInStoreUntilOwned: 0
   excludeFromDailyRotation: 0

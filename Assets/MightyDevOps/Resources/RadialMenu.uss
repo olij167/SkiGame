@@ -1,0 +1,9 @@
+.menu-item {
+    transition: left 0.5s ease-in-out, top 0.5s ease-in-out, width 0.5s ease-in-out, height 0.5s ease-in-out, opacity 0.5s ease-in-out;
+}
+
+.menu-item:hover {
+    opacity: 1;
+    scale: 1.25;
+}
+

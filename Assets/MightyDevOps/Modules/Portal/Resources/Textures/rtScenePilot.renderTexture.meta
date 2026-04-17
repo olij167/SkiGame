@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 10569e05d1ba94e4593e0f26278a0b02
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 177244
+  packageName: MIGHTY PORTAL
+  packageVersion: 2.2.
+  assetPath: Assets/MightyDevOps/Modules/Portal/Resources/Textures/rtScenePilot.renderTexture
+  uploadId: 767126

@@ -1110,6 +1110,34 @@ namespace TimeWeather
                 secondsPerMinuteInGame = _defaultSecondsPerMinute;
         }
 
+        public void SetTimeOfDayImmediate(float hour24)
+        {
+            timeOfDay = Mathf.Repeat(hour24, 24f);
+            timePercent = timeOfDay / 24f;
+
+            timeHours = Mathf.FloorToInt(timeOfDay);
+            timeMinutes = Mathf.Clamp((timeOfDay - timeHours) * 60f, 0f, 59.49f);
+            timeSeconds = 0f;
+            hourlyTimePercent = (timeMinutes %= 60f) / 60f;
+
+            isNewDay = false;
+
+            if (toggleUITimeControls && timeOfDaySlider != null && !_isScrubbingTimeOfDay)
+                timeOfDaySlider.value = timeOfDay;
+
+            UpdateLighting();
+            UpdateTimeTextIfNeeded();
+
+            if (toggleTimeUI && dayText != null && currentMonthData != null)
+                dayText.text = currentDay + ", " + currentMonthData.month + " " + dayOfMonth + ", \n" + currentMonthData.season + ", " + currentYear;
+        }
+
+        public void AdvanceToNextDayAt(float hour24)
+        {
+            ProgressDays(1);
+            SetTimeOfDayImmediate(hour24);
+        }
+
     }
 
 }

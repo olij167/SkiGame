@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: df8163b3b580f114f8c4cddb64430ee4
+ComputeShaderImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 177244
+  packageName: MIGHTY PORTAL
+  packageVersion: 2.2.
+  assetPath: Assets/MightyDevOps/Resources/FPSPositionComputeShader.compute
+  uploadId: 767126

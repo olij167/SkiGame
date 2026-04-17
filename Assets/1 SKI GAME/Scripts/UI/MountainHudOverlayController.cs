@@ -6,6 +6,7 @@ using SkiGame.Navigation;
 using SkiGame.POI;
 using SkiGame.Runs;
 using SkiGame.UI;
+using SkiGame.Activities;
 using TimeWeather;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -48,6 +49,9 @@ namespace SkiGame.Progression
         [SerializeField] private WeatherController weatherController;
         [SerializeField] private PlayerStatsManager statsManager;
         [SerializeField] private ProgressionDirector progressionDirector;
+        [SerializeField] private QuestDirector questDirector;
+        [SerializeField] private QuestSignalBus questSignalBus;
+        [SerializeField] private PlayerBlackoutTransition blackoutTransition;
 
         [Header("Refresh")]
         [SerializeField, Range(0.1f, 2f)] private float refreshIntervalSeconds = 0.35f;
@@ -66,6 +70,7 @@ namespace SkiGame.Progression
         private Label _lblTopTime;
         private Label _lblTopWeather;
         private Label _lblTopLocation;
+        private Label _lblTopCurrency;
         private Label _lblTopHint;
 
         // Context panel
@@ -92,29 +97,80 @@ namespace SkiGame.Progression
         private bool _statsShowLifetime;
 
         // Goals
+        private Button _btnGoalsQuests;
         private Button _btnGoalsTasks;
         private Button _btnGoalsAchievements;
         private ScrollView _goalsList;
+        private VisualElement _questPanel;
+        private ScrollView _questList;
+        private Button _btnQuestCurrent;
+        private Button _btnQuestCompleted;
+        private string _primaryQuestId;
+        private readonly HashSet<string> _expandedQuestIds = new();
         private VisualElement _achievementCategoryRow;
         private VisualElement _achievementGrid;
-        private bool _goalsShowAchievements;
+        private GoalsViewMode _goalsViewMode = GoalsViewMode.Quests;
+        private bool _questShowCompleted;
         private AchievementCategory _achievementCategory = AchievementCategory.Performance;
 
         private string _tutorialLastViewedSection = "Stats";
         private bool _tutorialVisitedStats;
         private bool _tutorialVisitedTasks;
+        private bool _tutorialVisitedQuests;
         private bool _tutorialVisitedMap;
 
         private ScrollView _achievementScroll;
         private bool _contextHistoryExpanded;
         private bool _contextHistoryAvailable;
 
-        // Pass
-        private Button _btnPassCurrent;
-        private Label _lblPassCurrent;
-        private Label _lblPassExpiryMeta;
-        private VisualElement _passExpiryBar;
-        private VisualElement _passExpiryFill;
+        private Label _lblRescueDispatchRank;
+        private Label _lblRescueDispatchRefresh;
+        private Label _lblRescueDispatchBeacon;
+        private Label _lblRescueDispatchStatus;
+        private Button _btnRescueMedicalDrop;
+        private Button _btnRescueBeacon;
+        private Button _btnRescueSnowmobile;
+        private Button _btnRescueSOS;
+        private string _rescueDispatchFeedback = "Complete rescue missions to unlock mountain-wide support utilities.";
+
+        // Pass / rescue panel
+        private Button _btnPassTabInfo;
+        private Button _btnPassTabRescue;
+        private Button _btnPassBack;
+
+        private ScrollView _passCurrentList;
+
+        private Label _lblPassDetailTitle;
+        private Label _lblPassDetailMeta;
+
+        private ScrollView _passOverviewList;
+        private ScrollView _passLiftList;
+
+        private VisualElement _passInfoView;
+        private VisualElement _passLiftDetailView;
+        private VisualElement _rescueUtilitiesView;
+
+        private VisualElement _screenFade;
+
+        private bool _passShowRescueTab;
+        private bool _passShowLiftDetail;
+        private string _passDetailPassId;
+        private int _passDetailLevel;
+        private string _passDetailDisplayName;
+        private float _screenFadeOpacity;
+        private Coroutine _sosRoutine;
+
+        private readonly List<PassPanelEntry> _passPanelEntryBuffer = new();
+        private readonly List<LiftLine> _passLiftBuffer = new();
+
+        private struct PassPanelEntry
+        {
+            public string passId;
+            public int level;
+            public string displayName;
+            public bool isCurrent;
+            public bool isPermanent;
+        }
 
         private float _nextRefreshTime;
         private bool _pendingInitializeAfterPreview;
@@ -123,6 +179,8 @@ namespace SkiGame.Progression
 
         private float _lastWaypointClickTime = -10f;
         private string _lastClickedWaypointId;
+
+        private readonly System.Collections.Generic.List<Vector3> _raceCheckpointMarkerBuffer = new();
 
         private enum SelectedMapKind
         {
@@ -139,15 +197,28 @@ namespace SkiGame.Progression
             MountainMastery = 20,
         }
 
+        private enum GoalsViewMode
+        {
+            Quests = 0,
+            Tasks = 10,
+            Achievements = 20,
+        }
+
         private SelectedMapKind _selectedKind;
         private string _selectedId;
         private string _selectedTitle;
         private string _selectedBody;
 
         private readonly List<ProgressionDirector.DailyTierDisplay> _dailyTierBuffer = new();
+        private readonly List<QuestRuntimeState> _questStateBuffer = new();
+        private readonly List<QuestDefinitionSO> _questDefinitionBuffer = new();
         private readonly List<AchievementDefinitionSO> _achievementBuffer = new();
         private readonly HashSet<string> _achievementDedup = new();
         private readonly List<AchievementDefinitionSO> _achievementQueryBuffer = new();
+
+        private VisualElement _achievementPanel;
+        private VisualElement _achievementHeaderShell;
+        private string _selectedAchievementId;
 
         private static readonly ProgressionMetric[] PerformanceMetrics =
         {
@@ -202,6 +273,9 @@ namespace SkiGame.Progression
             if (weatherController == null) weatherController = FindObjectOfType<WeatherController>();
             if (statsManager == null) statsManager = PlayerStatsManager.Instance != null ? PlayerStatsManager.Instance : FindObjectOfType<PlayerStatsManager>();
             if (progressionDirector == null) progressionDirector = ProgressionDirector.Instance != null ? ProgressionDirector.Instance : FindObjectOfType<ProgressionDirector>();
+            if (questDirector == null) questDirector = QuestDirector.Instance != null ? QuestDirector.Instance : FindObjectOfType<QuestDirector>();
+            if (questSignalBus == null) questSignalBus = FindObjectOfType<QuestSignalBus>();
+            if (blackoutTransition == null) blackoutTransition = FindObjectOfType<PlayerBlackoutTransition>();
         }
         private void Awake()
         {
@@ -372,6 +446,7 @@ namespace SkiGame.Progression
 
             float dt = Time.unscaledDeltaTime;
             _mapUI?.Tick(dt);
+            SyncRaceCheckpointMarkersOnMap();
 
             if (Time.unscaledTime < _nextRefreshTime)
                 return;
@@ -419,6 +494,41 @@ namespace SkiGame.Progression
             ToggleOverlay();
         }
 
+        public string GetOverlayToggleBindingDisplay(InputActionAsset fallbackInputActions = null)
+        {
+            if (toggleOverlayAction != null && toggleOverlayAction.action != null)
+                return InputPromptResolver.GetBindingDisplay(toggleOverlayAction.action);
+
+            return fallbackInputActions != null
+                ? InputPromptResolver.GetBindingDisplay(fallbackInputActions, "Toggle")
+                : "-";
+        }
+
+        private void SyncRaceCheckpointMarkersOnMap()
+        {
+            if (_mapUI == null)
+                return;
+
+            var mgr = MountainActivityManager.Instance;
+            if (mgr != null &&
+                mgr.ActiveKind == MountainActivityKind.Race &&
+                mgr.ActiveSource is RaceCourseLine race &&
+                race.GeneratedCheckpoints != null &&
+                race.GeneratedCheckpoints.Count > 0)
+            {
+                _raceCheckpointMarkerBuffer.Clear();
+
+                for (int i = 0; i < race.GeneratedCheckpoints.Count; i++)
+                    _raceCheckpointMarkerBuffer.Add(race.GeneratedCheckpoints[i].worldPos);
+
+                _mapUI.SetActivityCheckpointMarkers(_raceCheckpointMarkerBuffer, race.CurrentCheckpointIndex, hideBaseMarkers: true);
+            }
+            else
+            {
+                _mapUI.ClearActivityCheckpointMarkers();
+            }
+        }
+
         private void ResolveReferences()
         {
             ResolveBootstrapReferences();
@@ -430,6 +540,10 @@ namespace SkiGame.Progression
             if (weatherController == null) weatherController = FindObjectOfType<WeatherController>();
             if (statsManager == null) statsManager = PlayerStatsManager.Instance != null ? PlayerStatsManager.Instance : FindObjectOfType<PlayerStatsManager>();
             if (progressionDirector == null) progressionDirector = ProgressionDirector.Instance != null ? ProgressionDirector.Instance : FindObjectOfType<ProgressionDirector>();
+            if (questDirector == null) questDirector = QuestDirector.Instance != null ? QuestDirector.Instance : FindObjectOfType<QuestDirector>();
+            if (questSignalBus == null) questSignalBus = FindObjectOfType<QuestSignalBus>();
+
+            if (blackoutTransition == null) blackoutTransition = FindObjectOfType<PlayerBlackoutTransition>();
         }
 
         public bool IsOpen => _isOpen;
@@ -437,16 +551,34 @@ namespace SkiGame.Progression
         public string TutorialLastViewedSection => _tutorialLastViewedSection;
         public bool TutorialVisitedStats => _tutorialVisitedStats;
         public bool TutorialVisitedTasks => _tutorialVisitedTasks;
+        public bool QuestTabViewed => _tutorialVisitedQuests;
         public bool TutorialVisitedMap => _tutorialVisitedMap;
 
         public void ResetTutorialVisitedSections()
         {
             _tutorialVisitedStats = false;
             _tutorialVisitedTasks = false;
+            _tutorialVisitedQuests = false;
             _tutorialVisitedMap = false;
             _tutorialLastViewedSection = "Stats";
         }
 
+        private void CloseOpenKiosks()
+        {
+            var skiPassKiosks = FindObjectsOfType<SkiPassKioskUI>(true);
+            for (int i = 0; i < skiPassKiosks.Length; i++)
+            {
+                if (skiPassKiosks[i] != null && skiPassKiosks[i].IsOpen)
+                    skiPassKiosks[i].Close();
+            }
+
+            var raceKiosks = FindObjectsOfType<RaceSignupKioskUI>(true);
+            for (int i = 0; i < raceKiosks.Length; i++)
+            {
+                if (raceKiosks[i] != null && raceKiosks[i].IsOpen)
+                    raceKiosks[i].Close();
+            }
+        }
         public void ToggleOverlay()
         {
             SetOverlayOpen(!_isOpen);
@@ -454,6 +586,11 @@ namespace SkiGame.Progression
 
         public void SetOverlayOpen(bool open, bool refreshNow = true)
         {
+            bool wasOpen = _isOpen;
+
+            if (open)
+                CloseOpenKiosks();
+
             _isOpen = open;
 
             if (_isOpen)
@@ -465,6 +602,18 @@ namespace SkiGame.Progression
             if (_isOpen)
                 MarkMapVisitedForTutorial();
 
+            if (open && !wasOpen)
+            {
+                RaiseQuestUiEvent("ui.overlay.opened");
+                RaiseQuestUiEvent("ui.overlay.stats_viewed");
+                RaiseQuestUiEvent("ui.overlay.map_viewed");
+
+                if (_goalsViewMode == GoalsViewMode.Quests)
+                    RaiseQuestUiEvent("ui.overlay.quests_viewed");
+                else if (_goalsViewMode == GoalsViewMode.Tasks)
+                    RaiseQuestUiEvent("ui.overlay.tasks_viewed");
+            }
+
             if (_root != null)
             {
                 _root.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
@@ -475,6 +624,7 @@ namespace SkiGame.Progression
 
             ApplyCursorState(open);
             ApplyCameraLockState(open);
+            GameplayModalMovementLock.SetLocked(this, open);
 
             if (miniHudController != null)
                 miniHudController.SetVisible(!open);
@@ -522,13 +672,13 @@ namespace SkiGame.Progression
 
                 // Reset to a clean fit first so the actual rendered map image is centered,
                 // then center on the player from that valid baseline.
-                _mapUI.RequestCenterOnPlayer(keepZoom: false, minZoom: 1.0f);
+                _mapUI.RequestCenterOnPlayer(keepZoom: false, minZoom: 2.4f);
             }).ExecuteLater(0);
 
             _root.schedule.Execute(() =>
             {
                 _mapUI.Refresh();
-                _mapUI.RequestCenterOnPlayer(keepZoom: false, minZoom: 1.0f);
+                _mapUI.RequestCenterOnPlayer(keepZoom: false, minZoom: 2.4f);
             }).ExecuteLater(40);
         }
 
@@ -540,6 +690,7 @@ namespace SkiGame.Progression
             _lblTopTime = _root.Q<Label>("Lbl_TopTime");
             _lblTopWeather = _root.Q<Label>("Lbl_TopWeather");
             _lblTopLocation = _root.Q<Label>("Lbl_TopLocation");
+            _lblTopCurrency = _root.Q<Label>("Lbl_TopCurrency");
             _lblTopHint = _root.Q<Label>("Lbl_TopHint");
             _btnCloseOverlay = _root.Q<Button>("Btn_CloseOverlay");
 
@@ -549,6 +700,14 @@ namespace SkiGame.Progression
             _lblContextStatus = _root.Q<Label>("Lbl_ContextStatus");
             _lblContextGuidance = _root.Q<Label>("Lbl_ContextGuidance");
             _contextGuidanceBox = _root.Q<VisualElement>("ContextGuidanceBox");
+            _lblRescueDispatchRank = _root.Q<Label>("Lbl_RescueDispatchRank");
+            _lblRescueDispatchRefresh = _root.Q<Label>("Lbl_RescueDispatchRefresh");
+            _lblRescueDispatchBeacon = _root.Q<Label>("Lbl_RescueDispatchBeacon");
+            _lblRescueDispatchStatus = _root.Q<Label>("Lbl_RescueDispatchStatus");
+            _btnRescueMedicalDrop = _root.Q<Button>("Btn_RescueMedicalDrop");
+            _btnRescueBeacon = _root.Q<Button>("Btn_RescueBeacon");
+            _btnRescueSnowmobile = _root.Q<Button>("Btn_RescueSnowmobile");
+            _btnRescueSOS = _root.Q<Button>("Btn_RescueSOS");
 
             _lblContextTitle = _root.Q<Label>("Lbl_ContextTitle");
             _lblContextBody = _root.Q<Label>("Lbl_ContextBody");
@@ -563,23 +722,44 @@ namespace SkiGame.Progression
             _statsGrid = _root.Q<VisualElement>("StatsGrid");
             _lblStatsBody = _root.Q<Label>("Lbl_StatsBody");
 
+            _btnGoalsQuests = _root.Q<Button>("Btn_GoalsQuests");
             _btnGoalsTasks = _root.Q<Button>("Btn_GoalsTasks");
             _btnGoalsAchievements = _root.Q<Button>("Btn_GoalsAchievements");
             _goalsList = _root.Q<ScrollView>("GoalsList");
+            _questPanel = _root.Q<VisualElement>("QuestPanel");
+            _questList = _root.Q<ScrollView>("QuestList");
+            _btnQuestCurrent = _root.Q<Button>("Btn_QuestCurrent");
+            _btnQuestCompleted = _root.Q<Button>("Btn_QuestCompleted");
             _achievementCategoryRow = _root.Q<VisualElement>("AchievementCategoryRow");
             _achievementScroll = _root.Q<ScrollView>("AchievementScroll");
             _achievementGrid = _root.Q<VisualElement>("AchievementGrid");
 
-            _btnPassCurrent = _root.Q<Button>("Btn_PassCurrent");
-            _lblPassCurrent = _root.Q<Label>("Lbl_PassCurrent");
-            _lblPassExpiryMeta = _root.Q<Label>("Lbl_PassExpiryMeta");
-            _passExpiryBar = _root.Q<VisualElement>("PassExpiryBar");
-            _passExpiryFill = _root.Q<VisualElement>("PassExpiryFill");
+            _achievementPanel = _root.Q<VisualElement>("AchievementPanel");
+            _achievementHeaderShell = _root.Q<VisualElement>("AchievementHeaderShell");
+
+            _btnPassTabInfo = _root.Q<Button>("Btn_PassTabInfo");
+            _btnPassTabRescue = _root.Q<Button>("Btn_PassTabRescue");
+            _btnPassBack = _root.Q<Button>("Btn_PassBack");
+
+            _passCurrentList = _root.Q<ScrollView>("PassCurrentList");
+            _lblPassDetailTitle = _root.Q<Label>("Lbl_PassDetailTitle");
+            _lblPassDetailMeta = _root.Q<Label>("Lbl_PassDetailMeta");
+
+            _passOverviewList = _root.Q<ScrollView>("PassOverviewList");
+            _passLiftList = _root.Q<ScrollView>("PassLiftList");
+
+            _passInfoView = _root.Q<VisualElement>("PassInfoView");
+            _passLiftDetailView = _root.Q<VisualElement>("PassLiftDetailView");
+            _rescueUtilitiesView = _root.Q<VisualElement>("RescueUtilitiesView");
+            _screenFade = _root.Q<VisualElement>("OverlayScreenFade");
 
             bool hasRequiredUi =
+                _btnGoalsQuests != null &&
                 _btnGoalsTasks != null &&
                 _btnGoalsAchievements != null &&
                 _goalsList != null &&
+                _questPanel != null &&
+                _questList != null &&
                 _achievementCategoryRow != null &&
                 _achievementScroll != null &&
                 _achievementGrid != null &&
@@ -591,9 +771,12 @@ namespace SkiGame.Progression
             {
                 Debug.LogWarning(
                     "[MountainHudOverlayController] Required UI elements are missing. " +
+                    $"Btn_GoalsQuests={_btnGoalsQuests != null}, " +
                     $"Btn_GoalsTasks={_btnGoalsTasks != null}, " +
                     $"Btn_GoalsAchievements={_btnGoalsAchievements != null}, " +
                     $"GoalsList={_goalsList != null}, " +
+                    $"QuestPanel={_questPanel != null}, " +
+                    $"QuestList={_questList != null}, " +
                     $"AchievementCategoryRow={_achievementCategoryRow != null}, " +
                     $"AchievementScroll={_achievementScroll != null}, " +
                     $"AchievementGrid={_achievementGrid != null}, " +
@@ -634,6 +817,12 @@ namespace SkiGame.Progression
                 _btnStatsLifetime.clicked += ShowLifetimeStats;
             }
 
+            if (_btnGoalsQuests != null)
+            {
+                _btnGoalsQuests.clicked -= ShowQuestGoals;
+                _btnGoalsQuests.clicked += ShowQuestGoals;
+            }
+
             if (_btnGoalsTasks != null)
             {
                 _btnGoalsTasks.clicked -= ShowTasksGoals;
@@ -646,11 +835,62 @@ namespace SkiGame.Progression
                 _btnGoalsAchievements.clicked += ShowAchievementsGoals;
             }
 
-            if (_btnPassCurrent != null)
+            if (_btnQuestCurrent != null)
             {
-                _btnPassCurrent.clicked -= HighlightUsableLiftsForCurrentPass;
-                _btnPassCurrent.clicked += HighlightUsableLiftsForCurrentPass;
+                _btnQuestCurrent.clicked -= ShowCurrentQuests;
+                _btnQuestCurrent.clicked += ShowCurrentQuests;
             }
+
+            if (_btnQuestCompleted != null)
+            {
+                _btnQuestCompleted.clicked -= ShowCompletedQuests;
+                _btnQuestCompleted.clicked += ShowCompletedQuests;
+            }
+
+            if (_btnPassTabInfo != null)
+            {
+                _btnPassTabInfo.clicked -= ShowPassInfoTab;
+                _btnPassTabInfo.clicked += ShowPassInfoTab;
+            }
+
+            if (_btnPassTabRescue != null)
+            {
+                _btnPassTabRescue.clicked -= ShowPassRescueTab;
+                _btnPassTabRescue.clicked += ShowPassRescueTab;
+            }
+
+            if (_btnPassBack != null)
+            {
+                _btnPassBack.clicked -= ShowPassOverview;
+                _btnPassBack.clicked += ShowPassOverview;
+            }
+
+            if (_btnRescueMedicalDrop != null)
+            {
+                _btnRescueMedicalDrop.clicked -= RequestMedicalSupplyDrop;
+                _btnRescueMedicalDrop.clicked += RequestMedicalSupplyDrop;
+            }
+
+            if (_btnRescueBeacon != null)
+            {
+                _btnRescueBeacon.clicked -= ToggleRescueBeacon;
+                _btnRescueBeacon.clicked += ToggleRescueBeacon;
+            }
+
+            if (_btnRescueSnowmobile != null)
+            {
+                _btnRescueSnowmobile.clicked -= RequestSnowmobileDispatch;
+                _btnRescueSnowmobile.clicked += RequestSnowmobileDispatch;
+            }
+
+            if (_btnRescueSOS != null)
+            {
+                _btnRescueSOS.clicked -= RequestEmergencySOS;
+                _btnRescueSOS.clicked += RequestEmergencySOS;
+            }
+
+            SetScreenFadeOpacity(0f);
+            ApplyPassPanelViewState();
 
             BuildAchievementCategoryButtons();
 
@@ -672,27 +912,53 @@ namespace SkiGame.Progression
         private void ShowTodayStats()
         {
             _statsShowLifetime = false;
+            _tutorialVisitedStats = true;
+            RaiseQuestUiEvent("ui.overlay.stats_viewed");
             RefreshStatsPanel();
         }
 
         private void ShowLifetimeStats()
         {
             _statsShowLifetime = true;
+            _tutorialVisitedStats = true;
+            RaiseQuestUiEvent("ui.overlay.stats_viewed");
             RefreshStatsPanel();
+        }
+
+        private void ShowQuestGoals()
+        {
+            _goalsViewMode = GoalsViewMode.Quests;
+            _tutorialLastViewedSection = "Quests";
+            _tutorialVisitedQuests = true;
+            RaiseQuestUiEvent("ui.overlay.quests_viewed");
+            RefreshGoalsPanel();
         }
 
         private void ShowTasksGoals()
         {
-            _goalsShowAchievements = false;
+            _goalsViewMode = GoalsViewMode.Tasks;
             _tutorialLastViewedSection = "Tasks";
             _tutorialVisitedTasks = true;
+            RaiseQuestUiEvent("ui.overlay.tasks_viewed");
             RefreshGoalsPanel();
         }
 
         private void ShowAchievementsGoals()
         {
-            _goalsShowAchievements = true;
+            _goalsViewMode = GoalsViewMode.Achievements;
             _tutorialLastViewedSection = "Achievements";
+            RefreshGoalsPanel();
+        }
+
+        private void ShowCurrentQuests()
+        {
+            _questShowCompleted = false;
+            RefreshGoalsPanel();
+        }
+
+        private void ShowCompletedQuests()
+        {
+            _questShowCompleted = true;
             RefreshGoalsPanel();
         }
 
@@ -858,6 +1124,9 @@ namespace SkiGame.Progression
             if (_lblTopLocation != null)
                 _lblTopLocation.text = BuildLocationLine();
 
+            if (_lblTopCurrency != null)
+                _lblTopCurrency.text = $"${Mathf.Max(0, Profile != null ? Profile.currency : 0):N0}";
+
             if (_lblTopHint != null)
                 _lblTopHint.text = BuildHintLine();
         }
@@ -888,7 +1157,7 @@ namespace SkiGame.Progression
                         SetContextPresentation(
                             icon: "🚡",
                             status: "Lift Selected",
-                            guidance: "Review access before you commit. Use Highlight Lifts in the ski pass panel to quickly see eligible lines.");
+                            guidance: "Review access before you commit. Open the ski pass panel to inspect unlocked passes and focus eligible lifts on the map.");
                         break;
 
                     case SelectedMapKind.POI:
@@ -1016,12 +1285,12 @@ namespace SkiGame.Progression
                 case SelectedMapKind.Lift:
                     {
                         var lift = FindLiftById(_selectedId);
-                        int requiredLevel = lift != null ? lift.RequiredPassLevel : 0;
-                        bool canUse = skiPassManager == null || skiPassManager.CanUseLift(requiredLevel);
+                        bool canUse = skiPassManager == null || (lift != null && skiPassManager.CanUseLift(lift));
+                        string requirementText = lift != null ? lift.GetRequiredPassDisplayName() : "Unknown pass";
 
                         var accessCard = MakeContextHighlightCard(
                             "Access",
-                            canUse ? "Available now" : $"Requires pass L{requiredLevel}",
+                            canUse ? "Available now" : $"Requires {requirementText}",
                             canUse
                                 ? "You can ride this lift with your current pass."
                                 : "Upgrade at the kiosk before attempting to board.");
@@ -1059,32 +1328,12 @@ namespace SkiGame.Progression
             if (weatherController == null || weatherController.currentWeatherPreset == null)
                 return "◌";
 
-            string condition = weatherController.currentWeatherPreset.weatherCondition ?? string.Empty;
-            string lower = condition.ToLowerInvariant();
+            string glyph = weatherController.currentWeatherPreset.weatherGlyph;
 
-            bool raining = weatherController.currentWeatherPreset.isRaining;
-            float temp = weatherController.temperature;
+            if (!string.IsNullOrWhiteSpace(glyph))
+                return glyph;
 
-            if (lower.Contains("storm") || lower.Contains("thunder"))
-                return "⛈";
-            if (raining && temp <= 0f)
-                return "❄";
-            if (lower.Contains("snow") || lower.Contains("blizzard") || lower.Contains("sleet"))
-                return "❄";
-            if (lower.Contains("fog") || lower.Contains("mist"))
-                return "🌫";
-            if (lower.Contains("wind"))
-                return "🌀";
-            if (lower.Contains("cloud") || lower.Contains("overcast"))
-                return "☁";
-            if (lower.Contains("rain") || lower.Contains("shower") || raining)
-                return "🌧";
-            if (lower.Contains("night"))
-                return "☾";
-
-            int hour = timeController != null ? timeController.timeHours : 12;
-            bool daytime = hour >= 6 && hour < 18;
-            return daytime ? "☀" : "☾";
+            return "◌";
         }
 
         private void PopulateSelectedContextMeta()
@@ -1132,6 +1381,118 @@ namespace SkiGame.Progression
                         break;
                     }
             }
+        }
+
+        private void RefreshRescueDispatchPanel()
+        {
+            if (_rescueUtilitiesView == null)
+                return;
+
+            RescueDispatchController.EnsureInstance();
+
+            int rescueRank = RaceRescueProgression.GetRescueCareerRank();
+            int completedMissions = RaceRescueProgression.GetRescueMissionCompletionCount();
+            int medicalUses = RaceRescueProgression.GetRescueUtilityUsesRemaining(RaceRescueProgression.RescueDispatchUtility.MedicalSupplyDrop);
+            int beaconUses = RaceRescueProgression.GetRescueUtilityUsesRemaining(RaceRescueProgression.RescueDispatchUtility.RespawnBeacon);
+            int snowmobileUses = RaceRescueProgression.GetRescueUtilityUsesRemaining(RaceRescueProgression.RescueDispatchUtility.SnowmobileDispatch);
+
+            if (_lblRescueDispatchRank != null)
+                _lblRescueDispatchRank.text = $"Responder rank {rescueRank}  •  Missions completed {completedMissions}";
+
+            if (_lblRescueDispatchRefresh != null)
+            {
+                DateTime refreshUtc = RaceRescueProgression.GetRescueDispatchRefreshUtc().ToDateTimeUtc();
+                _lblRescueDispatchRefresh.text = $"Refresh: {refreshUtc:dd MMM HH:mm} UTC";
+            }
+
+            bool hasBeacon = RaceRescueProgression.TryGetActiveRescueBeacon(out _, out _);
+
+            if (_lblRescueDispatchBeacon != null)
+                _lblRescueDispatchBeacon.text = hasBeacon
+                    ? "Beacon active"
+                    : "No active beacon";
+
+            ConfigureDispatchButton(
+                _btnRescueMedicalDrop,
+                RaceRescueProgression.IsRescueUtilityUnlocked(RaceRescueProgression.RescueDispatchUtility.MedicalSupplyDrop),
+                medicalUses,
+                $"Medical Drop ({medicalUses})",
+                "Medical Drop (Rank 2)");
+
+            if (_btnRescueBeacon != null)
+            {
+                bool unlocked = RaceRescueProgression.IsRescueUtilityUnlocked(RaceRescueProgression.RescueDispatchUtility.RespawnBeacon);
+                _btnRescueBeacon.text = unlocked
+                    ? (hasBeacon ? "Recall to Beacon" : $"Place Beacon ({beaconUses})")
+                    : "Beacon (Rank 3)";
+                _btnRescueBeacon.SetEnabled(unlocked && (hasBeacon || beaconUses > 0));
+            }
+
+            ConfigureDispatchButton(
+                _btnRescueSnowmobile,
+                RaceRescueProgression.IsRescueUtilityUnlocked(RaceRescueProgression.RescueDispatchUtility.SnowmobileDispatch),
+                snowmobileUses,
+                $"Dispatch Snowmobile ({snowmobileUses})",
+                "Dispatch Snowmobile (Rank 4)");
+
+            if (_btnRescueSOS != null)
+            {
+                _btnRescueSOS.text = _sosRoutine == null ? "SOS Return to Resort" : "SOS In Progress...";
+                _btnRescueSOS.SetEnabled(_sosRoutine == null);
+            }
+
+            if (_lblRescueDispatchStatus != null)
+                _lblRescueDispatchStatus.text = _rescueDispatchFeedback;
+        }
+
+        private static void ConfigureDispatchButton(Button button, bool unlocked, int usesRemaining, string readyText, string lockedText)
+        {
+            if (button == null)
+                return;
+
+            button.text = unlocked ? readyText : lockedText;
+            button.SetEnabled(unlocked && usesRemaining > 0);
+        }
+
+        private void RequestMedicalSupplyDrop()
+        {
+            RescueDispatchController dispatch = RescueDispatchController.EnsureInstance();
+            string message = string.Empty;
+            bool success = dispatch != null && dispatch.TryRequestMedicalSupplyDrop(out message);
+            _rescueDispatchFeedback = success ? message : (string.IsNullOrWhiteSpace(message) ? "Medical drop failed." : message);
+            RefreshRescueDispatchPanel();
+        }
+
+        private void ToggleRescueBeacon()
+        {
+            RescueDispatchController dispatch = RescueDispatchController.EnsureInstance();
+            if (dispatch == null)
+            {
+                _rescueDispatchFeedback = "Rescue dispatch controller unavailable.";
+                RefreshRescueDispatchPanel();
+                return;
+            }
+
+            bool hasBeacon = RaceRescueProgression.TryGetActiveRescueBeacon(out _, out _);
+            bool success;
+            string message;
+
+            if (hasBeacon)
+                success = dispatch.TryRecallToRespawnBeacon(out message);
+            else
+                success = dispatch.TryPlaceRespawnBeacon(out message);
+
+            _rescueDispatchFeedback = success ? message : (string.IsNullOrWhiteSpace(message) ? "Beacon request failed." : message);
+            RefreshRescueDispatchPanel();
+        }
+
+        private void RequestSnowmobileDispatch()
+        {
+            RescueDispatchController dispatch = RescueDispatchController.EnsureInstance();
+            string message = string.Empty;
+            bool success = dispatch != null && dispatch.TryRequestSnowmobileDispatch(out message);
+            _rescueDispatchFeedback = success ? message : (string.IsNullOrWhiteSpace(message) ? "Snowmobile dispatch failed." : message);
+            RefreshRescueDispatchPanel();
         }
 
         private void RefreshStatsPanel()
@@ -1213,27 +1574,44 @@ namespace SkiGame.Progression
 
         private void RefreshGoalsPanel()
         {
-            SetToggleState(_btnGoalsTasks, !_goalsShowAchievements);
-            SetToggleState(_btnGoalsAchievements, _goalsShowAchievements);
+            bool showQuests = _goalsViewMode == GoalsViewMode.Quests;
+            bool showTasks = _goalsViewMode == GoalsViewMode.Tasks;
+            bool showAchievements = _goalsViewMode == GoalsViewMode.Achievements;
+
+            SetToggleState(_btnGoalsQuests, showQuests);
+            SetToggleState(_btnGoalsTasks, showTasks);
+            SetToggleState(_btnGoalsAchievements, showAchievements);
 
             if (_goalsList == null || _achievementCategoryRow == null || _achievementGrid == null)
                 return;
 
             if (_goalsList != null)
-                _goalsList.style.display = _goalsShowAchievements ? DisplayStyle.None : DisplayStyle.Flex;
+                _goalsList.style.display = showTasks ? DisplayStyle.Flex : DisplayStyle.None;
 
-            if (_achievementCategoryRow != null)
-                _achievementCategoryRow.style.display = _goalsShowAchievements ? DisplayStyle.Flex : DisplayStyle.None;
+            if (_questPanel != null)
+                _questPanel.style.display = showQuests ? DisplayStyle.Flex : DisplayStyle.None;
 
-            if (_achievementScroll != null)
-                _achievementScroll.style.display = _goalsShowAchievements ? DisplayStyle.Flex : DisplayStyle.None;
-            else if (_achievementGrid != null)
-                _achievementGrid.style.display = _goalsShowAchievements ? DisplayStyle.Flex : DisplayStyle.None;
+            if (_achievementPanel != null)
+                _achievementPanel.style.display = showAchievements ? DisplayStyle.Flex : DisplayStyle.None;
+            else
+            {
+                if (_achievementHeaderShell != null)
+                    _achievementHeaderShell.style.display = showAchievements ? DisplayStyle.Flex : DisplayStyle.None;
 
-            if (_goalsShowAchievements)
+                if (_achievementScroll != null)
+                    _achievementScroll.style.display = showAchievements ? DisplayStyle.Flex : DisplayStyle.None;
+                else if (_achievementGrid != null)
+                    _achievementGrid.style.display = showAchievements ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            if (showAchievements)
             {
                 BuildAchievementCategoryButtons();
                 RefreshAchievementsView();
+            }
+            else if (showQuests)
+            {
+                RefreshQuestView();
             }
             else
             {
@@ -1317,6 +1695,104 @@ namespace SkiGame.Progression
             }
         }
 
+        private void RefreshQuestView()
+        {
+            if (_questList == null)
+                return;
+
+            _questList.contentContainer.Clear();
+
+            SetToggleState(_btnQuestCurrent, !_questShowCompleted);
+            SetToggleState(_btnQuestCompleted, _questShowCompleted);
+
+            if (questDirector == null)
+            {
+                _questList.Add(MakeQuestEmptyState("Quest tracking is not available in this scene yet."));
+                return;
+            }
+
+            if (_questShowCompleted)
+                questDirector.GetCompletedQuestStates(_questStateBuffer);
+            else
+                questDirector.GetActiveQuestStates(_questStateBuffer);
+
+            SyncPrimaryQuestSelectionFromMiniHud();
+
+            if (_questStateBuffer.Count == 0)
+            {
+                _questList.Add(MakeQuestEmptyState(_questShowCompleted
+                    ? "No completed quests yet."
+                    : "No active quests yet."));
+                return;
+            }
+
+            if (!_questShowCompleted)
+                EnsureQuestSelectionIsValid(_questStateBuffer);
+
+            if (!_questShowCompleted)
+                _questStateBuffer.Sort(CompareQuestStatesForHud);
+
+            for (int i = 0; i < _questStateBuffer.Count; i++)
+            {
+                var state = _questStateBuffer[i];
+                var definition = questDirector.GetQuestDefinition(state.questId);
+                if (definition == null)
+                    continue;
+
+                _questList.Add(MakeQuestCard(definition, state));
+            }
+        }
+
+        private void SyncPrimaryQuestSelectionFromMiniHud()
+        {
+            if (miniHudController == null)
+                return;
+
+            string miniFocusedQuestId = miniHudController.GetFocusedQuestId();
+            if (!string.IsNullOrWhiteSpace(miniFocusedQuestId))
+            {
+                _primaryQuestId = miniFocusedQuestId;
+                _expandedQuestIds.Add(miniFocusedQuestId);
+            }
+        }
+
+        private void EnsureQuestSelectionIsValid(List<QuestRuntimeState> questStates)
+        {
+            if (questStates == null || questStates.Count == 0)
+            {
+                _primaryQuestId = null;
+                return;
+            }
+
+            for (int i = 0; i < questStates.Count; i++)
+            {
+                var state = questStates[i];
+                if (state != null && string.Equals(state.questId, _primaryQuestId, StringComparison.OrdinalIgnoreCase))
+                    return;
+            }
+
+            if (!_questShowCompleted)
+            {
+                for (int i = 0; i < questStates.Count; i++)
+                {
+                    var state = questStates[i];
+                    if (state == null)
+                        continue;
+
+                    if (questDirector != null && questDirector.IsQuestTracked(state.questId))
+                    {
+                        _primaryQuestId = state.questId;
+                        _expandedQuestIds.Add(state.questId);
+                        return;
+                    }
+                }
+            }
+
+            _primaryQuestId = questStates[0]?.questId;
+            if (!string.IsNullOrWhiteSpace(_primaryQuestId))
+                _expandedQuestIds.Add(_primaryQuestId);
+        }
+
         private void RefreshAchievementsView()
         {
             if (_achievementGrid == null)
@@ -1327,6 +1803,9 @@ namespace SkiGame.Progression
 
             AppendAchievementsForCategory(_achievementCategory, _achievementBuffer);
 
+            var profile = Profile;
+            _achievementBuffer.Sort((a, b) => CompareAchievementsForHud(a, b, profile));
+
             if (_achievementBuffer.Count == 0)
             {
                 var empty = new Label("No authored achievements match this tab yet.");
@@ -1335,7 +1814,21 @@ namespace SkiGame.Progression
                 return;
             }
 
-            var profile = Profile;
+            if (!string.IsNullOrWhiteSpace(_selectedAchievementId))
+            {
+                bool found = false;
+                for (int i = 0; i < _achievementBuffer.Count; i++)
+                {
+                    if (_achievementBuffer[i] != null && _achievementBuffer[i].id == _selectedAchievementId)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                    _selectedAchievementId = null;
+            }
 
             for (int i = 0; i < _achievementBuffer.Count; i++)
             {
@@ -1343,115 +1836,198 @@ namespace SkiGame.Progression
                 if (def == null)
                     continue;
 
-                bool unlocked = profile != null && profile.HasAchievement(def.id);
-                float progress01 = profile != null ? def.GetProgress01(profile) : 0f;
+                bool completed = profile != null && profile.HasAchievement(def.id);
+                bool claimed = profile != null && profile.HasClaimedAchievement(def.id);
+                bool claimable = completed && !claimed;
+                bool selected = _selectedAchievementId == def.id;
+
+                float progress01 = profile != null ? Mathf.Clamp01(def.GetProgress01(profile)) : 0f;
+                int progressPercent = Mathf.RoundToInt(progress01 * 100f);
+
                 string progressText = profile != null
                     ? def.GetProgressText(profile)
                     : $"0/{Mathf.Max(1f, def.target):0}";
-                string requirementText = def.GetRequirementText();
 
-                string status = unlocked ? "Completed" : "In Progress";
-                if (unlocked && profile != null && profile.TryGetAchievementUnlockedUtc(def.id, out var dt))
-                    status = $"Completed {dt.ToDateTimeUtc():dd MMM yyyy}";
+                string requirementText = def.GetRequirementText();
+                string titleText = string.IsNullOrWhiteSpace(def.title) ? def.id : def.title;
+
+                string subtitleText = requirementText;
+                if (completed && profile != null && profile.TryGetAchievementUnlockedUtc(def.id, out var dt))
+                    subtitleText = claimed ? $"Claimed • {dt.ToDateTimeUtc():dd MMM yyyy}" : $"Completed • {dt.ToDateTimeUtc():dd MMM yyyy}";
+                else if (completed)
+                    subtitleText = claimed ? "Reward claimed" : "Ready to claim";
+
+                var hudCategory = def.GetMountainHudCategory();
 
                 var card = new VisualElement();
                 card.AddToClassList("achievement-card");
+                card.AddToClassList($"is-{AchievementCategoryToCss(hudCategory)}");
+                card.AddToClassList(selected ? "is-expanded" : "is-compact");
 
-                if (unlocked)
-                    card.AddToClassList("is-complete");
+                if (claimable)
+                    card.AddToClassList("is-complete-unclaimed");
+                else if (claimed)
+                    card.AddToClassList("is-complete-claimed");
+                else if (progress01 >= 0.8f)
+                    card.AddToClassList("is-close");
 
-                var topRow = new VisualElement();
-                topRow.AddToClassList("achievement-card-toprow");
+                string clickedId = def.id;
+                card.RegisterCallback<ClickEvent>(_ =>
+                {
+                    _selectedAchievementId = _selectedAchievementId == clickedId ? null : clickedId;
+                    RefreshAchievementsView();
+                });
+
+                var header = new VisualElement();
+                header.AddToClassList("achievement-card-header");
 
                 var icon = new Label(def.GetMountainHudGlyph());
                 icon.AddToClassList("achievement-card-icon");
-                topRow.Add(icon);
+                header.Add(icon);
 
-                var state = new Label(status);
-                state.AddToClassList("achievement-card-state");
-                if (unlocked)
-                    state.AddToClassList("is-complete");
-                topRow.Add(state);
+                var titleBlock = new VisualElement();
+                titleBlock.AddToClassList("achievement-card-titleblock");
 
-                card.Add(topRow);
-
-                var title = new Label(string.IsNullOrWhiteSpace(def.title) ? def.id : def.title);
+                var title = new Label(titleText);
                 title.AddToClassList("achievement-card-title");
-                card.Add(title);
+                titleBlock.Add(title);
 
-                if (!string.IsNullOrWhiteSpace(def.description))
+                if (selected)
                 {
-                    var description = new Label(def.description);
-                    description.AddToClassList("achievement-card-description");
-                    card.Add(description);
+                    var subtitle = new Label(subtitleText);
+                    subtitle.AddToClassList("achievement-card-subtitle");
+                    titleBlock.Add(subtitle);
                 }
 
-                var requirement = new Label(requirementText);
-                requirement.AddToClassList("achievement-card-requirement");
-                card.Add(requirement);
+                header.Add(titleBlock);
+
+                var state = new Label(
+                    claimable ? "Claim" :
+                    claimed ? "Claimed" :
+                    $"{progressPercent}%");
+
+                state.AddToClassList("achievement-card-state");
+
+                if (claimable)
+                    state.AddToClassList("is-claimable");
+                else if (claimed)
+                    state.AddToClassList("is-claimed");
+
+                header.Add(state);
+
+                var expandHint = new Label(selected ? "▴" : "▾");
+                expandHint.AddToClassList("achievement-card-expandhint");
+                header.Add(expandHint);
+
+                card.Add(header);
 
                 var progressTrack = new VisualElement();
                 progressTrack.AddToClassList("achievement-progress-track");
 
                 var progressFill = new VisualElement();
                 progressFill.AddToClassList("achievement-progress-fill");
-                progressFill.style.width = Length.Percent(Mathf.RoundToInt(progress01 * 100f));
+                progressFill.style.width = Length.Percent(progressPercent);
                 progressTrack.Add(progressFill);
 
                 card.Add(progressTrack);
 
-                var progressLabel = new Label(unlocked ? "Complete" : progressText);
-                progressLabel.AddToClassList("achievement-card-progress");
-                card.Add(progressLabel);
+                if (selected)
+                {
+                    if (!string.IsNullOrWhiteSpace(def.description))
+                    {
+                        var description = new Label(def.description);
+                        description.AddToClassList("achievement-card-description");
+                        card.Add(description);
+                    }
 
+                    var rewardLabel = new Label(def.GetRewardSummary());
+                    rewardLabel.AddToClassList("achievement-card-reward");
+                    card.Add(rewardLabel);
+                }
+
+                var footer = new VisualElement();
+                footer.AddToClassList("achievement-card-footer");
+
+                var progressLabel = new Label(claimed ? "Reward claimed" : (completed ? "Completed" : progressText));
+                progressLabel.AddToClassList("achievement-card-progress");
+                footer.Add(progressLabel);
+
+                var categoryLabel = new Label(GetAchievementHudCategoryLabel(hudCategory));
+                categoryLabel.AddToClassList("achievement-card-category");
+                footer.Add(categoryLabel);
+
+                if (selected && claimable)
+                {
+                    var claimButton = new Button(() =>
+                    {
+                        if (progressionDirector != null && progressionDirector.TryClaimAchievement(def.id, out _))
+                        {
+                            RefreshGoalsPanel();
+                            RefreshPassPanel();
+                        }
+                    })
+                    {
+                        text = "Claim Reward"
+                    };
+                    claimButton.AddToClassList("achievement-claim-button");
+                    footer.Add(claimButton);
+                }
+
+                card.Add(footer);
                 _achievementGrid.Add(card);
             }
         }
 
+
+        private static string AchievementCategoryToCss(AchievementDefinitionSO.MountainHudCategory category)
+        {
+            return category switch
+            {
+                AchievementDefinitionSO.MountainHudCategory.Exploration => "exploration",
+                AchievementDefinitionSO.MountainHudCategory.MountainMastery => "mastery",
+                _ => "performance"
+            };
+        }
+
+        private static string GetAchievementHudCategoryLabel(AchievementDefinitionSO.MountainHudCategory category)
+        {
+            return category switch
+            {
+                AchievementDefinitionSO.MountainHudCategory.Exploration => "Explore",
+                AchievementDefinitionSO.MountainHudCategory.MountainMastery => "Mastery",
+                _ => "Performance"
+            };
+        }
+
         private void RefreshPassPanel()
         {
-            if (_lblPassCurrent == null)
-                return;
+            ApplyPassPanelViewState();
 
             if (skiPassManager == null || skiPassManager.Config == null)
             {
-                _lblPassCurrent.text = "No ski pass system found.";
+                if (_passCurrentList != null)
+                {
+                    _passCurrentList.Clear();
+                    _passCurrentList.Add(new Label("No ski pass system found."));
+                }
 
-                if (_lblPassExpiryMeta != null)
-                    _lblPassExpiryMeta.text = string.Empty;
+                if (_passOverviewList != null)
+                    _passOverviewList.Clear();
 
-                if (_passExpiryBar != null)
-                    _passExpiryBar.style.display = DisplayStyle.None;
-
-                return;
-            }
-
-            _lblPassCurrent.text = skiPassManager.GetCurrentPassDisplayName();
-
-            bool hasTimedPass = skiPassManager.HasTimedPass;
-
-            if (!hasTimedPass)
-            {
-                if (_lblPassExpiryMeta != null)
-                    _lblPassExpiryMeta.text = "No expiry";
-
-                if (_passExpiryBar != null)
-                    _passExpiryBar.style.display = DisplayStyle.None;
+                if (_passLiftList != null)
+                    _passLiftList.Clear();
 
                 return;
             }
 
-            if (_lblPassExpiryMeta != null)
-                _lblPassExpiryMeta.text = skiPassManager.GetRemainingTimeString();
+            RebuildPassCurrentList();
+            RebuildPassOverviewList();
 
-            if (_passExpiryBar != null)
-                _passExpiryBar.style.display = DisplayStyle.Flex;
+            if (_passShowLiftDetail)
+                RefreshPassLiftDetail();
 
-            if (_passExpiryFill != null)
-            {
-                float fraction = skiPassManager.GetRemainingFraction01();
-                _passExpiryFill.style.width = Length.Percent(Mathf.RoundToInt(fraction * 100f));
-            }
+            if (_passShowRescueTab)
+                RefreshRescueDispatchPanel();
         }
 
         private void HandleSkiPassChanged()
@@ -1459,16 +2035,715 @@ namespace SkiGame.Progression
             RefreshPassPanel();
         }
 
-        private void HighlightUsableLiftsForCurrentPass()
+        private void ShowPassInfoTab()
         {
-            int level = skiPassManager != null ? skiPassManager.CurrentLevel : 0;
-            _mapUI?.PreviewLiftAccessForPassLevel(level);
+            _passShowRescueTab = false;
+            _passShowLiftDetail = false;
+            ApplyPassPanelViewState();
+            RefreshPassPanel();
+        }
+
+        private void ShowPassRescueTab()
+        {
+            _passShowRescueTab = true;
+            _passShowLiftDetail = false;
+            ApplyPassPanelViewState();
+            RefreshPassPanel();
+        }
+
+        private void ShowPassOverview()
+        {
+            _passShowRescueTab = false;
+            _passShowLiftDetail = false;
+            ApplyPassPanelViewState();
+            RefreshPassPanel();
+        }
+
+        private void ApplyPassPanelViewState()
+        {
+            SetToggleState(_btnPassTabInfo, !_passShowRescueTab);
+            SetToggleState(_btnPassTabRescue, _passShowRescueTab);
+
+            if (_passInfoView != null)
+                _passInfoView.style.display = (!_passShowRescueTab && !_passShowLiftDetail) ? DisplayStyle.Flex : DisplayStyle.None;
+
+            if (_passLiftDetailView != null)
+                _passLiftDetailView.style.display = (!_passShowRescueTab && _passShowLiftDetail) ? DisplayStyle.Flex : DisplayStyle.None;
+
+            if (_rescueUtilitiesView != null)
+                _rescueUtilitiesView.style.display = _passShowRescueTab ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        private bool TryGetNowGameHours(out double nowHours)
+        {
+            nowHours = 0.0;
+
+            var t = TimeWeather.TimeController.instance != null
+                ? TimeWeather.TimeController.instance
+                : FindObjectOfType<TimeWeather.TimeController>();
+
+            if (t == null)
+                return false;
+
+            int day = Mathf.Max(0, t.dayCount);
+            int hh = Mathf.Clamp(t.timeHours, 0, 23);
+            float mm = Mathf.Clamp((float)t.timeMinutes, 0f, 59f);
+
+            nowHours = (day * 24.0) + hh + (mm / 60.0);
+            return true;
+        }
+
+        private string FormatGameHoursTimestamp(double gameHours)
+        {
+            if (double.IsNaN(gameHours) || double.IsInfinity(gameHours))
+                return string.Empty;
+
+            int totalMinutes = Mathf.Max(0, Mathf.RoundToInt((float)(gameHours * 60.0)));
+            int day = totalMinutes / (24 * 60);
+            int minutesIntoDay = totalMinutes % (24 * 60);
+            int hour = minutesIntoDay / 60;
+            int minute = minutesIntoDay % 60;
+
+            return $"Day {day + 1} • {hour:00}:{minute:00}";
+        }
+
+        private Color GetPassUiColor(SkiPassConfigSO.PassLevel pass)
+        {
+            if (pass != null && pass.mapColor.a > 0.001f)
+                return pass.mapColor;
+
+            return new Color(0.36f, 0.77f, 1f, 1f);
+        }
+
+        private VisualElement BuildCurrentPassRow(
+            string displayName,
+            Color passColor,
+            string statusText,
+            bool showProgress,
+            float progress01,
+            string progressText,
+            string tooltipText)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("pass-current-row");
+            row.tooltip = tooltipText ?? string.Empty;
+
+            var left = new VisualElement();
+            left.AddToClassList("pass-current-row-left");
+
+            var chip = new Label(displayName);
+            chip.AddToClassList("pass-current-chip");
+            chip.style.backgroundColor = new Color(passColor.r, passColor.g, passColor.b, 0.18f);
+            chip.style.borderLeftColor = new Color(passColor.r, passColor.g, passColor.b, 0.70f);
+            chip.style.borderRightColor = new Color(passColor.r, passColor.g, passColor.b, 0.70f);
+            chip.style.borderTopColor = new Color(passColor.r, passColor.g, passColor.b, 0.70f);
+            chip.style.borderBottomColor = new Color(passColor.r, passColor.g, passColor.b, 0.70f);
+
+            left.Add(chip);
+            row.Add(left);
+
+            var right = new VisualElement();
+            right.AddToClassList("pass-current-row-right");
+
+            if (showProgress)
+            {
+                var progressWrap = new VisualElement();
+                progressWrap.AddToClassList("pass-current-progress-wrap");
+                progressWrap.tooltip = tooltipText ?? string.Empty;
+
+                var progressTrack = new VisualElement();
+                progressTrack.AddToClassList("pass-current-progress-track");
+
+                var progressFill = new VisualElement();
+                progressFill.AddToClassList("pass-current-progress-fill");
+                progressFill.style.width = Length.Percent(Mathf.Clamp01(progress01) * 100f);
+                progressFill.style.backgroundColor = new Color(passColor.r, passColor.g, passColor.b, 0.92f);
+
+                var progressLabel = new Label(progressText);
+                progressLabel.AddToClassList("pass-current-progress-label");
+
+                progressTrack.Add(progressFill);
+                progressWrap.Add(progressTrack);
+                progressWrap.Add(progressLabel);
+                right.Add(progressWrap);
+            }
+            else
+            {
+                var status = new Label(statusText);
+                status.AddToClassList("pass-current-status");
+                right.Add(status);
+            }
+
+            row.Add(right);
+            return row;
+        }
+
+        private void RebuildPassCurrentList()
+        {
+            if (_passCurrentList == null || skiPassManager == null || skiPassManager.Config == null)
+                return;
+
+            _passCurrentList.Clear();
+
+            var cfg = skiPassManager.Config;
+            HashSet<string> addedPassIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var activePasses = skiPassManager.ActivePasses;
+            if (activePasses != null)
+            {
+                List<SkiPassManager.ActivePassRecord> sortedActive = new List<SkiPassManager.ActivePassRecord>();
+                for (int i = 0; i < activePasses.Count; i++)
+                {
+                    var record = activePasses[i];
+                    if (record != null && !string.IsNullOrWhiteSpace(record.passId))
+                        sortedActive.Add(record);
+                }
+
+                sortedActive.Sort((a, b) =>
+                {
+                    int levelA = cfg.GetLevelIndexByPassId(a.passId);
+                    int levelB = cfg.GetLevelIndexByPassId(b.passId);
+
+                    int levelCmp = levelB.CompareTo(levelA);
+                    if (levelCmp != 0)
+                        return levelCmp;
+
+                    return a.expiryGameHours.CompareTo(b.expiryGameHours);
+                });
+
+                for (int i = 0; i < sortedActive.Count; i++)
+                {
+                    var record = sortedActive[i];
+                    string passId = record.passId.Trim();
+                    if (!addedPassIds.Add(passId))
+                        continue;
+
+                    var pass = cfg.GetByPassId(passId);
+                    if (pass == null)
+                        continue;
+
+                    double nowHours = 0.0;
+                    TryGetNowGameHours(out nowHours);
+
+                    double totalHours = Math.Max(0.0001, record.totalHoursPurchased);
+                    double remainingHours = Math.Max(0.0, record.expiryGameHours - nowHours);
+                    float progress01 = Mathf.Clamp01((float)(remainingHours / totalHours));
+
+                    string tooltip = $"Started: {FormatGameHoursTimestamp(record.startGameHours)}\nExpires: {FormatGameHoursTimestamp(record.expiryGameHours)}";
+
+                    _passCurrentList.Add(BuildCurrentPassRow(
+                        pass.displayName,
+                        GetPassUiColor(pass),
+                        statusText: string.Empty,
+                        showProgress: true,
+                        progress01: progress01,
+                        progressText: $"Expires in {Mathf.CeilToInt((float)remainingHours)}h",
+                        tooltipText: tooltip));
+                }
+            }
+
+            List<string> permanentIds = RaceRescueProgression.GetPermanentlyUnlockedPassIds();
+            if (permanentIds != null)
+            {
+                for (int i = 0; i < permanentIds.Count; i++)
+                {
+                    string passId = permanentIds[i];
+                    if (string.IsNullOrWhiteSpace(passId))
+                        continue;
+
+                    string normalized = passId.Trim();
+                    if (!addedPassIds.Add(normalized))
+                        continue;
+
+                    var pass = cfg.GetByPassId(normalized);
+                    if (pass == null)
+                        continue;
+
+                    _passCurrentList.Add(BuildCurrentPassRow(
+                        pass.displayName,
+                        GetPassUiColor(pass),
+                        "Permanent",
+                        showProgress: false,
+                        progress01: 1f,
+                        progressText: string.Empty,
+                        tooltipText: string.Empty));
+                }
+            }
+
+            var profile = Profile;
+            List<int> legacyLevels = profile != null ? profile.permanentlyUnlockedPassLevels : null;
+            if (legacyLevels != null)
+            {
+                for (int i = 0; i < legacyLevels.Count; i++)
+                {
+                    string passId = cfg.GetPassIdForLevel(legacyLevels[i]);
+                    if (string.IsNullOrWhiteSpace(passId))
+                        continue;
+
+                    string normalized = passId.Trim();
+                    if (!addedPassIds.Add(normalized))
+                        continue;
+
+                    var pass = cfg.GetByPassId(normalized);
+                    if (pass == null)
+                        continue;
+
+                    _passCurrentList.Add(BuildCurrentPassRow(
+                        pass.displayName,
+                        GetPassUiColor(pass),
+                        "Permanent",
+                        showProgress: false,
+                        progress01: 1f,
+                        progressText: string.Empty,
+                        tooltipText: string.Empty));
+                }
+            }
+
+            if (skiPassManager.HasClaimedDefaultPass)
+            {
+                string defaultPassId = cfg.GetDefaultPassId();
+                if (!string.IsNullOrWhiteSpace(defaultPassId) && addedPassIds.Add(defaultPassId.Trim()))
+                {
+                    var pass = cfg.GetByPassId(defaultPassId);
+                    if (pass != null)
+                    {
+                        _passCurrentList.Add(BuildCurrentPassRow(
+                            pass.displayName,
+                            GetPassUiColor(pass),
+                            "Permanent",
+                            showProgress: false,
+                            progress01: 1f,
+                            progressText: string.Empty,
+                            tooltipText: string.Empty));
+                    }
+                }
+            }
+
+            if (_passCurrentList.childCount == 0)
+            {
+                var empty = new Label("No active or owned passes");
+                empty.AddToClassList("pass-current-empty");
+                _passCurrentList.Add(empty);
+            }
+        }
+
+        private string BuildPermanentPassSummary()
+        {
+            BuildPassPanelEntries(_passPanelEntryBuffer);
+
+            List<string> names = new List<string>();
+            for (int i = 0; i < _passPanelEntryBuffer.Count; i++)
+            {
+                var entry = _passPanelEntryBuffer[i];
+                if (!entry.isPermanent)
+                    continue;
+
+                names.Add(entry.displayName);
+            }
+
+            if (names.Count == 0)
+                return "No permanent passes earned yet.";
+
+            return "Permanent passes: " + string.Join(", ", names);
+        }
+
+        private void RebuildPassOverviewList()
+        {
+            if (_passOverviewList == null)
+                return;
+
+            _passOverviewList.Clear();
+            BuildPassPanelEntries(_passPanelEntryBuffer);
+
+            if (_passPanelEntryBuffer.Count == 0)
+            {
+                _passOverviewList.Add(new Label("No passes available."));
+                return;
+            }
+
+            for (int i = 0; i < _passPanelEntryBuffer.Count; i++)
+            {
+                PassPanelEntry entry = _passPanelEntryBuffer[i];
+
+                string meta = entry.isCurrent && entry.isPermanent
+                    ? "Current • Permanent"
+                    : entry.isCurrent
+                        ? "Active access"
+                        : entry.isPermanent
+                            ? "Permanent"
+                            : "Temporary";
+
+                var button = new Button(() => OpenPassLiftDetail(entry.passId, entry.level, entry.displayName))
+                {
+                    text = $"{entry.displayName}\n{meta}"
+                };
+
+                button.AddToClassList("pass-entry-button");
+
+                if (entry.isCurrent)
+                    button.AddToClassList("is-current");
+
+                if (entry.isPermanent)
+                    button.AddToClassList("is-permanent");
+
+                _passOverviewList.Add(button);
+            }
+        }
+
+        private void OpenPassLiftDetail(string passId, int level, string displayName)
+        {
+            _passDetailPassId = passId;
+            _passDetailLevel = Mathf.Max(0, level);
+            _passDetailDisplayName = string.IsNullOrWhiteSpace(displayName) ? passId : displayName;
+
+            _passShowRescueTab = false;
+            _passShowLiftDetail = true;
+
+            ApplyPassPanelViewState();
+            RefreshPassLiftDetail();
+        }
+
+        private void RefreshPassLiftDetail()
+        {
+            if (_passLiftList == null)
+                return;
+
+            _passLiftList.Clear();
+
+            if (_lblPassDetailTitle != null)
+                _lblPassDetailTitle.text = _passDetailDisplayName;
+
+            _passLiftBuffer.Clear();
+
+            LiftLine[] lifts = FindObjectsOfType<LiftLine>(includeInactive: false);
+            if (lifts != null)
+            {
+                for (int i = 0; i < lifts.Length; i++)
+                {
+                    LiftLine lift = lifts[i];
+                    if (lift == null)
+                        continue;
+
+                    if (PassGrantsLiftAccess(_passDetailPassId, _passDetailLevel, lift))
+                        _passLiftBuffer.Add(lift);
+                }
+            }
+
+            _passLiftBuffer.Sort((a, b) => string.Compare(a != null ? a.name : string.Empty, b != null ? b.name : string.Empty, StringComparison.OrdinalIgnoreCase));
+
+            if (_lblPassDetailMeta != null)
+                _lblPassDetailMeta.text = $"{_passLiftBuffer.Count} lifts";
+
+            if (_passLiftBuffer.Count == 0)
+            {
+                _passLiftList.Add(new Label("No lifts are mapped to this pass yet."));
+                return;
+            }
+
+            for (int i = 0; i < _passLiftBuffer.Count; i++)
+            {
+                LiftLine capturedLift = _passLiftBuffer[i];
+
+                var button = new Button(() => FocusLiftOnMap(capturedLift))
+                {
+                    text = capturedLift != null ? capturedLift.name : "Lift"
+                };
+
+                button.AddToClassList("pass-lift-button");
+                _passLiftList.Add(button);
+            }
+        }
+
+        private void BuildPassPanelEntries(List<PassPanelEntry> dst)
+        {
+            dst.Clear();
+
+            if (skiPassManager == null || skiPassManager.Config == null)
+                return;
+
+            var cfg = skiPassManager.Config;
+            HashSet<string> addedPassIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var activePasses = skiPassManager.ActivePasses;
+            if (activePasses != null)
+            {
+                List<SkiPassManager.ActivePassRecord> sortedActive = new List<SkiPassManager.ActivePassRecord>();
+                for (int i = 0; i < activePasses.Count; i++)
+                {
+                    var record = activePasses[i];
+                    if (record != null && !string.IsNullOrWhiteSpace(record.passId))
+                        sortedActive.Add(record);
+                }
+
+                sortedActive.Sort((a, b) =>
+                {
+                    int levelA = cfg.GetLevelIndexByPassId(a.passId);
+                    int levelB = cfg.GetLevelIndexByPassId(b.passId);
+
+                    int levelCmp = levelB.CompareTo(levelA);
+                    if (levelCmp != 0)
+                        return levelCmp;
+
+                    return a.expiryGameHours.CompareTo(b.expiryGameHours);
+                });
+
+                for (int i = 0; i < sortedActive.Count; i++)
+                {
+                    var record = sortedActive[i];
+                    string passId = record.passId.Trim();
+                    if (!addedPassIds.Add(passId))
+                        continue;
+
+                    int level = Mathf.Max(0, cfg.GetLevelIndexByPassId(passId));
+                    string displayName = cfg.GetDisplayNameForPassId(passId);
+
+                    AddOrUpdatePassPanelEntry(dst, passId, level, displayName, isCurrent: true, isPermanent: false);
+                }
+            }
+
+            List<string> permanentIds = RaceRescueProgression.GetPermanentlyUnlockedPassIds();
+            if (permanentIds != null)
+            {
+                for (int i = 0; i < permanentIds.Count; i++)
+                {
+                    string passId = permanentIds[i];
+                    if (string.IsNullOrWhiteSpace(passId))
+                        continue;
+
+                    string normalized = passId.Trim();
+                    int level = Mathf.Max(0, cfg.GetLevelIndexByPassId(normalized));
+                    string displayName = cfg.GetDisplayNameForPassId(normalized);
+
+                    AddOrUpdatePassPanelEntry(dst, normalized, level, displayName, isCurrent: skiPassManager.IsPassActive(normalized), isPermanent: true);
+                    addedPassIds.Add(normalized);
+                }
+            }
+
+            var profile = Profile;
+            if (profile != null && profile.permanentlyUnlockedPassLevels != null)
+            {
+                for (int i = 0; i < profile.permanentlyUnlockedPassLevels.Count; i++)
+                {
+                    int level = Mathf.Max(0, profile.permanentlyUnlockedPassLevels[i]);
+                    string passId = cfg.GetPassIdForLevel(level);
+                    if (string.IsNullOrWhiteSpace(passId))
+                        continue;
+
+                    string normalized = passId.Trim();
+                    string displayName = cfg.GetDisplayNameForPassId(normalized);
+
+                    AddOrUpdatePassPanelEntry(dst, normalized, level, displayName, isCurrent: skiPassManager.IsPassActive(normalized), isPermanent: true);
+                    addedPassIds.Add(normalized);
+                }
+            }
+
+            if (skiPassManager.HasClaimedDefaultPass)
+            {
+                string defaultPassId = cfg.GetDefaultPassId();
+                if (!string.IsNullOrWhiteSpace(defaultPassId))
+                {
+                    string normalized = defaultPassId.Trim();
+                    int level = Mathf.Max(0, cfg.GetLevelIndexByPassId(normalized));
+                    string displayName = cfg.GetDisplayNameForPassId(normalized);
+
+                    AddOrUpdatePassPanelEntry(dst, normalized, level, displayName, isCurrent: skiPassManager.IsPassActive(normalized), isPermanent: true);
+                    addedPassIds.Add(normalized);
+                }
+            }
+
+            dst.Sort((a, b) =>
+            {
+                if (a.isCurrent != b.isCurrent)
+                    return a.isCurrent ? -1 : 1;
+
+                if (a.isPermanent != b.isPermanent)
+                    return a.isPermanent ? -1 : 1;
+
+                return string.Compare(a.displayName, b.displayName, StringComparison.OrdinalIgnoreCase);
+            });
+        }
+
+        private static void AddOrUpdatePassPanelEntry(List<PassPanelEntry> dst, string passId, int level, string displayName, bool isCurrent, bool isPermanent)
+        {
+            for (int i = 0; i < dst.Count; i++)
+            {
+                if (string.Equals(dst[i].passId, passId, StringComparison.OrdinalIgnoreCase))
+                {
+                    PassPanelEntry existing = dst[i];
+                    existing.isCurrent |= isCurrent;
+                    existing.isPermanent |= isPermanent;
+
+                    if (!string.IsNullOrWhiteSpace(displayName))
+                        existing.displayName = displayName;
+
+                    existing.level = Mathf.Max(existing.level, level);
+                    dst[i] = existing;
+                    return;
+                }
+            }
+
+            dst.Add(new PassPanelEntry
+            {
+                passId = passId,
+                level = Mathf.Max(0, level),
+                displayName = displayName,
+                isCurrent = isCurrent,
+                isPermanent = isPermanent
+            });
+        }
+
+        private bool PassGrantsLiftAccess(string passId, int passLevel, LiftLine lift)
+        {
+            if (lift == null || skiPassManager == null || skiPassManager.Config == null)
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(lift.RequiredPassId) && !string.IsNullOrWhiteSpace(passId))
+                return skiPassManager.Config.PassGrantsAccessTo(passId, lift.RequiredPassId);
+
+            return passLevel >= Mathf.Max(0, lift.RequiredPassLevel);
+        }
+
+        private void FocusLiftOnMap(LiftLine lift)
+        {
+            if (_mapUI == null || lift == null || !TryGetLiftPolylineId(lift, out string polylineId))
+                return;
+
+            _mapUI.SelectPolylineById(polylineId, center: false, minZoom: -1f);
+            _mapUI.FramePolylineById(polylineId, paddingPx: 28f, minZoom: 0.85f);
+        }
+
+        private bool TryGetLiftPolylineId(LiftLine lift, out string polylineId)
+        {
+            polylineId = null;
+            if (lift == null)
+                return false;
+
+            if (mapData != null && mapData.Polylines != null)
+            {
+                for (int i = 0; i < mapData.Polylines.Count; i++)
+                {
+                    var poly = mapData.Polylines[i];
+                    if (!poly.IsValid || poly.lineType != MapLineType.SkiLift)
+                        continue;
+
+                    if (string.Equals(poly.id, lift.name, StringComparison.Ordinal) ||
+                        string.Equals(poly.displayName, lift.name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        polylineId = poly.id;
+                        return true;
+                    }
+                }
+            }
+
+            polylineId = lift.gameObject.name;
+            return !string.IsNullOrWhiteSpace(polylineId);
+        }
+
+        private void RequestEmergencySOS()
+        {
+            if (_sosRoutine != null)
+                return;
+
+            _sosRoutine = StartCoroutine(CoEmergencySOS());
+        }
+
+        private System.Collections.IEnumerator CoEmergencySOS()
+        {
+            ResolveReferences();
+
+            if (blackoutTransition == null)
+            {
+                _rescueDispatchFeedback = "No blackout transition component was found.";
+                RefreshPassPanel();
+                _sosRoutine = null;
+                yield break;
+            }
+
+            bool success = blackoutTransition.TryRespawnAtNearestResort(out string message);
+            _rescueDispatchFeedback = success
+                ? message
+                : (string.IsNullOrWhiteSpace(message) ? "SOS return failed." : message);
+
+            RefreshPassPanel();
+
+            if (success)
+            {
+                while (blackoutTransition != null && blackoutTransition.IsTransitionActive)
+                    yield return null;
+            }
+
+            RefreshPassPanel();
+            _sosRoutine = null;
+        }
+
+        private bool TryFindBestResortExit(Vector3 fromPosition, out Transform exitPoint)
+        {
+            exitPoint = null;
+
+            SkiResortZone[] zones = FindObjectsOfType<SkiResortZone>(includeInactive: false);
+            float bestSqr = float.PositiveInfinity;
+
+            for (int i = 0; i < zones.Length; i++)
+            {
+                SkiResortZone zone = zones[i];
+                if (zone == null || zone.exitPoint == null)
+                    continue;
+
+                float sqr = (zone.exitPoint.position - fromPosition).sqrMagnitude;
+                if (sqr < bestSqr)
+                {
+                    bestSqr = sqr;
+                    exitPoint = zone.exitPoint;
+                }
+            }
+
+            return exitPoint != null;
+        }
+
+        private void SetScreenFadeOpacity(float opacity)
+        {
+            _screenFadeOpacity = Mathf.Clamp01(opacity);
+
+            if (_screenFade == null)
+                return;
+
+            _screenFade.style.opacity = _screenFadeOpacity;
+            _screenFade.style.display = _screenFadeOpacity > 0.001f ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        private System.Collections.IEnumerator FadeScreenTo(float targetOpacity, float duration)
+        {
+            float start = _screenFadeOpacity;
+            float elapsed = 0f;
+            duration = Mathf.Max(0.01f, duration);
+
+            SetScreenFadeOpacity(start);
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                SetScreenFadeOpacity(Mathf.Lerp(start, targetOpacity, t));
+                yield return null;
+            }
+
+            SetScreenFadeOpacity(targetOpacity);
         }
 
         private void OnMapPolylineSelected(MapPolyline poly)
         {
             if (!poly.IsValid)
                 return;
+
+            if (poly.lineType == MapLineType.RaceCourse && TryFindRaceByPolylineId(poly.id, out var race))
+            {
+                _selectedKind = SelectedMapKind.POI;
+                _selectedId = poly.id;
+                _selectedTitle = race.RaceName;
+                _selectedBody = BuildSelectedRaceBody(race);
+                RefreshContextPanel();
+                return;
+            }
 
             _selectedId = poly.id;
             _selectedTitle = string.IsNullOrWhiteSpace(poly.displayName) ? poly.id : poly.displayName;
@@ -1610,6 +2885,15 @@ namespace SkiGame.Progression
 
                     case POICategory.Landmark:
                         return new Color(0.8f, 0.8f, 1f, 1f);
+
+                    case POICategory.Race:
+                        return new Color(1.00f, 0.55f, 0.20f, 1f);
+
+                    case POICategory.Medical:
+                        return new Color(0.20f, 1.00f, 1.00f, 1f);
+
+                    case POICategory.Vehicle:
+                        return new Color(1.00f, 0.90f, 0.25f, 1f);
                 }
             }
 
@@ -1875,17 +3159,100 @@ namespace SkiGame.Progression
             ApplyContextHistoryVisibility();
         }
 
+        private static int CompareAchievementsForHud(AchievementDefinitionSO a, AchievementDefinitionSO b, PlayerStatsProfile profile)
+        {
+            if (a == null && b == null) return 0;
+            if (a == null) return 1;
+            if (b == null) return -1;
+
+            bool aCompleted = profile != null && profile.HasAchievement(a.id);
+            bool bCompleted = profile != null && profile.HasAchievement(b.id);
+
+            bool aClaimed = profile != null && profile.HasClaimedAchievement(a.id);
+            bool bClaimed = profile != null && profile.HasClaimedAchievement(b.id);
+
+            int aBucket = aCompleted ? (aClaimed ? 2 : 0) : 1;
+            int bBucket = bCompleted ? (bClaimed ? 2 : 0) : 1;
+
+            int bucketCompare = aBucket.CompareTo(bBucket);
+            if (bucketCompare != 0)
+                return bucketCompare;
+
+            float aPct = profile != null ? Mathf.Clamp01(a.GetProgress01(profile)) : 0f;
+            float bPct = profile != null ? Mathf.Clamp01(b.GetProgress01(profile)) : 0f;
+
+            int pctCompare = bPct.CompareTo(aPct);
+            if (pctCompare != 0)
+                return pctCompare;
+
+            int targetCompare = a.target.CompareTo(b.target);
+            if (targetCompare != 0)
+                return targetCompare;
+
+            string aTitle = string.IsNullOrWhiteSpace(a.title) ? a.id : a.title;
+            string bTitle = string.IsNullOrWhiteSpace(b.title) ? b.id : b.title;
+            return string.Compare(aTitle, bTitle, StringComparison.OrdinalIgnoreCase);
+        }
+
         private void BuildAchievementCategoryButtons()
         {
             if (_achievementCategoryRow == null)
                 return;
 
             _achievementCategoryRow.Clear();
-            AddAchievementCategoryButton("Performance", AchievementCategory.Performance);
-            AddAchievementCategoryButton("Exploration", AchievementCategory.Exploration);
-            AddAchievementCategoryButton("Mastery", AchievementCategory.MountainMastery);
+
+            AddAchievementCategoryButton(BuildAchievementCategoryLabel(AchievementCategory.Performance), AchievementCategory.Performance);
+            AddAchievementCategoryButton(BuildAchievementCategoryLabel(AchievementCategory.Exploration), AchievementCategory.Exploration);
+            AddAchievementCategoryButton(BuildAchievementCategoryLabel(AchievementCategory.MountainMastery), AchievementCategory.MountainMastery);
         }
 
+        private string BuildAchievementCategoryLabel(AchievementCategory category)
+        {
+            if (progressionDirector == null)
+                return category switch
+                {
+                    AchievementCategory.Exploration => "Explore\n-- / --",
+                    AchievementCategory.MountainMastery => "Mastery\n-- / --",
+                    _ => "Performance\n-- / --"
+                };
+
+            _achievementQueryBuffer.Clear();
+            progressionDirector.GetAllAchievements(_achievementQueryBuffer);
+
+            var profile = Profile;
+            var wantedCategory = ToDefinitionHudCategory(category);
+
+            int total = 0;
+            int unlocked = 0;
+            _achievementDedup.Clear();
+
+            for (int i = 0; i < _achievementQueryBuffer.Count; i++)
+            {
+                var def = _achievementQueryBuffer[i];
+                if (def == null || string.IsNullOrWhiteSpace(def.id))
+                    continue;
+
+                if (def.GetMountainHudCategory() != wantedCategory)
+                    continue;
+
+                if (!_achievementDedup.Add(def.id))
+                    continue;
+
+                total++;
+
+                if (profile != null && profile.HasAchievement(def.id))
+                    unlocked++;
+            }
+
+            string baseLabel = category switch
+            {
+                AchievementCategory.Exploration => "Explore",
+                AchievementCategory.MountainMastery => "Mastery",
+                _ => "Performance"
+            };
+
+            return $"{baseLabel}\n{unlocked} / {total}";
+        }
         private void AddAchievementCategoryButton(string label, AchievementCategory category)
         {
             var btn = new Button(() =>
@@ -1898,6 +3265,8 @@ namespace SkiGame.Progression
             };
 
             btn.AddToClassList("goal-subtab-button");
+            btn.AddToClassList("achievement-category-button");
+
             if (_achievementCategory == category)
                 btn.AddToClassList("is-selected");
 
@@ -1993,6 +3362,489 @@ namespace SkiGame.Progression
             return tile;
         }
 
+        private VisualElement MakeQuestEmptyState(string text)
+        {
+            var label = new Label(text);
+            label.AddToClassList("quest-empty-state");
+            return label;
+        }
+
+        private VisualElement MakeQuestCard(QuestDefinitionSO definition, QuestRuntimeState state)
+        {
+            var card = new VisualElement();
+            card.AddToClassList("quest-card");
+
+            Color accent = QuestVisualUtility.GetQuestAccent(definition.SafeId);
+            bool tracked = questDirector != null && questDirector.IsQuestTracked(definition.SafeId);
+            bool isPrimary = !_questShowCompleted && string.Equals(_primaryQuestId, definition.SafeId, StringComparison.OrdinalIgnoreCase);
+            bool expanded = _expandedQuestIds.Contains(definition.SafeId);
+            if (tracked)
+                card.AddToClassList("is-tracked");
+            if (isPrimary)
+                card.AddToClassList("is-primary");
+
+            if (state.completed)
+                card.AddToClassList("is-completed");
+
+            card.tooltip = state.completed || _questShowCompleted
+                ? "Click to expand or collapse."
+                : (isPrimary ? "Click to expand. Double-click to unpin." : "Click to expand. Double-click to pin.");
+
+            card.AddToClassList(expanded ? "is-expanded" : "is-collapsed");
+            card.RegisterCallback<ClickEvent>(evt =>
+            {
+                if (!state.completed && !_questShowCompleted && evt.clickCount >= 2)
+                {
+                    TogglePrimaryQuest(definition.SafeId);
+                    RefreshQuestView();
+                    evt.StopPropagation();
+                    return;
+                }
+
+                ToggleQuestExpanded(definition.SafeId);
+                RefreshQuestView();
+            });
+
+            var accentBar = new VisualElement();
+            accentBar.AddToClassList("quest-card-accent");
+            accentBar.style.backgroundColor = new StyleColor(accent);
+            card.Add(accentBar);
+
+            var header = new VisualElement();
+            header.AddToClassList("quest-card-header");
+
+            var titleBlock = new VisualElement();
+            titleBlock.AddToClassList("quest-card-titleblock");
+
+            var title = new Label(string.IsNullOrWhiteSpace(definition.title) ? definition.SafeId : definition.title);
+            title.AddToClassList("quest-card-title");
+            titleBlock.Add(title);
+
+            string stageText = state.completed
+                ? "Completed"
+                : BuildQuestStageLabel(definition, state);
+            string statusText = state.completed ? "Complete" : (isPrimary ? "Pinned" : (tracked ? "Tracking" : "Active"));
+
+            var subtitle = new Label($"{stageText} • {statusText}");
+            subtitle.AddToClassList("quest-card-subtitle");
+            titleBlock.Add(subtitle);
+
+            if (isPrimary)
+            {
+                var pinIndicator = new Label("PINNED");
+                pinIndicator.AddToClassList("quest-card-pin-indicator");
+                titleBlock.Add(pinIndicator);
+            }
+
+            header.Add(titleBlock);
+
+            var headerActions = new VisualElement();
+            headerActions.AddToClassList("quest-card-header-actions");
+
+            var stage = definition.GetStage(state.currentStageIndex);
+            TryResolveNextQuestObjective(definition, state, out var nextObjectiveDefinition, out var nextObjectiveState);
+
+            if (!state.completed)
+            {
+                var primaryButton = new Button(() =>
+                {
+                    TogglePrimaryQuest(definition.SafeId);
+                    RefreshQuestView();
+                })
+                {
+                    text = isPrimary ? "Pinned" : "Pin"
+                };
+                primaryButton.AddToClassList("quest-primary-button");
+                if (isPrimary)
+                    primaryButton.AddToClassList("is-active");
+                primaryButton.tooltip = isPrimary ? "Unpin this quest." : "Pin this quest to the top.";
+                SwallowClick(primaryButton);
+                headerActions.Add(primaryButton);
+
+                var trackButton = new Button(() =>
+                {
+                    if (questDirector != null)
+                    {
+                        bool newTracked = !questDirector.IsQuestTracked(definition.SafeId);
+                        questDirector.SetQuestTracked(definition.SafeId, newTracked);
+
+                        if (!newTracked && string.Equals(_primaryQuestId, definition.SafeId, StringComparison.OrdinalIgnoreCase))
+                            ClearPrimaryQuest(definition.SafeId);
+
+                        RefreshQuestView();
+                    }
+                })
+                {
+                    text = tracked ? "Tracking" : "Track"
+                };
+                trackButton.AddToClassList("quest-track-button");
+                if (tracked)
+                    trackButton.AddToClassList("is-active");
+                trackButton.tooltip = tracked ? "Stop showing this quest in the HUD." : "Show this quest in the HUD.";
+                SwallowClick(trackButton);
+                headerActions.Add(trackButton);
+            }
+
+            header.Add(headerActions);
+            card.Add(header);
+
+            string promptText = nextObjectiveDefinition != null ? BuildQuestObjectivePrompt(nextObjectiveDefinition) : string.Empty;
+            if (!string.IsNullOrWhiteSpace(promptText))
+            {
+                var prompt = new Label(promptText);
+                prompt.AddToClassList("quest-card-prompt");
+                prompt.style.backgroundColor = new StyleColor(new Color(accent.r, accent.g, accent.b, 0.12f));
+                card.Add(prompt);
+            }
+
+            float questProgress01 = GetQuestProgress01(state);
+            string questProgressSummary = BuildQuestProgressSummary(state);
+
+            var questProgressRow = new VisualElement();
+            questProgressRow.AddToClassList("quest-card-progress-row");
+
+            var questProgressLabel = new Label(questProgressSummary);
+            questProgressLabel.AddToClassList("quest-card-progress-label");
+            questProgressRow.Add(questProgressLabel);
+
+            var questProgressPercent = new Label($"{Mathf.RoundToInt(questProgress01 * 100f)}%");
+            questProgressPercent.AddToClassList("quest-card-progress-percent");
+            questProgressRow.Add(questProgressPercent);
+            card.Add(questProgressRow);
+
+            var questTrack = new VisualElement();
+            questTrack.AddToClassList("quest-card-progress-track");
+
+            var questFill = new VisualElement();
+            questFill.AddToClassList("quest-card-progress-fill");
+            questFill.style.width = Length.Percent(Mathf.RoundToInt(questProgress01 * 100f));
+            questFill.style.backgroundColor = new StyleColor(accent);
+            questTrack.Add(questFill);
+            card.Add(questTrack);
+
+            if (!expanded)
+                return card;
+
+            var body = new VisualElement();
+            body.AddToClassList("quest-card-body");
+
+            bool showQuestDescription = !string.IsNullOrWhiteSpace(definition.description) &&
+                (state.completed || stage == null || string.IsNullOrWhiteSpace(stage.description));
+
+            if (showQuestDescription)
+            {
+                var description = new Label(definition.description.Trim());
+                description.AddToClassList("quest-card-description");
+                body.Add(description);
+            }
+
+            if (!state.completed && stage != null && !string.IsNullOrWhiteSpace(stage.description))
+            {
+                var stageDescription = new Label(stage.description.Trim());
+                stageDescription.AddToClassList("quest-card-stage-description");
+                body.Add(stageDescription);
+            }
+
+            var objectiveList = new VisualElement();
+            objectiveList.AddToClassList("quest-objective-list");
+
+            int objectiveCount = 0;
+            if (state.objectiveStates != null)
+            {
+                for (int i = 0; i < state.objectiveStates.Count; i++)
+                {
+                    var objectiveState = state.objectiveStates[i];
+                    if (objectiveState == null)
+                        continue;
+
+                    var objectiveDef = FindObjectiveDefinition(stage, objectiveState.objectiveId);
+                    if (objectiveDef == null)
+                        continue;
+
+                    objectiveList.Add(MakeQuestObjectiveRow(objectiveDef, objectiveState, accent));
+                    objectiveCount++;
+                }
+            }
+
+            if (objectiveCount > 0)
+            {
+                body.Add(objectiveList);
+            }
+            else if (state.completed)
+            {
+                var completedSummary = new Label("All objectives completed.");
+                completedSummary.AddToClassList("quest-card-stage-description");
+                body.Add(completedSummary);
+            }
+
+            card.Add(body);
+            return card;
+        }
+
+        private void ToggleQuestExpanded(string questId)
+        {
+            if (string.IsNullOrWhiteSpace(questId))
+                return;
+
+            if (!_expandedQuestIds.Add(questId))
+                _expandedQuestIds.Remove(questId);
+        }
+
+        private void SetPrimaryQuest(string questId, bool expandCard)
+        {
+            if (string.IsNullOrWhiteSpace(questId))
+                return;
+
+            _primaryQuestId = questId;
+
+            if (expandCard)
+                _expandedQuestIds.Add(questId);
+
+            miniHudController?.SetFocusedQuest(questId, expandSummary: true);
+            ScrollQuestListToTop();
+        }
+
+        private void TogglePrimaryQuest(string questId)
+        {
+            if (string.IsNullOrWhiteSpace(questId))
+                return;
+
+            if (string.Equals(_primaryQuestId, questId, StringComparison.OrdinalIgnoreCase))
+            {
+                ClearPrimaryQuest(questId);
+                ScrollQuestListToTop();
+                return;
+            }
+
+            if (questDirector != null && !questDirector.IsQuestTracked(questId))
+                questDirector.SetQuestTracked(questId, true);
+
+            SetPrimaryQuest(questId, expandCard: true);
+        }
+
+        private void ClearPrimaryQuest(string questId)
+        {
+            if (string.IsNullOrWhiteSpace(questId) ||
+                !string.Equals(_primaryQuestId, questId, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _primaryQuestId = null;
+        }
+
+        private static string BuildQuestObjectivePrompt(QuestObjectiveDefinition objectiveDefinition)
+        {
+            if (objectiveDefinition == null)
+                return string.Empty;
+
+            string prompt = objectiveDefinition.BuildPromptLabel();
+            return string.IsNullOrWhiteSpace(prompt) ? string.Empty : prompt.Trim();
+        }
+
+        private int CompareQuestStatesForHud(QuestRuntimeState a, QuestRuntimeState b)
+        {
+            if (a == null && b == null) return 0;
+            if (a == null) return 1;
+            if (b == null) return -1;
+
+            bool aPrimary = string.Equals(a.questId, _primaryQuestId, StringComparison.OrdinalIgnoreCase);
+            bool bPrimary = string.Equals(b.questId, _primaryQuestId, StringComparison.OrdinalIgnoreCase);
+            if (aPrimary != bPrimary)
+                return aPrimary ? -1 : 1;
+
+            bool aTracked = questDirector != null && questDirector.IsQuestTracked(a.questId);
+            bool bTracked = questDirector != null && questDirector.IsQuestTracked(b.questId);
+            if (aTracked != bTracked)
+                return aTracked ? -1 : 1;
+
+            var aDef = questDirector != null ? questDirector.GetQuestDefinition(a.questId) : null;
+            var bDef = questDirector != null ? questDirector.GetQuestDefinition(b.questId) : null;
+            string aTitle = aDef != null && !string.IsNullOrWhiteSpace(aDef.title) ? aDef.title : a.questId;
+            string bTitle = bDef != null && !string.IsNullOrWhiteSpace(bDef.title) ? bDef.title : b.questId;
+            return string.Compare(aTitle, bTitle, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void ScrollQuestListToTop()
+        {
+            if (_questList == null)
+                return;
+
+            _questList.scrollOffset = Vector2.zero;
+            _questList.schedule.Execute(() => _questList.scrollOffset = Vector2.zero);
+        }
+
+        private static bool TryResolveNextQuestObjective(
+            QuestDefinitionSO definition,
+            QuestRuntimeState state,
+            out QuestObjectiveDefinition objectiveDefinition,
+            out QuestObjectiveRuntimeState objectiveState)
+        {
+            objectiveDefinition = null;
+            objectiveState = null;
+
+            var stage = definition != null ? definition.GetStage(state.currentStageIndex) : null;
+            if (stage?.objectives == null || state?.objectiveStates == null)
+                return false;
+
+            for (int i = 0; i < state.objectiveStates.Count; i++)
+            {
+                var candidateState = state.objectiveStates[i];
+                if (candidateState == null || candidateState.completed)
+                    continue;
+
+                var candidateDefinition = FindObjectiveDefinition(stage, candidateState.objectiveId);
+                if (candidateDefinition == null)
+                    continue;
+
+                objectiveState = candidateState;
+                objectiveDefinition = candidateDefinition;
+                return true;
+            }
+
+            return false;
+        }
+
+        private VisualElement MakeQuestObjectiveRow(QuestObjectiveDefinition objectiveDef, QuestObjectiveRuntimeState objectiveState, Color accent)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("quest-objective-row");
+            if (objectiveState.completed)
+                row.AddToClassList("is-complete");
+
+            var check = new Label(objectiveState.completed ? "✓" : "•");
+            check.AddToClassList("quest-objective-check");
+            row.Add(check);
+
+            var copy = new VisualElement();
+            copy.AddToClassList("quest-objective-copy");
+
+            var title = new Label(string.IsNullOrWhiteSpace(objectiveDef.title) ? objectiveDef.BuildAuthoringSummary() : objectiveDef.title);
+            title.AddToClassList("quest-objective-title");
+            copy.Add(title);
+
+            var progressTrack = new VisualElement();
+            progressTrack.AddToClassList("quest-objective-progress-track");
+
+            var progressFill = new VisualElement();
+            progressFill.AddToClassList("quest-objective-progress-fill");
+            progressFill.style.width = Length.Percent(Mathf.RoundToInt(Mathf.Clamp01(objectiveState.progress01) * 100f));
+            progressFill.style.backgroundColor = new StyleColor(accent);
+            progressTrack.Add(progressFill);
+            copy.Add(progressTrack);
+
+            if (!string.IsNullOrWhiteSpace(objectiveState.progressText))
+            {
+                var progress = new Label(objectiveState.progressText);
+                progress.AddToClassList("quest-objective-progress");
+                copy.Add(progress);
+            }
+
+            row.Add(copy);
+            return row;
+        }
+
+        private static void SwallowClick(VisualElement element)
+        {
+            if (element == null)
+                return;
+
+            element.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
+            element.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());
+            element.RegisterCallback<PointerUpEvent>(evt => evt.StopPropagation());
+        }
+
+        private static string BuildQuestStageLabel(QuestDefinitionSO definition, QuestRuntimeState state)
+        {
+            var stage = definition != null ? definition.GetStage(state.currentStageIndex) : null;
+            if (stage == null)
+                return "Quest in progress";
+
+            string stageTitle = string.IsNullOrWhiteSpace(stage.title) ? $"Stage {state.currentStageIndex + 1}" : stage.title.Trim();
+            return stageTitle;
+        }
+
+        private static QuestObjectiveDefinition FindObjectiveDefinition(QuestStageDefinition stage, string objectiveId)
+        {
+            if (stage?.objectives == null || string.IsNullOrWhiteSpace(objectiveId))
+                return null;
+
+            for (int i = 0; i < stage.objectives.Count; i++)
+            {
+                var objective = stage.objectives[i];
+                if (objective != null && string.Equals(objective.id, objectiveId, StringComparison.OrdinalIgnoreCase))
+                    return objective;
+            }
+
+            return null;
+        }
+
+        private void RaiseQuestUiEvent(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+                return;
+
+            if (questSignalBus == null)
+                questSignalBus = FindObjectOfType<QuestSignalBus>();
+
+            questSignalBus?.RaiseEvent(key);
+        }
+
+        private static float GetQuestProgress01(QuestRuntimeState state)
+        {
+            if (state == null)
+                return 0f;
+
+            if (state.completed)
+                return 1f;
+
+            if (state.objectiveStates == null || state.objectiveStates.Count == 0)
+                return 0f;
+
+            float total = 0f;
+            int count = 0;
+            for (int i = 0; i < state.objectiveStates.Count; i++)
+            {
+                var objective = state.objectiveStates[i];
+                if (objective == null)
+                    continue;
+
+                total += Mathf.Clamp01(objective.progress01);
+                count++;
+            }
+
+            return count > 0 ? total / count : 0f;
+        }
+
+        private static string BuildQuestProgressSummary(QuestRuntimeState state)
+        {
+            if (state == null)
+                return "No progress yet";
+
+            if (state.completed)
+                return "Quest complete";
+
+            int completed = 0;
+            int total = 0;
+            if (state.objectiveStates != null)
+            {
+                for (int i = 0; i < state.objectiveStates.Count; i++)
+                {
+                    var objective = state.objectiveStates[i];
+                    if (objective == null)
+                        continue;
+
+                    total++;
+                    if (objective.completed)
+                        completed++;
+                }
+            }
+
+            return total > 0
+                ? $"{completed} of {total} objectives completed"
+                : "No active objectives";
+        }
+
         private VisualElement MakeTaskCard(string title, ProgressionDirector.DailyTierDisplay tier)
         {
             string statusText;
@@ -2040,7 +3892,7 @@ namespace SkiGame.Progression
             var bottomRow = new VisualElement();
             bottomRow.AddToClassList("task-card-bottomrow");
 
-            var rewardEl = new Label($"+{tier.reward} currency");
+            var rewardEl = new Label($"+${tier.reward}");
             rewardEl.AddToClassList("task-card-reward");
             bottomRow.Add(rewardEl);
 
@@ -2058,6 +3910,12 @@ namespace SkiGame.Progression
                 {
                     if (statsManager != null)
                         statsManager.Save();
+
+                    questSignalBus?.RaiseEvent(
+                        "ui.tasks.claimed",
+                        QuestSignalData.Create()
+                            .WithTag("ladderId", tier.ladderId ?? string.Empty)
+                            .WithTag("tierIndex", tier.tierIndex.ToString()));
 
                     RefreshGoalsPanel();
                     RefreshPassPanel();
@@ -2339,6 +4197,100 @@ namespace SkiGame.Progression
             // No trustworthy map reference camera found.
             // Return null so PhoneMapPageUI uses MapProjection instead of a wrong camera.
             return null;
+        }
+
+        private bool TryFindRaceByPolylineId(string polylineId, out RaceCourseLine race)
+        {
+            race = null;
+            if (string.IsNullOrWhiteSpace(polylineId))
+                return false;
+
+            var races = FindObjectsOfType<RaceCourseLine>(includeInactive: false);
+            for (int i = 0; i < races.Length; i++)
+            {
+                var candidate = races[i];
+                if (candidate == null)
+                    continue;
+
+                if (string.Equals(candidate.RaceId, polylineId, StringComparison.Ordinal) ||
+                    string.Equals(candidate.RaceName, polylineId, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(candidate.gameObject.name, polylineId, StringComparison.Ordinal))
+                {
+                    race = candidate;
+                    return true;
+                }
+
+                if (TryGetRacePolylineId(candidate, out string racePolylineId) &&
+                    string.Equals(racePolylineId, polylineId, StringComparison.Ordinal))
+                {
+                    race = candidate;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool TryGetRacePolylineId(RaceCourseLine race, out string polylineId)
+        {
+            polylineId = null;
+
+            if (race == null || mapData == null || mapData.Polylines == null)
+                return false;
+
+            string raceId = race.RaceId;
+            string raceName = race.RaceName;
+            string objectName = race.gameObject.name;
+
+            for (int i = 0; i < mapData.Polylines.Count; i++)
+            {
+                var poly = mapData.Polylines[i];
+                if (!poly.IsValid)
+                    continue;
+
+                if ((!string.IsNullOrWhiteSpace(raceId) && string.Equals(poly.id, raceId, StringComparison.Ordinal)) ||
+                    string.Equals(poly.id, objectName, StringComparison.Ordinal) ||
+                    string.Equals(poly.id, raceName, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(poly.displayName, raceName, StringComparison.OrdinalIgnoreCase))
+                {
+                    polylineId = poly.id;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private string BuildSelectedRaceBody(RaceCourseLine race)
+        {
+            if (race == null)
+                return "Race unavailable.";
+
+            int selectedLeague = Mathf.Max(1, race.SelectedLeagueNumber);
+            bool unlocked = race.IsLeagueUnlocked(selectedLeague);
+            bool completed = race.HasCompletedLeague(selectedLeague);
+            int bestPlacement = race.GetBestPlacement(selectedLeague);
+            float bestTime = race.GetBestTimeSeconds(selectedLeague);
+            var league = race.GetLeague(selectedLeague);
+
+            string description = league != null && !string.IsNullOrWhiteSpace(league.description)
+                ? league.description
+                : "Race the course against the current league field.";
+
+            string lockText = unlocked
+                ? (completed ? "Completed" : "Unlocked")
+                : $"Locked - win {race.GetLeagueDisplayName(race.GetPreviousLeagueNumber(selectedLeague))}";
+
+            string bestPlacementText = bestPlacement > 0 ? $"{bestPlacement} place" : "--";
+            string bestTimeText = bestTime >= 0f ? $"{bestTime:0.00}s" : "--";
+
+            return
+                $"{race.RaceName}\n" +
+                $"{race.GetLeagueDisplayName(selectedLeague)} • {lockText}\n" +
+                $"{description}\n" +
+                $"Best Placement: {bestPlacementText}\n" +
+                $"Best Time: {bestTimeText}\n" +
+                $"Reward: ${race.CompletionReward}";
         }
     }
 }

@@ -1,0 +1,211 @@
+#pragma kernel ProcessTrackerPositions
+#pragma kernel FilterByFrustum
+#pragma kernel ConsolidatePositions
+
+// Input data structures
+struct TrackerData
+{
+    float3 position;
+    float3 rotation;
+    float fps;
+    int visibleObjectCount;
+    int visibleObjectStartIndex;
+};
+
+struct VisibleObject
+{
+    float3 position;
+    int polyCount;
+};
+
+struct RawPointData
+{
+    float3 position;
+    float fps;
+    float trackerYaw;
+    int polyCount;
+};
+
+struct ConsolidatedPoint
+{
+    float3 position;
+    float finalFps;
+    int polyCount;
+};
+
+// Buffers
+StructuredBuffer<TrackerData> TrackerBuffer;
+StructuredBuffer<VisibleObject> VisibleObjectBuffer;
+RWStructuredBuffer<RawPointData> RawPointBuffer;
+RWStructuredBuffer<ConsolidatedPoint> ConsolidatedBuffer;
+RWStructuredBuffer<int> CounterBuffer;
+
+// Shared parameters
+int heatmapMode; // 0=Origin, 1=Projection, 2=VisibleObjects
+float maxProjectionDistance;
+int polyMin;
+int polyMax;
+float fpsMin;
+float fpsMax;
+int trackerCount;
+
+// Frustum culling
+float4 frustumPlanes[6]; // Each plane as (a,b,c,d) where ax+by+cz+d=0
+bool useFrustumCulling;
+
+// Directional weighting
+bool useDirectionalWeighting;
+float cameraYaw;
+float fov;
+float maxAngleDiff;
+
+[numthreads(64, 1, 1)]
+void ProcessTrackerPositions(uint3 id : SV_DispatchThreadID)
+{
+    uint index = id.x;
+    if (index >= (uint)trackerCount) return;
+    
+    TrackerData tracker = TrackerBuffer[index];
+    
+    // Early FPS filtering
+    if (tracker.fps < fpsMin || tracker.fps > fpsMax) return;
+    
+    if (heatmapMode == 0) // Origin mode
+    {
+        // Use a default polycount that passes the filter
+        int defaultPolyCount = max(polyMin, 1000);
+        
+        RawPointData rawPoint;
+        rawPoint.position = tracker.position;
+        rawPoint.fps = tracker.fps;
+        rawPoint.trackerYaw = tracker.rotation.y;
+        rawPoint.polyCount = defaultPolyCount;
+        
+        if (rawPoint.polyCount >= polyMin && rawPoint.polyCount <= polyMax)
+        {
+            uint outputIndex;
+            InterlockedAdd(CounterBuffer[0], 1, outputIndex);
+            if (outputIndex < 1000000) // Safety check
+                RawPointBuffer[outputIndex] = rawPoint;
+        }
+    }
+    else if (heatmapMode == 1) // Projection mode
+    {
+        float3 forward = float3(sin(tracker.rotation.y), 0, cos(tracker.rotation.y));
+        float3 projectedPos = tracker.position + forward * maxProjectionDistance;
+        
+        int defaultPolyCount = max(polyMin, 1000);
+        
+        RawPointData rawPoint;
+        rawPoint.position = projectedPos;
+        rawPoint.fps = tracker.fps;
+        rawPoint.trackerYaw = tracker.rotation.y;
+        rawPoint.polyCount = defaultPolyCount;
+        
+        if (rawPoint.polyCount >= polyMin && rawPoint.polyCount <= polyMax)
+        {
+            uint outputIndex;
+            InterlockedAdd(CounterBuffer[0], 1, outputIndex);
+            if (outputIndex < 1000000)
+                RawPointBuffer[outputIndex] = rawPoint;
+        }
+    }
+    else if (heatmapMode == 2) // VisibleObjects mode
+    {
+        for (int i = 0; i < tracker.visibleObjectCount; i++)
+        {
+            int objIndex = tracker.visibleObjectStartIndex + i;
+            if (objIndex >= 0 && objIndex < 1000000) // Safety bounds check
+            {
+                VisibleObject obj = VisibleObjectBuffer[objIndex];
+                
+                if (obj.polyCount >= polyMin && obj.polyCount <= polyMax)
+                {
+                    RawPointData rawPoint;
+                    rawPoint.position = obj.position;
+                    rawPoint.fps = tracker.fps;
+                    rawPoint.trackerYaw = tracker.rotation.y;
+                    rawPoint.polyCount = obj.polyCount;
+                    
+                    uint outputIndex;
+                    InterlockedAdd(CounterBuffer[0], 1, outputIndex);
+                    if (outputIndex < 1000000)
+                        RawPointBuffer[outputIndex] = rawPoint;
+                }
+            }
+        }
+    }
+}
+
+bool IsPointInFrustum(float3 position)
+{
+    if (!useFrustumCulling) return true;
+    
+    for (int i = 0; i < 6; i++)
+    {
+        float4 plane = frustumPlanes[i];
+        float distance = dot(plane.xyz, position) + plane.w;
+        if (distance < 0) return false;
+    }
+    return true;
+}
+
+[numthreads(64, 1, 1)]
+void FilterByFrustum(uint3 id : SV_DispatchThreadID)
+{
+    uint index = id.x;
+    uint totalCount = (uint)CounterBuffer[0];
+    if (index >= totalCount) return;
+    
+    RawPointData rawPoint = RawPointBuffer[index];
+    
+    if (!IsPointInFrustum(rawPoint.position))
+    {
+        // Mark as invalid by setting polyCount to -1
+        rawPoint.polyCount = -1;
+        RawPointBuffer[index] = rawPoint;
+    }
+}
+
+// Simple hash function for grouping positions
+uint HashPosition(float3 pos)
+{
+    // Grid-based hashing with small cell size
+    int3 gridPos = int3(floor(pos / 0.1)); // 0.1 unit grid cells
+    return (uint)(gridPos.x * 73856093) ^ (uint)(gridPos.y * 19349663) ^ (uint)(gridPos.z * 83492791);
+}
+
+[numthreads(64, 1, 1)]
+void ConsolidatePositions(uint3 id : SV_DispatchThreadID)
+{
+    uint index = id.x;
+    uint totalCount = (uint)CounterBuffer[0];
+    if (index >= totalCount) return;
+    
+    RawPointData rawPoint = RawPointBuffer[index];
+    if (rawPoint.polyCount < 0) return; // Skip filtered out points
+    
+    if (useDirectionalWeighting)
+    {
+        float delta = abs(rawPoint.trackerYaw - cameraYaw);
+        if (delta > 180.0) delta = 360.0 - delta; // Handle angle wrap-around
+        
+        if (delta > (fov * 0.5)) return; // Outside FOV
+        
+        float angleWeight = saturate(1.0 - (delta / maxAngleDiff));
+        if (angleWeight <= 0.0) return;
+        
+        // Apply directional weighting to FPS
+        rawPoint.fps *= angleWeight;
+    }
+    
+    ConsolidatedPoint consolidated;
+    consolidated.position = rawPoint.position;
+    consolidated.finalFps = rawPoint.fps;
+    consolidated.polyCount = rawPoint.polyCount;
+    
+    uint outputIndex;
+    InterlockedAdd(CounterBuffer[1], 1, outputIndex);
+    if (outputIndex < 1000000)
+        ConsolidatedBuffer[outputIndex] = consolidated;
+} 

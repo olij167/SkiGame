@@ -30,6 +30,11 @@ public class CharacterCustomizer : MonoBehaviour
     [Tooltip("Color property for the eye color (e.g., Base_Colour or _BaseColor).")]
     [SerializeField] private string eyeBaseColorPropertyName = "Base_Colour";
 
+    [Header("Eye Presentation")]
+    [SerializeField] private float eyeSizeScale = 3f;
+    [SerializeField] private Color eyeOutlineColour = new Color(0f, 0f, 0f, 0f);
+    [SerializeField] private float eyeOutlineScaleMultiplier = 1.035f;
+
     [Header("Eye Options")]
     [SerializeField] private int selectedEyeOption;
     [SerializeField] private Color eyeColour;
@@ -47,9 +52,16 @@ public class CharacterCustomizer : MonoBehaviour
 
     // Runtime state
     private Material _eyeMaterialInstance;
+    private Material _eyeOutlineMaterialInstance;
     private int _eyeBaseMapId;
     private int _eyeBaseColorId;
     private int _skinColorPropertyId;
+    private int _eyeOutlineBaseMapId;
+    private int _eyeOutlineBaseColorId;
+    private DecalProjector _leftEyeOutlineProjector;
+    private DecalProjector _rightEyeOutlineProjector;
+    private Vector3 _leftEyeBaseSize;
+    private Vector3 _rightEyeBaseSize;
 
     private GameObject _currentHatInstance;
     private GameObject _currentJacketInstance;
@@ -58,6 +70,8 @@ public class CharacterCustomizer : MonoBehaviour
 
     private void Awake()
     {
+        CacheEyeProjectorBaseSizes();
+
         if (!string.IsNullOrEmpty(eyeBaseMapPropertyName))
             _eyeBaseMapId = Shader.PropertyToID(eyeBaseMapPropertyName);
 
@@ -94,8 +108,9 @@ public class CharacterCustomizer : MonoBehaviour
 
         _eyeMaterialInstance = new Material(eyeDecalBaseMaterial);
 
-        ResolveEyePropertyIds();     // ✅ NEW
+        ResolveEyePropertyIds();
         ApplyEyeMaterialToProjectors();
+        EnsureEyeOutlineResources();
     }
 
     private void ResolveEyePropertyIds()
@@ -145,6 +160,138 @@ public class CharacterCustomizer : MonoBehaviour
             rightEyeProjector.material = _eyeMaterialInstance;
     }
 
+    private void CacheEyeProjectorBaseSizes()
+    {
+        _leftEyeBaseSize = leftEyeProjector != null ? leftEyeProjector.size : Vector3.one * 0.06f;
+        _rightEyeBaseSize = rightEyeProjector != null ? rightEyeProjector.size : _leftEyeBaseSize;
+    }
+
+    private void EnsureEyeOutlineResources()
+    {
+        EnsureEyeOutlineProjector(ref _leftEyeOutlineProjector, leftEyeProjector, "LeftEyeOutline");
+        EnsureEyeOutlineProjector(ref _rightEyeOutlineProjector, rightEyeProjector, "RightEyeOutline");
+
+        if (_eyeOutlineMaterialInstance == null && eyeDecalBaseMaterial != null)
+        {
+            _eyeOutlineMaterialInstance = new Material(eyeDecalBaseMaterial);
+            ResolveEyeOutlinePropertyIds();
+        }
+
+        ApplyEyeOutlineMaterialToProjectors();
+        ApplyEyeOutlineColorInternal();
+        ApplyEyeSizeInternal();
+    }
+
+    private void EnsureEyeOutlineProjector(ref DecalProjector outlineProjector, DecalProjector sourceProjector, string objectName)
+    {
+        if (outlineProjector != null || sourceProjector == null)
+            return;
+
+        var outlineObject = new GameObject(objectName);
+        outlineObject.transform.SetParent(sourceProjector.transform.parent, false);
+        outlineObject.transform.localPosition = sourceProjector.transform.localPosition;
+        outlineObject.transform.localRotation = sourceProjector.transform.localRotation;
+        outlineObject.transform.localScale = sourceProjector.transform.localScale;
+
+        outlineProjector = outlineObject.AddComponent<DecalProjector>();
+        outlineProjector.pivot = sourceProjector.pivot;
+        outlineProjector.size = ScaleEyeProjectorSize(sourceProjector.size, eyeOutlineScaleMultiplier);
+    }
+
+    private void ResolveEyeOutlinePropertyIds()
+    {
+        if (_eyeOutlineMaterialInstance == null) return;
+
+        _eyeOutlineBaseMapId = 0;
+        foreach (var prop in EyeMapPropCandidates)
+        {
+            if (!string.IsNullOrEmpty(prop) && _eyeOutlineMaterialInstance.HasProperty(prop))
+            {
+                _eyeOutlineBaseMapId = Shader.PropertyToID(prop);
+                break;
+            }
+        }
+
+        _eyeOutlineBaseColorId = 0;
+        foreach (var prop in EyeColorPropCandidates)
+        {
+            if (!string.IsNullOrEmpty(prop) && _eyeOutlineMaterialInstance.HasProperty(prop))
+            {
+                _eyeOutlineBaseColorId = Shader.PropertyToID(prop);
+                break;
+            }
+        }
+    }
+
+    private void ApplyEyeOutlineMaterialToProjectors()
+    {
+        if (_eyeOutlineMaterialInstance == null) return;
+
+        if (_leftEyeOutlineProjector != null)
+            _leftEyeOutlineProjector.material = _eyeOutlineMaterialInstance;
+
+        if (_rightEyeOutlineProjector != null)
+            _rightEyeOutlineProjector.material = _eyeOutlineMaterialInstance;
+    }
+
+    private void ApplyEyeOutlineColorInternal()
+    {
+        if (_eyeOutlineMaterialInstance == null) return;
+        if (_eyeOutlineBaseColorId == 0)
+            ResolveEyeOutlinePropertyIds();
+
+        if (_eyeOutlineBaseColorId != 0)
+            _eyeOutlineMaterialInstance.SetColor(_eyeOutlineBaseColorId, eyeOutlineColour);
+    }
+
+    private void ApplyEyeTextureToMaterials(Texture texture)
+    {
+        if (texture == null)
+            return;
+
+        if (_eyeBaseMapId != 0 && _eyeMaterialInstance != null)
+            _eyeMaterialInstance.SetTexture(_eyeBaseMapId, texture);
+
+        if (_eyeOutlineBaseMapId != 0 && _eyeOutlineMaterialInstance != null)
+            _eyeOutlineMaterialInstance.SetTexture(_eyeOutlineBaseMapId, texture);
+    }
+
+    private void ApplyEyeSizeInternal()
+    {
+        float sizeStep = Mathf.Clamp(Mathf.Round(eyeSizeScale), 1f, 10f);
+        float xyScale = ResolveEyeSizeStepToScale(sizeStep);
+        float outlineScale = Mathf.Min(xyScale * eyeOutlineScaleMultiplier, Mathf.Min(0.985f, xyScale + 0.01f));
+
+        if (leftEyeProjector != null)
+            leftEyeProjector.size = ScaleEyeProjectorSize(_leftEyeBaseSize, xyScale);
+
+        if (rightEyeProjector != null)
+            rightEyeProjector.size = ScaleEyeProjectorSize(_rightEyeBaseSize, xyScale);
+
+        if (_leftEyeOutlineProjector != null)
+            _leftEyeOutlineProjector.size = ScaleEyeProjectorSize(_leftEyeBaseSize, outlineScale);
+
+        if (_rightEyeOutlineProjector != null)
+            _rightEyeOutlineProjector.size = ScaleEyeProjectorSize(_rightEyeBaseSize, outlineScale);
+    }
+
+    private static Vector3 ScaleEyeProjectorSize(Vector3 baseSize, float xyScale)
+    {
+        return new Vector3(baseSize.x * xyScale, baseSize.y * xyScale, baseSize.z);
+    }
+
+    private static float ResolveEyeSizeStepToScale(float sizeStep)
+    {
+        switch (Mathf.Clamp(Mathf.RoundToInt(sizeStep), 1, 5))
+        {
+            case 1: return 0.78f;
+            case 2: return 0.84f;
+            case 3: return 0.89f;
+            case 4: return 0.94f;
+            default: return 0.975f;
+        }
+    }
+
     [ContextMenu("Randomise Eye Style")]
     public void SetRandomEyeStyle()
     {
@@ -169,12 +316,14 @@ public class CharacterCustomizer : MonoBehaviour
         if (_eyeBaseColorId == 0 || _eyeBaseMapId == 0)
             ResolveEyePropertyIds();
 
+        EnsureEyeOutlineResources();
+
         selectedEyeOption = index;
 
         // Texture
         if (option != null && _eyeBaseMapId != 0)
         {
-            _eyeMaterialInstance.SetTexture(_eyeBaseMapId, option.texture);
+            ApplyEyeTextureToMaterials(option.texture);
         }
 
         // Color (uses current field)
@@ -184,6 +333,9 @@ public class CharacterCustomizer : MonoBehaviour
         }
 
         ApplyEyeMaterialToProjectors();
+        ApplyEyeOutlineMaterialToProjectors();
+        ApplyEyeOutlineColorInternal();
+        ApplyEyeSizeInternal();
     }
 
     public void SetEyeColor(Color color)
@@ -201,6 +353,21 @@ public class CharacterCustomizer : MonoBehaviour
 
         // Projectors already share the same instance, but keeping this is harmless.
         ApplyEyeMaterialToProjectors();
+    }
+
+    public void SetEyeOutlineColor(Color color)
+    {
+        EnsureEyeMaterialInstance();
+        EnsureEyeOutlineResources();
+
+        eyeOutlineColour = color;
+        ApplyEyeOutlineColorInternal();
+    }
+
+    public void SetEyeSize(float scale)
+    {
+        eyeSizeScale = Mathf.Clamp(Mathf.Round(scale), 1f, 10f);
+        ApplyEyeSizeInternal();
     }
 
     #endregion
@@ -343,6 +510,17 @@ public class CharacterCustomizer : MonoBehaviour
         _currentJacketAttachment.SetColor(color);
     }
 
+    public void SetHatChannelColor(string channelId, Color color)
+    {
+        if (_currentHatAttachment == null) return;
+        _currentHatAttachment.SetChannelColor(channelId, color);
+    }
+    public void SetJacketChannelColor(string channelId, Color color)
+    {
+        if (_currentJacketAttachment == null) return;
+        _currentJacketAttachment.SetChannelColor(channelId, color);
+    }
+
     public void SetJacketMaterial(Material material)
     {
         if (_currentJacketAttachment == null || material == null) return;
@@ -417,10 +595,11 @@ public class CharacterCustomizer : MonoBehaviour
         if (_eyeMaterialInstance == null) return;
 
         if (_eyeBaseMapId == 0) ResolveEyePropertyIds();
-        if (_eyeBaseMapId != 0)
-            _eyeMaterialInstance.SetTexture(_eyeBaseMapId, sprite.texture);
+        EnsureEyeOutlineResources();
+        ApplyEyeTextureToMaterials(sprite.texture);
 
         ApplyEyeMaterialToProjectors();
+        ApplyEyeOutlineMaterialToProjectors();
     }
 
     public void SetSkinPatternTexture(Texture tex)
@@ -484,6 +663,28 @@ public class CharacterCustomizer : MonoBehaviour
 
         rootT.localRotation = rootLocalRot;
         rootT.localPosition = rootLocalPos;
+    }
+
+    public GameObject GetHatPrefabAtIndex(int index)
+    {
+        if (hatPrefabs == null || hatPrefabs.Length == 0)
+            return null;
+
+        if (index < 0 || index >= hatPrefabs.Length)
+            return null;
+
+        return hatPrefabs[index];
+    }
+
+    public GameObject GetJacketPrefabAtIndex(int index)
+    {
+        if (jacketPrefabs == null || jacketPrefabs.Length == 0)
+            return null;
+
+        if (index < 0 || index >= jacketPrefabs.Length)
+            return null;
+
+        return jacketPrefabs[index];
     }
 
 }

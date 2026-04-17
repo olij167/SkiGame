@@ -549,9 +549,16 @@ MonoBehaviour:
   renderers:
   - {fileID: 2560702311840505526}
   - {fileID: 1086702449545188021}
-  - {fileID: 8161502526450276296}
   colorPropertyName: _BaseColor
   texturePropertyName: _BaseMap
+  extraChannels:
+  - id: cape
+    displayName: Cape
+    targetRoot: {fileID: 4479388528160582926}
+    renderers:
+    - {fileID: 8161502526450276296}
+    colorPropertyName: _BaseColor
+    defaultColor: {r: 0.64705884, g: 0.16470589, b: 0.16470589, a: 1}
 --- !u!1 &6533310870054972818
 GameObject:
   m_ObjectHideFlags: 0

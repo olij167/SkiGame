@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -213,12 +214,16 @@ public class SkiContact : MonoBehaviour
     // Any-collision cache (used for rails/props that are not in groundLayers, including triggers).
     private bool _hasAnyCollisionContact;
     private Collider _anyCollisionOtherCollider;
+    private readonly HashSet<Collider> _anyCollisionOtherColliders = new HashSet<Collider>();
 
     /// <summary>True if we have *any* collision/trigger contact cached this frame (not filtered by groundLayers).</summary>
     public bool HasAnyCollisionContact => _hasAnyCollisionContact;
 
     /// <summary>The collider we are touching for the last cached any-collision contact (can be null).</summary>
     public Collider AnyCollisionOtherCollider => _anyCollisionOtherCollider;
+
+    /// <summary>Enumerates all currently cached collision/trigger contacts for non-ground uses like grind detection.</summary>
+    public IEnumerable<Collider> AnyCollisionOtherColliders => _anyCollisionOtherColliders;
 
     public Vector3 CollisionContactPoint => _collisionContactPoint;
     public Vector3 CollisionContactNormal => _collisionContactNormal;
@@ -497,8 +502,7 @@ public class SkiContact : MonoBehaviour
         // can detect rails/props that are not part of groundLayers.
         {
             ContactPoint cp0 = collision.GetContact(0);
-            _hasAnyCollisionContact = true;
-            _anyCollisionOtherCollider = cp0.otherCollider;
+            AddAnyCollisionOtherCollider(cp0.otherCollider);
         }
 
         // Only treat as "ground collision contact" if the other object is on groundLayers.
@@ -551,19 +555,14 @@ public class SkiContact : MonoBehaviour
     {
         // Cache trigger contacts as "any collision" so grindables using triggers can be detected.
         if (other == null) return;
-        _hasAnyCollisionContact = true;
-        _anyCollisionOtherCollider = other;
+        AddAnyCollisionOtherCollider(other);
     }
 
     private void OnTriggerExit(Collider other)
     {
         // Clear trigger cache if we are exiting the cached collider.
         if (other == null) return;
-        if (other == _anyCollisionOtherCollider)
-        {
-            _hasAnyCollisionContact = false;
-            _anyCollisionOtherCollider = null;
-        }
+        RemoveAnyCollisionOtherCollider(other);
     }
 
     private void OnCollisionExit(Collision collision)
@@ -572,11 +571,7 @@ public class SkiContact : MonoBehaviour
 
         // Always clear the any-collision cache if we are exiting the cached collider.
         Collider other = collision.collider;
-        if (other != null && other == _anyCollisionOtherCollider)
-        {
-            _hasAnyCollisionContact = false;
-            _anyCollisionOtherCollider = null;
-        }
+        RemoveAnyCollisionOtherCollider(other);
 
         // Clear wall-contact cache if we are exiting the cached wall collider.
         if (other != null && other == _wallOtherCollider)
@@ -658,11 +653,48 @@ public class SkiContact : MonoBehaviour
 
         _hasAnyCollisionContact = false;
         _anyCollisionOtherCollider = null;
+        _anyCollisionOtherColliders.Clear();
     }
     public void NotifySkiModelChanged()
     {
         _geometryInitialized = false;
         ResetContactState();
+    }
+
+    private void AddAnyCollisionOtherCollider(Collider other)
+    {
+        if (other == null)
+            return;
+
+        _anyCollisionOtherColliders.Add(other);
+        _hasAnyCollisionContact = _anyCollisionOtherColliders.Count > 0;
+
+        if (_anyCollisionOtherCollider == null)
+            _anyCollisionOtherCollider = other;
+    }
+
+    private void RemoveAnyCollisionOtherCollider(Collider other)
+    {
+        if (other == null)
+            return;
+
+        _anyCollisionOtherColliders.Remove(other);
+        _hasAnyCollisionContact = _anyCollisionOtherColliders.Count > 0;
+
+        if (!_hasAnyCollisionContact)
+        {
+            _anyCollisionOtherCollider = null;
+            return;
+        }
+
+        if (_anyCollisionOtherCollider == other || _anyCollisionOtherCollider == null || !_anyCollisionOtherColliders.Contains(_anyCollisionOtherCollider))
+        {
+            foreach (Collider candidate in _anyCollisionOtherColliders)
+            {
+                _anyCollisionOtherCollider = candidate;
+                return;
+            }
+        }
     }
 
 #if UNITY_EDITOR

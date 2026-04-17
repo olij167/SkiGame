@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/Activities/ActivityCompletionFanfare.uss?fileID=7433441132597879392&amp;guid=7cdefffcdb0520c4da83836c6cad3b15&amp;type=3#ActivityCompletionFanfare" />
+    <ui:VisualElement name="ActivityFanfareRoot" class="activity-fanfare-root">
+        <ui:VisualElement name="ActivityFanfareContainer" class="activity-fanfare-container" style="display: none;">
+            <ui:Label name="Lbl_ActivityFanfareHeadline" text="VICTORY" class="activity-fanfare-headline" />
+            <ui:Label name="Lbl_ActivityFanfareDetail" text="1ST / 8 - +$250 - New personal best" class="activity-fanfare-detail" style="-unity-text-align: upper-center; -unity-font-style: bold;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 301e6494375742f4b98ef78f27b43667, type: 3}
+  m_Name: Quest_Tutorial_04_SpeedControl
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.QuestDefinitionSO
+  id: tutorial.speed_control
+  title: Speed Control
+  description: 'Speed control is a toolkit: W, skating, and tuck build speed; S,
+    wedge, and quick stop bleed it away.'
+  autoAccept: 0
+  tutorialQuest: 1
+  stages:
+  - id: tutorial.speed_control.stage1
+    title: Use the Fastest Option for the Moment
+    description: On steeper terrain, tuck is the cleanest way to hold speed without
+      extra ski movement.
+    objectives:
+    - id: tutorial.speed_control.tuck
+      title: Tuck to carry speed
+      description: Press Left Shift while moving to reduce drag and hold your speed
+        longer.
+      optional: 0
+      hiddenUntilAvailable: 0
+      autoPinWhenAvailable: 1
+      template: 0
+      requiredCount: 1
+      targetValue: 1
+      comparison: 0
+      inputAction: 10
+      movementSkill: 0
+      distanceStat: 0
+      thresholdStat: 0
+      stateTarget: 0
+      activityTarget: 0
+      trickTarget: 0
+      interactionTarget: 0
+      uiTarget: 0
+      namedTrick: 
+      compoundMode: 40
+      compoundObjectives: []
+      advancedCondition:
+        kind: 0
+        key: 
+        comparison: 0
+        targetCount: 1
+        targetValue: 1
+        stateValueKind: 0
+        boolValue: 1
+        stringValue: 
+        filters: []
+        children: []

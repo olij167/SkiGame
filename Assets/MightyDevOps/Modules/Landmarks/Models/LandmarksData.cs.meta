@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: f5cc9371831913a40b111da91d471612
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 177244
+  packageName: MIGHTY PORTAL
+  packageVersion: 2.2.
+  assetPath: Assets/MightyDevOps/Modules/Landmarks/Models/LandmarksData.cs
+  uploadId: 767126

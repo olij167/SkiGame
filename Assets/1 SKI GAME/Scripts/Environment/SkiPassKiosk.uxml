@@ -1,22 +1,56 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/Environment/SkiPassKiosk.uss?fileID=7433441132597879392&amp;guid=7f4c5864760c2534db9548a124b65558&amp;type=3#SkiPassKiosk" />
-    <ui:VisualElement name="SkiPassKioskRoot" class="ski-pass-kiosk-root" style="justify-content: center;">
-        <ui:VisualElement name="SkiPassKioskPanel" class="ski-pass-kiosk-panel" style="justify-content: flex-start; margin-bottom: 20px;">
+    <ui:VisualElement name="SkiPassKioskRoot" class="ski-pass-kiosk-root">
+        <ui:VisualElement name="SkiPassKioskPanel" class="ski-pass-kiosk-panel">
             <ui:VisualElement class="ski-pass-kiosk-header">
-                <ui:Label text="Ski Pass Kiosk" class="ski-pass-kiosk-title" />
-                <ui:Button name="Btn_CloseSkiPassKiosk" text="Close" class="mini-button" />
+                <ui:VisualElement class="ski-pass-title-block">
+                    <ui:Label text="Ski Pass Kiosk" class="ski-pass-kiosk-title" />
+                    <ui:Label text="Preview regional pass access across the mountain." class="ski-pass-kiosk-subtitle" />
+                </ui:VisualElement>
+                <ui:Button name="Btn_CloseSkiPassKiosk" text="Close" class="ski-pass-close-button" />
             </ui:VisualElement>
-            <ui:Label name="Lbl_CurrentPass" text="Basic Pass (L0)" class="ski-pass-current" />
-            <ui:Label name="Lbl_PassExpiry" text="No expiry" class="ski-pass-expiry" />
-            <ui:Label text="Pass Tiers" class="ski-pass-section-title" />
-            <ui:VisualElement name="PassLevelList" class="ski-pass-option-list" />
-            <ui:Label text="Duration" class="ski-pass-section-title" />
-            <ui:VisualElement name="DurationList" class="ski-pass-option-list horizontal" />
-            <ui:Label name="Lbl_PassQuote" class="ski-pass-quote" />
-            <ui:Button name="Btn_PurchasePass" text="Purchase" class="tasks-claimall-btn" style="-unity-font-style: bold;" />
-            <ui:Label name="Lbl_PassResult" class="ski-pass-result" />
-            <ui:Label text="Lift Access" class="ski-pass-section-title" />
-            <ui:ScrollView name="UnlockedLiftList" class="ski-pass-lift-list" />
+            <ui:VisualElement class="ski-pass-kiosk-body">
+                <ui:VisualElement style="flex-grow: 1;">
+                    <ui:VisualElement name="LiftMapPanel" class="ski-pass-map-panel" style="margin-left: 16px;">
+                        <ui:VisualElement name="LiftMapHost" class="ski-pass-map-host" />
+                        <ui:VisualElement name="SelectedLiftOverlay" class="ski-pass-selected-lift-overlay">
+                            <ui:Label text="Selected Lift" class="ski-pass-section-title compact" />
+                            <ui:Label name="Lbl_SelectedLiftName" text="Select a ski lift" class="ski-pass-selected-lift-name" />
+                            <ui:Label name="Lbl_SelectedLiftStatus" text="Choose a lift from the map or pass cards." class="ski-pass-selected-lift-status" />
+                            <ui:Label name="Lbl_SelectedLiftPassRequirement" class="ski-pass-selected-lift-meta" />
+                            <ui:Label text="Passes With Access" class="ski-pass-section-title compact" />
+                            <ui:VisualElement name="SelectedLiftPassList" class="ski-pass-supported-list" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement style="flex-grow: 1; justify-content: space-between; left: 0; position: absolute; top: 0; bottom: 0;">
+                    <ui:VisualElement name="CurrentPassPanel" style="padding-top: 12px; padding-right: 12px; padding-bottom: 12px; padding-left: 12px; position: relative; bottom: auto; left: 0; flex-grow: 0; border-left-color: rgba(255, 255, 255, 0.05); border-right-color: rgba(255, 255, 255, 0.05); border-top-color: rgba(255, 255, 255, 0.05); border-bottom-color: rgba(255, 255, 255, 0.05); border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 18px; border-top-right-radius: 18px; border-bottom-right-radius: 18px; border-bottom-left-radius: 18px; background-color: rgba(16, 24, 40, 0.9);">
+                        <ui:Label text="Active Passes" class="ski-pass-current" />
+                        <ui:VisualElement name="CurrentPassList" class="ski-pass-current-list" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="SelectionPanel" style="padding-top: 12px; padding-right: 12px; padding-bottom: 12px; padding-left: 12px; position: relative; bottom: auto; left: auto; flex-grow: 0; justify-content: flex-end; background-color: rgba(16, 24, 40, 0.9); border-left-color: rgba(255, 255, 255, 0.05); border-right-color: rgba(255, 255, 255, 0.05); border-top-color: rgba(255, 255, 255, 0.05); border-bottom-color: rgba(255, 255, 255, 0.05); border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 18px; border-top-right-radius: 18px; border-bottom-right-radius: 18px; border-bottom-left-radius: 18px;">
+                        <ui:Label name="Lbl_CurrentSelection" text="Previewing: Basic Pass" class="ski-pass-current" />
+                        <ui:Label text="Duration" class="ski-pass-section-title" />
+                        <ui:VisualElement name="DurationList" class="ski-pass-option-list horizontal" />
+                        <ui:Label name="Lbl_PassQuote" class="ski-pass-quote" />
+                        <ui:Button name="Btn_PurchasePass" text="Purchase" class="ski-pass-primary-button" />
+                        <ui:Label name="Lbl_PassResult" class="ski-pass-result" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement style="flex-grow: 1; width: 380px; min-width: 380px; max-width: 380px; align-content: stretch; align-self: stretch; justify-content: flex-start;">
+                    <ui:ScrollView name="KioskSidebarScroll" class="ski-pass-sidebar" style="max-height: none; height: auto; flex-grow: 1;">
+                        <ui:Label text="Available Passes" class="ski-pass-section-title" style="font-size: 16px;" />
+                        <ui:VisualElement name="PassLevelList" class="ski-pass-option-list" />
+                    </ui:ScrollView>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="ClaimPassOverlay" class="ski-pass-claim-overlay">
+            <ui:VisualElement class="ski-pass-claim-card">
+                <ui:Label name="Lbl_ClaimPassTitle" text="Free Pass Available" class="ski-pass-claim-title" />
+                <ui:Label name="Lbl_ClaimPassBody" text="Claim the free permanent starter pass to unlock ski lift access." class="ski-pass-claim-body" />
+                <ui:Button name="Btn_ClaimPassOverlay" text="Claim Free Pass" class="ski-pass-primary-button" />
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

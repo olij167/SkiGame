@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7779ee983db4b024d8a05441259e77bf, type: 3}
+  m_Name: MightyPortalSettingsSO
+  m_EditorClassIdentifier: 
+  layerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  invertMovement: 1
+  invertRotation: 1
+  invertScrolWheel: 1
+  toggleMode: 0
+  keyStartA: 1
+  keyStartB: 2
+  keyPrecision: 4
+  hoverBoxSize: 150
+  adjustBoxSize: 350
+  hoverAlpha: 0.75
+  adjustAlpha: 1
+  animateBoxes: 1
+  showOOB: 1
+  undoTimerMax: 30
+  UseShader: 1
+  shaderBrightness: 0
+  isActive: 1
+  isDeleted: 0

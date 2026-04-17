@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/Player/TrickOverlay.uss?fileID=7433441132597879392&amp;guid=74850805cc9664c4598ea5131f27127b&amp;type=3#TrickOverlay" />
+    <ui:VisualElement name="TrickOverlayRoot" class="trick-overlay-root">
+        <ui:VisualElement name="TrickList" class="trick-list" />
+    </ui:VisualElement>
+</ui:UXML>

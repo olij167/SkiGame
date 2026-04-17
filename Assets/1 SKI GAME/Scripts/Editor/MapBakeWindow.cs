@@ -18,6 +18,7 @@ public sealed class MapBakeWindow : EditorWindow
     [SerializeField] private bool includeSkiRuns = true;
     [SerializeField] private bool includeLiftLines = true;
     [SerializeField] private bool includePOIsFromRegistry = true;
+    [SerializeField] private bool includeRaceCourses = true;
 
     [Header("Projection Bounds")]
     [SerializeField] private float boundsPaddingMeters = 25f;
@@ -73,8 +74,8 @@ public sealed class MapBakeWindow : EditorWindow
         EditorGUILayout.LabelField("Map Bake Tool", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox(
             "Bakes a MapData asset from the current scene:\n" +
-            "- Projection bounds from runs, lifts, POIs\n" +
-            "- Run + lift polylines\n" +
+            "- Projection bounds from runs, lifts, race courses, and POIs\n" +
+            "- Run, lift, and race polylines\n" +
             "- POI markers from PointOfInterestRegistry\n" +
             "- Optional orthographic background snapshot\n\n" +
             "NOTE: Misalignment almost always comes from the background being baked with different bounds than MapProjection.",
@@ -118,6 +119,7 @@ public sealed class MapBakeWindow : EditorWindow
         EditorGUILayout.LabelField("Bake Scope", EditorStyles.boldLabel);
         includeSkiRuns = EditorGUILayout.ToggleLeft("Include Ski Runs (SkiRunLine)", includeSkiRuns);
         includeLiftLines = EditorGUILayout.ToggleLeft("Include Lift Lines (LiftLine)", includeLiftLines);
+        includeRaceCourses = EditorGUILayout.ToggleLeft("Include Race Courses (RaceCourseLine)", includeRaceCourses);
         includePOIsFromRegistry = EditorGUILayout.ToggleLeft("Include POIs from PointOfInterestRegistry", includePOIsFromRegistry);
     }
 
@@ -280,6 +282,7 @@ public sealed class MapBakeWindow : EditorWindow
         // 1) Discover source objects
         var runs = includeSkiRuns ? FindAll<SkiRunLine>() : Array.Empty<SkiRunLine>();
         var lifts = includeLiftLines ? FindAll<LiftLine>() : Array.Empty<LiftLine>();
+        var races = includeRaceCourses ? FindAll<RaceCourseLine>() : Array.Empty<RaceCourseLine>();
 
         PointOfInterestRegistry poiRegistry = null;
         IReadOnlyList<POIInfo> poiList = Array.Empty<POIInfo>();
@@ -294,7 +297,7 @@ public sealed class MapBakeWindow : EditorWindow
         }
 
         // 2) Compute bounds (XZ) from all relevant sources
-        if (!TryComputeBoundsXZ(runs, lifts, poiList, out Vector2 minXZ, out Vector2 maxXZ))
+        if (!TryComputeBoundsXZ(runs, lifts, races, poiList, out Vector2 minXZ, out Vector2 maxXZ))
         {
             Debug.LogError("[MapBake] Could not compute bounds. Ensure you have at least one run/lift/POI in the scene.");
             return;
@@ -321,7 +324,7 @@ public sealed class MapBakeWindow : EditorWindow
         };
 
         // 3) Build polylines + baked run corridors
-        var polylines = new List<MapPolyline>(runs.Length + lifts.Length);
+        var polylines = new List<MapPolyline>(runs.Length + lifts.Length + races.Length);
         var runCorridors = new List<MapRunCorridor>(runs.Length);
 
         if (includeSkiRuns)
@@ -332,6 +335,9 @@ public sealed class MapBakeWindow : EditorWindow
 
         if (includeLiftLines)
             AppendLiftPolylines(lifts, poiList, polylines);
+
+        if (includeRaceCourses)
+            AppendRacePolylines(races, poiList, polylines);
 
         // 4) Build markers from POI registry
         var markers = new List<MapMarker>(poiList.Count);
@@ -412,8 +418,10 @@ public sealed class MapBakeWindow : EditorWindow
                 $"The baked marker data may not persist to disk until the terrain save issue is resolved.\n{ex}");
         }
 
-        Debug.Log($"[MapBake] Baked MapData '{targetMapData.name}'. Lines: {polylines.Count}, Markers: {markers.Count}, Background: {(bgTex ? bgTex.name : "none")}" +
-                  $"{(bakeBackgroundTexture ? $" | Inset: {(lockBackgroundToProjectionBounds ? "(reset 0..1)" : (wroteInset ? $"{insetMin}..{insetMax}" : "(none)"))}" : "")}");
+        Debug.Log($"[MapBake] Baked MapData '{targetMapData.name}'. " +
+          $"Runs: {runs.Length}, Lifts: {lifts.Length}, Races: {races.Length}, " +
+          $"Polylines: {polylines.Count}, Markers: {markers.Count}, Background: {(bgTex ? bgTex.name : "none")}" +
+          $"{(bakeBackgroundTexture ? $" | Inset: {(lockBackgroundToProjectionBounds ? "(reset 0..1)" : (wroteInset ? $"{insetMin}..{insetMax}" : "(none)"))}" : "")}");
     }
 
     // --------------------------
@@ -427,6 +435,7 @@ public sealed class MapBakeWindow : EditorWindow
 #else
         return UnityEngine.Object.FindObjectsOfType<T>(true);
 #endif
+
     }
 
     private static PointOfInterestRegistry FindPOIRegistry()
@@ -446,37 +455,36 @@ public sealed class MapBakeWindow : EditorWindow
     // --------------------------
 
     private static bool TryComputeBoundsXZ(
-        SkiRunLine[] runs,
-        LiftLine[] lifts,
-        IReadOnlyList<POIInfo> poiList,
-        out Vector2 minXZ,
-        out Vector2 maxXZ)
+    SkiRunLine[] runs,
+    LiftLine[] lifts,
+    RaceCourseLine[] races,
+    IReadOnlyList<POIInfo> poiList,
+    out Vector2 minXZ,
+    out Vector2 maxXZ)
     {
         minXZ = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
         maxXZ = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
 
         bool any = false;
 
-        // Runs
         if (runs != null)
         {
             for (int i = 0; i < runs.Length; i++)
             {
                 var r = runs[i];
                 if (r == null) continue;
+
                 var pts = r.PointsWorld;
                 if (pts == null) continue;
 
                 for (int p = 0; p < pts.Count; p++)
                 {
-                    Vector3 w = pts[p];
                     any = true;
-                    ExpandBounds(w, ref minXZ, ref maxXZ);
+                    ExpandBounds(pts[p], ref minXZ, ref maxXZ);
                 }
             }
         }
 
-        // Lifts (stations)
         if (lifts != null)
         {
             for (int i = 0; i < lifts.Length; i++)
@@ -498,24 +506,41 @@ public sealed class MapBakeWindow : EditorWindow
             }
         }
 
-        // POIs
+        if (races != null)
+        {
+            for (int i = 0; i < races.Length; i++)
+            {
+                var race = races[i];
+                if (race == null) continue;
+
+                var pts = race.PointsWorld;
+                if (pts == null) continue;
+
+                for (int p = 0; p < pts.Count; p++)
+                {
+                    any = true;
+                    ExpandBounds(pts[p], ref minXZ, ref maxXZ);
+                }
+            }
+        }
+
         if (poiList != null)
         {
             for (int i = 0; i < poiList.Count; i++)
             {
-                var p = poiList[i];
                 any = true;
-                ExpandBounds(p.position, ref minXZ, ref maxXZ);
+                ExpandBounds(poiList[i].position, ref minXZ, ref maxXZ);
             }
         }
 
-        if (!any) return false;
+        if (!any)
+            return false;
 
         if (!(maxXZ.x > minXZ.x && maxXZ.y > minXZ.y))
         {
             Vector2 c = 0.5f * (minXZ + maxXZ);
-            minXZ = c - Vector2.one * 1f;
-            maxXZ = c + Vector2.one * 1f;
+            minXZ = c - Vector2.one;
+            maxXZ = c + Vector2.one;
         }
 
         return true;
@@ -661,6 +686,71 @@ public sealed class MapBakeWindow : EditorWindow
                 pointsWorld = pts3,
                 pointsWorldXZ = ptsXZ
             };
+
+            dst.Add(line);
+        }
+    }
+
+    private static void AppendRacePolylines(RaceCourseLine[] races, IReadOnlyList<POIInfo> poiList, List<MapPolyline> dst)
+    {
+        if (races == null || dst == null)
+            return;
+
+        for (int i = 0; i < races.Length; i++)
+        {
+            var race = races[i];
+            if (race == null)
+                continue;
+
+            var pts = race.PointsWorld;
+            if (pts == null || pts.Count < 2)
+                continue;
+
+            string raceId = !string.IsNullOrWhiteSpace(race.RaceId)
+                ? race.RaceId
+                : race.gameObject.name;
+
+            string displayName = string.IsNullOrWhiteSpace(race.RaceName)
+                ? race.gameObject.name
+                : race.RaceName;
+
+            Color fallback = new Color(1.00f, 0.55f, 0.20f, 1f);
+            Color color = race.GetResolvedMapLineColor(fallback);
+
+            if (poiList != null)
+            {
+                for (int p = 0; p < poiList.Count; p++)
+                {
+                    var poi = poiList[p];
+                    if (poi.source != race)
+                        continue;
+
+                    // Prefer the explicit activity POI display name if present.
+                    if (!string.IsNullOrWhiteSpace(poi.displayName))
+                        displayName = poi.displayName;
+
+                    break;
+                }
+            }
+
+            var line = new MapPolyline
+            {
+                id = raceId,
+                displayName = displayName,
+                lineType = MapLineType.RaceCourse,
+                color = color,
+                widthMeters = Mathf.Max(6f, race.CourseWidthMeters * 0.35f),
+                difficultyRank = 0,
+                difficultyLabel = "Race",
+                pointsWorld = new List<Vector3>(pts.Count),
+                pointsWorldXZ = new List<Vector2>(pts.Count)
+            };
+
+            for (int p = 0; p < pts.Count; p++)
+            {
+                line.pointsWorld.Add(pts[p]);
+                line.pointsWorldXZ.Add(new Vector2(pts[p].x, pts[p].z));
+            }
 
             dst.Add(line);
         }

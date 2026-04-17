@@ -21,8 +21,17 @@ MonoBehaviour:
   skinPatternTexture: {fileID: 2800000, guid: eba09c7fb206e1b47b85a4ffce19e895, type: 3}
   eyeSprite: {fileID: 0}
   hatPrefab: {fileID: 0}
-  cloakPrefab: {fileID: 0}
-  customizerIndex: 15
+  jacketPrefab: {fileID: 0}
+  customizerIndex: 14
   gearProfile: {fileID: 0}
+  defaultPatternOption: {fileID: 0}
+  defaultPatternId: 
+  unlockPatternOptionsOnPurchase: []
+  unlockPatternIdsOnPurchase: []
+  defaultPatternTiling: {x: 1, y: 1}
+  defaultPatternOffset: {x: 0, y: 0}
+  defaultPatternRotation: 0
+  hasTint: 1
+  defaultTint: {r: 0.12, g: 0.12, b: 0.12, a: 1}
   alwaysInStoreUntilOwned: 0
   excludeFromDailyRotation: 0

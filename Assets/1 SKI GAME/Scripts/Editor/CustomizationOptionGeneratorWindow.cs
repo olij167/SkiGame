@@ -18,6 +18,9 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
     private bool migDryRun = true;
     private bool migSyncEyeIconToIcon = true;
 
+    // Catalog maintenance
+    private bool catalogScanIncludePackages = false;
+
     [MenuItem("SkiGame/Customization/Generate Options From CharacterCustomizer")]
     public static void Open()
     {
@@ -69,6 +72,22 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
         {
             if (GUILayout.Button("Migrate Existing Catalog Options (populate payload refs)"))
                 MigrateCatalogPayloads();
+        }
+
+        EditorGUILayout.Space(14);
+        EditorGUILayout.LabelField("Catalog Maintenance", EditorStyles.boldLabel);
+
+        catalogScanIncludePackages = EditorGUILayout.ToggleLeft(
+            "Include Packages Folder",
+            catalogScanIncludePackages);
+
+        using (new EditorGUI.DisabledScope(targetCatalog == null))
+        {
+            if (GUILayout.Button("Find Project Options And Add Missing To Target Catalog"))
+                FindAndAddMissingOptionsToCatalog();
+
+            if (GUILayout.Button("Validate / Repair customizerIndex Values For Target Catalog"))
+                ValidateAndRepairCustomizerIndices();
         }
 
         EditorGUILayout.Space(12);
@@ -373,6 +392,194 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
         if (arrayProp == null || !arrayProp.isArray) return null;
         if (index < 0 || index >= arrayProp.arraySize) return null;
         return arrayProp.GetArrayElementAtIndex(index).objectReferenceValue as T;
+    }
+
+    // ---------------------------
+    // CATALOG MAINTENANCE
+    // ---------------------------
+
+    private void FindAndAddMissingOptionsToCatalog()
+    {
+        if (targetCatalog == null)
+        {
+            Debug.LogWarning("[CustomizationOptionGenerator] No target catalog assigned.");
+            return;
+        }
+
+        string[] searchFolders = catalogScanIncludePackages
+            ? null
+            : new[] { "Assets" };
+
+        string[] guids = AssetDatabase.FindAssets("t:CustomizationOptionSO", searchFolders);
+
+        if (targetCatalog.options == null)
+            targetCatalog.options = new List<CustomizationOptionSO>();
+
+        Undo.RecordObject(targetCatalog, "Add Missing Customization Options To Catalog");
+
+        int found = 0;
+        int added = 0;
+        int skippedNull = 0;
+
+        foreach (string guid in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            var opt = AssetDatabase.LoadAssetAtPath<CustomizationOptionSO>(path);
+            if (opt == null)
+            {
+                skippedNull++;
+                continue;
+            }
+
+            found++;
+
+            if (!targetCatalog.options.Contains(opt))
+            {
+                targetCatalog.options.Add(opt);
+                added++;
+            }
+        }
+
+        // Keep ordering deterministic so index validation is stable.
+        targetCatalog.options.Sort(CompareOptionsForCatalogOrder);
+
+        EditorUtility.SetDirty(targetCatalog);
+
+        int repaired = RebuildCustomizerIndicesForCatalog(targetCatalog, logResults: true);
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        Debug.Log(
+            $"[CustomizationOptionGenerator] Catalog scan complete. " +
+            $"Found={found}, Added={added}, NullSkipped={skippedNull}, IndexesRepaired={repaired}");
+    }
+
+    private void ValidateAndRepairCustomizerIndices()
+    {
+        if (targetCatalog == null)
+        {
+            Debug.LogWarning("[CustomizationOptionGenerator] No target catalog assigned.");
+            return;
+        }
+
+        if (targetCatalog.options == null)
+        {
+            targetCatalog.options = new List<CustomizationOptionSO>();
+        }
+
+        Undo.RecordObject(targetCatalog, "Validate Customizer Indices");
+
+        // Sort first so the assigned indices are deterministic.
+        targetCatalog.options.Sort(CompareOptionsForCatalogOrder);
+
+        int repaired = RebuildCustomizerIndicesForCatalog(targetCatalog, logResults: true);
+
+        EditorUtility.SetDirty(targetCatalog);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        Debug.Log(
+            repaired > 0
+                ? $"[CustomizationOptionGenerator] customizerIndex validation complete. Repaired {repaired} option(s)."
+                : "[CustomizationOptionGenerator] customizerIndex validation complete. No changes were needed.");
+    }
+
+    private int RebuildCustomizerIndicesForCatalog(CustomizationCatalogSO catalog, bool logResults)
+    {
+        if (catalog == null || catalog.options == null)
+            return 0;
+
+        int repairedCount = 0;
+
+        int skinIndex = 0;
+        int eyeIndex = 0;
+        int hatIndex = 0;
+        int jacketIndex = 0;
+
+        for (int i = 0; i < catalog.options.Count; i++)
+        {
+            var opt = catalog.options[i];
+            if (opt == null)
+                continue;
+
+            int desiredIndex = GetDesiredCustomizerIndex(opt, ref skinIndex, ref eyeIndex, ref hatIndex, ref jacketIndex);
+
+            if (opt.customizerIndex != desiredIndex)
+            {
+                Undo.RecordObject(opt, "Repair Customizer Index");
+                int previous = opt.customizerIndex;
+                opt.customizerIndex = desiredIndex;
+                EditorUtility.SetDirty(opt);
+                repairedCount++;
+
+                if (logResults)
+                {
+                    Debug.Log(
+                        $"[CustomizationOptionGenerator] Repaired {opt.name} ({opt.type}) " +
+                        $"customizerIndex {previous} -> {desiredIndex}");
+                }
+            }
+        }
+
+        return repairedCount;
+    }
+
+    private int GetDesiredCustomizerIndex(
+        CustomizationOptionSO opt,
+        ref int skinIndex,
+        ref int eyeIndex,
+        ref int hatIndex,
+        ref int jacketIndex)
+    {
+        switch (opt.type)
+        {
+            case CustomizationOptionType.SkinPattern:
+                return skinIndex++;
+
+            case CustomizationOptionType.EyeIcon:
+                return eyeIndex++;
+
+            case CustomizationOptionType.Hat:
+                return hatIndex++;
+
+            case CustomizationOptionType.Jacket:
+                return jacketIndex++;
+
+            default:
+                return -1;
+        }
+    }
+
+    private static int CompareOptionsForCatalogOrder(CustomizationOptionSO a, CustomizationOptionSO b)
+    {
+        if (ReferenceEquals(a, b)) return 0;
+        if (a == null) return 1;
+        if (b == null) return -1;
+
+        int typeCompare = a.type.CompareTo(b.type);
+        if (typeCompare != 0) return typeCompare;
+
+        string aKey = GetStableOptionSortKey(a);
+        string bKey = GetStableOptionSortKey(b);
+        return string.Compare(aKey, bKey, System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetStableOptionSortKey(CustomizationOptionSO opt)
+    {
+        if (opt == null) return "~";
+
+        if (!string.IsNullOrWhiteSpace(opt.id))
+            return opt.id;
+
+        string path = AssetDatabase.GetAssetPath(opt);
+        if (!string.IsNullOrWhiteSpace(path))
+            return path;
+
+        if (!string.IsNullOrWhiteSpace(opt.displayName))
+            return opt.displayName;
+
+        return opt.name;
     }
 
     // ---------------------------

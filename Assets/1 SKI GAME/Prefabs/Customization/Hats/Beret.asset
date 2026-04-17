@@ -22,7 +22,7 @@ MonoBehaviour:
   eyeSprite: {fileID: 0}
   hatPrefab: {fileID: 6559161750433092136, guid: be38a543befcc7340a9d4c2a68100841, type: 3}
   jacketPrefab: {fileID: 0}
-  customizerIndex: 0
+  customizerIndex: 1
   gearProfile: {fileID: 0}
   defaultPatternOption: {fileID: 0}
   defaultPatternId: 

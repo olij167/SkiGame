@@ -1,0 +1,217 @@
+.rescue-overlay-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    color: rgb(244, 248, 255);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.rescue-center-callout {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 26%;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.rescue-center-callout-label {
+    unity-text-align: middle-center;
+    font-size: 62px;
+    color: rgb(255, 255, 255);
+    letter-spacing: 2px;
+    -unity-text-outline-color: rgba(8, 14, 26, 1);
+    -unity-text-outline-width: 4px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
+}
+
+.rescue-mission-panel {
+    position: absolute;
+    right: 24px;
+    top: 24px;
+    width: 440px;
+    min-height: 230px;
+    padding-left: 18px;
+    padding-right: 18px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    background-color: rgba(10, 16, 28, 0.95);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.rescue-kicker {
+    font-size: 10px;
+    color: rgb(241, 199, 74);
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.rescue-title {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: rgb(248, 251, 255);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
+}
+
+.rescue-chip-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.rescue-chip {
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(223, 244, 255);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+    font-size: 11px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.30);
+    border-right-color: rgba(91, 196, 255, 0.30);
+    border-top-color: rgba(91, 196, 255, 0.30);
+    border-bottom-color: rgba(91, 196, 255, 0.30);
+}
+
+.rescue-chip-accent {
+    background-color: rgba(230, 189, 61, 0.16);
+    color: rgb(247, 224, 140);
+    border-left-color: rgba(230, 189, 61, 0.24);
+    border-right-color: rgba(230, 189, 61, 0.24);
+    border-top-color: rgba(230, 189, 61, 0.24);
+    border-bottom-color: rgba(230, 189, 61, 0.24);
+}
+
+.rescue-objective {
+    white-space: normal;
+    font-size: 15px;
+    margin-bottom: 4px;
+    color: rgb(244, 248, 255);
+}
+
+.rescue-detail {
+    white-space: normal;
+    font-size: 12px;
+    margin-bottom: 12px;
+    color: rgba(226, 235, 246, 0.78);
+}
+
+.rescue-stat-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.rescue-stat-card {
+    min-width: 120px;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    background-color: rgba(24, 36, 58, 0.92);
+    color: rgba(244, 248, 255, 0.92);
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+    font-size: 12px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.rescue-stat-wide {
+    min-width: 190px;
+    flex-grow: 1;
+}
+
+.rescue-progress-block {
+    margin-top: 2px;
+}
+
+.rescue-progress-track {
+    width: 100%;
+    height: 12px;
+    background-color: rgba(255, 255, 255, 0.10);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    margin-bottom: 6px;
+}
+
+.rescue-progress-fill {
+    width: 0%;
+    height: 100%;
+    background-color: rgb(91, 196, 255);
+    border-top-left-radius: 999px;
+    border-top-right-radius: 999px;
+    border-bottom-left-radius: 999px;
+    border-bottom-right-radius: 999px;
+}
+
+.rescue-progress-text {
+    font-size: 20px;
+    color: rgba(226, 235, 246, 0.82);
+    -unity-text-align: upper-center;
+}
+
+.rescue-toast-panel {
+    position: absolute;
+    left: 24px;
+    bottom: 24px;
+    max-width: 520px;
+    padding-left: 14px;
+    padding-right: 14px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    background-color: rgba(10, 16, 28, 0.95);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.rescue-toast-text {
+    white-space: normal;
+    font-size: 24px;
+    color: rgb(248, 251, 255);
+}

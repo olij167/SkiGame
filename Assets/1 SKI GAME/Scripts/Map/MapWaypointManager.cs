@@ -13,6 +13,9 @@ namespace SkiGame.Navigation
         public Vector3 worldPosition;
         public Color color;
         public NavigationTargetKind kind;
+        public Sprite markerSprite;
+        public float markerSizeMultiplier;
+        public float labelSizeMultiplier;
     }
 
     [DisallowMultipleComponent]
@@ -37,6 +40,11 @@ namespace SkiGame.Navigation
             new Color(0.38f, 0.92f, 0.46f, 1f), // green
             new Color(1.00f, 0.49f, 0.20f, 1f), // orange
         };
+
+        [Header("Marker Visuals")]
+        [SerializeField] private Sprite defaultCustomWaypointSprite;
+        [SerializeField, Min(0.1f)] private float defaultCustomWaypointSizeMultiplier = 1f;
+        [SerializeField, Min(0.1f)] private float defaultCustomWaypointLabelSizeMultiplier = 1f;
 
         private readonly List<MapWaypointRecord> _waypoints = new();
         private readonly Dictionary<string, NavigationWorldBeaconController> _beaconInstances = new();
@@ -192,7 +200,13 @@ namespace SkiGame.Navigation
             return waypointColours[index];
         }
 
-        public string AddCustomWaypoint(Vector3 worldPosition, string displayName = null, bool setActive = true)
+        public string AddCustomWaypoint(
+    Vector3 worldPosition,
+    string displayName = null,
+    bool setActive = true,
+    Sprite markerSprite = null,
+    float markerSizeMultiplier = 1f,
+    float labelSizeMultiplier = 1f)
         {
             string id = $"custom-waypoint-{_customSequence++}";
             string label = string.IsNullOrWhiteSpace(displayName) ? "Custom Waypoint" : displayName;
@@ -204,7 +218,14 @@ namespace SkiGame.Navigation
                 displayName = label,
                 worldPosition = worldPosition,
                 color = SelectedColour,
-                kind = NavigationTargetKind.Waypoint
+                kind = NavigationTargetKind.Waypoint,
+                markerSprite = markerSprite != null ? markerSprite : defaultCustomWaypointSprite,
+                markerSizeMultiplier = markerSizeMultiplier > 0f
+    ? Mathf.Max(0.1f, markerSizeMultiplier)
+    : Mathf.Max(0.1f, defaultCustomWaypointSizeMultiplier),
+                labelSizeMultiplier = labelSizeMultiplier > 0f
+    ? Mathf.Max(0.1f, labelSizeMultiplier)
+    : Mathf.Max(0.1f, defaultCustomWaypointLabelSizeMultiplier)
             };
 
             _waypoints.Add(record);
@@ -239,7 +260,10 @@ namespace SkiGame.Navigation
                 displayName = displayName,
                 worldPosition = worldPosition,
                 color = sourceColour,
-                kind = kind
+                kind = kind,
+                markerSprite = null,
+                markerSizeMultiplier = 1f,
+                labelSizeMultiplier = 1f
             };
 
             _waypoints.Add(record);
@@ -282,6 +306,36 @@ namespace SkiGame.Navigation
 
             if (_activeWaypointId == waypointId)
                 PublishActiveWaypoint();
+        }
+
+        public void SetWaypointMarkerVisual(
+     string waypointId,
+     Sprite markerSprite,
+     float markerSizeMultiplier = 1f,
+     float labelSizeMultiplier = 1f)
+        {
+            int index = FindById(waypointId);
+            if (index < 0)
+                return;
+
+            var record = _waypoints[index];
+            record.markerSprite = markerSprite;
+            record.markerSizeMultiplier = markerSizeMultiplier > 0f ? Mathf.Max(0.1f, markerSizeMultiplier) : 1f;
+            record.labelSizeMultiplier = labelSizeMultiplier > 0f ? Mathf.Max(0.1f, labelSizeMultiplier) : 1f;
+            _waypoints[index] = record;
+            MarkChanged();
+        }
+
+        public void SetWaypointLabelSizeMultiplier(string waypointId, float labelSizeMultiplier = 1f)
+        {
+            int index = FindById(waypointId);
+            if (index < 0)
+                return;
+
+            var record = _waypoints[index];
+            record.labelSizeMultiplier = labelSizeMultiplier > 0f ? Mathf.Max(0.1f, labelSizeMultiplier) : 1f;
+            _waypoints[index] = record;
+            MarkChanged();
         }
 
         public void RemoveWaypoint(string waypointId)

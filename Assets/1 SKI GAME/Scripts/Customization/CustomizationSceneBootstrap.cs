@@ -65,13 +65,8 @@ public class CustomizationSceneBootstrap : MonoBehaviour
 
     private UIDocument _uiDoc;
 
-    // Snapshot of equipped IDs on entry (guarantees previews never persist)
-    private string _entrySkinPatternId;
-    private string _entryEyeIconId;
-    private string _entryHatId;
-    private string _entryCloakId;
-    private string _entrySkisId;
-    private string _entryPolesId;
+    // Snapshot of shop-entry customization state so cancel cleanly restores everything.
+    private string _entryCustomizationStateJson;
 
     private void OnEnable()
     {
@@ -155,16 +150,10 @@ public class CustomizationSceneBootstrap : MonoBehaviour
         if (_uiDoc == null)
             _uiDoc = FindFirstObjectByType<UIDocument>();
 
-        // Snapshot equipped state so we can always restore on exit (previews never persist)
+        // Snapshot the full customization state so cancel fully restores entry state.
         if (profile != null && profile.customization != null)
         {
-            var s = profile.customization;
-            _entrySkinPatternId = s.equippedSkinPatternId;
-            _entryEyeIconId = s.equippedEyeIconId;
-            _entryHatId = s.equippedHatId;
-            _entryCloakId = s.equippedJacketId;
-            _entrySkisId = s.equippedSkisId;
-            _entryPolesId = s.equippedPolesId;
+            _entryCustomizationStateJson = JsonUtility.ToJson(profile.customization);
         }
 
         // Ensure the player visuals match the saved profile when we enter the shop
@@ -174,6 +163,9 @@ public class CustomizationSceneBootstrap : MonoBehaviour
             if (applier != null)
                 applier.ApplyFromProfile(profile);
         }
+
+        if (uiController != null)
+            uiController.SetTimeController(timeController);
 
         if (uiController != null)
         {
@@ -275,6 +267,19 @@ public class CustomizationSceneBootstrap : MonoBehaviour
         _ski = _player.GetComponent<SkiController>();
         _walk = _player.GetComponent<WalkingController>();
         _playerInput = _player.GetComponent<PlayerInput>();
+
+        if (_walk != null)
+        {
+            _walk.ClearExternalMove();
+            _walk.SetWalkPresentationKeepsSkisEquipped(false);
+            _walk.ForceEnterSkiMode();
+        }
+
+        if (_ski != null)
+        {
+            _ski.ClearExternalInputSource();
+            _ski.ResetStackStateSilently(snapUpright: true, forwardHint: _player.transform.forward);
+        }
 
         if (_ski != null) _ski.enabled = false;
         if (_walk != null) _walk.enabled = false;
@@ -420,17 +425,11 @@ public class CustomizationSceneBootstrap : MonoBehaviour
         var mgr = PlayerStatsManager.Instance;
         var profile = mgr != null ? mgr.Profile : null;
 
-        // If we are NOT applying, force-restore the equipped IDs from when we entered the shop.
-        // This guarantees previews can never "leak" into saved equip state.
+        // If we are NOT applying, restore the complete entry snapshot so no shop changes leak out.
         if (!apply && profile != null && profile.customization != null)
         {
-            var s = profile.customization;
-            s.equippedSkinPatternId = _entrySkinPatternId;
-            s.equippedEyeIconId = _entryEyeIconId;
-            s.equippedHatId = _entryHatId;
-            s.equippedJacketId = _entryCloakId;
-            s.equippedSkisId = _entrySkisId;
-            s.equippedPolesId = _entryPolesId;
+            if (!string.IsNullOrEmpty(_entryCustomizationStateJson))
+                JsonUtility.FromJsonOverwrite(_entryCustomizationStateJson, profile.customization);
         }
 
         if (profile != null && _player != null)

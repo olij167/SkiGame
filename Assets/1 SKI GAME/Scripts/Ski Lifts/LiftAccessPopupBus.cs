@@ -39,5 +39,17 @@ namespace SkiGame.UI
                 accent = new Color(0.28f, 0.76f, 0.46f, 1f)
             });
         }
+
+        public static void RaiseCustomDenied(string title, string body, float seconds = 2.75f, Color? accent = null)
+        {
+            OnPopup?.Invoke(new PopupMessage
+            {
+                positive = false,
+                title = string.IsNullOrWhiteSpace(title) ? "Locked" : title,
+                body = body ?? string.Empty,
+                seconds = seconds,
+                accent = accent ?? new Color(0.92f, 0.34f, 0.34f, 1f)
+            });
+        }
     }
 }

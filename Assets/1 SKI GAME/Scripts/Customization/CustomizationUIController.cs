@@ -10,11 +10,21 @@ public class CustomizationUIController : MonoBehaviour
 
     public enum PatternTarget { Skis, Poles, Hat, Jacket }
 
+    [Serializable]
+    public sealed class GearColorChannelInfo
+    {
+        public string id;
+        public string displayName;
+        public Color defaultColor = Color.white;
+        public bool isPrimary;
+    }
+
     [Header("Runtime (read-only)")]
     [SerializeField] private GameObject playerRoot;
     [SerializeField] private CharacterCustomizer customizer;
     [SerializeField] private PlayerCustomizationApplier applier;
     [SerializeField] private SkiController skiController;
+    [SerializeField] private TimeWeather.TimeController timeController;
 
     [Header("Shop Rotation")]
     [SerializeField] private int dailySkinPatternOffers = 6;
@@ -67,8 +77,21 @@ public class CustomizationUIController : MonoBehaviour
         catch (Exception e) { Debug.LogException(e); }
     }
 
+    private void Update()
+    {
+        if (!IsOpen)
+            return;
+
+        int currentKey = ResolveCurrentShopDayKey();
+        if (currentKey != _todayKey)
+            RefreshDailyOffers();
+    }
+
     public void Open(GameObject playerRoot, GameObject previewRoot, CustomizationCatalogSO catalog, PlayerStatsProfile profile, Action<bool> onRequestExit)
     {
+        bool sameProfile = ReferenceEquals(_profile, profile);
+        bool sameCatalog = ReferenceEquals(_catalog, catalog);
+
         this.playerRoot = playerRoot;
         _catalog = catalog;
         _profile = profile;
@@ -78,7 +101,7 @@ public class CustomizationUIController : MonoBehaviour
         applier = playerRoot != null ? playerRoot.GetComponent<PlayerCustomizationApplier>() : null;
         skiController = playerRoot != null ? playerRoot.GetComponent<SkiController>() : null;
 
-        _todayKey = DailyShopService.GetUtcDayKey();
+        _todayKey = ResolveCurrentShopDayKey();
 
         DailyShopService.EnsureDailyOffers(
             _catalog, _todayKey,
@@ -92,12 +115,20 @@ public class CustomizationUIController : MonoBehaviour
             isOwnedId: (id) => _profile != null && _profile.customization != null && _profile.customization.IsUnlocked(id)
         );
 
-        _rootTab = RootTab.Shop;
-        _subTab = SubTab.Cosmetics;
-        _activeCategory = CustomizationOptionType.SkinPattern;
-        _patternTarget = PatternTarget.Skis;
+        // Only reset previews/navigation when switching to a different profile/catalog.
+        if (!sameProfile || !sameCatalog)
+        {
+            ResetNavigationState();
+            ClearPreviewState();
+        }
 
-        // Preview starts “none” (we only preview unowned)
+        RebuildLists();
+        ReapplyEquippedThenPreviews();
+        NotifyChanged();
+    }
+
+    private void ClearPreviewState()
+    {
         _previewEyeId = null;
         _previewSkisId = null;
         _previewPolesId = null;
@@ -108,9 +139,15 @@ public class CustomizationUIController : MonoBehaviour
         _previewPolesPatternId = null;
         _previewHatPatternId = null;
         _previewJacketPatternId = null;
+    }
 
-        RebuildLists();
-        NotifyChanged();
+    private void ResetNavigationState()
+    {
+        _rootTab = RootTab.Shop;
+        _subTab = SubTab.Cosmetics;
+        _activeCategory = CustomizationOptionType.SkinPattern;
+        _patternTarget = PatternTarget.Skis;
+        _selected = null;
     }
 
     // ---------------- Queries for UI ----------------
@@ -162,7 +199,7 @@ public class CustomizationUIController : MonoBehaviour
         if (_selected == null) return;
 
         // Owned items are equipped immediately (this becomes the authoritative selection for that slot).
-        // To avoid “effective” preview overriding the equip, clear preview ONLY for that slot/type.
+        // To avoid ï¿½effectiveï¿½ preview overriding the equip, clear preview ONLY for that slot/type.
         if (IsOwned(_selected))
         {
             ClearPreviewForType(_selected.type);
@@ -197,14 +234,12 @@ public class CustomizationUIController : MonoBehaviour
 
             case CustomizationOptionType.Hat:
                 _previewHatId = _selected.id;
-                if (customizer != null) customizer.SetHat(_selected.customizerIndex);
-                if (_profile?.customization != null) customizer?.SetHatColor(_profile.customization.hatColor);
+                ApplyPreviewWearable(PatternTarget.Hat, _selected);
                 break;
 
             case CustomizationOptionType.Jacket:
                 _previewJacketId = _selected.id;
-                if (customizer != null) customizer.SetJacket(_selected.customizerIndex);
-                if (_profile?.customization != null) customizer?.SetJacketColor(_profile.customization.jacketColor);
+                ApplyPreviewWearable(PatternTarget.Jacket, _selected);
                 break;
 
             case CustomizationOptionType.SkinPattern:
@@ -350,25 +385,272 @@ public class CustomizationUIController : MonoBehaviour
         if (_profile == null || _profile.customization == null) return;
         if (_profile.currency < _selected.cost) return;
 
-        _profile.currency -= _selected.cost;
+        if (!ProgressionEventRecorder.TrySpendCurrency(_profile, _selected.cost))
+            return;
+
+        ProgressionEventRecorder.RecordCustomizationPurchase(_profile);
         _profile.customization.Unlock(_selected.id);
 
         // Unlock any patterns granted by this purchase (preferred SO refs, fallback ids)
         if (_selected.unlockPatternOptionsOnPurchase != null)
         {
             foreach (var pat in _selected.unlockPatternOptionsOnPurchase)
+            {
                 if (pat != null && !string.IsNullOrEmpty(pat.id))
                     _profile.customization.Unlock(pat.id);
+            }
         }
+
         if (_selected.unlockPatternIdsOnPurchase != null)
         {
             foreach (var pid in _selected.unlockPatternIdsOnPurchase)
+            {
                 if (!string.IsNullOrEmpty(pid))
                     _profile.customization.Unlock(pid);
+            }
+        }
+
+        // Important UX fix:
+        // once the item is bought, immediately equip/apply it so the purchase
+        // flow for previewed gear and patterns feels direct.
+        EquipSelected();
+
+        RebuildLists();
+        NotifyChanged();
+    }
+
+    public void SetTimeController(TimeWeather.TimeController controller)
+    {
+        timeController = controller;
+    }
+
+    private bool IsPurchasableToday(CustomizationOptionSO opt)
+    {
+        if (opt == null) return false;
+        if (IsOwned(opt)) return false;
+        return DailyShopService.IsInTodayOffers(opt.id, _todayKey);
+    }
+
+    private bool CanAffordInternal(int cost)
+    {
+        return _profile != null && _profile.currency >= cost;
+    }
+
+    private void UnlockPurchasedOption(CustomizationOptionSO opt)
+    {
+        if (opt == null || _profile?.customization == null) return;
+
+        _profile.customization.Unlock(opt.id);
+
+        if (opt.unlockPatternOptionsOnPurchase != null)
+        {
+            foreach (var pat in opt.unlockPatternOptionsOnPurchase)
+            {
+                if (pat != null && !string.IsNullOrEmpty(pat.id))
+                    _profile.customization.Unlock(pat.id);
+            }
+        }
+
+        if (opt.unlockPatternIdsOnPurchase != null)
+        {
+            foreach (var pid in opt.unlockPatternIdsOnPurchase)
+            {
+                if (!string.IsNullOrEmpty(pid))
+                    _profile.customization.Unlock(pid);
+            }
+        }
+    }
+
+    private void ApplyOwnedOption(CustomizationOptionSO opt, PatternTarget? patternTargetOverride = null)
+    {
+        if (opt == null) return;
+        if (_profile?.customization == null) return;
+        if (!IsOwned(opt)) return;
+
+        var s = _profile.customization;
+        var previousPatternTarget = _patternTarget;
+
+        if (patternTargetOverride.HasValue)
+            _patternTarget = patternTargetOverride.Value;
+
+        ClearPreviewForType(opt.type);
+
+        switch (opt.type)
+        {
+            case CustomizationOptionType.EyeIcon:
+                s.equippedEyeIconId = opt.id;
+                break;
+
+            case CustomizationOptionType.Skis:
+                s.equippedSkisId = opt.id;
+                break;
+
+            case CustomizationOptionType.Poles:
+                s.equippedPolesId = opt.id;
+                break;
+
+            case CustomizationOptionType.Hat:
+                s.equippedHatId = opt.id;
+                break;
+
+            case CustomizationOptionType.Jacket:
+                s.equippedJacketId = opt.id;
+                break;
+
+            case CustomizationOptionType.SkinPattern:
+                EquipPatternToTarget(opt);
+                break;
+        }
+
+        if (patternTargetOverride.HasValue)
+            _patternTarget = previousPatternTarget;
+
+        ReapplyEquippedThenPreviews();
+    }
+
+    private bool TryPurchaseOption(CustomizationOptionSO opt, PatternTarget? patternTargetOverride = null)
+    {
+        if (opt == null) return false;
+        if (_profile?.customization == null) return false;
+        if (!IsPurchasableToday(opt)) return false;
+        if (!CanAffordInternal(opt.cost)) return false;
+
+        if (!ProgressionEventRecorder.TrySpendCurrency(_profile, opt.cost)) return false;
+
+        ProgressionEventRecorder.RecordCustomizationPurchase(_profile);
+        UnlockPurchasedOption(opt);
+        ApplyOwnedOption(opt, patternTargetOverride);
+        return true;
+    }
+
+    public bool CanAffordCost(int cost) => CanAffordInternal(cost);
+
+    public CustomizationOptionSO GetPreviewedPurchasableEyeOption()
+    {
+        var opt = ResolveById(_previewEyeId);
+        return (opt != null && opt.type == CustomizationOptionType.EyeIcon && IsPurchasableToday(opt)) ? opt : null;
+    }
+
+    public CustomizationOptionSO GetPreviewedPurchasableGearOption(PatternTarget target)
+    {
+        string id = target switch
+        {
+            PatternTarget.Skis => _previewSkisId,
+            PatternTarget.Poles => _previewPolesId,
+            PatternTarget.Hat => _previewHatId,
+            PatternTarget.Jacket => _previewJacketId,
+            _ => null
+        };
+
+        var expectedType = target switch
+        {
+            PatternTarget.Skis => CustomizationOptionType.Skis,
+            PatternTarget.Poles => CustomizationOptionType.Poles,
+            PatternTarget.Hat => CustomizationOptionType.Hat,
+            PatternTarget.Jacket => CustomizationOptionType.Jacket,
+            _ => CustomizationOptionType.Skis
+        };
+
+        var opt = ResolveById(id);
+        return (opt != null && opt.type == expectedType && IsPurchasableToday(opt)) ? opt : null;
+    }
+
+    public CustomizationOptionSO GetPreviewedPurchasablePatternOption(PatternTarget target)
+    {
+        string id = target switch
+        {
+            PatternTarget.Skis => _previewSkisPatternId,
+            PatternTarget.Poles => _previewPolesPatternId,
+            PatternTarget.Hat => _previewHatPatternId,
+            PatternTarget.Jacket => _previewJacketPatternId,
+            _ => null
+        };
+
+        var opt = ResolveById(id);
+        return (opt != null && opt.type == CustomizationOptionType.SkinPattern && IsPurchasableToday(opt)) ? opt : null;
+    }
+
+    public int GetPreviewedEyePurchaseCost()
+    {
+        return GetPreviewedPurchasableEyeOption()?.cost ?? 0;
+    }
+
+    public int GetPreviewedGearPurchaseCost(PatternTarget target)
+    {
+        return GetPreviewedPurchasableGearOption(target)?.cost ?? 0;
+    }
+
+    public int GetPreviewedPatternPurchaseCost(PatternTarget target)
+    {
+        return GetPreviewedPurchasablePatternOption(target)?.cost ?? 0;
+    }
+
+    public int GetPreviewedCombinedPurchaseCost(PatternTarget target)
+    {
+        return GetPreviewedGearPurchaseCost(target) + GetPreviewedPatternPurchaseCost(target);
+    }
+
+    public void TryBuyPreviewedEye()
+    {
+        var opt = GetPreviewedPurchasableEyeOption();
+        if (!TryPurchaseOption(opt)) return;
+
+        RebuildLists();
+        NotifyChanged();
+    }
+
+    public void TryBuyPreviewedGear(PatternTarget target)
+    {
+        var opt = GetPreviewedPurchasableGearOption(target);
+        if (!TryPurchaseOption(opt)) return;
+
+        RebuildLists();
+        NotifyChanged();
+    }
+
+    public void TryBuyPreviewedPattern(PatternTarget target)
+    {
+        var opt = GetPreviewedPurchasablePatternOption(target);
+        if (!TryPurchaseOption(opt, target)) return;
+
+        RebuildLists();
+        NotifyChanged();
+    }
+
+    public void TryBuyPreviewedGearAndPattern(PatternTarget target)
+    {
+        var gear = GetPreviewedPurchasableGearOption(target);
+        var pattern = GetPreviewedPurchasablePatternOption(target);
+
+        if (gear == null && pattern == null)
+            return;
+
+        int total = (gear != null ? gear.cost : 0) + (pattern != null ? pattern.cost : 0);
+        if (!CanAffordInternal(total))
+            return;
+
+        if (gear != null)
+        {
+            if (!ProgressionEventRecorder.TrySpendCurrency(_profile, gear.cost))
+                return;
+
+            ProgressionEventRecorder.RecordCustomizationPurchase(_profile);
+            UnlockPurchasedOption(gear);
+            ApplyOwnedOption(gear);
+        }
+
+        if (pattern != null)
+        {
+            if (!ProgressionEventRecorder.TrySpendCurrency(_profile, pattern.cost))
+                return;
+
+            ProgressionEventRecorder.RecordCustomizationPurchase(_profile);
+            UnlockPurchasedOption(pattern);
+            ApplyOwnedOption(pattern, target);
         }
 
         RebuildLists();
-
+        NotifyChanged();
     }
 
     public void EquipSelected()
@@ -377,91 +659,60 @@ public class CustomizationUIController : MonoBehaviour
         if (_profile == null || _profile.customization == null) return;
         if (!IsOwned(_selected)) return;
 
-        // Safety: if called directly, ensure the slot preview is cleared
-        ClearPreviewForType(_selected.type);
-
-        var s = _profile.customization;
-
-        switch (_selected.type)
-        {
-            case CustomizationOptionType.EyeIcon:
-                s.equippedEyeIconId = _selected.id;
-                break;
-
-            case CustomizationOptionType.Skis:
-                s.equippedSkisId = _selected.id;
-                break;
-
-            case CustomizationOptionType.Poles:
-                s.equippedPolesId = _selected.id;
-                break;
-
-            case CustomizationOptionType.Hat:
-                // "" = None
-                s.equippedHatId = _selected.id;
-                break;
-
-            case CustomizationOptionType.Jacket:
-                // "" = None
-                s.equippedJacketId = _selected.id;
-                break;
-
-            case CustomizationOptionType.SkinPattern:
-                // Equip pattern to current target. Clear preview for that target first so equip wins.
-                ClearPreviewForType(CustomizationOptionType.SkinPattern);
-                EquipPatternToTarget(_selected);
-                break;
-        }
-
-        // IMPORTANT: apply equipped baseline, then re-apply remaining previews for OTHER slots
-        ReapplyEquippedThenPreviews();
+        ApplyOwnedOption(_selected);
+        RebuildLists();
+        NotifyChanged();
     }
 
     public void ResetSkisColorToDefault()
     {
         if (_profile?.customization == null) return;
         var s = _profile.customization;
-        var opt = ResolveById(s.equippedSkisId);
-        var c = (opt != null && opt.HasTint) ? opt.DefaultTint : Color.white;
 
-        s.skisColor = c;
+        s.skisColor = ResolvePrimaryDefaultColorForCurrentVisual(PatternTarget.Skis);
         s.hasSetSkisColor = false;
-        applier?.ApplySkisColorToLoadout(_profile, c);
+        s.skisUseDefaultColor = true;
+
+        ReapplyEquippedThenPreviews();
+        NotifyChanged();
     }
     public void ResetPolesColorToDefault()
     {
         if (_profile?.customization == null) return;
         var s = _profile.customization;
-        var opt = ResolveById(s.equippedPolesId);
-        var c = (opt != null && opt.HasTint) ? opt.DefaultTint : Color.white;
 
-        s.polesColor = c;
+        s.polesColor = ResolvePrimaryDefaultColorForCurrentVisual(PatternTarget.Poles);
         s.hasSetPolesColor = false;
-        applier?.ApplyPolesColorToLoadout(_profile, c);
+        s.polesUseDefaultColor = true;
+
+        ReapplyEquippedThenPreviews();
+        NotifyChanged();
     }
 
     public void ResetHatColorToDefault()
     {
         if (_profile?.customization == null) return;
         var s = _profile.customization;
-        var opt = ResolveById(s.equippedHatId);
-        var c = (opt != null && opt.HasTint) ? opt.DefaultTint : Color.white;
 
-        s.hatColor = c;
+        s.hatColor = ResolvePrimaryDefaultColorForCurrentVisual(PatternTarget.Hat);
         s.hasSetHatColor = false;
-        customizer?.SetHatColor(c);
+        s.hatUseDefaultColor = true;
+
+        ReapplyEquippedThenPreviews();
+        NotifyChanged();
     }
 
     public void ResetJacketColorToDefault()
     {
         if (_profile?.customization == null) return;
         var s = _profile.customization;
-        var opt = ResolveById(s.equippedJacketId);
-        var c = (opt != null && opt.HasTint) ? opt.DefaultTint : Color.white;
 
-        s.jacketColor = c;
+        s.jacketColor = ResolvePrimaryDefaultColorForCurrentVisual(PatternTarget.Jacket);
         s.hasSetJacketColor = false;
-        customizer?.SetJacketColor(c);
+        s.jacketUseDefaultColor = true;
+
+        ReapplyEquippedThenPreviews();
+        NotifyChanged();
     }
 
     public void ResetPatternToDefault(PatternTarget t)
@@ -469,7 +720,7 @@ public class CustomizationUIController : MonoBehaviour
         if (_profile?.customization == null) return;
         var s = _profile.customization;
 
-        // Empty means “use equipped gear’s defaultPatternId”
+        // Empty means use equipped gear's defaultPatternId
         switch (t)
         {
             case PatternTarget.Skis: s.equippedSkisPatternId = ""; break;
@@ -478,7 +729,28 @@ public class CustomizationUIController : MonoBehaviour
             case PatternTarget.Jacket: s.equippedJacketPatternId = ""; break;
         }
 
-        applier?.ApplyFromProfile(_profile);
+        switch (t)
+        {
+            case PatternTarget.Skis:
+                _previewSkisPatternId = null;
+                s.skisUseDefaultPattern = true;
+                break;
+            case PatternTarget.Poles:
+                _previewPolesPatternId = null;
+                s.polesUseDefaultPattern = true;
+                break;
+            case PatternTarget.Hat:
+                _previewHatPatternId = null;
+                s.hatUseDefaultPattern = true;
+                break;
+            case PatternTarget.Jacket:
+                _previewJacketPatternId = null;
+                s.jacketUseDefaultPattern = true;
+                break;
+        }
+
+        ReapplyEquippedThenPreviews();
+        NotifyChanged();
     }
 
     private void EquipPatternToTarget(CustomizationOptionSO patternOpt)
@@ -540,16 +812,35 @@ public class CustomizationUIController : MonoBehaviour
         customizer?.SetEyeColor(c);
     }
 
+    public void SetEyeOutlineColor(Color c)
+    {
+        if (_profile?.customization == null) return;
+        _profile.customization.eyeOutlineColor = c;
+        _profile.customization.hasSetEyeOutlineColor = c.a > 0.001f;
+
+        customizer?.SetEyeOutlineColor(c);
+    }
+
+    public void SetEyeSize(float size)
+    {
+        if (_profile?.customization == null) return;
+        float clamped = Mathf.Clamp(Mathf.Round(size), 1f, 5f);
+        _profile.customization.eyeSize = clamped;
+        _profile.customization.hasSetEyeSize = !Mathf.Approximately(clamped, 3f);
+
+        customizer?.SetEyeSize(clamped);
+    }
+
     public void SetSkisColor(Color c)
     {
         if (_profile?.customization == null) return;
         var s = _profile.customization;
 
-        s.skisColor = c;              // store custom selection
+        s.skisColor = c;
         s.hasSetSkisColor = true;
         s.skisUseDefaultColor = false;
 
-        applier?.ApplyFromProfile(_profile);
+        ReapplyStatePreservingPreviews();
     }
 
     public void SetPolesColor(Color c)
@@ -561,7 +852,7 @@ public class CustomizationUIController : MonoBehaviour
         s.hasSetPolesColor = true;
         s.polesUseDefaultColor = false;
 
-        applier?.ApplyFromProfile(_profile);
+        ReapplyStatePreservingPreviews();
     }
 
     public void SetHatColor(Color c)
@@ -573,7 +864,7 @@ public class CustomizationUIController : MonoBehaviour
         s.hasSetHatColor = true;
         s.hatUseDefaultColor = false;
 
-        applier?.ApplyFromProfile(_profile);
+        ReapplyStatePreservingPreviews();
     }
 
     public void SetJacketColor(Color c)
@@ -585,15 +876,307 @@ public class CustomizationUIController : MonoBehaviour
         s.hasSetJacketColor = true;
         s.jacketUseDefaultColor = false;
 
-        applier?.ApplyFromProfile(_profile);
+        ReapplyStatePreservingPreviews();
     }
 
     public Color GetSkinColor() => _profile?.customization != null ? _profile.customization.skinColor : Color.white;
     public Color GetEyeColor() => _profile?.customization != null ? _profile.customization.eyeColor : Color.white;
+    public Color GetEyeOutlineColor() => _profile?.customization != null ? _profile.customization.eyeOutlineColor : new Color(0f, 0f, 0f, 0f);
+    public float GetEyeSize() => _profile?.customization != null ? Mathf.Clamp(Mathf.Round(_profile.customization.eyeSize), 1f, 5f) : 3f;
     public Color GetSkisColor() => _profile?.customization != null ? _profile.customization.skisColor : Color.white;
     public Color GetPolesColor() => _profile?.customization != null ? _profile.customization.polesColor : Color.white;
     public Color GetHatColor() => _profile?.customization != null ? _profile.customization.hatColor : Color.white;
     public Color GetJacketColor() => _profile?.customization != null ? _profile.customization.jacketColor : Color.white;
+
+    private static string GetSlotKey(PatternTarget target)
+    {
+        switch (target)
+        {
+            case PatternTarget.Skis: return "Skis";
+            case PatternTarget.Poles: return "Poles";
+            case PatternTarget.Hat: return "Hat";
+            case PatternTarget.Jacket: return "Jacket";
+            default: return null;
+        }
+    }
+
+    private CustomizationOptionSO GetEffectiveGearOption(PatternTarget target)
+    {
+        switch (target)
+        {
+            case PatternTarget.Skis: return GetEffectiveSkisOption();
+            case PatternTarget.Poles: return GetEffectivePolesOption();
+            case PatternTarget.Hat: return GetEffectiveHatOption();
+            case PatternTarget.Jacket: return GetEffectiveJacketOption();
+            default: return null;
+        }
+    }
+
+    private WearableAttachment GetEffectiveWearableAttachment(PatternTarget target)
+    {
+        var opt = GetEffectiveGearOption(target);
+        if (opt == null)
+            return null;
+
+        var prefab = ResolveWearablePrefab(target, opt);
+        return prefab != null ? prefab.GetComponent<WearableAttachment>() : null;
+    }
+
+    private GameObject ResolveWearablePrefab(PatternTarget target, CustomizationOptionSO opt)
+    {
+        if (opt == null)
+            return null;
+
+        switch (target)
+        {
+            case PatternTarget.Hat:
+                if (opt.hatPrefab != null)
+                    return opt.hatPrefab;
+
+                return customizer != null ? customizer.GetHatPrefabAtIndex(opt.customizerIndex) : null;
+
+            case PatternTarget.Jacket:
+                if (opt.jacketPrefab != null)
+                    return opt.jacketPrefab;
+
+                return customizer != null ? customizer.GetJacketPrefabAtIndex(opt.customizerIndex) : null;
+
+            default:
+                return null;
+        }
+    }
+
+    private Color ResolveCurrentPrimaryColorForTarget(PatternTarget target)
+    {
+        switch (target)
+        {
+            case PatternTarget.Skis: return GetSkisColor();
+            case PatternTarget.Poles: return GetPolesColor();
+            case PatternTarget.Hat: return GetHatColor();
+            case PatternTarget.Jacket: return GetJacketColor();
+            default: return Color.white;
+        }
+    }
+
+    private void ApplyCurrentExtraChannelColorsForTarget(PatternTarget target)
+    {
+        var wearable = GetEffectiveWearableAttachment(target);
+        var channels = wearable != null ? wearable.GetExtraChannels() : null;
+        if (channels == null)
+            return;
+
+        for (int i = 0; i < channels.Count; i++)
+        {
+            var ch = channels[i];
+            if (ch == null || string.IsNullOrEmpty(ch.id))
+                continue;
+
+            var color = GetGearChannelColor(target, ch.id);
+            ApplyExtraChannelColorLive(target, ch.id, color);
+        }
+    }
+
+    private Color ResolveExtraChannelDefaultColor(PatternTarget target, string channelId)
+    {
+        var wearable = GetEffectiveWearableAttachment(target);
+        var channel = wearable != null ? wearable.GetChannel(channelId) : null;
+        return channel != null ? channel.defaultColor : Color.white;
+    }
+
+    private Color ResolvePrimaryDefaultColorForCurrentVisual(PatternTarget target)
+    {
+        var opt = GetEffectiveGearOption(target);
+        return (opt != null && opt.HasTint) ? opt.DefaultTint : Color.white;
+    }
+
+    private void ApplyPreviewWearable(PatternTarget target, CustomizationOptionSO opt)
+    {
+        if (opt == null || customizer == null)
+            return;
+
+        switch (target)
+        {
+            case PatternTarget.Hat:
+                {
+                    if (opt.hatPrefab != null) customizer.SetHatPrefab(opt.hatPrefab);
+                    else customizer.SetHat(opt.customizerIndex);
+
+                    customizer.SetHatColor(ResolveCurrentPrimaryColorForTarget(PatternTarget.Hat));
+
+                    var hatPatternOpt = ResolveById(opt.DefaultPatternIdResolved);
+                    customizer.SetHatPatternTexture(ResolvePatternTexture(hatPatternOpt));
+
+                    ApplyCurrentExtraChannelColorsForTarget(PatternTarget.Hat);
+                    break;
+                }
+
+            case PatternTarget.Jacket:
+                {
+                    if (opt.jacketPrefab != null) customizer.SetJacketPrefab(opt.jacketPrefab);
+                    else customizer.SetJacket(opt.customizerIndex);
+
+                    customizer.SetJacketColor(ResolveCurrentPrimaryColorForTarget(PatternTarget.Jacket));
+
+                    var jacketPatternOpt = ResolveById(opt.DefaultPatternIdResolved);
+                    customizer.SetJacketPatternTexture(ResolvePatternTexture(jacketPatternOpt));
+
+                    ApplyCurrentExtraChannelColorsForTarget(PatternTarget.Jacket);
+                    break;
+                }
+        }
+    }
+
+    private void ApplyExtraChannelColorLive(PatternTarget target, string channelId, Color color)
+    {
+        if (string.IsNullOrEmpty(channelId)) return;
+
+        switch (target)
+        {
+            case PatternTarget.Hat:
+                customizer?.SetHatChannelColor(channelId, color);
+                break;
+
+            case PatternTarget.Jacket:
+                customizer?.SetJacketChannelColor(channelId, color);
+                break;
+        }
+    }
+
+    public List<GearColorChannelInfo> GetActiveExtraColorChannels(PatternTarget target)
+    {
+        var result = new List<GearColorChannelInfo>();
+
+        // For now, extra channels are authorable on wearable prefabs only.
+        if (target != PatternTarget.Hat && target != PatternTarget.Jacket)
+            return result;
+
+        var wearable = GetEffectiveWearableAttachment(target);
+        var channels = wearable != null ? wearable.GetExtraChannels() : null;
+        if (channels == null) return result;
+
+        for (int i = 0; i < channels.Count; i++)
+        {
+            var ch = channels[i];
+            if (ch == null || string.IsNullOrEmpty(ch.id))
+                continue;
+
+            result.Add(new GearColorChannelInfo
+            {
+                id = ch.id,
+                displayName = string.IsNullOrEmpty(ch.displayName) ? ch.id : ch.displayName,
+                defaultColor = ch.defaultColor,
+                isPrimary = false
+            });
+        }
+
+        return result;
+    }
+
+    public Color GetGearChannelColor(PatternTarget target, string channelId)
+    {
+        if (string.IsNullOrEmpty(channelId) || string.Equals(channelId, WearableAttachment.PrimaryChannelId, StringComparison.Ordinal))
+        {
+            switch (target)
+            {
+                case PatternTarget.Skis: return GetSkisColor();
+                case PatternTarget.Poles: return GetPolesColor();
+                case PatternTarget.Hat: return GetHatColor();
+                case PatternTarget.Jacket: return GetJacketColor();
+                default: return Color.white;
+            }
+        }
+
+        if (_profile?.customization == null)
+            return ResolveExtraChannelDefaultColor(target, channelId);
+
+        var slotKey = GetSlotKey(target);
+        if (_profile.customization.TryGetExtraColor(slotKey, channelId, out var saved))
+            return saved;
+
+        return ResolveExtraChannelDefaultColor(target, channelId);
+    }
+
+    public void SetGearChannelColor(PatternTarget target, string channelId, Color color)
+    {
+        if (string.IsNullOrEmpty(channelId) || string.Equals(channelId, WearableAttachment.PrimaryChannelId, StringComparison.Ordinal))
+        {
+            switch (target)
+            {
+                case PatternTarget.Skis: SetSkisColor(color); break;
+                case PatternTarget.Poles: SetPolesColor(color); break;
+                case PatternTarget.Hat: SetHatColor(color); break;
+                case PatternTarget.Jacket: SetJacketColor(color); break;
+            }
+            return;
+        }
+
+        if (_profile?.customization == null)
+            return;
+
+        var slotKey = GetSlotKey(target);
+        _profile.customization.SetExtraColor(slotKey, channelId, color);
+
+        ApplyExtraChannelColorLive(target, channelId, color);
+        NotifyChanged();
+    }
+
+    public bool HasActiveExtraColorChannels(PatternTarget target)
+    {
+        var channels = GetActiveExtraColorChannels(target);
+        return channels != null && channels.Count > 0;
+    }
+
+    public void ResetGearChannelColorToDefault(PatternTarget target, string channelId)
+    {
+        if (string.IsNullOrEmpty(channelId) || string.Equals(channelId, WearableAttachment.PrimaryChannelId, StringComparison.Ordinal))
+        {
+            switch (target)
+            {
+                case PatternTarget.Skis: ResetSkisColorToDefault(); break;
+                case PatternTarget.Poles: ResetPolesColorToDefault(); break;
+                case PatternTarget.Hat: ResetHatColorToDefault(); break;
+                case PatternTarget.Jacket: ResetJacketColorToDefault(); break;
+            }
+            return;
+        }
+
+        if (_profile?.customization == null)
+            return;
+
+        var slotKey = GetSlotKey(target);
+        _profile.customization.ClearExtraColor(slotKey, channelId);
+
+        var defaultColor = ResolveExtraChannelDefaultColor(target, channelId);
+        ApplyExtraChannelColorLive(target, channelId, defaultColor);
+
+        NotifyChanged();
+    }
+
+    public void ResetGearExtraColorsToDefault(PatternTarget target)
+    {
+        if (_profile?.customization == null)
+            return;
+
+        var slotKey = GetSlotKey(target);
+        if (string.IsNullOrEmpty(slotKey))
+            return;
+
+        var channels = GetActiveExtraColorChannels(target);
+        if (channels != null)
+        {
+            for (int i = 0; i < channels.Count; i++)
+            {
+                var channel = channels[i];
+                if (channel == null || string.IsNullOrEmpty(channel.id))
+                    continue;
+
+                _profile.customization.ClearExtraColor(slotKey, channel.id);
+            }
+        }
+
+        ReapplyEquippedThenPreviews();
+        NotifyChanged();
+    }
 
     // ---------------- Reset toggles (default <-> custom) ----------------
 
@@ -601,28 +1184,28 @@ public class CustomizationUIController : MonoBehaviour
     {
         if (_profile?.customization == null) return;
         _profile.customization.skisUseDefaultColor = !_profile.customization.skisUseDefaultColor;
-        applier?.ApplyFromProfile(_profile);
+        ReapplyStatePreservingPreviews();
     }
 
     public void TogglePolesColorDefault()
     {
         if (_profile?.customization == null) return;
         _profile.customization.polesUseDefaultColor = !_profile.customization.polesUseDefaultColor;
-        applier?.ApplyFromProfile(_profile);
+        ReapplyStatePreservingPreviews();
     }
 
     public void ToggleHatColorDefault()
     {
         if (_profile?.customization == null) return;
         _profile.customization.hatUseDefaultColor = !_profile.customization.hatUseDefaultColor;
-        applier?.ApplyFromProfile(_profile);
+        ReapplyStatePreservingPreviews();
     }
 
     public void ToggleJacketColorDefault()
     {
         if (_profile?.customization == null) return;
         _profile.customization.jacketUseDefaultColor = !_profile.customization.jacketUseDefaultColor;
-        applier?.ApplyFromProfile(_profile);
+        ReapplyStatePreservingPreviews();
     }
 
     public void TogglePatternDefault(PatternTarget t)
@@ -638,7 +1221,7 @@ public class CustomizationUIController : MonoBehaviour
             case PatternTarget.Jacket: s.jacketUseDefaultPattern = !s.jacketUseDefaultPattern; break;
         }
 
-        applier?.ApplyFromProfile(_profile);
+        ReapplyStatePreservingPreviews();
     }
 
     public void Exit(bool apply) => _onRequestExit?.Invoke(apply);
@@ -849,8 +1432,7 @@ public class CustomizationUIController : MonoBehaviour
             var opt = _catalog.FindById(_previewHatId);
             if (opt != null && opt.type == CustomizationOptionType.Hat)
             {
-                customizer?.SetHat(opt.customizerIndex);
-                if (_profile.customization != null) customizer?.SetHatColor(_profile.customization.hatColor);
+                ApplyPreviewWearable(PatternTarget.Hat, opt);
             }
             else if (_previewHatId == "")
             {
@@ -863,8 +1445,7 @@ public class CustomizationUIController : MonoBehaviour
             var opt = _catalog.FindById(_previewJacketId);
             if (opt != null && opt.type == CustomizationOptionType.Jacket)
             {
-                customizer?.SetJacket(opt.customizerIndex);
-                if (_profile.customization != null) customizer?.SetJacketColor(_profile.customization.jacketColor);
+                ApplyPreviewWearable(PatternTarget.Jacket, opt);
             }
             else if (_previewJacketId == "")
             {
@@ -902,6 +1483,12 @@ public class CustomizationUIController : MonoBehaviour
         }
     }
 
+    private void ReapplyStatePreservingPreviews()
+    {
+        ReapplyEquippedThenPreviews();
+        NotifyChanged();
+    }
+
     private void ClearAllPreviews()
     {
         _previewEyeId = null;
@@ -914,6 +1501,73 @@ public class CustomizationUIController : MonoBehaviour
         _previewPolesPatternId = null;
         _previewHatPatternId = null;
         _previewJacketPatternId = null;
+    }
+
+    private int ResolveCurrentShopDayKey()
+    {
+        if (timeController == null)
+            timeController = TimeWeather.TimeController.instance ?? FindFirstObjectByType<TimeWeather.TimeController>();
+
+        if (timeController != null)
+        {
+            int year = Mathf.Max(0, timeController.currentYear);
+            int month = Mathf.Max(1, timeController.currentMonthIndex + 1);
+            int day = Mathf.Max(1, timeController.dayOfMonth);
+            return (year * 10000) + (month * 100) + day;
+        }
+
+        // Fallback only if no in-game TimeController can be found.
+        return DailyShopService.GetUtcDayKey();
+    }
+
+    public void RefreshDailyOffers()
+    {
+        RefreshDailyOffersInternal(forceResetCache: false);
+    }
+
+    private void RefreshDailyOffersInternal(bool forceResetCache)
+    {
+        if (_catalog == null)
+            return;
+
+        if (forceResetCache)
+            DailyShopService.ClearSavedOffers();
+
+        int newDayKey = ResolveCurrentShopDayKey();
+
+        DailyShopService.EnsureDailyOffers(
+            _catalog, newDayKey,
+            dailySkinPatternOffers,
+            dailyEyeIconOffers,
+            dailySkisOffers,
+            dailyPolesOffers,
+            dailyHatOffers,
+            dailyJacketOffers,
+            cosmeticStockPerOffer,
+            isOwnedId: (id) => _profile != null && _profile.customization != null && _profile.customization.IsUnlocked(id)
+        );
+
+        _todayKey = newDayKey;
+
+        if (_selected != null && !IsOwned(_selected) && !DailyShopService.IsInTodayOffers(_selected.id, _todayKey))
+            _selected = null;
+
+        RebuildLists();
+        NotifyChanged();
+    }
+
+    [ContextMenu("Customization Shop/Refresh Daily Offers")]
+    private void ContextRefreshDailyOffers()
+    {
+        RefreshDailyOffersInternal(forceResetCache: false);
+        Debug.Log("[CustomizationUIController] Refreshed daily offers using the current in-game day key.", this);
+    }
+
+    [ContextMenu("Customization Shop/Reset Daily Offers")]
+    private void ContextResetDailyOffers()
+    {
+        RefreshDailyOffersInternal(forceResetCache: true);
+        Debug.Log("[CustomizationUIController] Reset cached daily offers and rebuilt them for the current in-game day.", this);
     }
 
 }

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 949e0f9e1879a1443ad1db3ebd02719b
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 13804, guid: 0000000000000000e000000000000000, type: 0}
+AssetOrigin:
+  serializedVersion: 1
+  productId: 177244
+  packageName: MIGHTY PORTAL
+  packageVersion: 2.2.
+  assetPath: Assets/MightyDevOps/Modules/Screenshots/Resources/screenshot_back -
+    Copy.uxml
+  uploadId: 767126

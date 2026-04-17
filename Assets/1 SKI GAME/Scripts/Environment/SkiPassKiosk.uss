@@ -6,66 +6,129 @@
     bottom: 0;
     justify-content: center;
     align-items: center;
-    background-color: rgba(0, 0, 0, 0.45);
+    background-color: rgba(6, 10, 18, 0.72);
     -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgb(244, 248, 255);
 }
 
 .ski-pass-kiosk-panel {
-    width: 520px;
-    max-height: 85%;
+    width: 1420px;
+    height: 86%;
+    min-height: 720px;
+    max-width: 96%;
+    max-height: 92%;
     padding: 18px;
     border-top-left-radius: 18px;
     border-top-right-radius: 18px;
     border-bottom-left-radius: 18px;
     border-bottom-right-radius: 18px;
-    background-color: rgba(10, 16, 24, 0.96);
+    background-color: rgba(10, 16, 28, 0.97);
     border-left-width: 1px;
     border-right-width: 1px;
     border-top-width: 1px;
     border-bottom-width: 1px;
-    border-left-color: rgba(255,255,255,0.08);
-    border-right-color: rgba(255,255,255,0.08);
-    border-top-color: rgba(255,255,255,0.08);
-    border-bottom-color: rgba(255,255,255,0.08);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .ski-pass-kiosk-header {
     flex-direction: row;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.ski-pass-title-block {
+    flex-direction: column;
 }
 
 .ski-pass-kiosk-title {
     font-size: 20px;
-    -unity-font-style: bold;
-    color: rgb(245,248,252);
+    color: rgb(248, 251, 255);
     -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
+}
+
+.ski-pass-kiosk-subtitle {
+    margin-top: 4px;
+    font-size: 13px;
+    color: rgba(226, 235, 246, 0.78);
+}
+
+.ski-pass-kiosk-body {
+    flex-grow: 1;
+    flex-direction: row;
+    min-height: 0;
+}
+
+.ski-pass-map-panel {
+    flex-grow: 1;
+    min-width: 0;
+    margin-right: 16px;
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+    background-color: rgba(14, 22, 36, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+}
+
+.ski-pass-map-host {
+    flex-grow: 1;
+    position: relative;
+}
+
+.ski-pass-sidebar {
+    width: 380px;
+    max-width: 380px;
+    min-width: 380px;
+    min-height: 0;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    background-color: rgba(16, 24, 40, 0.94);
+    border-left-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
 }
 
 .ski-pass-current {
     font-size: 16px;
-    -unity-font-style: bold;
-    color: rgb(236, 243, 252);
+    color: rgb(245, 249, 255);
     margin-bottom: 4px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .ski-pass-expiry,
+.ski-pass-owned,
 .ski-pass-quote,
-.ski-pass-result {
-    color: rgba(230,235,240,0.82);
+.ski-pass-result,
+.ski-pass-selected-lift-status,
+.ski-pass-selected-lift-meta {
+    color: rgba(226, 234, 245, 0.76);
     margin-bottom: 10px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .ski-pass-section-title {
     margin-top: 8px;
     margin-bottom: 6px;
-    -unity-font-style: bold;
-    color: rgb(220,228,238);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgb(247, 250, 255);
+}
+
+.ski-pass-section-title.compact {
+    margin-top: 0;
 }
 
 .ski-pass-option-list {
@@ -78,29 +141,486 @@
     flex-wrap: wrap;
 }
 
+.ski-pass-lift-list {
+    max-height: 230px;
+    min-height: 160px;
+    margin-bottom: 10px;
+}
+
+.ski-pass-lift-button {
+    margin-bottom: 6px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
+    text-align: left;
+    white-space: normal;
+    background-color: rgba(91, 196, 255, 0.12);
+    color: rgb(239, 246, 255);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.22);
+    border-right-color: rgba(91, 196, 255, 0.22);
+    border-top-color: rgba(91, 196, 255, 0.22);
+    border-bottom-color: rgba(91, 196, 255, 0.22);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.ski-pass-lift-button.is-locked {
+    opacity: 0.58;
+}
+
+.ski-pass-lift-button.is-selected {
+    background-color: rgba(230, 189, 61, 0.96);
+    color: rgb(16, 22, 34);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgba(255, 240, 189, 0.62);
+    border-right-color: rgba(255, 240, 189, 0.62);
+    border-top-color: rgba(255, 240, 189, 0.62);
+    border-bottom-color: rgba(255, 240, 189, 0.62);
+}
+
+.ski-pass-selected-lift-card {
+    margin-top: 8px;
+    padding: 12px;
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+    background-color: rgba(24, 36, 58, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.ski-pass-selected-lift-name {
+    color: rgb(248, 251, 255);
+    font-size: 16px;
+    margin-bottom: 6px;
+}
+
+.ski-pass-supported-list {
+    flex-direction: column;
+}
+
+.ski-pass-supported-pass-chip {
+    margin-bottom: 4px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    background-color: rgba(91, 196, 255, 0.12);
+    color: rgb(223, 244, 255);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.22);
+    border-right-color: rgba(91, 196, 255, 0.22);
+    border-top-color: rgba(91, 196, 255, 0.22);
+    border-bottom-color: rgba(91, 196, 255, 0.22);
+}
+
+.ski-pass-supported-pass-chip.is-required {
+    background-color: rgba(230, 189, 61, 0.16);
+    color: rgb(247, 224, 140);
+    border-left-color: rgba(230, 189, 61, 0.22);
+    border-right-color: rgba(230, 189, 61, 0.22);
+    border-top-color: rgba(230, 189, 61, 0.22);
+    border-bottom-color: rgba(230, 189, 61, 0.22);
+}
+
 .ski-pass-option-button {
     margin-bottom: 6px;
     margin-right: 6px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    min-height: 34px;
+    padding-left: 10px;
+    padding-right: 10px;
+    unity-text-align: middle-left;
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(223, 244, 255);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.30);
+    border-right-color: rgba(91, 196, 255, 0.30);
+    border-top-color: rgba(91, 196, 255, 0.30);
+    border-bottom-color: rgba(91, 196, 255, 0.30);
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
 }
 
 .ski-pass-option-button.is-selected {
+    background-color: rgba(230, 189, 61, 0.95);
+    color: rgb(18, 24, 34);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgba(255, 239, 179, 0.55);
+    border-right-color: rgba(255, 239, 179, 0.55);
+    border-top-color: rgba(255, 239, 179, 0.55);
+    border-bottom-color: rgba(255, 239, 179, 0.55);
+}
+
+.ski-pass-option-button.is-current {
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(230, 189, 61, 0.55);
+    border-right-color: rgba(230, 189, 61, 0.55);
+    border-top-color: rgba(230, 189, 61, 0.55);
+    border-bottom-color: rgba(230, 189, 61, 0.55);
+}
+
+.ski-pass-option-button.is-current.is-selected {
     border-left-width: 2px;
     border-right-width: 2px;
     border-top-width: 2px;
     border-bottom-width: 2px;
 }
 
-.ski-pass-lift-list {
-    max-height: 220px;
+.map-button {
+    position: absolute;
+    background-color: rgba(10, 16, 28, 0.84);
+    color: rgba(244, 248, 255, 0.96);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.3);
+    border-right-color: rgba(91, 196, 255, 0.3);
+    border-top-color: rgba(91, 196, 255, 0.3);
+    border-bottom-color: rgba(91, 196, 255, 0.3);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
 }
 
-.ski-pass-lift-row {
+.map-button-reset {
+    right: 16px;
+    bottom: 16px;
+}
+
+.map-button-center {
+    right: 88px;
+    bottom: 16px;
+}
+
+.ski-pass-close-button {
+    min-width: 112px;
+    height: 42px;
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(218, 242, 255);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.45);
+    border-right-color: rgba(91, 196, 255, 0.45);
+    border-top-color: rgba(91, 196, 255, 0.45);
+    border-bottom-color: rgba(91, 196, 255, 0.45);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.ski-pass-primary-button {
+    min-height: 42px;
+    margin-top: 2px;
+    margin-bottom: 10px;
+    background-color: rgba(91, 196, 255, 0.95);
+    color: rgb(14, 22, 34);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(220, 245, 255, 0.55);
+    border-right-color: rgba(220, 245, 255, 0.55);
+    border-top-color: rgba(220, 245, 255, 0.55);
+    border-bottom-color: rgba(220, 245, 255, 0.55);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.ski-pass-claim-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(4, 8, 16, 0.62);
+    display: none;
+}
+
+.ski-pass-claim-card {
+    width: 420px;
+    max-width: 86%;
+    padding: 22px;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+    background-color: rgba(18, 28, 46, 0.98);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgba(230, 189, 61, 0.70);
+    border-right-color: rgba(230, 189, 61, 0.70);
+    border-top-color: rgba(230, 189, 61, 0.70);
+    border-bottom-color: rgba(230, 189, 61, 0.70);
+}
+
+.ski-pass-claim-title {
+    font-size: 24px;
+    -unity-font-style: bold;
+    color: rgb(255, 240, 188);
+    margin-bottom: 8px;
+}
+
+.ski-pass-claim-body {
+    color: rgb(224, 237, 248);
+    white-space: normal;
+    margin-bottom: 14px;
+}
+
+    .ski-pass-pass-block {
+    margin-bottom: 10px;
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+    background-color: rgba(18, 28, 46, 0.82);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+}
+
+.ski-pass-pass-lift-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-bottom: 6px;
+    margin-top: -2px;
+}
+
+.ski-pass-pass-lift-chip {
+    flex-grow: 1;
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    min-width: 84px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+    padding-left: 8px;
+    padding-right: 8px;
+    text-align: center;
+    white-space: nowrap;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+.ski-pass-selected-lift-overlay {
+    position: absolute;
+    left: 16px;
+    top: 16px;
+    width: 300px;
+    max-width: 42%;
+    padding: 12px;
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+    background-color: rgba(16, 24, 39, 0.88);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.06);
+    border-right-color: rgba(255, 255, 255, 0.06);
+    border-top-color: rgba(255, 255, 255, 0.06);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+    display: none;
+}
+
+.ski-pass-selected-lift-overlay .ski-pass-section-title.compact {
     margin-bottom: 4px;
-    color: rgb(230,236,244);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
-.ski-pass-lift-row.is-locked {
-    color: rgba(180, 188, 198, 0.55);
+.ski-pass-selected-lift-overlay .ski-pass-supported-list {
+    margin-top: 4px;
+}
+
+.ski-pass-current-list {
+    flex-direction: column;
+    min-width: 280px;
+    gap: 6px;
+}
+
+.ski-pass-current-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 34px;
+    gap: 10px;
+}
+
+.ski-pass-current-row-left {
+    flex-direction: row;
+    align-items: center;
+    min-width: 0;
+    max-width: 40%;
+    flex-shrink: 1;
+    flex-grow: 1;
+}
+
+.ski-pass-current-row-right {
+    flex-direction: row;
+    align-content: stretch;
+    align-items: stretch;
+    align-self: stretch;
+    flex-grow: 1;
+    min-width: 132px;
+    max-width: 60%;
+}
+
+.ski-pass-current-chip {
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    color: rgb(244, 248, 255);
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
+    -unity-text-align: middle-center;
+    align-content: stretch;
+    align-items: stretch;
+    align-self: stretch;
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.ski-pass-current-status {
+    color: rgb(247, 250, 255);
+    font-size: 16px;
+    min-width: 72px;
+    -unity-text-align: middle-center;
+    align-content: stretch;
+    align-items: stretch;
+    align-self: stretch;
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.ski-pass-current-progress-wrap {
+    position: relative;
+    min-width: 168px;
+    height: 22px;
+    justify-content: center;
+    align-content: stretch;
+    align-items: stretch;
+    align-self: center;
+}
+
+.ski-pass-current-progress-track {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.ski-pass-current-progress-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+    background-color: rgba(91, 196, 255, 0.92);
+}
+
+.ski-pass-current-progress-label {
+    position: relative;
+    align-content: stretch;
+    align-items: stretch;
+    align-self: center;
+    -unity-text-align: middle-center;
+    color: rgb(247, 250, 255);
+    font-size: 14px;
+    flex-grow: 1;
+    flex-shrink: 1;
+    width: 20%;
+}
+
+.ski-pass-current-empty {
+    color: rgba(226, 234, 245, 0.58);
+    font-size: 12px;
+    margin-top: 2px;
+
 }

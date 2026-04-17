@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public enum LiftCarrierMode
 {
@@ -18,10 +19,14 @@ public class LiftLine : MonoBehaviour
     public Transform topStation;
 
     [Header("Ski Pass")]
-    [Tooltip("Minimum Ski Pass level required to use this lift (0 = default/basic).")]
+    [Tooltip("Legacy fallback: minimum Ski Pass level required to use this lift (0 = default/basic).")]
     [Min(0)]
     [SerializeField] private int requiredPassLevel = 0;
     public int RequiredPassLevel => requiredPassLevel;
+
+    [Tooltip("Preferred non-sequential requirement. If set, this pass ID is used instead of the legacy numeric level.")]
+    [SerializeField] private string requiredPassId = "";
+    public string RequiredPassId => requiredPassId;
 
     [Header("Curve & Sag")]
     [Tooltip("Horizontal distance between the uphill and downhill sides of the loop.")]
@@ -98,6 +103,74 @@ public class LiftLine : MonoBehaviour
     [Tooltip("Runtime list of all spawned carriers on this line.")]
     public List<LiftCarrier> carriers = new List<LiftCarrier>();
 
+    [Header("Loading Gates")]
+    [FormerlySerializedAs("loadingGate")]
+    public LiftBoardGate legacyLoadingGate;
+
+    [Tooltip("Boarding gate at the bottom station.")]
+    public LiftBoardGate bottomLoadingGate;
+
+    [Tooltip("Boarding gate at the top station.")]
+    public LiftBoardGate topLoadingGate;
+
+    [Header("Intermediate Supports")]
+    [Tooltip("If enabled, support towers are inserted between bottom and top stations to break the side spans into smaller sag segments.")]
+    public bool useIntermediateSupports = true;
+
+    [Tooltip("Prefab used when auto-generating support towers.")]
+    public LiftSupportTower supportTowerPrefab;
+
+    [Tooltip("Optional parent for generated support towers.")]
+    public Transform supportTowerContainer;
+
+    [Tooltip("Toggle on to regenerate support towers immediately in the editor, then auto-reset to false.")]
+    public bool regenerateSupportsNow = false;
+
+    [Tooltip("Extra horizontal inset from the usable span ends when distributing supports evenly.")]
+    [Min(0f)]
+    public float supportEdgePadding = 2f;
+
+    [Tooltip("Generated placement spacing. Towers can still be manually fine-tuned after generation.")]
+    [Min(5f)]
+    public float generateSupportEveryXMeters = 35f;
+
+    [Tooltip("Distance from the bottom station before the first generated tower is allowed.")]
+    [Min(0f)]
+    public float supportStartOffset = 18f;
+
+    [Tooltip("Distance from the top station before the last generated tower is allowed.")]
+    [Min(0f)]
+    public float supportEndOffset = 18f;
+
+    [Tooltip("Guide height assigned to newly generated towers.")]
+    public float generatedSupportGuideHeight = 8f;
+
+    [Tooltip("Crossarm width assigned to newly generated towers.")]
+    public float generatedSupportCrossarmWidth = 5f;
+
+    [Tooltip("Layers used when terrain-snapping generated supports.")]
+    public LayerMask supportPlacementLayers = ~0;
+
+    [Tooltip("Downward raycast start height for generated support placement.")]
+    public float supportPlacementRayStartHeight = 200f;
+
+    [Tooltip("Downward raycast distance for generated support placement.")]
+    public float supportPlacementRayDistance = 500f;
+
+    [Tooltip("Current support tower list used by this lift.")]
+    public List<LiftSupportTower> supportTowers = new List<LiftSupportTower>();
+
+    [Header("Manual Support Authoring")]
+    [Tooltip("If enabled, manually placed support towers keep their XZ positions and can be snapped vertically to terrain.")]
+    public bool keepManualTowerXZWhenAligning = true;
+
+    [Tooltip("Prefab used when manually placing support towers in the scene view. Falls back to supportTowerPrefab if null.")]
+    public LiftSupportTower manualSupportTowerPrefab;
+
+    [Tooltip("Optional vertical offset applied after terrain alignment.")]
+    public float manualTowerTerrainYOffset = 0f;
+
+
     // ---- internal analytic loop ----
 
     private class CarrierRuntime
@@ -119,6 +192,15 @@ public class LiftLine : MonoBehaviour
     private float _bandLength;
     public float BandLength => _bandLength;
 
+#if UNITY_EDITOR
+    private bool _editorQueuedSupportRegeneration;
+    private bool _editorQueuedRebuild;
+#endif
+
+    private LiftRopeVisual[] _cachedRopeVisuals;
+    private bool _supportTowerCacheDirty = true;
+    private bool _ropeVisualCacheDirty = true;
+
     // ----------------------------------------------------------------------
     // GRINDING SUPPORT (lightweight runtime registry + closest point queries)
     // ----------------------------------------------------------------------
@@ -133,12 +215,74 @@ public class LiftLine : MonoBehaviour
     {
         if (!ActiveLiftLines.Contains(this))
             ActiveLiftLines.Add(this);
+
+        _supportTowerCacheDirty = true;
+        _ropeVisualCacheDirty = true;
     }
 
     private void OnDisable()
     {
         ActiveLiftLines.Remove(this);
+        _cachedRopeVisuals = null;
     }
+
+    private void OnValidate()
+    {
+        if (Application.isPlaying)
+            return;
+
+#if UNITY_EDITOR
+        if (regenerateSupportsNow)
+        {
+            regenerateSupportsNow = false;
+            QueueEditorSupportRegeneration();
+            return;
+        }
+
+        QueueEditorRebuild();
+#endif
+    }
+
+#if UNITY_EDITOR
+    private void QueueEditorSupportRegeneration()
+    {
+        if (_editorQueuedSupportRegeneration)
+            return;
+
+        _editorQueuedSupportRegeneration = true;
+        UnityEditor.EditorApplication.delayCall += ProcessQueuedEditorSupportRegeneration;
+    }
+
+    private void ProcessQueuedEditorSupportRegeneration()
+    {
+        _editorQueuedSupportRegeneration = false;
+
+        if (this == null)
+            return;
+
+        RegenerateIntermediateSupports();
+    }
+
+    private void QueueEditorRebuild()
+    {
+        if (_editorQueuedRebuild)
+            return;
+
+        _editorQueuedRebuild = true;
+        UnityEditor.EditorApplication.delayCall += ProcessQueuedEditorRebuild;
+    }
+
+    private void ProcessQueuedEditorRebuild()
+    {
+        _editorQueuedRebuild = false;
+
+        if (this == null)
+            return;
+
+        RebuildNow();
+    }
+
+#endif
 
     /// <summary>
     /// Public tangent accessor (wrapper around internal tangent method).
@@ -233,6 +377,7 @@ public class LiftLine : MonoBehaviour
         }
 
         SnapStationsToTerrainIfAvailable();
+        CacheSupportTowers();
         BuildAnalyticLoop();
         SpawnCarriers();
     }
@@ -349,6 +494,38 @@ public class LiftLine : MonoBehaviour
         return true;
     }
 
+    public bool HasPlayerBoardingGates
+    {
+        get
+        {
+            return GateRequiresPlayers(legacyLoadingGate) ||
+                   GateRequiresPlayers(bottomLoadingGate) ||
+                   GateRequiresPlayers(topLoadingGate);
+        }
+    }
+
+    public void GetBoardGates(List<LiftBoardGate> results)
+    {
+        if (results == null)
+            return;
+
+        results.Clear();
+
+        AddGateIfValid(results, legacyLoadingGate);
+        AddGateIfValid(results, bottomLoadingGate);
+        AddGateIfValid(results, topLoadingGate);
+    }
+
+    private static bool GateRequiresPlayers(LiftBoardGate gate)
+    {
+        return gate != null && gate.requireGateForPlayers;
+    }
+
+    private static void AddGateIfValid(List<LiftBoardGate> results, LiftBoardGate gate)
+    {
+        if (gate != null && !results.Contains(gate))
+            results.Add(gate);
+    }
 
     #region Public API for visuals
 
@@ -361,8 +538,7 @@ public class LiftLine : MonoBehaviour
         if (!ValidateStations())
             return;
 
-        SnapStationsToTerrainIfAvailable();
-        BuildAnalyticLoop();
+        RebuildNow();
     }
 
     /// <summary>
@@ -439,6 +615,238 @@ public class LiftLine : MonoBehaviour
         return true;
     }
 
+    private void MarkSupportCacheDirty()
+    {
+        _supportTowerCacheDirty = true;
+    }
+
+    private void CacheSupportTowers(bool force = false)
+    {
+        if (!force && !_supportTowerCacheDirty)
+            return;
+
+        _supportTowerCacheDirty = false;
+
+        supportTowers.RemoveAll(t => t == null);
+
+        if (supportTowerContainer == null)
+            return;
+
+        LiftSupportTower[] found = supportTowerContainer.GetComponentsInChildren<LiftSupportTower>(true);
+
+        supportTowers.Clear();
+        for (int i = 0; i < found.Length; i++)
+        {
+            if (found[i] != null)
+                supportTowers.Add(found[i]);
+        }
+    }
+
+    private void MarkRopeVisualCacheDirty()
+    {
+        _ropeVisualCacheDirty = true;
+    }
+
+    private LiftRopeVisual[] GetRopeVisuals(bool force = false)
+    {
+        if (!force && !_ropeVisualCacheDirty && _cachedRopeVisuals != null)
+            return _cachedRopeVisuals;
+
+        _ropeVisualCacheDirty = false;
+        _cachedRopeVisuals = GetComponentsInChildren<LiftRopeVisual>(true);
+        return _cachedRopeVisuals;
+    }
+
+    public void RefreshLiftVisualsImmediate()
+    {
+        LiftRopeVisual[] ropeVisuals = GetRopeVisuals();
+        for (int i = 0; i < ropeVisuals.Length; i++)
+        {
+            if (ropeVisuals[i] == null)
+                continue;
+
+            ropeVisuals[i].RebuildRopeFromLiftLine();
+        }
+    }
+
+    public void RebuildNow(bool refreshRopeVisuals = true)
+    {
+        if (!ValidateStations())
+            return;
+
+        SnapStationsToTerrainIfAvailable();
+        CacheSupportTowers();
+        BuildAnalyticLoop();
+
+        for (int i = 0; i < _carrierRuntime.Count; i++)
+        {
+            CarrierRuntime runtime = _carrierRuntime[i];
+            if (runtime == null || runtime.anchor == null || runtime.carrier == null)
+                continue;
+
+            runtime.distanceAlong = Mathf.Repeat(runtime.distanceAlong, Mathf.Max(0.0001f, _bandLength));
+            runtime.carrier.distanceAlong = runtime.distanceAlong;
+
+            Vector3 pos = GetBandPosition(runtime.distanceAlong);
+            Vector3 fwd = GetBandTangent(runtime.distanceAlong);
+
+            runtime.anchor.position = pos;
+            runtime.anchor.rotation = Quaternion.LookRotation(fwd, Vector3.up);
+        }
+
+        if (refreshRopeVisuals)
+            RefreshLiftVisualsImmediate();
+    }
+
+    [ContextMenu("Regenerate Intermediate Supports")]
+    public void RegenerateIntermediateSupports()
+    {
+        if (!ValidateStations())
+            return;
+
+        if (supportTowerPrefab == null)
+        {
+            Debug.LogWarning($"[{nameof(LiftLine)}] No support tower prefab assigned.", this);
+            return;
+        }
+
+        if (supportTowerContainer == null)
+        {
+            GameObject root = new GameObject("GeneratedSupports");
+            root.transform.SetParent(transform, false);
+            supportTowerContainer = root.transform;
+        }
+
+        ClearGeneratedIntermediateSupports();
+
+        Vector3 a = bottomStation.position;
+        Vector3 b = topStation.position;
+        Vector3 full = b - a;
+
+        float fullLength = full.magnitude;
+        if (fullLength < 0.01f)
+        {
+            RebuildNow();
+            return;
+        }
+
+        Vector3 dir = full / fullLength;
+
+        Vector3 horizDir = full;
+        horizDir.y = 0f;
+        if (horizDir.sqrMagnitude < 0.0001f)
+            horizDir = Vector3.forward;
+        horizDir.Normalize();
+
+        float usableStart = Mathf.Max(0f, supportStartOffset);
+        float usableEnd = Mathf.Max(usableStart, fullLength - supportEndOffset);
+
+        float paddedStart = Mathf.Min(usableEnd, usableStart + supportEdgePadding);
+        float paddedEnd = Mathf.Max(paddedStart, usableEnd - supportEdgePadding);
+        float paddedLength = paddedEnd - paddedStart;
+
+        supportTowers.Clear();
+
+        float desiredSpacing = Mathf.Max(5f, generateSupportEveryXMeters);
+
+        if (paddedLength > desiredSpacing)
+        {
+            int supportCount = Mathf.Max(1, Mathf.RoundToInt(paddedLength / desiredSpacing) - 1);
+            float actualSpacing = paddedLength / (supportCount + 1);
+
+            for (int i = 0; i < supportCount; i++)
+            {
+                float d = paddedStart + actualSpacing * (i + 1);
+                CreateGeneratedSupportAtDistance(a, dir, horizDir, d);
+            }
+        }
+        else if (paddedLength > 1f)
+        {
+            float d = paddedStart + paddedLength * 0.5f;
+            CreateGeneratedSupportAtDistance(a, dir, horizDir, d);
+        }
+
+        MarkSupportCacheDirty();
+        MarkRopeVisualCacheDirty();
+        RebuildNow();
+    }
+
+    private void CreateGeneratedSupportAtDistance(Vector3 spanStart, Vector3 dir, Vector3 horizDir, float distanceAlongSpan)
+    {
+        Vector3 pos = spanStart + dir * distanceAlongSpan;
+
+        Vector3 rayOrigin = pos + Vector3.up * supportPlacementRayStartHeight;
+        if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, supportPlacementRayDistance, supportPlacementLayers, QueryTriggerInteraction.Ignore))
+            pos = hit.point;
+
+        LiftSupportTower tower = Instantiate(
+            supportTowerPrefab,
+            pos,
+            Quaternion.LookRotation(horizDir, Vector3.up),
+            supportTowerContainer
+        );
+
+        tower.name = $"SupportTower_{supportTowers.Count:00}";
+        tower.generatedByLiftLine = true;
+        tower.guideHeight = generatedSupportGuideHeight;
+        tower.crossarmWidth = generatedSupportCrossarmWidth;
+
+        supportTowers.Add(tower);
+
+        MarkSupportCacheDirty();
+    }
+
+    [ContextMenu("Clear Generated Intermediate Supports")]
+    public void ClearGeneratedIntermediateSupports()
+    {
+        if (supportTowerContainer == null)
+            return;
+
+        List<Transform> toRemove = new List<Transform>();
+        for (int i = 0; i < supportTowerContainer.childCount; i++)
+        {
+            Transform child = supportTowerContainer.GetChild(i);
+            LiftSupportTower tower = child.GetComponent<LiftSupportTower>();
+            if (tower != null && tower.generatedByLiftLine)
+                toRemove.Add(child);
+        }
+
+        for (int i = 0; i < toRemove.Count; i++)
+        {
+            if (Application.isPlaying)
+                Destroy(toRemove[i].gameObject);
+            else
+                DestroyImmediate(toRemove[i].gameObject);
+        }
+
+        supportTowers.RemoveAll(t => t == null || t.generatedByLiftLine);
+        MarkSupportCacheDirty();
+        MarkRopeVisualCacheDirty();
+    }
+
+    private List<LiftSupportTower> GetOrderedSupportTowers(Vector3 origin, Vector3 axis)
+    {
+        CacheSupportTowers();
+
+        List<LiftSupportTower> ordered = new List<LiftSupportTower>();
+        for (int i = 0; i < supportTowers.Count; i++)
+        {
+            if (supportTowers[i] != null)
+                ordered.Add(supportTowers[i]);
+        }
+
+        axis = axis.sqrMagnitude > 0.0001f ? axis.normalized : Vector3.forward;
+
+        ordered.Sort((lhs, rhs) =>
+        {
+            float a = Vector3.Dot(lhs.transform.position - origin, axis);
+            float b = Vector3.Dot(rhs.transform.position - origin, axis);
+            return a.CompareTo(b);
+        });
+
+        return ordered;
+    }
+
     /// <summary>
     /// Build an analytic closed loop around the two station spheres.
     /// - Two straight sides (up and down) with static sag.
@@ -453,7 +861,6 @@ public class LiftLine : MonoBehaviour
         Vector3 a = bottomStation.position;
         Vector3 b = topStation.position;
 
-        // Travel direction projected onto horizontal plane for side separation.
         Vector3 dir = b - a;
         Vector3 horizDir = dir;
         horizDir.y = 0f;
@@ -461,7 +868,6 @@ public class LiftLine : MonoBehaviour
             horizDir = Vector3.forward;
         horizDir.Normalize();
 
-        // Left/right axis relative to travel direction (for up/down lines).
         Vector3 right = Vector3.Cross(Vector3.up, horizDir);
         if (right.sqrMagnitude < 0.0001f)
             right = Vector3.right;
@@ -473,43 +879,54 @@ public class LiftLine : MonoBehaviour
 
         Vector3 upOffset = Vector3.up * verticalOffset;
 
-        // Contact points on either side of each sphere
-        Vector3 aLeft = a + right * (rA + halfSep) + upOffset;   // Uphill side at bottom
-        Vector3 aRight = a - right * (rA + halfSep) + upOffset;   // Downhill side at bottom
+        Vector3 aLeft = a + right * (rA + halfSep) + upOffset;
+        Vector3 aRight = a - right * (rA + halfSep) + upOffset;
 
-        Vector3 bLeft = b + right * (rB + halfSep) + upOffset;   // Uphill side at top
-        Vector3 bRight = b - right * (rB + halfSep) + upOffset;   // Downhill side at top
+        Vector3 bLeft = b + right * (rB + halfSep) + upOffset;
+        Vector3 bRight = b - right * (rB + halfSep) + upOffset;
 
-        // Arc midpoints: move along travel direction to place control points "outside" the stations.
         Vector3 cA = a + upOffset;
         Vector3 cB = b + upOffset;
 
         float arcDepthA = rA + halfSep;
         float arcDepthB = rB + halfSep;
 
-        // Station A loop at the "bottom" end (behind A along -dir)
         Vector3 aMid = cA - horizDir * arcDepthA;
-
-        // Station B loop at the "top" end (ahead of B along +dir)
         Vector3 bMid = cB + horizDir * arcDepthB;
 
-        // Start at uphill side near bottom station
+        List<LiftSupportTower> orderedSupports = useIntermediateSupports
+            ? GetOrderedSupportTowers(a, b - a)
+            : new List<LiftSupportTower>();
+
         _bandPoints.Add(aLeft);
 
-        // Uphill side A_left -> B_left with analytic sag
-        AddSideSegmentWithSag(_bandPoints, aLeft, bLeft, includeStartPoint: false);
+        Vector3 previous = aLeft;
+        for (int i = 0; i < orderedSupports.Count; i++)
+        {
+            Vector3 next = orderedSupports[i].GetGuidePoint(right, true, ropeClearance, verticalOffset);
+            AddSideSegmentWithSag(_bandPoints, previous, next, includeStartPoint: false);
+            previous = next;
+        }
 
-        // Rounded arc around top station: B_left -> B_right
+        AddSideSegmentWithSag(_bandPoints, previous, bLeft, includeStartPoint: false);
+
         AddArcInterior(_bandPoints, bLeft, bMid, bRight);
 
-        // Downhill side B_right -> A_right with analytic sag
-        AddSideSegmentWithSag(_bandPoints, bRight, aRight, includeStartPoint: true);
+        previous = bRight;
+        bool includeStart = true;
 
-        // Rounded arc around bottom station: A_right -> A_left (closing loop)
+        for (int i = orderedSupports.Count - 1; i >= 0; i--)
+        {
+            Vector3 next = orderedSupports[i].GetGuidePoint(right, false, ropeClearance, verticalOffset);
+            AddSideSegmentWithSag(_bandPoints, previous, next, includeStartPoint: includeStart);
+            previous = next;
+            includeStart = false;
+        }
+
+        AddSideSegmentWithSag(_bandPoints, previous, aRight, includeStartPoint: includeStart);
+
         AddArcInterior(_bandPoints, aRight, aMid, aLeft);
-        // We do not re-add A_left here; the loop conceptually closes back to the first point.
 
-        // Build cumulative lengths (including last->first segment)
         _segmentCumulative.Add(0f);
         for (int i = 0; i < _bandPoints.Count; i++)
         {
@@ -521,10 +938,127 @@ public class LiftLine : MonoBehaviour
         }
 
         if (_bandLength <= 0f)
-        {
             Debug.LogWarning($"[{nameof(LiftLine)}] Analytic band length is zero after setup.", this);
+    }
+
+    public LiftSupportTower GetManualSupportPrefab()
+    {
+        return manualSupportTowerPrefab != null ? manualSupportTowerPrefab : supportTowerPrefab;
+    }
+
+    public LiftSupportTower AddManualSupport(Vector3 worldPosition, Quaternion rotation)
+    {
+        LiftSupportTower prefab = GetManualSupportPrefab();
+        if (prefab == null)
+        {
+            Debug.LogWarning($"[{nameof(LiftLine)}] No manual support prefab assigned.", this);
+            return null;
+        }
+
+        if (supportTowerContainer == null)
+        {
+            GameObject root = new GameObject("GeneratedSupports");
+            root.transform.SetParent(transform, false);
+            supportTowerContainer = root.transform;
+        }
+
+        LiftSupportTower tower = Instantiate(prefab, worldPosition, rotation, supportTowerContainer);
+        tower.generatedByLiftLine = false;
+
+        supportTowers.Add(tower);
+        MarkSupportCacheDirty();
+        MarkRopeVisualCacheDirty();
+        RebuildNow();
+
+        return tower;
+    }
+
+    public void RemoveSupport(LiftSupportTower tower)
+    {
+        if (tower == null)
+            return;
+
+        supportTowers.Remove(tower);
+
+        if (Application.isPlaying)
+            Destroy(tower.gameObject);
+        else
+            DestroyImmediate(tower.gameObject);
+
+        MarkSupportCacheDirty();
+        MarkRopeVisualCacheDirty();
+        RebuildNow();
+    }
+
+    [ContextMenu("Align Manual Supports To Terrain")]
+    public void AlignManualSupportsToTerrain()
+    {
+        CacheSupportTowers(force: true);
+
+        for (int i = 0; i < supportTowers.Count; i++)
+        {
+            LiftSupportTower tower = supportTowers[i];
+            if (tower == null || tower.generatedByLiftLine)
+                continue;
+
+            AlignSupportToTerrain(tower, preserveXZ: keepManualTowerXZWhenAligning);
+        }
+
+        MarkSupportCacheDirty();
+        MarkRopeVisualCacheDirty();
+        RebuildNow();
+    }
+
+    [ContextMenu("Align All Supports To Terrain")]
+    public void AlignAllSupportsToTerrain()
+    {
+        CacheSupportTowers(force: true);
+
+        for (int i = 0; i < supportTowers.Count; i++)
+        {
+            LiftSupportTower tower = supportTowers[i];
+            if (tower == null)
+                continue;
+
+            AlignSupportToTerrain(tower, preserveXZ: true);
+        }
+
+        MarkSupportCacheDirty();
+        MarkRopeVisualCacheDirty();
+        RebuildNow();
+    }
+
+    public void AlignSupportToTerrain(LiftSupportTower tower, bool preserveXZ)
+    {
+        if (tower == null)
+            return;
+
+        Vector3 pos = tower.transform.position;
+        Vector3 rayOrigin = pos + Vector3.up * supportPlacementRayStartHeight;
+
+        if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, supportPlacementRayDistance, supportPlacementLayers, QueryTriggerInteraction.Ignore))
+        {
+            if (preserveXZ)
+            {
+                tower.transform.position = new Vector3(
+                    pos.x,
+                    hit.point.y + manualTowerTerrainYOffset,
+                    pos.z
+                );
+            }
+            else
+            {
+                tower.transform.position = hit.point + Vector3.up * manualTowerTerrainYOffset;
+            }
         }
     }
+
+#if UNITY_EDITOR
+    public void CacheSupportTowerEditorOnly()
+    {
+        CacheSupportTowers(force: true);
+    }
+#endif
 
     /// <summary>
     /// Approximate world radius of a SphereCollider accounting for non-uniform scale.
@@ -736,13 +1270,42 @@ public class LiftLine : MonoBehaviour
         var mgr = SkiPassManager.Instance;
         var cfg = mgr != null ? mgr.Config : null;
 
+        if (cfg != null && !string.IsNullOrWhiteSpace(requiredPassId))
+        {
+            var byId = cfg.GetByPassId(requiredPassId);
+            if (byId != null)
+                return byId.displayName;
+
+            return requiredPassId;
+        }
+
         if (cfg != null)
         {
             var p = cfg.Get(requiredPassLevel);
-            if (p != null) return $"{p.displayName} (L{requiredPassLevel})";
+            if (p != null)
+                return p.displayName;
         }
 
-        return $"Pass Level {requiredPassLevel}";
+        return "Ski pass required";
+    }
+
+    public bool HasValidRequiredPassId(SkiPassConfigSO config)
+    {
+        if (config == null || string.IsNullOrWhiteSpace(requiredPassId))
+            return false;
+
+        return config.GetLevelIndexByPassId(requiredPassId) >= 0;
+    }
+
+    public string GetResolvedRequiredPassId(SkiPassConfigSO config)
+    {
+        if (config == null)
+            return string.Empty;
+
+        if (HasValidRequiredPassId(config))
+            return requiredPassId.Trim();
+
+        return config.GetPassIdForLevel(Mathf.Max(0, requiredPassLevel));
     }
 
     private void OnDrawGizmosSelected()

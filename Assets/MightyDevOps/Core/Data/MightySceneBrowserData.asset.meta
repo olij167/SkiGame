@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 928880c09e4df2a4897c5493597b404b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 177244
+  packageName: MIGHTY PORTAL
+  packageVersion: 2.2.
+  assetPath: Assets/MightyDevOps/Core/Data/MightySceneBrowserData.asset
+  uploadId: 767126

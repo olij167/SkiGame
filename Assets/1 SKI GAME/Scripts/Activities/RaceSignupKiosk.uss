@@ -1,0 +1,864 @@
+.race-signup-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    justify-content: center;
+    align-items: center;
+    padding: 22px;
+    background-color: rgba(6, 10, 18, 0.72);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgb(244, 248, 255);
+}
+
+.race-signup-shell {
+    width: 96%;
+    max-width: 1780px;
+    height: 92%;
+    background-color: rgba(10, 16, 28, 0.97);
+    border-radius: 20px;
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.race-signup-header {
+    min-height: 82px;
+    padding-left: 22px;
+    padding-right: 22px;
+    padding-top: 18px;
+    padding-bottom: 14px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    background-color: rgba(18, 28, 44, 0.92);
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.race-signup-header-copy {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.race-signup-title {
+    font-size: 26px;
+    color: rgb(250, 252, 255);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
+}
+
+.race-signup-subtitle {
+    margin-top: 4px;
+    font-size: 13px;
+    color: rgba(226, 235, 246, 0.78);
+}
+
+.race-signup-close-button {
+    min-width: 112px;
+    height: 42px;
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(218, 242, 255);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.45);
+    border-right-color: rgba(91, 196, 255, 0.45);
+    border-top-color: rgba(91, 196, 255, 0.45);
+    border-bottom-color: rgba(91, 196, 255, 0.45);
+    border-radius: 12px;
+}
+
+.race-signup-top-row {
+    margin-left: 18px;
+    margin-right: 18px;
+    margin-top: 12px;
+    margin-bottom: 0;
+    min-height: 0;
+    flex-direction: row;
+}
+
+.race-signup-race-selection-panel {
+    flex-grow: 1;
+    min-width: 0;
+    min-height: 172px;
+    max-height: 172px;
+    padding: 10px;
+    flex-direction: row;
+    align-items: stretch;
+    border-radius: 18px;
+    background-color: rgba(18, 28, 46, 0.97);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.race-signup-race-selection-main {
+    flex-grow: 1;
+    min-width: 0;
+    margin-right: 10px;
+    padding: 10px;
+    flex-direction: column;
+    border-radius: 14px;
+    background-color: rgba(10, 18, 31, 0.46);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.04);
+    border-right-color: rgba(255, 255, 255, 0.04);
+    border-top-color: rgba(255, 255, 255, 0.04);
+    border-bottom-color: rgba(255, 255, 255, 0.04);
+}
+
+.race-signup-race-selection-toolbar {
+    margin-bottom: 8px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.race-signup-board-summary {
+    min-width: 0;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: rgba(238, 244, 252, 0.88);
+    font-size: 10px;
+    unity-text-align: middle-center;
+}
+
+.race-signup-race-board-scroll {
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.race-signup-race-board-scroll .unity-scroll-view__content-container {
+    flex-direction: row;
+    align-items: flex-start;
+    padding-right: 10px;
+}
+
+.race-selection-pass-block {
+    width: 228px;
+    min-width: 228px;
+    margin-right: 10px;
+    flex-direction: column;
+    align-self: center;
+}
+
+.race-selection-pass-button {
+    min-height: 58px;
+    margin-bottom: 6px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 12px;
+    padding-right: 12px;
+    unity-text-align: middle-left;
+    white-space: normal;
+    background-color: rgba(91, 196, 255, 0.12);
+    color: rgb(239, 246, 255);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.22);
+    border-right-color: rgba(91, 196, 255, 0.22);
+    border-top-color: rgba(91, 196, 255, 0.22);
+    border-bottom-color: rgba(91, 196, 255, 0.22);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.race-selection-pass-button.is-selected {
+    background-color: rgba(230, 189, 61, 0.96);
+    color: rgb(16, 22, 34);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgba(255, 240, 189, 0.62);
+    border-right-color: rgba(255, 240, 189, 0.62);
+    border-top-color: rgba(255, 240, 189, 0.62);
+    border-bottom-color: rgba(255, 240, 189, 0.62);
+}
+
+.race-selection-pass-league-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: stretch;
+    align-self: stretch;
+    flex-grow: 1;
+}
+
+.race-selection-league-chip {
+    margin-right: 6px;
+    margin-bottom: 4px;
+    min-width: 48px;
+    height: 30px;
+    padding-left: 8px;
+    padding-right: 8px;
+    unity-text-align: middle-center;
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(223, 244, 255);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.3);
+    border-right-color: rgba(91, 196, 255, 0.3);
+    border-top-color: rgba(91, 196, 255, 0.3);
+    border-bottom-color: rgba(91, 196, 255, 0.3);
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    font-size: 11px;
+    align-content: stretch;
+    align-self: stretch;
+    flex-grow: 1;
+}
+
+.race-selection-league-chip.is-selected {
+    background-color: rgba(230, 189, 61, 0.95);
+    color: rgb(18, 24, 34);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgba(255, 239, 179, 0.55);
+    border-right-color: rgba(255, 239, 179, 0.55);
+    border-top-color: rgba(255, 239, 179, 0.55);
+    border-bottom-color: rgba(255, 239, 179, 0.55);
+}
+
+.race-selection-league-chip.is-locked {
+    opacity: 0.56;
+}
+
+.race-selection-league-chip.is-completed {
+    background-color: rgba(120, 220, 150, 0.16);
+}
+
+.race-signup-championship-goal-panel {
+    width: 320px;
+    min-width: 320px;
+    max-width: 320px;
+    padding: 12px 12px 10px;
+    flex-direction: column;
+    justify-content: space-between;
+    border-radius: 16px;
+    background-color: rgba(39, 28, 12, 0.44);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 224, 156, 0.18);
+    border-right-color: rgba(255, 224, 156, 0.18);
+    border-top-color: rgba(255, 224, 156, 0.18);
+    border-bottom-color: rgba(255, 224, 156, 0.18);
+}
+
+.race-signup-championship-goal-panel.is-unlocked {
+    background-color: rgba(57, 42, 12, 0.62);
+    border-left-color: rgba(255, 228, 138, 0.42);
+    border-right-color: rgba(255, 228, 138, 0.42);
+    border-top-color: rgba(255, 228, 138, 0.42);
+    border-bottom-color: rgba(255, 228, 138, 0.42);
+}
+
+.race-signup-championship-goal-panel.is-completed {
+    background-color: rgba(48, 35, 10, 0.68);
+    border-left-color: rgba(255, 238, 188, 0.54);
+    border-right-color: rgba(255, 238, 188, 0.54);
+    border-top-color: rgba(255, 238, 188, 0.54);
+    border-bottom-color: rgba(255, 238, 188, 0.54);
+}
+
+.race-signup-championship-title {
+    margin-top: 0;
+    font-size: 19px;
+    color: rgb(250, 245, 224);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
+    unity-text-align: upper-center;
+}
+
+.race-signup-championship-reward {
+    margin-top: 4px;
+    font-size: 11px;
+    color: rgba(255, 231, 176, 0.84);
+    white-space: normal;
+    unity-text-align: upper-center;
+}
+
+.race-signup-goal-lane-shell {
+    margin-top: 8px;
+    padding: 5px;
+    min-height: 26px;
+    border-radius: 12px;
+    background-color: rgba(10, 16, 28, 0.48);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+    justify-content: center;
+}
+
+.race-signup-goal-lane {
+    height: 14px;
+    border-radius: 999px;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.08);
+    flex-direction: row;
+}
+
+.race-signup-goal-lane-fill {
+    height: 100%;
+    flex-direction: row;
+    overflow: hidden;
+    border-radius: 999px;
+}
+
+.race-signup-goal-segment {
+    flex-grow: 1;
+    height: 100%;
+    margin-right: 2px;
+    border-radius: 999px;
+}
+
+.race-signup-goal-segment:last-child {
+    margin-right: 0;
+}
+
+.race-signup-championship-status-row {
+    margin-top: 8px;
+    margin-bottom: 6px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.race-signup-championship-status {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(248, 251, 255, 0.94);
+}
+
+.race-signup-championship-summary {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(242, 228, 186, 0.88);
+    unity-text-align: upper-right;
+}
+
+.race-signup-championship-button {
+    margin-top: 8px;
+    min-width: 0;
+    width: 100%;
+    height: 34px;
+    background-color: rgba(241, 199, 74, 0.94);
+    color: rgb(15, 21, 33);
+    border-radius: 10px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 241, 187, 0.58);
+    border-right-color: rgba(255, 241, 187, 0.58);
+    border-top-color: rgba(255, 241, 187, 0.58);
+    border-bottom-color: rgba(255, 241, 187, 0.58);
+}
+
+.race-signup-body {
+    flex-grow: 1;
+    flex-direction: row;
+    min-height: 0;
+    padding-top: 8px;
+}
+
+.race-signup-map-host {
+    flex-grow: 1;
+    min-width: 0;
+    margin-left: 18px;
+    margin-right: 10px;
+    margin-top: 0;
+    margin-bottom: 18px;
+    border-radius: 18px;
+    overflow: hidden;
+    background-color: rgba(14, 22, 36, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.race-signup-side-panel {
+    width: 430px;
+    min-width: 430px;
+    max-width: 430px;
+    min-height: 0;
+    padding: 18px;
+    background-color: rgba(16, 24, 40, 0.94);
+    flex-direction: column;
+    border-left-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+}
+
+.race-signup-state {
+    flex-grow: 1;
+    min-height: 0;
+    flex-direction: column;
+}
+
+.race-signup-state-browse {
+    display: none;
+}
+
+.race-signup-state-selected {
+    display: none;
+}
+
+.race-signup-section-title {
+    margin-top: 8px;
+    margin-bottom: 6px;
+    font-size: 16px;
+    color: rgb(247, 250, 255);
+}
+
+.race-signup-inline-section {
+    margin-top: 12px;
+}
+
+.no-top-margin {
+    margin-top: 0;
+}
+
+.race-signup-card-kicker {
+    font-size: 11px;
+    color: rgb(241, 199, 74);
+    letter-spacing: 0.5px;
+}
+
+.race-signup-meta-text {
+    margin-top: 2px;
+    margin-right: 2px;
+    margin-bottom: 2px;
+    margin-left: 2px;
+    font-size: 12px;
+    color: rgba(226, 234, 245, 0.76);
+    white-space: normal;
+}
+
+.race-signup-race-list {
+    flex-grow: 1;
+    min-height: 220px;
+    margin-top: 6px;
+}
+
+.race-signup-race-list {
+    flex-grow: 1;
+    min-height: 220px;
+    margin-top: 6px;
+}
+
+.race-signup-race-list {
+    flex-grow: 1;
+    min-height: 220px;
+    margin-top: 6px;
+}
+
+.race-signup-race-card {
+    width: 100%;
+    min-height: 82px;
+    margin-bottom: 10px;
+    margin-left: 0px;
+    margin-right: 0px;
+    padding: 12px;
+    unity-text-align: middle-left;
+    background-color: rgba(18, 28, 44, 0.92);
+    color: rgb(239, 246, 255);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.12);
+    border-right-color: rgba(255, 255, 255, 0.12);
+    border-top-color: rgba(255, 255, 255, 0.12);
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+}
+
+.race-signup-race-card.is-selected {
+    color: rgb(16, 22, 34);
+}
+
+.race-signup-race-card.is-locked {
+    opacity: 0.68;
+}
+
+.race-signup-race-card-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.race-signup-race-card-title-wrap {
+    flex-grow: 1;
+    min-width: 0;
+    flex-direction: column;
+    margin-right: 8px;
+}
+
+.race-signup-race-card-title {
+    font-size: 24px;
+    color: inherit;
+    unity-font-style: bold;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
+    white-space: normal;
+    color: rgba(235, 242, 250, 0.86);
+
+}
+
+.race-signup-race-card-tier {
+    margin-top: 4px;
+    font-size: 18px;
+    color: rgba(235, 242, 250, 0.86);
+}
+
+.race-signup-race-card.is-selected .race-signup-race-card-tier {
+    color: rgba(28, 34, 40, 0.82);
+}
+
+.race-signup-race-card-status {
+    min-width: 84px;
+    padding: 5px 8px;
+    border-top-left-radius: 999px;
+    border-top-right-radius: 999px;
+    border-bottom-left-radius: 999px;
+    border-bottom-right-radius: 999px;
+    unity-text-align: middle-center;
+    font-size: 10px;
+    background-color: rgba(255, 255, 255, 0.14);
+    color: rgba(245, 249, 255, 0.96);
+}
+
+.race-signup-race-card-status.is-completed {
+    background-color: rgba(120, 220, 150, 0.22);
+}
+
+.race-signup-race-card-status.is-locked {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.race-signup-race-card.is-selected .race-signup-race-card-status {
+    background-color: rgba(255, 255, 255, 0.24);
+    color: rgb(20, 24, 30);
+}
+
+.race-signup-race-card-stats {
+    flex-direction: row;
+    gap: 6px;
+}
+
+.race-signup-race-card-stat-chip {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    max-width: 30%;
+    padding: 3px 2px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    background-color: rgba(10, 16, 28, 0.28);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+    justify-content: center;
+    align-items: center;
+}
+
+.race-signup-race-card.is-selected .race-signup-race-card-stat-chip {
+    background-color: rgba(255, 255, 255, 0.20);
+    border-left-color: rgba(255, 255, 255, 0.14);
+    border-right-color: rgba(255, 255, 255, 0.14);
+    border-top-color: rgba(255, 255, 255, 0.14);
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+}
+
+.race-signup-race-card-stat-label {
+    font-size: 16px;
+    color: rgba(235, 242, 250, 0.86);
+    unity-text-align: middle-center;
+    unity-font-style: bold;
+}
+
+.race-signup-race-card-stat-value {
+    margin-top: 1px;
+    font-size: 18px;
+    color: rgba(235, 242, 250, 0.86);
+    unity-text-align: middle-center;
+    unity-font-style: bold;
+}
+
+.race-signup-race-card.is-selected .race-signup-race-card-stat-label,
+.race-signup-race-card.is-selected .race-signup-race-card-stat-value {
+    color: rgb(20, 24, 30);
+}
+
+
+.race-signup-race-button.is-selected .race-signup-race-card-meta {
+    color: rgba(24, 28, 36, 0.78);
+}
+
+.race-signup-button-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 4px;
+    margin-bottom: 0;
+    gap: 6px;
+}
+
+.race-signup-option-button {
+    min-width: 50px;
+    height: 34px;
+    margin-right: 0;
+    margin-bottom: 0;
+    background-color: rgba(91, 196, 255, 0.16);
+    color: rgb(223, 244, 255);
+    border-radius: 9px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.3);
+    border-right-color: rgba(91, 196, 255, 0.3);
+    border-top-color: rgba(91, 196, 255, 0.3);
+    border-bottom-color: rgba(91, 196, 255, 0.3);
+}
+
+.race-signup-option-button.is-selected {
+    background-color: rgba(230, 189, 61, 0.95);
+    color: rgb(18, 24, 34);
+    border-left-color: rgba(255, 239, 179, 0.55);
+    border-right-color: rgba(255, 239, 179, 0.55);
+    border-top-color: rgba(255, 239, 179, 0.55);
+    border-bottom-color: rgba(255, 239, 179, 0.55);
+}
+
+.race-signup-option-button.is-locked {
+    opacity: 0.54;
+}
+
+.race-signup-selected-topbar {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.race-signup-selected-kicker {
+    margin-left: 12px;
+    flex-grow: 1;
+    unity-text-align: upper-right;
+}
+
+.race-signup-back-button {
+    min-width: 100px;
+    height: 38px;
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(218, 242, 255);
+    border-radius: 10px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.34);
+    border-right-color: rgba(91, 196, 255, 0.34);
+    border-top-color: rgba(91, 196, 255, 0.34);
+    border-bottom-color: rgba(91, 196, 255, 0.34);
+}
+
+.race-signup-selected-title {
+    margin-top: 10px;
+    font-size: 20px;
+    color: rgb(248, 251, 255);
+}
+
+.race-signup-selected-status {
+    margin-top: 2px;
+    font-size: 13px;
+    color: rgb(155, 221, 255);
+}
+
+.race-signup-description {
+    margin-top: 4px;
+    font-size: 12px;
+    color: rgba(230, 236, 246, 0.84);
+    white-space: normal;
+}
+
+.race-signup-stats-row {
+    flex-direction: row;
+    margin-top: 6px;
+}
+
+.race-signup-stat-box {
+    flex-grow: 1;
+    min-width: 0;
+    min-height: 74px;
+    margin-right: 8px;
+    padding: 10px 8px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    background-color: rgba(12, 18, 30, 0.7);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.04);
+    border-right-color: rgba(255, 255, 255, 0.04);
+    border-top-color: rgba(255, 255, 255, 0.04);
+    border-bottom-color: rgba(255, 255, 255, 0.04);
+}
+
+.race-signup-stat-box:last-child {
+    margin-right: 0;
+}
+
+.race-signup-stat-label {
+    font-size: 11px;
+    color: rgba(219, 230, 242, 0.68);
+    unity-text-align: middle-center;
+}
+
+.race-signup-stat-value {
+    margin-top: 4px;
+    font-size: 16px;
+    color: rgb(246, 250, 255);
+    unity-text-align: middle-center;
+}
+
+.race-signup-selected-reward {
+    margin-top: 12px;
+    font-size: 13px;
+    color: rgb(241, 199, 74);
+}
+
+.race-signup-reward-list {
+    margin-top: 8px;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.race-signup-reward-chip {
+    width: 92px;
+    min-width: 92px;
+    min-height: 58px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    padding: 8px 6px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(230, 189, 61, 0.14);
+    color: rgb(247, 224, 140);
+    border-radius: 12px;
+    font-size: 11px;
+    unity-text-align: middle-center;
+    white-space: normal;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(230, 189, 61, 0.22);
+    border-right-color: rgba(230, 189, 61, 0.22);
+    border-top-color: rgba(230, 189, 61, 0.22);
+    border-bottom-color: rgba(230, 189, 61, 0.22);
+}
+
+.race-signup-footer {
+    margin-top: auto;
+    padding-top: 14px;
+    flex-direction: column;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.race-signup-result-label {
+    min-height: 18px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: rgb(172, 226, 255);
+}
+
+.race-signup-primary-button {
+    height: 48px;
+    font-size: 16px;
+    background-color: rgb(91, 196, 255);
+    color: rgb(14, 22, 34);
+    border-radius: 12px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(220, 245, 255, 0.55);
+    border-right-color: rgba(220, 245, 255, 0.55);
+    border-top-color: rgba(220, 245, 255, 0.55);
+    border-bottom-color: rgba(220, 245, 255, 0.55);
+}
+
+.map-button {
+    position: absolute;
+    background-color: rgba(10, 16, 28, 0.84);
+    color: rgba(244, 248, 255, 0.96);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.3);
+    border-right-color: rgba(91, 196, 255, 0.3);
+    border-top-color: rgba(91, 196, 255, 0.3);
+    border-bottom-color: rgba(91, 196, 255, 0.3);
+}
+
+.map-button-reset {
+    right: 16px;
+    bottom: 16px;
+}
+
+.map-button-center {
+    right: 88px;
+    bottom: 16px;
+}

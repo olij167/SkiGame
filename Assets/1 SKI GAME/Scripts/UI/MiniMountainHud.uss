@@ -1,7 +1,7 @@
 .mini-root {
     flex-grow: 1;
     background-color: rgba(0, 0, 0, 0);
-    color: rgb(245, 245, 245);
+    color: rgb(244, 248, 255);
     -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
@@ -16,6 +16,7 @@
 
 .mini-map-column {
     width: 250px;
+    gap: 8px;
 }
 
 .mini-info-column {
@@ -24,7 +25,7 @@
 }
 
 .mini-panel {
-    background-color: rgba(8, 12, 18, 0.78);
+    background-color: rgba(10, 16, 28, 0.95);
     border-top-left-radius: 16px;
     border-top-right-radius: 16px;
     border-bottom-left-radius: 16px;
@@ -47,36 +48,41 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
+    margin-bottom: 0;
     min-height: 34px;
 }
 
 .mini-time {
-    -unity-font-style: bold;
     font-size: 16px;
     min-width: 52px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgb(248, 251, 255);
 }
 
 .mini-weather {
     flex-grow: 1;
     margin-left: 8px;
     margin-right: 8px;
-    color: rgba(255, 255, 255, 0.86);
+    color: rgba(226, 235, 246, 0.92);
     white-space: normal;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .mini-open-button {
     min-width: 56px;
-    min-height: 26px;
-    background-color: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.95);
+    min-height: 28px;
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(223, 244, 255);
     border-top-left-radius: 12px;
     border-top-right-radius: 12px;
     border-bottom-left-radius: 12px;
     border-bottom-right-radius: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.30);
+    border-right-color: rgba(91, 196, 255, 0.30);
+    border-top-color: rgba(91, 196, 255, 0.30);
+    border-bottom-color: rgba(91, 196, 255, 0.30);
 }
 
 .mini-map-viewport {
@@ -87,33 +93,12 @@
     border-top-right-radius: 16px;
     border-bottom-left-radius: 16px;
     border-bottom-right-radius: 16px;
-    background-color: rgba(8, 12, 18, 0.55);
+    background-color: rgba(14, 22, 36, 0.92);
 }
 
-.map-content {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 1024px;
-    height: 1024px;
-}
-
-.map-background {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 1024px;
-    height: 1024px;
-}
-
-.map-polylines {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 1024px;
-    height: 1024px;
-}
-
+.map-content,
+.map-background,
+.map-polylines,
 .map-markers {
     position: absolute;
     left: 0;
@@ -125,40 +110,38 @@
 .mini-run-panel {
     min-height: 86px;
     gap: 2px;
+    background-color: rgba(16, 24, 40, 0.94);
 }
 
 .mini-region-kicker {
     font-size: 10px;
-    color: rgba(255, 255, 255, 0.58);
-    -unity-font-style: bold;
+    color: rgb(241, 199, 74);
     letter-spacing: 0.4px;
     text-transform: uppercase;
     margin-bottom: 2px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .mini-run-title {
-    -unity-font-style: bold;
     font-size: 15px;
     margin-bottom: 4px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgb(248, 251, 255);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
 }
 
 .mini-run-body {
     white-space: normal;
-    color: rgba(255, 255, 255, 0.88);
+    color: rgba(226, 235, 246, 0.84);
     font-size: 11px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .mini-stats-panel {
     min-height: 132px;
+    background-color: rgba(16, 24, 40, 0.94);
 }
 
 .mini-stats-title {
-    -unity-font-style: bold;
     margin-bottom: 6px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgb(248, 251, 255);
 }
 
 .mini-stat-grid {
@@ -174,16 +157,23 @@
     padding-right: 8px;
     padding-top: 6px;
     padding-bottom: 6px;
-    background-color: rgba(255, 255, 255, 0.06);
+    background-color: rgba(24, 36, 58, 0.92);
     border-top-left-radius: 12px;
     border-top-right-radius: 12px;
     border-bottom-left-radius: 12px;
     border-bottom-right-radius: 12px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
     -unity-text-align: middle-center;
     white-space: normal;
-    color: rgba(255, 255, 255, 0.92);
+    color: rgba(244, 248, 255, 0.92);
     align-self: stretch;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .is-hidden {
@@ -198,6 +188,19 @@
     flex-grow: 0;
     flex-shrink: 0;
     overflow: hidden;
+    background-color: rgba(14, 22, 36, 0.92);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
 .run-banner-anchor {
@@ -212,7 +215,7 @@
 .run-banner {
     min-width: 360px;
     max-width: 520px;
-    background-color: rgba(8, 12, 18, 0.88);
+    background-color: rgba(10, 16, 28, 0.95);
     border-top-left-radius: 16px;
     border-top-right-radius: 16px;
     border-bottom-left-radius: 16px;
@@ -239,26 +242,23 @@
 }
 
 .run-banner-name {
-    -unity-font-style: bold;
     font-size: 16px;
     flex-grow: 1;
     margin-right: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgb(248, 251, 255);
 }
 
 .run-banner-time {
     font-size: 15px;
-    color: rgba(255, 255, 255, 0.92);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgba(244, 248, 255, 0.92);
 }
 
 .run-banner-track {
     position: relative;
     height: 18px;
     background-color: rgba(255, 255, 255, 0.08);
-    border-radius: 999px;
+    border-radius: 12px;
     overflow: hidden;
-    justify-content: center;
 }
 
 .run-banner-segments {
@@ -273,17 +273,862 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    background-color: rgba(120, 210, 255, 0.95);
-    border-radius: 999px;
+    background-color: rgba(91, 196, 255, 0.95);
+    border-radius: 12px;
 }
 
 .run-banner-percent {
     position: absolute;
-    right: 8px;
+    left: 0;
+    right: 0;
     top: 0;
     bottom: 0;
-    -unity-text-align: middle-right;
+    unity-text-align: middle-center;
+    color: rgb(248, 251, 255);
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.92);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.quest-primary-host {
+    flex-direction: column;
+    margin-bottom: 4px;
+}
+
+.quest-tracker-panel {
+    width: 304px;
+    padding: 10px 12px 10px 12px;
+    background-color: rgba(7, 12, 18, 0.72);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.quest-tracker-title {
+    display: none;
+}
+
+.quest-primary-host {
+    flex-direction: column;
+    margin-bottom: 4px;
+}
+
+.quest-focus-card {
+    position: relative;
+    padding: 9px 10px 9px 14px;
+    border-radius: 12px;
+    background-color: rgba(8, 14, 22, 0.52);
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+}
+
+.quest-focus-card--calm {
+    gap: 9px;
+}
+
+.quest-focus-accent {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
+}
+
+.objective-card-header {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.objective-card-title-block {
+    flex-grow: 1;
+    min-width: 0;
+    gap: 4px;
+}
+
+.objective-card-header-side {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+    align-self: flex-start;
+    min-width: 32px;
+}
+
+.quest-focus-quest-title,
+.objective-card-kicker {
+    margin-bottom: 0;
+    font-size: 13px;
+    line-height: 15px;
+    color: rgba(230, 238, 247, 0.90);
+    -unity-font-style: bold;
+    text-transform: uppercase;
+    white-space: normal;
+    -unity-text-outline-color: rgba(6, 10, 18, 1);
+    -unity-text-outline-width: 1px;
+}
+
+.quest-focus-title,
+.objective-card-title {
+    font-size: 18px;
+    line-height: 21px;
+    color: rgb(248, 251, 255);
+    -unity-font-style: bold;
+    white-space: normal;
+    -unity-text-outline-color: rgba(6, 10, 18, 1);
+    -unity-text-outline-width: 1px;
+}
+
+.objective-card-glyph {
+    min-width: 26px;
+    font-size: 50px;
+    line-height: 22px;
+    color: rgba(255,255,255,0.96);
+    -unity-text-align: middle-center;
+    align-self: flex-start;
+    margin-top: 1px;
+    -unity-text-outline-color: rgba(6, 10, 18, 1);
+    -unity-text-outline-width: 1px;
+}
+
+.objective-card-glyph.is-activity {
+    min-width: 26px;
+    font-size: 50px;
+    line-height: 22px;
+}
+
+.objective-divider {
+    height: 1px;
+    background-color: rgba(255,255,255,0.08);
+}
+
+.objective-directive-row {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.objective-directive-kicker {
+    min-width: 32px;
+    font-size: 12px;
+    line-height: 14px;
+    color: rgba(210, 220, 231, 0.58);
+    -unity-font-style: normal;
+    -unity-text-align: upper-left;
+    white-space: normal;
+    -unity-text-outline-color: rgba(6, 10, 18, 0.9);
+    -unity-text-outline-width: 1px;
+}
+
+.objective-directive-text {
+    flex-shrink: 1;
+    font-size: 16px;
+    line-height: 19px;
+    color: rgba(248,250,252,0.99);
+    -unity-font-style: bold;
+    white-space: normal;
+    -unity-text-outline-color: rgba(6, 10, 18, 1);
+    -unity-text-outline-width: 1px;
+}
+
+.objective-directive-row.is-urgent {
+    padding: 6px 8px;
+    background-color: rgba(255, 170, 80, 0.08);
+    border-left-width: 3px;
+    border-left-color: rgba(255, 170, 80, 0.85);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.objective-directive-row.is-urgent .objective-directive-kicker {
+    color: rgba(255, 196, 120, 0.92);
+    -unity-font-style: bold;
+}
+
+.objective-directive-row.is-urgent .objective-directive-text {
+    color: rgba(255, 248, 238, 1);
+}
+
+.quest-focus-progress-track,
+.activity-progress-track {
+    height: 7px;
+    margin-top: 4px;
+    background-color: rgba(255,255,255,0.08);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.quest-focus-progress-fill,
+.activity-progress-fill {
+    height: 100%;
+    border-radius: 12px;
+}
+
+.quest-focus-progress,
+.activity-progress-text {
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 15px;
+    color: rgba(240, 247, 255, 0.96);
+    white-space: normal;
+    -unity-text-outline-color: rgba(6, 10, 18, 1);
+    -unity-text-outline-width: 1px;
+}
+
+.quest-summary-toggle {
+    min-height: 24px;
+    margin-bottom: 6px;
+    padding-left: 0;
+    padding-right: 0;
+    border-radius: 0;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(242, 248, 255, 0.90);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(0, 0, 0, 0);
+    border-right-color: rgba(0, 0, 0, 0);
+    border-top-color: rgba(0, 0, 0, 0);
+    border-bottom-color: rgba(0, 0, 0, 0);
+    -unity-font-style: bold;
+    font-size: 12px;
+    unity-text-align: upper-left;
+    align-self: flex-start;
+    -unity-text-outline-color: rgba(6, 10, 18, 0.9);
+    -unity-text-outline-width: 1px;
+    opacity: 0.96;
+    white-space: normal;
+}
+
+.quest-tracker-list {
+    flex-direction: column;
+    gap: 5px;
+}
+
+.quest-tracker-card {
+    position: relative;
+    padding: 6px 8px 6px 13px;
+    border-radius: 9px;
+    background-color: rgba(8, 14, 22, 0.28);
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    gap: 4px;
+}
+
+.quest-tracker-card.is-secondary {
+    position: relative;
+    padding: 7px 8px 7px 12px;
+    border-radius: 8px;
+    background-color: rgba(8, 14, 22, 0.14);
+    gap: 0;
+}
+
+.quest-tracker-card.is-selected {
+    opacity: 1;
+}
+
+.quest-tracker-accent {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+}
+
+.quest-tracker-card.is-secondary .quest-tracker-accent {
+    display: flex;
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    margin-bottom: 0;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+}
+
+.quest-tracker-summary-topline {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+
+.quest-tracker-summary-title-wrap {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.quest-tracker-stage {
+    font-size: 10px;
+    color: rgba(232, 240, 248, 0.86);
+    -unity-text-outline-color: rgba(6, 10, 18, 0.9);
+    -unity-text-outline-width: 1px;
+}
+
+.quest-tracker-progress-track,
+.quest-tracker-objective-track {
+    height: 6px;
+    margin-top: 5px;
+    background-color: rgba(255,255,255,0.10);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.quest-tracker-progress-fill,
+.quest-tracker-objective-fill {
+    height: 100%;
+    border-radius: 12px;
+}
+
+.quest-tracker-card-title {
+    font-size: 14px;
+    line-height: 17px;
+    -unity-font-style: bold;
+    color: rgb(248, 251, 255);
+    white-space: normal;
+    -unity-text-outline-color: rgba(6, 10, 18, 1);
+    -unity-text-outline-width: 1px;
+}
+
+.quest-tracker-card.is-secondary .quest-tracker-card-title,
+.quest-secondary-title {
+    font-size: 13px;
+    line-height: 16px;
+    color: rgba(246, 250, 255, 1);
+    -unity-font-style: bold;
+    white-space: normal;
+    -unity-text-outline-color: rgba(6, 10, 18, 1);
+    -unity-text-outline-width: 1px;
+}
+
+.quest-tracker-objective {
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 16px;
+    color: rgba(242, 248, 255, 0.96);
+    white-space: normal;
+    -unity-text-outline-color: rgba(6, 10, 18, 1);
+    -unity-text-outline-width: 1px;
+}
+
+.quest-tracker-progress {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 14px;
+    color: rgba(240, 247, 255, 0.96);
+    white-space: normal;
+    -unity-text-outline-color: rgba(6, 10, 18, 1);
+    -unity-text-outline-width: 1px;
+}
+
+.quest-secondary-row {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 8px;
+    min-height: 34px;
+}
+
+.quest-secondary-text-block {
+    flex-grow: 1;
+    min-width: 0;
+    gap: 3px;
+}
+
+.quest-secondary-subtitle {
+    font-size: 12px;
+    line-height: 14px;
+    color: rgba(220,229,239,0.72);
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    -unity-text-outline-color: rgba(6, 10, 18, 0.95);
+    -unity-text-outline-width: 1px;
+}
+
+.quest-secondary-pips {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+    margin-top: 4px;
+}
+
+.quest-secondary-pip {
+    width: 16px;
+    height: 3px;
+    border-top-left-radius: 999px;
+    border-top-right-radius: 999px;
+    border-bottom-left-radius: 999px;
+    border-bottom-right-radius: 999px;
+}
+
+.quest-tracker-prompt,
+.quest-focus-prompt {
+    margin-top: 5px;
+    padding: 4px 8px 4px 8px;
+    border-radius: 8px;
+    align-self: flex-start;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.08);
+    border-right-color: rgba(255,255,255,0.08);
+    border-top-color: rgba(255,255,255,0.08);
+    border-bottom-color: rgba(255,255,255,0.08);
+    font-size: 13px;
+    line-height: 16px;
+    color: rgb(244, 248, 255);
+    -unity-font-style: bold;
+    white-space: normal;
+    -unity-text-outline-color: rgba(6, 10, 18, 1);
+    -unity-text-outline-width: 1px;
+}
+
+.quest-tracker-card.is-secondary .quest-tracker-prompt {
+    display: none;
+}
+
+.quest-focus-prompt.input-prompt,
+.quest-tracker-prompt.input-prompt {
+    justify-content: flex-start;
+    gap: 6px;
+}
+
+.quest-focus-prompt .input-prompt-text,
+.quest-focus-prompt .input-prompt-separator,
+.quest-tracker-prompt .input-prompt-text,
+.quest-tracker-prompt .input-prompt-separator {
+    color: rgb(242, 248, 255);
+    font-size: 14px;
+    line-height: 17px;
+    -unity-text-outline-color: rgba(6, 10, 18, 1);
+    -unity-text-outline-width: 1px;
+}
+
+.quest-focus-prompt .input-prompt-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.quest-tracker-prompt .input-prompt-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.quest-focus-hint,
+.quest-tracker-hint,
+.quest-tracker-footer,
+.quest-footer-prompt {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 15px;
+    color: rgba(236, 243, 251, 0.92);
+    white-space: normal;
+    -unity-text-outline-color: rgba(6, 10, 18, 1);
+    -unity-text-outline-width: 1px;
+}
+
+.quest-footer-prompt {
+    padding: 0;
+    background-color: rgba(0, 0, 0, 0);
+    align-self: flex-start;
+    opacity: 0.88;
+    -unity-font-style: normal;
+}
+
+.activity-focus-card {
+    gap: 10px;
+    background-color: rgba(8, 14, 22, 0.40);
+}
+
+.activity-focus-card.is-prestart {
+    gap: 10px;
+}
+
+.activity-focus-card.is-active {
+    gap: 9px;
+}
+
+.activity-focus-card.is-result {
+    gap: 8px;
+}
+
+.activity-status-chip {
+    padding: 2px 0;
+    min-height: auto;
+    border-top-width: 0;
+    border-right-width: 0;
+    border-bottom-width: 0;
+    border-left-width: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    font-size: 12px;
+    line-height: 14px;
+    unity-font-style: bold;
+    text-transform: uppercase;
+    white-space: normal;
+    color: rgba(222,232,242,0.74);
+    align-self: flex-start;
+    background-color: rgba(0,0,0,0);
+    -unity-text-outline-color: rgba(6, 10, 18, 1);
+    -unity-text-outline-width: 1px;
+    max-width: 160px;
+}
+
+.activity-status-chip--quiet {
+    background-color: rgba(0,0,0,0);
+    color: rgba(222,232,242,0.74);
+}
+
+.activity-league-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.activity-league-row.is-championship {
+    justify-content: flex-start;
+}
+
+.activity-league-title {
+    flex-grow: 1;
+    min-height: 34px;
+    padding: 7px 10px;
+    font-size: 14px;
+    line-height: 16px;
+    unity-font-style: bold;
+    -unity-text-align: middle-center;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    color: rgba(255,255,255,0.98);
+    white-space: normal;
+    background-color: rgba(255,255,255,0.04);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.08);
+    border-right-color: rgba(255,255,255,0.08);
+    border-top-color: rgba(255,255,255,0.08);
+    border-bottom-color: rgba(255,255,255,0.08);
+}
+
+.activity-league-title.is-championship {
+    flex-grow: 1;
+    -unity-text-align: middle-center;
+}
+
+.activity-input-card,
+.activity-binding-card {
+    min-width: 40px;
+    min-height: 34px;
+    padding: 4px 8px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(11, 20, 34, 0.74);
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-top-color: rgba(255,255,255,0.08);
+    border-right-color: rgba(255,255,255,0.08);
+    border-bottom-color: rgba(255,255,255,0.08);
+    border-left-color: rgba(255,255,255,0.08);
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+.activity-binding-card-label {
+    -unity-text-align: middle-center;
+    unity-font-style: bold;
+    font-size: 13px;
+    line-height: 14px;
+    color: rgba(255,255,255,0.98);
+    white-space: nowrap;
+}
+
+.activity-meta-line {
+    font-size: 13px;
+    line-height: 15px;
+    color: rgba(230,236,244,0.80);
+    margin-top: -1px;
+    white-space: normal;
+}
+
+.activity-progress-wrap,
+.objective-progress-wrap {
+    gap: 4px;
+}
+
+.activity-metric-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.activity-metric-grid.is-vertical {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 6px;
+}
+
+.activity-metric-grid.is-active {
+    margin-top: 2px;
+}
+
+.activity-metric-grid.is-result {
+    margin-top: 0;
+}
+
+.activity-metric-chip {
+    min-width: 96px;
+    flex-grow: 1;
+    padding: 6px 0 6px 0;
+    gap: 0;
+    border-top-width: 0;
+    border-right-width: 0;
+    border-bottom-width: 0;
+    border-left-width: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.activity-metric-chip--flat {
+    background-color: rgba(0,0,0,0);
+}
+
+.activity-metric-grid.is-prestart .activity-metric-chip,
+.activity-metric-grid.is-result .activity-metric-chip,
+.activity-metric-grid.is-rescue .activity-metric-chip {
+    padding-top: 7px;
+    padding-bottom: 7px;
+    border-top-width: 1px;
+    border-top-color: rgba(255,255,255,0.07);
+}
+
+.activity-metric-grid.is-prestart .activity-metric-chip:first-child,
+.activity-metric-grid.is-result .activity-metric-chip:first-child,
+.activity-metric-grid.is-rescue .activity-metric-chip:first-child {
+    border-top-width: 0;
+    padding-top: 2px;
+}
+
+.activity-metric-line {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+.activity-metric-glyph {
+    min-width: 18px;
+    font-size: 14px;
+    line-height: 15px;
+    color: rgba(255,255,255,0.90);
+    -unity-text-align: middle-center;
+}
+
+.activity-metric-line-label {
+    font-size: 13px;
+    line-height: 15px;
+    color: rgba(214,224,234,0.76);
+    unity-font-style: bold;
+    white-space: normal;
+}
+
+.activity-metric-line-separator {
+    font-size: 13px;
+    line-height: 15px;
+    color: rgba(208,217,228,0.48);
+    white-space: nowrap;
+}
+
+.activity-metric-line-value {
+    flex-shrink: 1;
+    font-size: 14px;
+    line-height: 16px;
+    color: rgba(248,250,252,0.99);
+    unity-font-style: bold;
+    white-space: normal;
+    max-width: 100%;
+}
+
+.activity-control-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.activity-control-row.is-race-prestart {
+    justify-content: flex-start;
+}
+
+.activity-control-row.is-minimal {
+    margin-top: 2px;
+}
+
+.activity-control-chip {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    min-height: 30px;
+    padding: 4px 0;
+    background-color: rgba(0,0,0,0);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    color: rgba(245,247,251,0.92);
+    font-size: 12px;
+}
+
+.activity-binding-action-chip {
+    align-items: center;
+    min-height: 30px;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.activity-binding-inline-card {
+    min-width: 36px;
+    min-height: 24px;
+    padding: 2px 6px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(11, 20, 34, 0.78);
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-top-color: rgba(255,255,255,0.08);
+    border-right-color: rgba(255,255,255,0.08);
+    border-bottom-color: rgba(255,255,255,0.08);
+    border-left-color: rgba(255,255,255,0.08);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.activity-binding-inline-label {
+    -unity-text-align: middle-center;
+    unity-font-style: bold;
+    font-size: 12px;
+    line-height: 13px;
+    color: rgba(255,255,255,0.98);
+    white-space: nowrap;
+}
+
+.activity-control-text {
+    font-size: 13px;
+    line-height: 15px;
+    color: rgba(245,247,251,0.92);
+    white-space: normal;
+}
+
+.activity-modal-blocker {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(6, 10, 18, 0.36);
+    display: none;
+}
+
+.activity-fail-modal {
+    width: 340px;
+    max-width: 82%;
+    padding: 14px;
+    gap: 10px;
+    background-color: rgba(10, 16, 28, 0.96);
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-top-color: rgba(255,255,255,0.10);
+    border-right-color: rgba(255,255,255,0.10);
+    border-bottom-color: rgba(255,255,255,0.10);
+    border-left-color: rgba(255,255,255,0.10);
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+}
+
+.activity-fail-modal-accent {
+    height: 4px;
+    background-color: rgba(255, 112, 96, 1);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.activity-fail-modal-title {
+    font-size: 20px;
+    line-height: 22px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.99);
+    white-space: normal;
+    max-width: 100%;
+}
+
+.activity-fail-modal-body {
+    font-size: 13px;
+    line-height: 16px;
+    color: rgba(233,239,247,0.90);
+    white-space: normal;
+    max-width: 100%;
+}
+
+.activity-fail-modal-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.activity-fail-modal-button {
+    min-width: 88px;
+    min-height: 34px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+.activity-fail-modal-button.is-primary {
+    unity-font-style: bold;
 }

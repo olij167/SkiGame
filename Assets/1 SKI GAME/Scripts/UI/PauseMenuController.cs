@@ -301,6 +301,30 @@ namespace SkiGame.Progression
             BindControlsPageIfNeeded();
         }
 
+        private void CloseOpenKiosks()
+        {
+            var skiPassKiosks = FindObjectsOfType<SkiPassKioskUI>(true);
+            for (int i = 0; i < skiPassKiosks.Length; i++)
+            {
+                if (skiPassKiosks[i] != null && skiPassKiosks[i].IsOpen)
+                    skiPassKiosks[i].Close();
+            }
+
+            var raceKiosks = FindObjectsOfType<RaceSignupKioskUI>(true);
+            for (int i = 0; i < raceKiosks.Length; i++)
+            {
+                if (raceKiosks[i] != null && raceKiosks[i].IsOpen)
+                    raceKiosks[i].Close();
+            }
+        }
+
+        private void CloseMountainHudOverlay()
+        {
+            var overlay = FindObjectOfType<MountainHudOverlayController>(true);
+            if (overlay != null && overlay.IsOpen)
+                overlay.SetOverlayOpen(false);
+        }
+
         private void SetOpen(bool open, bool force = false)
         {
             if (!force && _isOpen == open) return;
@@ -321,6 +345,9 @@ namespace SkiGame.Progression
                     Debug.LogError("[PauseMenuController] Tried to open pause menu but PauseRoot is missing. Aborting pause.");
                     return;
                 }
+
+                CloseOpenKiosks();
+                CloseMountainHudOverlay();
 
                 _isOpen = true;
 

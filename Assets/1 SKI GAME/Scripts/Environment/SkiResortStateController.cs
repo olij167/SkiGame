@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using SkiGame.Audio;
+using SkiGame.Progression;
 using UnityEngine;
 using TimeWeather;
 using UnityEngine.LowLevel;
@@ -670,6 +672,18 @@ public class SkiResortStateController : MonoBehaviour
             if (zone.entrancePoint == null || resortCamera == null)
                 return;
 
+            SkiResortAccessManager resortAccessManager = SkiResortAccessManager.Instance != null
+                ? SkiResortAccessManager.Instance
+                : FindObjectOfType<SkiResortAccessManager>();
+
+            if (resortAccessManager != null &&
+                !resortAccessManager.TryPrepareForEntry(zone, out string failureReason))
+            {
+                if (!string.IsNullOrWhiteSpace(failureReason))
+                    Debug.Log($"[SkiResortStateController] Resort entry blocked for '{zone.ResortId}': {failureReason}");
+                return;
+            }
+
             StartEnterFlow(playerRoot, zone);
         }
         else if (_state == ResortState.InResort)
@@ -765,20 +779,10 @@ public class SkiResortStateController : MonoBehaviour
 
             Vector3 dir = to / Mathf.Max(0.001f, distance);
 
-            walkingController.GetMoveBasis(out Vector3 fwd, out Vector3 right);
-
-            float x = Vector3.Dot(dir, right);
-            float y = Vector3.Dot(dir, fwd);
-
-            Vector2 auto = new Vector2(x, y);
-            auto = Vector2.ClampMagnitude(auto, 1f);
-
             float distanceT = Mathf.InverseLerp(arriveDistance, farApproachDistance, distance);
             float strength = Mathf.Lerp(autoWalkMoveStrength, 1f, distanceT);
 
-            auto *= strength;
-
-            walkingController.SetExternalMove(auto, sprint: autoWalkUsesSprint);
+            walkingController.SetExternalMoveToward(dir, strength, sprint: autoWalkUsesSprint);
 
             yield return null;
         }
@@ -847,12 +851,14 @@ public class SkiResortStateController : MonoBehaviour
         }
 
         _state = ResortState.InResort;
+        GameAudio.PlayUi(GameAudioCueId.ResortEnter);
 
     }
 
     private IEnumerator CoExitResort(GameObject playerRoot, SkiResortZone zone)
     {
         _state = ResortState.ExitingResort;
+        GameAudio.PlayUi(GameAudioCueId.ResortExit);
 
         // Stop recovery/time accel as soon as exit begins.
         ClearResortState(playerRoot);
@@ -961,6 +967,7 @@ public class SkiResortStateController : MonoBehaviour
         _activeZone = null;
         CancelScheduledExit();
         _state = ResortState.Outside;
+        GameAudio.PlayUi(GameAudioCueId.InteractionCancel, 0.8f);
     }
 
     private void StopAllFlows()

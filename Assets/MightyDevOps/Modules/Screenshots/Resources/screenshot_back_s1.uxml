@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <Style src="project://database/Assets/MightyDevOps/Resources/UI/mightystyles.uss?fileID=7433441132597879392&amp;guid=e16eaa24891f7454080ce05502d92e74&amp;type=3#tao" />
+    <ui:VisualElement name="back" class="mappable" style="background-color: rgb(105, 0, 255); height: 192px; margin-top: 0; width: 192px; top: auto; align-items: stretch; justify-content: flex-start; flex-direction: column; flex-wrap: nowrap; left: auto; max-width: 192px; max-height: 192px; scale: 1 1; transition-duration: 0.1s; opacity: 1;">
+        <ui:Button text="Back" display-tooltip-when-elided="true" class="back" />
+        <ui:ScrollView />
+    </ui:VisualElement>
+</ui:UXML>

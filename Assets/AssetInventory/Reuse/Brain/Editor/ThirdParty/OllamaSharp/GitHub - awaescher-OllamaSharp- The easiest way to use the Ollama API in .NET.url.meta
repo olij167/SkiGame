@@ -1,0 +1,15 @@
+﻿fileFormatVersion: 2
+guid: 59600ab363304c4793c383d2d75eafc6
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 349582
+  packageName: Asset Inventory 4
+  packageVersion: 4.1.1
+  assetPath: Assets/AssetInventory/Reuse/Brain/Editor/ThirdParty/OllamaSharp/GitHub
+    - awaescher-OllamaSharp- The easiest way to use the Ollama API in .NET.url
+  uploadId: 888060

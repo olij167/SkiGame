@@ -210,6 +210,24 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
+                    ""name"": ""Tuck"",
+                    ""type"": ""Button"",
+                    ""id"": ""847234b4-f03c-44a6-9ca8-61d7925ccc06"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Pose"",
+                    ""type"": ""Button"",
+                    ""id"": ""d62a81af-c142-4e86-b990-eb830358b5ee"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
                     ""name"": ""Interact"",
                     ""type"": ""Button"",
                     ""id"": ""6c4f4055-07ec-406c-b2d8-4d9cb32f9287"",
@@ -727,7 +745,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                 {
                     ""name"": """",
                     ""id"": ""89f5eddc-42ab-4a9e-b181-4c74a112eae3"",
-                    ""path"": ""<Keyboard>/shift"",
+                    ""path"": ""<Keyboard>/ctrl"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -754,6 +772,28 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""Pause"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""88a7a357-d322-44d6-bf57-667306bd5d4f"",
+                    ""path"": ""<Keyboard>/shift"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Tuck"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""e4c1c0d6-cf64-42fb-acac-07277cc10bc2"",
+                    ""path"": ""<Keyboard>/ctrl"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Pose"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -857,6 +897,24 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""name"": ""Toggle"",
                     ""type"": ""Button"",
                     ""id"": ""137959dd-d0ce-4bef-b837-557fdfb14660"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""CycleUILeft"",
+                    ""type"": ""Button"",
+                    ""id"": ""fc54945d-e074-4dc6-b1dc-608737f510aa"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""CycleUIRight"",
+                    ""type"": ""Button"",
+                    ""id"": ""23940c16-09bd-4ce4-a48b-da9fdd6886ce"",
                     ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
@@ -1292,6 +1350,28 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""action"": ""Toggle"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""7fbacefe-c99d-4490-9ba0-5b6e585b7824"",
+                    ""path"": ""<Keyboard>/q"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""CycleUILeft"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""600c5bd7-b838-48e4-b649-891024f5c8e9"",
+                    ""path"": ""<Keyboard>/e"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""CycleUIRight"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -1374,6 +1454,8 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         m_Player_RightSki = m_Player.FindAction("RightSki", throwIfNotFound: true);
         m_Player_Lean = m_Player.FindAction("Lean", throwIfNotFound: true);
         m_Player_Poles = m_Player.FindAction("Poles", throwIfNotFound: true);
+        m_Player_Tuck = m_Player.FindAction("Tuck", throwIfNotFound: true);
+        m_Player_Pose = m_Player.FindAction("Pose", throwIfNotFound: true);
         m_Player_Interact = m_Player.FindAction("Interact", throwIfNotFound: true);
         m_Player_Pause = m_Player.FindAction("Pause", throwIfNotFound: true);
         // UI
@@ -1389,6 +1471,8 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         m_UI_TrackedDevicePosition = m_UI.FindAction("TrackedDevicePosition", throwIfNotFound: true);
         m_UI_TrackedDeviceOrientation = m_UI.FindAction("TrackedDeviceOrientation", throwIfNotFound: true);
         m_UI_Toggle = m_UI.FindAction("Toggle", throwIfNotFound: true);
+        m_UI_CycleUILeft = m_UI.FindAction("CycleUILeft", throwIfNotFound: true);
+        m_UI_CycleUIRight = m_UI.FindAction("CycleUIRight", throwIfNotFound: true);
     }
 
     ~@InputSystem_Actions()
@@ -1483,6 +1567,8 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_RightSki;
     private readonly InputAction m_Player_Lean;
     private readonly InputAction m_Player_Poles;
+    private readonly InputAction m_Player_Tuck;
+    private readonly InputAction m_Player_Pose;
     private readonly InputAction m_Player_Interact;
     private readonly InputAction m_Player_Pause;
     /// <summary>
@@ -1548,6 +1634,14 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Player/Poles".
         /// </summary>
         public InputAction @Poles => m_Wrapper.m_Player_Poles;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/Tuck".
+        /// </summary>
+        public InputAction @Tuck => m_Wrapper.m_Player_Tuck;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/Pose".
+        /// </summary>
+        public InputAction @Pose => m_Wrapper.m_Player_Pose;
         /// <summary>
         /// Provides access to the underlying input action "Player/Interact".
         /// </summary>
@@ -1621,6 +1715,12 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Poles.started += instance.OnPoles;
             @Poles.performed += instance.OnPoles;
             @Poles.canceled += instance.OnPoles;
+            @Tuck.started += instance.OnTuck;
+            @Tuck.performed += instance.OnTuck;
+            @Tuck.canceled += instance.OnTuck;
+            @Pose.started += instance.OnPose;
+            @Pose.performed += instance.OnPose;
+            @Pose.canceled += instance.OnPose;
             @Interact.started += instance.OnInteract;
             @Interact.performed += instance.OnInteract;
             @Interact.canceled += instance.OnInteract;
@@ -1677,6 +1777,12 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Poles.started -= instance.OnPoles;
             @Poles.performed -= instance.OnPoles;
             @Poles.canceled -= instance.OnPoles;
+            @Tuck.started -= instance.OnTuck;
+            @Tuck.performed -= instance.OnTuck;
+            @Tuck.canceled -= instance.OnTuck;
+            @Pose.started -= instance.OnPose;
+            @Pose.performed -= instance.OnPose;
+            @Pose.canceled -= instance.OnPose;
             @Interact.started -= instance.OnInteract;
             @Interact.performed -= instance.OnInteract;
             @Interact.canceled -= instance.OnInteract;
@@ -1731,6 +1837,8 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
     private readonly InputAction m_UI_TrackedDevicePosition;
     private readonly InputAction m_UI_TrackedDeviceOrientation;
     private readonly InputAction m_UI_Toggle;
+    private readonly InputAction m_UI_CycleUILeft;
+    private readonly InputAction m_UI_CycleUIRight;
     /// <summary>
     /// Provides access to input actions defined in input action map "UI".
     /// </summary>
@@ -1786,6 +1894,14 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "UI/Toggle".
         /// </summary>
         public InputAction @Toggle => m_Wrapper.m_UI_Toggle;
+        /// <summary>
+        /// Provides access to the underlying input action "UI/CycleUILeft".
+        /// </summary>
+        public InputAction @CycleUILeft => m_Wrapper.m_UI_CycleUILeft;
+        /// <summary>
+        /// Provides access to the underlying input action "UI/CycleUIRight".
+        /// </summary>
+        public InputAction @CycleUIRight => m_Wrapper.m_UI_CycleUIRight;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -1845,6 +1961,12 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Toggle.started += instance.OnToggle;
             @Toggle.performed += instance.OnToggle;
             @Toggle.canceled += instance.OnToggle;
+            @CycleUILeft.started += instance.OnCycleUILeft;
+            @CycleUILeft.performed += instance.OnCycleUILeft;
+            @CycleUILeft.canceled += instance.OnCycleUILeft;
+            @CycleUIRight.started += instance.OnCycleUIRight;
+            @CycleUIRight.performed += instance.OnCycleUIRight;
+            @CycleUIRight.canceled += instance.OnCycleUIRight;
         }
 
         /// <summary>
@@ -1889,6 +2011,12 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Toggle.started -= instance.OnToggle;
             @Toggle.performed -= instance.OnToggle;
             @Toggle.canceled -= instance.OnToggle;
+            @CycleUILeft.started -= instance.OnCycleUILeft;
+            @CycleUILeft.performed -= instance.OnCycleUILeft;
+            @CycleUILeft.canceled -= instance.OnCycleUILeft;
+            @CycleUIRight.started -= instance.OnCycleUIRight;
+            @CycleUIRight.performed -= instance.OnCycleUIRight;
+            @CycleUIRight.canceled -= instance.OnCycleUIRight;
         }
 
         /// <summary>
@@ -2086,6 +2214,20 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnPoles(InputAction.CallbackContext context);
         /// <summary>
+        /// Method invoked when associated input action "Tuck" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnTuck(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Pose" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnPose(InputAction.CallbackContext context);
+        /// <summary>
         /// Method invoked when associated input action "Interact" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
@@ -2184,5 +2326,19 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnToggle(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "CycleUILeft" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnCycleUILeft(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "CycleUIRight" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnCycleUIRight(InputAction.CallbackContext context);
     }
 }

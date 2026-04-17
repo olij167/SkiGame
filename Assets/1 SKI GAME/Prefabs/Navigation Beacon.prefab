@@ -176,6 +176,8 @@ MonoBehaviour:
   - _EmissionColor
   alsoWriteMaterialColor: 1
   updateSharedMaterialsInEditor: 0
+  beaconAlpha: 0.2
+  forceTransparentMaterials: 1
   snapAnchorToTerrain: 1
   terrainLayers:
     serializedVersion: 2

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using SkiGame.Map;
+using SkiGame.Runs;
 using SkiGame.POI;
 using SkiGame.Navigation;
 using static UnityEngine.UIElements.VisualElement;
@@ -47,7 +48,7 @@ namespace SkiGame.Map.UI
         private bool _pendingCenterKeepZoom = true;
         private float _pendingCenterMinZoom = 1.0f;
 
-        [SerializeField, Min(1f)] private float _centerOnPlayerButtonMinZoom = 1.75f;
+        [SerializeField, Min(1f)] private float _centerOnPlayerButtonMinZoom = 2.4f;
 
         // -------------------------
         // Debug: projection validation overlay
@@ -109,11 +110,15 @@ namespace SkiGame.Map.UI
         private VisualElement _playerMarker;         // UI element (directional marker)
         private MapTrailLayer _trailLayer;           // Painter2D trail layer
 
-        // Trail sampling (world XZ)
+        // Trail samples are stored in map UV space so they stay aligned with both
+        // bounds-based and camera-projected maps when shared across views.
         private readonly List<Vector2> _trailWorldXZ = new();
+        private readonly List<float> _trailSampleTimes = new();
+        private readonly List<float> _trailSampleDistances = new();
         private float _nextTrailSampleTime;
         private Vector2 _lastTrailSampleWorldXZ;
         private bool _hasLastTrailSample;
+        private float _trailDistanceTravelledMeters;
 
         private bool _trackPlayerMarker = true;
         private bool _trackPlayerTrail = true;
@@ -121,6 +126,12 @@ namespace SkiGame.Map.UI
         private float _trailSampleInterval = 0.20f;
         private float _trailMinDistanceMeters = 1.5f;
         private int _trailMaxSamples = 1500;
+        private float _playerMarkerAngleDeg;
+        private bool _hasPlayerMarkerAngle;
+        private const float PlayerMarkerSmoothingPerSecond = 14f;
+        private const float PlayerMarkerSnapAngleDelta = 90f;
+        private const float PlayerMarkerIgnoreAngleDelta = 0.6f;
+        private const float PlayerMarkerForwardProbeMeters = 6f;
 
         // -------------------------
         // Minimap / embedded-map mode
@@ -131,6 +142,9 @@ namespace SkiGame.Map.UI
         private bool _suppressSelection = false;
         private bool _hideMarkerLabels = false;
 
+        private Func<SkiGame.Map.MapMarker, bool> _markerSelectionFilter;
+        private Func<SkiGame.Map.MapPolyline, bool> _polylineSelectionFilter;
+
         // -------------------------
         // Map legend / filters
         // -------------------------
@@ -140,8 +154,17 @@ namespace SkiGame.Map.UI
         private VisualElement _btnLayerPOIs;
 
         private readonly HashSet<POICategory> _visiblePOICategories = new();
-        private int _maxVisibleRunDifficultyRank = 3; // Green..Black inclusive by default
+        private readonly HashSet<int> _visibleRunDifficultyRanks = new() { 0, 1, 2, 3 };
+
         private bool _legendDefaultsInitialized;
+
+        private VisualElement _btnLayerRaces;
+        private VisualElement _btnLayerMedicTents;
+        private VisualElement _btnLayerSnowmobiles;
+
+        private bool _showRaceStartOverlays = true;
+        private bool _showMedicTentOverlays = true;
+        private bool _showSnowmobileOverlays = true;
 
         // -------------------------
         // Info panel + viewport sizing sync
@@ -161,6 +184,7 @@ namespace SkiGame.Map.UI
         private float _pendingSelectionMinZoom = -1f;
 
         private bool _showRunOverlays = true;
+        private bool _showSkiRunOverlays = true;
         private bool _showLiftOverlays = true;
         private bool _showPOIOverlays = true;
 
@@ -175,13 +199,13 @@ namespace SkiGame.Map.UI
         private readonly Dictionary<string, Vector2> _regionAnchorLocal = new();   // regionId -> content-local anchor
         private MapRegionSet _regionSet;
         private string _selectedRegionId;
-        private const float RegionOverviewZoomThreshold = 0.60f;
 
         private MapUIStyleSettings _style;
         private PointOfInterestRegistry _poiRegistry;
+        private int _appliedStyleRevision = -1;
 
         // Cache created UI elements so we can restyle them when selection changes
-        private readonly Dictionary<string, (VisualElement dot, Label label)> _markerVisuals = new();
+        private readonly Dictionary<string, (VisualElement dot, VisualElement spriteOutline, VisualElement spriteBody, Label glyph, Label label)> _markerVisuals = new();
         private readonly Dictionary<string, Label> _polylineLabelVisuals = new();
         private readonly Dictionary<string, Color> _polylineColorOverrides = new();
 
@@ -195,16 +219,65 @@ namespace SkiGame.Map.UI
 
         // Lift pass requirement → map colouring
         private readonly Dictionary<string, int> _liftRequiredLevelByPolyline = new();
+        private readonly Dictionary<string, string> _liftRequiredPassIdByPolyline = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, Color> _liftRequiredColorByPolyline = new();
 
         private string _lastSelectedPolylineId;
 
-        private const float LiftLabelOffsetPx = 10f; // above the midline (screen px)
+        private const float DefaultRegionOverviewFadeStartZoom = 1.10f;
+        private const float DefaultRegionOverviewFadeEndZoom = 2.20f;
+        private const float DefaultPoiLabelRevealZoom = 2.10f;
+        private const float DefaultRunLiftLabelRevealZoom = 0.72f;
+        private const int DefaultMaxContextRunLiftLabels = 30;
+        private const int DefaultMaxContextPoiLabels = 12;
+        private const float DefaultMarkerFadeInStartZoom = 0.95f;
+        private const float DefaultMarkerFadeInEndZoom = 2.10f;
 
-        private const float PoiVisibleMinZoom = 1.15f;
-        private const int MaxContextRunLiftLabels = 50;
-        private const int MaxContextPoiLabels = 25;
+        private const float DefaultTrailMaxAgeSeconds = 45f;
+        private const float DefaultTrailMaxDistanceMeters = 450f;
+        private const float DefaultTrailBreakDistanceMeters = 60f;
+        private const float DefaultTrailOutlierWorldDistanceMeters = 45f;
+        private const float DefaultTrailOutlierUvDistance = 0.12f;
+        private const float DefaultTrailFadePower = 1.35f;
+        private const float DefaultTrailMinAlpha = 0.08f;
+        private static readonly Color DefaultTrailColor = new Color(0.5176471f, 0.4392157f, 1f, 0.92f);
+        private static readonly Color DefaultTrailOutlineColor = new Color(0f, 0f, 0f, 0.40f);
 
+        private float GetRegionOverviewFadeStartZoom() => DefaultRegionOverviewFadeStartZoom;
+        private float GetRegionOverviewFadeEndZoom() => DefaultRegionOverviewFadeEndZoom;
+        private float GetPoiLabelRevealZoom() => DefaultPoiLabelRevealZoom;
+        private float GetRunLiftLabelRevealZoom() => DefaultRunLiftLabelRevealZoom;
+        private int GetMaxContextRunLiftLabels() => DefaultMaxContextRunLiftLabels;
+        private int GetMaxContextPoiLabels() => DefaultMaxContextPoiLabels;
+        private float GetMarkerFadeInStartZoom() => DefaultMarkerFadeInStartZoom;
+        private float GetMarkerFadeInEndZoom() => DefaultMarkerFadeInEndZoom;
+
+        private struct ResolvedMapLabelRule
+        {
+            public MapUIStyleSettings.MapElementSemantic semantic;
+            public MapUIStyleSettings.MapLabelDisplayMode markerDisplayMode;
+            public string labelStyleId;
+            public float labelSizeMultiplier;
+        }
+
+        private struct ResolvedMarkerStyleRule
+        {
+            public bool hasMarkerSprite;
+            public Sprite markerSprite;
+            public float markerSizeMultiplier;
+            public bool hasDefaultColor;
+            public Color defaultColor;
+            public bool colorIsFallbackOnly;
+        }
+
+        private struct ResolvedMarkerRule
+        {
+            public Sprite sprite;
+            public float sizeMultiplier;
+            public bool hasDefaultColor;
+            public Color defaultColor;
+            public bool colorIsFallbackOnly;
+        }
 
         // -------------------------
         // Linked selection (Runs + Lifts)
@@ -216,7 +289,11 @@ namespace SkiGame.Map.UI
         private readonly Dictionary<string, string> _liftMarkerToPolyline = new();
         private readonly Dictionary<string, List<string>> _liftPolylineToMarkers = new();
         private readonly Dictionary<string, LiftStationRole> _liftMarkerRole = new();
+        private readonly Dictionary<string, LiftLine> _liveLiftByPolylineId = new(StringComparer.OrdinalIgnoreCase);
 
+        private readonly Dictionary<string, int> _forcedLiftRequiredLevelByPolyline = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string> _forcedLiftRequiredPassIdByPolyline = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, Color> _forcedLiftColorByPolyline = new(StringComparer.OrdinalIgnoreCase);
 
         // If selection came from a lift station marker, we append this to the info panel title.
         private string _selectedLiftStationSuffix;
@@ -327,7 +404,7 @@ namespace SkiGame.Map.UI
         private readonly Dictionary<string, string> _markerDisplayNames = new();
 
         // Explicit “always visible label” POIs (driven by marker.meta tokens, not UI toggles).
-        private readonly Dictionary<string, bool> _poiAlwaysLabelById = new();
+        private readonly Dictionary<string, MapUIStyleSettings.MapLabelDisplayMode> _poiLabelDisplayOverrides = new();
 
         // Fixed pixel offsets (screen-space) for labels
         private const float PoiLabelOffsetPx = 18f;  // label center sits below marker pivot
@@ -361,6 +438,22 @@ namespace SkiGame.Map.UI
         private readonly Dictionary<string, Label> _waypointLabels = new();
         private readonly Dictionary<string, Vector2> _waypointAnchorLocal = new();
 
+        private readonly Dictionary<string, Rect> _waypointLabelViewportRects = new();
+        private readonly Dictionary<string, Vector2> _waypointLabelScreenOffsets = new();
+
+        private float _lastWaypointLayoutZoom = -1f;
+        private Vector2 _lastWaypointLayoutPan = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+        private float _lastWaypointLayoutTime = -10f;
+        private bool _waypointLabelLayoutDirty = true;
+
+        private TextField _activeWaypointRenameField;
+        private string _activeWaypointRenameId;
+        private Vector2 _activeWaypointRenameScreenOffset = new Vector2(0f, -28f);
+
+        private const float WaypointLayoutZoomThreshold = 0.10f;
+        private const float WaypointLayoutPanThresholdPx = 18f;
+        private const float WaypointLayoutSettleDelay = 0.10f;
+
         private Label _activeWaypointArrow;
         private int _pointerButton = -1;
 
@@ -371,8 +464,36 @@ namespace SkiGame.Map.UI
         private float _lastPolylineRightClickTime = -10f;
 
         private VisualElement _navigationOverlay;
-        private readonly Dictionary<string, Label> _waypointNavArrows = new();
+        private readonly Dictionary<string, VisualElement> _waypointNavArrows = new();
         private WaypointConnectorOverlay _selectedWaypointConnector;
+
+        private VisualElement _activeNavigationArrow;
+        private VisualElement _activityCheckpointArrow;
+
+        private readonly List<Vector3> _activityCheckpointWorldPositions = new();
+        private readonly List<VisualElement> _activityCheckpointMarkerRoots = new();
+        private readonly List<VisualElement> _activityCheckpointMarkerDots = new();
+        private readonly List<Label> _activityCheckpointMarkerLabels = new();
+
+        private bool _hideBaseMarkersForActivity;
+        private int _activityCurrentCheckpointIndex = -1;
+
+        private bool _legendVisible = true;
+
+        private bool _hasActiveActivityMarker;
+        private Vector3 _activeActivityMarkerWorldPosition;
+        private Color _activeActivityMarkerColor = Color.white;
+        private string _activeActivityMarkerLabel = string.Empty;
+
+        private bool _regionsSelectable = true;
+        private bool _showRegionOverlayLabels = true;
+        private bool _showNonRegionLabels = true;
+
+        private const string MinorLabelStyleId = "minor";
+        private const string StandardLabelStyleId = "standard";
+        private const string MajorLabelStyleId = "major";
+        private const string RegionMajorLabelStyleId = "region-major";
+        private const string WaypointEditableLabelStyleId = "waypoint-editable";
 
         public void SetWaypointManager(SkiGame.Navigation.MapWaypointManager waypointManager)
         {
@@ -486,15 +607,27 @@ namespace SkiGame.Map.UI
             _labelOverlay.BringToFront();
         }
 
+        private void RegisterOverlayLabelCallbacks(Label label)
+        {
+            if (label == null)
+                return;
+
+            label.RegisterCallback<GeometryChangedEvent>(_ => LayoutOverlayLabels());
+        }
+
         private void SelectPolylineInternal(string polylineId, Map.MapPolyline polyline, bool fireEvent)
         {
             _selectedPolylineId = polylineId;
+            _selectedMarkerId = null;
 
-            // If this is a SkiRun, also select its linked marker (if present).
-            if (polyline.lineType == MapLineType.SkiRun && _polylineToMarker.TryGetValue(polylineId, out var markerId))
-                _selectedMarkerId = markerId;
-            else
-                _selectedMarkerId = null;
+            if (polyline.lineType == MapLineType.SkiRun && _polylineToMarker.TryGetValue(polylineId, out var runMarkerId))
+            {
+                _selectedMarkerId = runMarkerId;
+            }
+            else if (polyline.lineType == MapLineType.RaceCourse && TryFindRaceActivityMarkerForPolyline(polylineId, out var raceMarker))
+            {
+                _selectedMarkerId = raceMarker.id;
+            }
 
             UpdateSelectionVisuals();
 
@@ -662,6 +795,7 @@ namespace SkiGame.Map.UI
                 _polyHost.Add(_polyLayer);
 
                 _trailLayer = new MapTrailLayer();
+                _trailLayer.SetStyle(_style);
                 _polyHost.Add(_trailLayer); // draw above base polylines, below markers
             }
 
@@ -737,6 +871,7 @@ namespace SkiGame.Map.UI
                 if (_trailLayer == null || _trailLayer.parent != _polyHost)
                 {
                     _trailLayer = new MapTrailLayer();
+                    _trailLayer.SetStyle(_style);
                     _polyHost.Add(_trailLayer); // draw above base polylines, below markers
                 }
             }
@@ -824,10 +959,34 @@ namespace SkiGame.Map.UI
                 centerDot.style.backgroundColor = Color.white;
                 centerDot.pickingMode = PickingMode.Ignore;
 
+                var spriteVisual = new VisualElement();
+                spriteVisual.name = "MapPlayerMarkerSprite";
+                spriteVisual.style.position = Position.Absolute;
+                spriteVisual.style.left = 0f;
+                spriteVisual.style.top = 0f;
+                spriteVisual.style.right = 0f;
+                spriteVisual.style.bottom = 0f;
+                spriteVisual.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+                spriteVisual.style.display = DisplayStyle.None;
+                spriteVisual.pickingMode = PickingMode.Ignore;
+
+                var spriteOutlineVisual = new VisualElement();
+                spriteOutlineVisual.name = "MapPlayerMarkerSpriteOutline";
+                spriteOutlineVisual.style.position = Position.Absolute;
+                spriteOutlineVisual.style.left = 0f;
+                spriteOutlineVisual.style.top = 0f;
+                spriteOutlineVisual.style.right = 0f;
+                spriteOutlineVisual.style.bottom = 0f;
+                spriteOutlineVisual.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+                spriteOutlineVisual.style.display = DisplayStyle.None;
+                spriteOutlineVisual.pickingMode = PickingMode.Ignore;
+
+                _playerMarker.Add(spriteOutlineVisual);
                 _playerMarker.Add(arrowOutline);
                 _playerMarker.Add(arrowBody);
                 _playerMarker.Add(baseCircle);
                 _playerMarker.Add(centerDot);
+                _playerMarker.Add(spriteVisual);
 
                 _playerMarker.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());
 
@@ -932,21 +1091,50 @@ namespace SkiGame.Map.UI
                 _viewport.Add(_layerBar);
             }
 
+            // Strip legacy toolbar classes so they don't fight the legend layout.
+            _layerBar.RemoveFromClassList("map-layerbar");
+            _layerBar.RemoveFromClassList("map-layer-bar");
+
             _layerBar.pickingMode = PickingMode.Position;
+
             _layerBar.style.position = Position.Absolute;
             _layerBar.style.right = 14f;
             _layerBar.style.top = 14f;
             _layerBar.style.left = StyleKeyword.Auto;
             _layerBar.style.bottom = StyleKeyword.Auto;
 
+            _layerBar.style.width = StyleKeyword.Auto;
+            _layerBar.style.height = StyleKeyword.Auto;
+            _layerBar.style.maxHeight = Length.Percent(72);
+            _layerBar.style.flexGrow = 0f;
+            _layerBar.style.flexShrink = 0f;
+            _layerBar.style.overflow = Overflow.Hidden;
+            _layerBar.style.unityOverflowClipBox = OverflowClipBox.PaddingBox;
+
+            _layerBar.BringToFront();
+
             EnsureLegendDefaults();
             RebuildLegendUI();
+        }
+
+        private bool IsEventInsideLegend(EventBase evtBase)
+        {
+            if (_layerBar == null || evtBase == null)
+                return false;
+
+            if (evtBase.target is VisualElement ve)
+                return ve == _layerBar || _layerBar.Contains(ve);
+
+            return false;
         }
 
         private void EnsureLegendDefaults()
         {
             if (_legendDefaultsInitialized)
+            {
+                SanitizeLegendCategoryVisibilityState();
                 return;
+            }
 
             _visiblePOICategories.Clear();
 
@@ -961,7 +1149,11 @@ namespace SkiGame.Map.UI
                     if (m.type == POIType.SkiRun || m.type == POIType.SkiLift)
                         continue;
 
-                    _visiblePOICategories.Add(NormalizeCategoryForLegend(m.category));
+                    var normalized = NormalizeCategoryForLegend(m.category);
+                    if (IsDedicatedActivityLegendCategory(normalized))
+                        continue;
+
+                    _visiblePOICategories.Add(normalized);
                 }
             }
 
@@ -975,8 +1167,170 @@ namespace SkiGame.Map.UI
                 _visiblePOICategories.Add(POICategory.Custom);
             }
 
-            _maxVisibleRunDifficultyRank = 3;
+            SanitizeLegendCategoryVisibilityState();
+
+            _visibleRunDifficultyRanks.Clear();
+            for (int i = 0; i < DefaultRunDifficultyRanks.Length; i++)
+                _visibleRunDifficultyRanks.Add(DefaultRunDifficultyRanks[i]);
+
             _legendDefaultsInitialized = true;
+        }
+
+        private static readonly int[] DefaultRunDifficultyRanks = { 0, 1, 2, 3 };
+
+        private void EnsureRunDifficultyDefaults()
+        {
+            if (_visibleRunDifficultyRanks.Count > 0)
+                return;
+
+            for (int i = 0; i < DefaultRunDifficultyRanks.Length; i++)
+                _visibleRunDifficultyRanks.Add(DefaultRunDifficultyRanks[i]);
+        }
+
+        private bool IsRunDifficultyVisible(int rank)
+        {
+            EnsureRunDifficultyDefaults();
+            return _visibleRunDifficultyRanks.Contains(rank);
+        }
+
+        private bool AreAllRunDifficultiesVisible()
+        {
+            return _visibleRunDifficultyRanks.Count >= DefaultRunDifficultyRanks.Length;
+        }
+
+        private void SetAllRunDifficultiesVisible()
+        {
+            _visibleRunDifficultyRanks.Clear();
+            for (int i = 0; i < DefaultRunDifficultyRanks.Length; i++)
+                _visibleRunDifficultyRanks.Add(DefaultRunDifficultyRanks[i]);
+        }
+
+        private void ToggleRunOverlays()
+        {
+            if (_showRunOverlays)
+            {
+                _showRunOverlays = false;
+                _visibleRunDifficultyRanks.Clear();
+                return;
+            }
+
+            _showRunOverlays = true;
+            SetAllRunDifficultiesVisible();
+        }
+
+        private void ToggleRunDifficulty(int rank)
+        {
+            EnsureRunDifficultyDefaults();
+
+            // If the main Ski Runs toggle is off, pressing a difficulty should
+            // turn Ski Runs back on and enable only that difficulty.
+            if (!_showRunOverlays)
+            {
+                _showRunOverlays = true;
+                _visibleRunDifficultyRanks.Clear();
+                _visibleRunDifficultyRanks.Add(rank);
+                return;
+            }
+
+            if (_visibleRunDifficultyRanks.Contains(rank))
+                _visibleRunDifficultyRanks.Remove(rank);
+            else
+                _visibleRunDifficultyRanks.Add(rank);
+
+            // If all difficulties are off, the main Ski Runs toggle should also go off.
+            if (_visibleRunDifficultyRanks.Count == 0)
+                _showRunOverlays = false;
+            else
+                _showRunOverlays = true;
+        }
+
+        private static string FormatRunDifficultyLabel(int rank)
+        {
+            switch (rank)
+            {
+                case 0: return "Green";
+                case 1: return "Blue";
+                case 2: return "Red";
+                case 3: return "Black";
+                default: return $"Difficulty {rank}";
+            }
+        }
+
+        private static string GetRunDifficultyClass(int rank)
+        {
+            switch (rank)
+            {
+                case 0: return "legend-chip-difficulty-green";
+                case 1: return "legend-chip-difficulty-blue";
+                case 2: return "legend-chip-difficulty-red";
+                case 3: return "legend-chip-difficulty-black";
+                default: return "legend-chip-difficulty-generic";
+            }
+        }
+
+        public void SetOverlayVisibility(bool showRuns, bool showLifts, bool showPOIs)
+        {
+            _showRunOverlays = showRuns;
+            _showSkiRunOverlays = showRuns;
+            _showLiftOverlays = showLifts;
+            _showPOIOverlays = showPOIs;
+
+            ApplyLayerVisibility();
+        }
+
+        public void SetShowStandardPOIOverlays(bool show)
+        {
+            _showPOIOverlays = show;
+            _dirty = true;
+            Refresh();
+        }
+
+        public void SetActivityOverlayVisibility(bool showRaceStarts, bool showMedicTents, bool showSnowmobiles)
+        {
+            _showRaceStartOverlays = showRaceStarts;
+            _showMedicTentOverlays = showMedicTents;
+            _showSnowmobileOverlays = showSnowmobiles;
+            _dirty = true;
+            Refresh();
+        }
+
+        public void SetSelectionFilters(
+            Func<SkiGame.Map.MapMarker, bool> markerFilter,
+            Func<SkiGame.Map.MapPolyline, bool> polylineFilter)
+        {
+            _markerSelectionFilter = markerFilter;
+            _polylineSelectionFilter = polylineFilter;
+        }
+
+        public void SetSkiRunOverlayVisible(bool visible)
+        {
+            _showSkiRunOverlays = visible;
+            ApplyLayerVisibility();
+        }
+
+        public void SetPolylineDisplayColorOverride(string polylineId, Color color)
+        {
+            if (string.IsNullOrWhiteSpace(polylineId))
+                return;
+
+            Color opaque = new Color(color.r, color.g, color.b, 1f);
+            _polylineColorOverrides[polylineId] = opaque;
+            _polylineLabelAccent[polylineId] = opaque;
+            _polyLayer?.SetColorOverrides(_polylineColorOverrides);
+            ApplyPolylineLabelVisual(polylineId, selected: string.Equals(_selectedPolylineId, polylineId, StringComparison.Ordinal));
+        }
+
+        public void ClearSelection()
+        {
+            ClearSelectionInternal(fireEvent: true);
+        }
+
+        public void SetLegendVisible(bool visible)
+        {
+            _legendVisible = visible;
+
+            if (_layerBar != null)
+                _layerBar.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private void RebuildLegendUI()
@@ -985,66 +1339,62 @@ namespace SkiGame.Map.UI
                 return;
 
             EnsureLegendDefaults();
+            EnsureRunDifficultyDefaults();
 
             _layerBar.Clear();
+
+            _layerBar.RemoveFromClassList("map-layerbar");
+            _layerBar.RemoveFromClassList("map-layer-bar");
             _layerBar.AddToClassList("map-legend-panel");
+
+            _layerBar.style.display = _legendVisible ? DisplayStyle.Flex : DisplayStyle.None;
+            _layerBar.style.flexDirection = FlexDirection.Column;
+            _layerBar.style.alignSelf = Align.FlexStart;
+
+            if (!_legendVisible)
+                return;
 
             var header = new Label("Map Filters");
             header.AddToClassList("map-legend-title");
             _layerBar.Add(header);
 
-            var topRow = new VisualElement();
-            topRow.AddToClassList("map-legend-row");
+            var legendMarkerStyle = GetLegendMarkerStyle();
+            Sprite labelLegendSprite = legendMarkerStyle.sprite;
 
-            _btnLayerRuns = CreateLegendToggleChip("Runs", _showRunOverlays, () =>
-            {
-                _showRunOverlays = !_showRunOverlays;
-                ApplyLayerVisibility();
-            });
-            _btnLayerRuns.AddToClassList("legend-chip-run");
+            var labelChip = CreateLegendToggleChip(
+                "Labels",
+                _showNonRegionLabels,
+                () =>
+                {
+                    _showNonRegionLabels = !_showNonRegionLabels;
+                    ApplyGlobalLabelVisibility();
+                    UpdateLayerBarVisuals();
+                },
+                labelLegendSprite,
+                Color.white);
 
-            _btnLayerLifts = CreateLegendToggleChip("Lifts", _showLiftOverlays, () =>
+            labelChip.AddToClassList("legend-chip-labels");
+            _layerBar.Add(labelChip);
+
+            var typeLabel = new Label("Map Markers");
+            typeLabel.AddToClassList("map-legend-section-label");
+            _layerBar.Add(typeLabel);
+
+
+            _btnLayerLifts = CreateLegendToggleChip("Ski Lifts", _showLiftOverlays, () =>
             {
                 _showLiftOverlays = !_showLiftOverlays;
                 ApplyLayerVisibility();
-            });
+            }, ResolveLegendSprite(POIType.SkiLift, POICategory.None), new Color(0.40f, 0.85f, 1f, 1f));
             _btnLayerLifts.AddToClassList("legend-chip-lift");
+            _layerBar.Add(_btnLayerLifts);
 
-            _btnLayerPOIs = CreateLegendToggleChip("POIs", _showPOIOverlays, () =>
-            {
-                _showPOIOverlays = !_showPOIOverlays;
-                ApplyLayerVisibility();
-            });
-            _btnLayerPOIs.AddToClassList("legend-chip-poi");
-
-            topRow.Add(_btnLayerRuns);
-            topRow.Add(_btnLayerLifts);
-            topRow.Add(_btnLayerPOIs);
-            _layerBar.Add(topRow);
-
-            var diffLabel = new Label("Max run difficulty");
-            diffLabel.AddToClassList("map-legend-section-label");
-            _layerBar.Add(diffLabel);
-
-            var diffRow = new VisualElement();
-            diffRow.AddToClassList("map-legend-row");
-
-            diffRow.Add(CreateDifficultyChip("Green", 0));
-            diffRow.Add(CreateDifficultyChip("Blue", 1));
-            diffRow.Add(CreateDifficultyChip("Red", 2));
-            diffRow.Add(CreateDifficultyChip("Black", 3));
-
-            _layerBar.Add(diffRow);
-
-            var poiLabel = new Label("POIs");
-            poiLabel.AddToClassList("map-legend-section-label");
-            _layerBar.Add(poiLabel);
-
-            var poiWrap = new VisualElement();
-            poiWrap.AddToClassList("map-legend-wrap");
 
             foreach (var category in GetLegendCategoriesSorted())
             {
+                if (IsDedicatedActivityLegendCategory(category))
+                    continue;
+
                 var chip = CreateLegendToggleChip(
                     FormatPOICategoryLabel(category),
                     IsPOICategoryVisible(category),
@@ -1052,58 +1402,209 @@ namespace SkiGame.Map.UI
                     {
                         TogglePOICategory(category);
                         ApplyLayerVisibility();
-                    });
+                    },
+                    ResolveLegendSprite(POIType.Custom, category),
+                    GetLegendCategoryTint(category));
 
                 chip.AddToClassList(GetPOICategoryClass(category));
-                poiWrap.Add(chip);
+                _layerBar.Add(chip);
             }
 
-            _layerBar.Add(poiWrap);
+            var activityLabel = new Label("Activities");
+            activityLabel.AddToClassList("map-legend-section-label");
+            _layerBar.Add(activityLabel);
+
+            _btnLayerRaces = CreateLegendToggleChip("Races", _showRaceStartOverlays, () =>
+            {
+                _showRaceStartOverlays = !_showRaceStartOverlays;
+                ApplyLayerVisibility();
+            }, ResolveLegendSprite(POIType.Custom, POICategory.Race), GetLegendCategoryTint(POICategory.Race));
+            _btnLayerRaces.AddToClassList("legend-chip-race");
+            _layerBar.Add(_btnLayerRaces);
+
+            _btnLayerMedicTents = CreateLegendToggleChip("Medic Tents", _showMedicTentOverlays, () =>
+            {
+                _showMedicTentOverlays = !_showMedicTentOverlays;
+                ApplyLayerVisibility();
+            }, ResolveLegendSprite(POIType.Custom, POICategory.Medical), GetLegendCategoryTint(POICategory.Medical));
+            _btnLayerMedicTents.AddToClassList("legend-chip-medic");
+            _layerBar.Add(_btnLayerMedicTents);
+
+            var diffLabel = new Label("Run Difficulties");
+            diffLabel.AddToClassList("map-legend-section-label");
+            _layerBar.Add(diffLabel);
+
+            _btnLayerRuns = CreateLegendToggleChip("All Ski Runs", _showRunOverlays, () =>
+            {
+                ToggleRunOverlays();
+                ApplyLayerVisibility();
+            }, ResolveLegendSprite(POIType.SkiRun, POICategory.None));
+            _btnLayerRuns.AddToClassList("legend-chip-run");
+            _layerBar.Add(_btnLayerRuns);
+
+            for (int i = 0; i < DefaultRunDifficultyRanks.Length; i++)
+            {
+                int rank = DefaultRunDifficultyRanks[i];
+                bool isOn = _showRunOverlays && IsRunDifficultyVisible(rank);
+
+                var chip = CreateLegendToggleChip(
+                    FormatRunDifficultyLabel(rank),
+                    isOn,
+                    () =>
+                    {
+                        ToggleRunDifficulty(rank);
+                        ApplyLayerVisibility();
+                    },
+                    ResolveLegendSprite(POIType.SkiRun, POICategory.None),
+                    GetRunDifficultyTint(rank));
+
+                chip.AddToClassList(GetRunDifficultyClass(rank));
+                _layerBar.Add(chip);
+            }
         }
 
-        private VisualElement CreateLegendToggleChip(string text, bool on, Action onClick)
+        private VisualElement CreateLegendToggleChip(string text, bool on, Action onClick, Sprite iconSprite = null, Color? iconTint = null)
         {
             var chip = new VisualElement();
             chip.AddToClassList("map-legend-chip");
             chip.EnableInClassList("is-on", on);
+            chip.pickingMode = PickingMode.Position;
+            chip.focusable = false;
 
-            var dot = new VisualElement();
-            dot.AddToClassList("map-legend-chip-dot");
-            chip.Add(dot);
+            var iconRoot = new VisualElement();
+            iconRoot.AddToClassList("map-legend-chip-dot");
+            iconRoot.pickingMode = PickingMode.Ignore;
+
+            float iconSize = Mathf.Max(1f, GetLegendMarkerStyle().size);
+            iconRoot.style.width = iconSize;
+            iconRoot.style.height = iconSize;
+            iconRoot.style.position = Position.Relative;
+            iconRoot.style.justifyContent = Justify.Center;
+            iconRoot.style.alignItems = Align.Center;
+
+            var iconOutline = new VisualElement();
+            iconOutline.name = "LegendIconOutline";
+            iconOutline.style.position = Position.Absolute;
+            iconOutline.style.left = 0f;
+            iconOutline.style.top = 0f;
+            iconOutline.style.right = 0f;
+            iconOutline.style.bottom = 0f;
+            iconOutline.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+            iconOutline.pickingMode = PickingMode.Ignore;
+
+            var iconBody = new VisualElement();
+            iconBody.name = "LegendIconBody";
+            iconBody.style.position = Position.Absolute;
+            iconBody.style.left = 0f;
+            iconBody.style.top = 0f;
+            iconBody.style.right = 0f;
+            iconBody.style.bottom = 0f;
+            iconBody.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+            iconBody.pickingMode = PickingMode.Ignore;
+
+            iconRoot.Add(iconOutline);
+            iconRoot.Add(iconBody);
+            ApplyLegendChipVisual(iconRoot, iconOutline, iconBody, iconSprite, iconTint ?? Color.white);
+            chip.Add(iconRoot);
 
             var label = new Label(text);
             label.AddToClassList("map-legend-chip-text");
+            label.pickingMode = PickingMode.Ignore;
             chip.Add(label);
 
             HookLayerBtn(chip, onClick);
             return chip;
         }
 
-        private VisualElement CreateDifficultyChip(string text, int rank)
+        private void ApplyLegendChipVisual(VisualElement iconRoot, VisualElement iconOutline, VisualElement iconBody, Sprite iconSprite, Color tint)
         {
-            bool on = _maxVisibleRunDifficultyRank == rank;
+            if (iconRoot == null || iconOutline == null || iconBody == null)
+                return;
 
-            var chip = new VisualElement();
-            chip.AddToClassList("map-legend-chip");
-            chip.AddToClassList("map-legend-chip-compact");
-            chip.EnableInClassList("is-on", on);
-            chip.EnableInClassList($"is-difficulty-{text.ToLowerInvariant()}", true);
+            bool useSprite = iconSprite != null;
+            var legendStyle = GetLegendMarkerStyle();
+            float borderWidth = Mathf.Max(0f, legendStyle.borderWidth);
+            Color borderColor = legendStyle.borderColor;
 
-            var dot = new VisualElement();
-            dot.AddToClassList("map-legend-chip-dot");
-            chip.Add(dot);
+            iconRoot.style.backgroundImage = StyleKeyword.None;
+            iconRoot.style.backgroundColor = useSprite ? Color.clear : tint;
+            iconRoot.style.borderLeftWidth = 0f;
+            iconRoot.style.borderRightWidth = 0f;
+            iconRoot.style.borderTopWidth = 0f;
+            iconRoot.style.borderBottomWidth = 0f;
+            iconRoot.style.borderTopLeftRadius = useSprite ? 0f : 999f;
+            iconRoot.style.borderTopRightRadius = useSprite ? 0f : 999f;
+            iconRoot.style.borderBottomLeftRadius = useSprite ? 0f : 999f;
+            iconRoot.style.borderBottomRightRadius = useSprite ? 0f : 999f;
 
-            var label = new Label(text);
-            label.AddToClassList("map-legend-chip-text");
-            chip.Add(label);
-
-            HookLayerBtn(chip, () =>
+            if (useSprite)
             {
-                _maxVisibleRunDifficultyRank = rank;
-                ApplyLayerVisibility();
-            });
+                iconOutline.style.display = DisplayStyle.Flex;
+                iconOutline.style.backgroundImage = new StyleBackground(iconSprite);
+                iconOutline.style.unityBackgroundImageTintColor = borderColor;
 
-            return chip;
+                iconBody.style.display = DisplayStyle.Flex;
+                iconBody.style.backgroundImage = new StyleBackground(iconSprite);
+                iconBody.style.unityBackgroundImageTintColor = tint;
+                iconBody.style.left = borderWidth;
+                iconBody.style.top = borderWidth;
+                iconBody.style.right = borderWidth;
+                iconBody.style.bottom = borderWidth;
+            }
+            else
+            {
+                iconOutline.style.display = DisplayStyle.None;
+                iconOutline.style.backgroundImage = StyleKeyword.None;
+
+                iconBody.style.display = DisplayStyle.None;
+                iconBody.style.backgroundImage = StyleKeyword.None;
+                iconBody.style.left = 0f;
+                iconBody.style.top = 0f;
+                iconBody.style.right = 0f;
+                iconBody.style.bottom = 0f;
+
+                iconRoot.style.borderTopLeftRadius = 999f;
+                iconRoot.style.borderTopRightRadius = 999f;
+                iconRoot.style.borderBottomLeftRadius = 999f;
+                iconRoot.style.borderBottomRightRadius = 999f;
+            }
+        }
+
+        private Sprite ResolveLegendSprite(POIType type, POICategory category)
+        {
+            ResolvedMarkerStyleRule styleRule = ResolveMarkerStyleRuleForPoi(type, category);
+            if (styleRule.hasMarkerSprite)
+                return styleRule.markerSprite;
+
+            return GetPoiMarkerStyle().sprite;
+        }
+
+        private static Color GetLegendCategoryTint(POICategory category)
+        {
+            switch (category)
+            {
+                case POICategory.Resort: return new Color(0.25f, 0.75f, 1f, 1f);
+                case POICategory.Shop: return new Color(1f, 0.45f, 0.75f, 1f);
+                case POICategory.Kiosk: return new Color(1f, 0.75f, 0.2f, 1f);
+                case POICategory.Service: return new Color(0.45f, 1f, 0.45f, 1f);
+                case POICategory.Landmark: return new Color(0.8f, 0.8f, 1f, 1f);
+                case POICategory.Race: return new Color(1.00f, 0.55f, 0.20f, 1f);
+                case POICategory.Medical: return new Color(0.20f, 1.00f, 1.00f, 1f);
+                case POICategory.Vehicle: return new Color(1.00f, 0.90f, 0.25f, 1f);
+                default: return Color.white;
+            }
+        }
+
+        private static Color GetRunDifficultyTint(int rank)
+        {
+            switch (rank)
+            {
+                case 0: return new Color(0.45f, 0.92f, 0.48f, 1f);
+                case 1: return new Color(0.35f, 0.72f, 1f, 1f);
+                case 2: return new Color(1f, 0.35f, 0.35f, 1f);
+                case 3: return new Color(0.18f, 0.18f, 0.22f, 1f);
+                default: return Color.white;
+            }
         }
 
         private IEnumerable<POICategory> GetLegendCategoriesSorted()
@@ -1122,6 +1623,9 @@ namespace SkiGame.Map.UI
                         continue;
 
                     var normalized = NormalizeCategoryForLegend(m.category);
+                    if (IsDedicatedActivityLegendCategory(normalized))
+                        continue;
+
                     if (!list.Contains(normalized))
                         list.Add(normalized);
                 }
@@ -1140,14 +1644,55 @@ namespace SkiGame.Map.UI
                 case POICategory.Shop: return 2;
                 case POICategory.Service: return 3;
                 case POICategory.Landmark: return 4;
-                case POICategory.Custom: return 5;
+                case POICategory.Race: return 5;
+                case POICategory.Medical: return 6;
+                case POICategory.Vehicle: return 7;
+                case POICategory.Custom: return 8;
                 default: return 99;
             }
         }
 
+
         private static POICategory NormalizeCategoryForLegend(POICategory category)
         {
             return category == POICategory.None ? POICategory.Custom : category;
+        }
+
+        private static bool IsDedicatedActivityLegendCategory(POICategory category)
+        {
+            switch (NormalizeCategoryForLegend(category))
+            {
+                case POICategory.Race:
+                case POICategory.Medical:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private void SanitizeLegendCategoryVisibilityState()
+        {
+            if (_visiblePOICategories.Count == 0)
+                return;
+
+            var sanitized = new HashSet<POICategory>();
+
+            foreach (var category in _visiblePOICategories)
+            {
+                var normalized = NormalizeCategoryForLegend(category);
+                if (IsDedicatedActivityLegendCategory(normalized))
+                    continue;
+
+                sanitized.Add(normalized);
+            }
+
+            if (sanitized.SetEquals(_visiblePOICategories))
+                return;
+
+            _visiblePOICategories.Clear();
+            foreach (var category in sanitized)
+                _visiblePOICategories.Add(category);
         }
 
         private bool IsPOICategoryVisible(POICategory category)
@@ -1158,6 +1703,9 @@ namespace SkiGame.Map.UI
         private void TogglePOICategory(POICategory category)
         {
             category = NormalizeCategoryForLegend(category);
+
+            if (IsDedicatedActivityLegendCategory(category))
+                return;
 
             if (!_visiblePOICategories.Add(category))
                 _visiblePOICategories.Remove(category);
@@ -1172,6 +1720,9 @@ namespace SkiGame.Map.UI
                 case POICategory.Shop: return "Shops";
                 case POICategory.Service: return "Services";
                 case POICategory.Landmark: return "Landmarks";
+                case POICategory.Race: return "Races";
+                case POICategory.Medical: return "Medical";
+                case POICategory.Vehicle: return "Vehicles";
                 case POICategory.Custom: return "Other";
                 default: return category.ToString();
             }
@@ -1186,6 +1737,9 @@ namespace SkiGame.Map.UI
                 case POICategory.Shop: return "legend-chip-shop";
                 case POICategory.Service: return "legend-chip-service";
                 case POICategory.Landmark: return "legend-chip-landmark";
+                case POICategory.Race: return "legend-chip-custom";
+                case POICategory.Medical: return "legend-chip-service";
+                case POICategory.Vehicle: return "legend-chip-custom";
                 case POICategory.Custom: return "legend-chip-custom";
                 default: return "legend-chip-custom";
             }
@@ -1195,14 +1749,20 @@ namespace SkiGame.Map.UI
         {
             if (btn == null) return;
 
-            btn.RegisterCallback<ClickEvent>(e =>
+            btn.RegisterCallback<PointerDownEvent>(e =>
             {
+                if (e.button == 0)
+                    e.StopPropagation();
+            });
+
+            btn.RegisterCallback<PointerUpEvent>(e =>
+            {
+                if (e.button != 0)
+                    return;
+
                 onClick?.Invoke();
                 e.StopPropagation();
             });
-
-            // Prevent accidental map drag start if this ends up within the viewport area on some layouts.
-            btn.RegisterCallback<PointerDownEvent>(e => e.StopPropagation());
         }
 
         private void UpdateLayerBarVisuals()
@@ -1220,7 +1780,11 @@ namespace SkiGame.Map.UI
 
         private void ApplyLayerVisibility()
         {
-            _polyLayer?.SetFilterState(_showRunOverlays, _showLiftOverlays, _maxVisibleRunDifficultyRank);
+            _polyLayer?.SetFilterState(
+                _showRunOverlays,
+                _showLiftOverlays,
+                _showRaceStartOverlays,
+                _visibleRunDifficultyRanks);
 
             foreach (var kv in _markerRoots)
             {
@@ -1233,6 +1797,148 @@ namespace SkiGame.Map.UI
 
             RebuildLegendUI();
             ClearSelectionIfHidden();
+            UpdateLayerBarVisuals();
+            ApplyGlobalLabelVisibility();
+        }
+
+        private void ApplyGlobalLabelVisibility()
+        {
+            for (int i = 0; i < _activityCheckpointMarkerLabels.Count; i++)
+            {
+                var label = _activityCheckpointMarkerLabels[i];
+                if (label == null)
+                    continue;
+
+                label.style.display = _showNonRegionLabels ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            LayoutOverlayLabels();
+
+            // Waypoint labels are solved separately.
+            // Mark dirty once and let the dedicated solver decide visibility/placement.
+            MarkWaypointLabelLayoutDirty();
+            LayoutWaypointLabels();
+        }
+
+        private void RefreshActivityCheckpointMarkers()
+        {
+            if (!_bound || _markerHost == null)
+                return;
+
+            EnsureActivityCheckpointMarkerVisualCount(_activityCheckpointWorldPositions.Count);
+
+            for (int i = 0; i < _activityCheckpointMarkerRoots.Count; i++)
+            {
+                bool active = i < _activityCheckpointWorldPositions.Count && i >= _activityCurrentCheckpointIndex;
+
+                var root = _activityCheckpointMarkerRoots[i];
+                var dot = _activityCheckpointMarkerDots[i];
+                var label = _activityCheckpointMarkerLabels[i];
+
+                if (!active || _mapData == null || !_mapData.Projection.IsValid)
+                {
+                    root.style.display = DisplayStyle.None;
+                    continue;
+                }
+
+                if (!TryProjectWorldToUV(_activityCheckpointWorldPositions[i], out Vector2 uv))
+                {
+                    root.style.display = DisplayStyle.None;
+                    continue;
+                }
+
+                Vector2 local = UVToLocal(uv);
+
+                root.style.display = DisplayStyle.Flex;
+                root.style.left = local.x;
+                root.style.top = local.y;
+
+                bool isCurrent = i == _activityCurrentCheckpointIndex;
+                bool isFinal = i == _activityCheckpointWorldPositions.Count - 1;
+
+                Color dotColor = isFinal
+                    ? new Color(1f, 0.15f, 0.15f, 1f)
+                    : (isCurrent ? new Color(0.12f, 0.95f, 0.25f, 1f) : new Color(1f, 0.92f, 0.16f, 1f));
+
+                dot.style.backgroundColor = dotColor;
+                label.text = $"{i + 1}";
+            }
+        }
+
+        private void RefreshActiveActivityMarker()
+        {
+            _hasActiveActivityMarker = false;
+            _activeActivityMarkerLabel = string.Empty;
+
+            if (!NavigationTargetController.TryGetActiveState(out var state))
+                return;
+
+            if (state.request.kind == NavigationTargetKind.Waypoint)
+                return;
+
+            // Race checkpoints use the dedicated checkpoint marker path.
+            if (_activityCurrentCheckpointIndex >= 0 && _activityCheckpointWorldPositions.Count > 0)
+                return;
+
+            _hasActiveActivityMarker = true;
+            _activeActivityMarkerWorldPosition = state.beaconWorldPosition;
+            _activeActivityMarkerColor = state.request.accentColor.a > 0f
+                ? state.request.accentColor
+                : new Color(0.36f, 0.74f, 1f, 1f);
+            _activeActivityMarkerLabel = state.request.displayName;
+        }
+
+        private void EnsureActivityCheckpointMarkerVisualCount(int required)
+        {
+            if (_markerHost == null)
+                return;
+
+            while (_activityCheckpointMarkerRoots.Count < required)
+            {
+                var root = new VisualElement();
+                root.style.position = Position.Absolute;
+                root.style.width = 0f;
+                root.style.height = 0f;
+                root.pickingMode = PickingMode.Ignore;
+
+                var dot = new VisualElement();
+                dot.style.position = Position.Absolute;
+                dot.style.width = 18f;
+                dot.style.height = 18f;
+                dot.style.translate = new Translate(-9f, -9f, 0f);
+                dot.style.borderTopLeftRadius = 9f;
+                dot.style.borderTopRightRadius = 9f;
+                dot.style.borderBottomLeftRadius = 9f;
+                dot.style.borderBottomRightRadius = 9f;
+                dot.style.borderLeftWidth = 2f;
+                dot.style.borderRightWidth = 2f;
+                dot.style.borderTopWidth = 2f;
+                dot.style.borderBottomWidth = 2f;
+                dot.style.borderLeftColor = Color.white;
+                dot.style.borderRightColor = Color.white;
+                dot.style.borderTopColor = Color.white;
+                dot.style.borderBottomColor = Color.white;
+
+                var label = new Label();
+                label.style.position = Position.Absolute;
+                label.style.left = 12f;
+                label.style.top = -12f;
+                label.style.fontSize = 12f;
+                label.style.color = Color.white;
+                label.style.unityFontStyleAndWeight = FontStyle.Bold;
+                label.pickingMode = PickingMode.Ignore;
+
+                root.Add(dot);
+                root.Add(label);
+                _markerHost.Add(root);
+
+                _activityCheckpointMarkerRoots.Add(root);
+                _activityCheckpointMarkerDots.Add(dot);
+                _activityCheckpointMarkerLabels.Add(label);
+            }
+
+            for (int i = 0; i < _activityCheckpointMarkerRoots.Count; i++)
+                _activityCheckpointMarkerRoots[i].style.display = i < required ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private bool IsMarkerVisibleById(string markerId)
@@ -1252,61 +1958,328 @@ namespace SkiGame.Map.UI
             if (marker.type == POIType.SkiLift)
                 return _showLiftOverlays;
 
+            // Activity POIs are normal custom POIs with activity meta tokens.
+            if (IsRaceActivityMarker(marker) || IsMedicActivityMarker(marker) || IsSnowmobileActivityMarker(marker))
+                return IsActivityMarkerVisible(marker);
+
             return _showPOIOverlays && IsPOICategoryVisible(marker.category);
         }
 
         private bool IsPolylineVisible(MapPolyline polyline)
         {
-            if (polyline.lineType == MapLineType.SkiRun)
-                return IsRunVisibleById(polyline.id);
+            switch (polyline.lineType)
+            {
+                case MapLineType.SkiRun:
+                    return IsRunVisibleById(polyline.id);
 
-            if (polyline.lineType == MapLineType.SkiLift)
-                return _showLiftOverlays;
+                case MapLineType.SkiLift:
+                    return _showLiftOverlays;
 
-            return true;
+                case MapLineType.RaceCourse:
+                    return IsRaceCourseVisible(polyline.id);
+
+                default:
+                    return true;
+            }
         }
 
         private bool IsRunVisibleById(string runId)
         {
-            if (!_showRunOverlays)
+            if (!_showRunOverlays || !_showSkiRunOverlays)
                 return false;
 
             if (TryGetRunDifficultyRank(runId, out int rank))
-                return rank <= _maxVisibleRunDifficultyRank;
+                return IsRunDifficultyVisible(rank);
 
-            return true;
+            // If the run difficulty cannot be resolved, only show it when all
+            // difficulties are effectively enabled.
+            return AreAllRunDifficultiesVisible();
         }
 
         private bool TryGetRunDifficultyRank(string runId, out int rank)
         {
-            rank = 0;
+            rank = -1;
 
-            if (_mapData == null || string.IsNullOrWhiteSpace(runId))
+            if (string.IsNullOrWhiteSpace(runId))
                 return false;
 
-            var corridors = _mapData.RunCorridors;
-            if (corridors != null)
+            string normalizedRunId = runId;
+            int suffixIndex = normalizedRunId.LastIndexOf("__", StringComparison.Ordinal);
+            if (suffixIndex > 0)
+                normalizedRunId = normalizedRunId.Substring(0, suffixIndex);
+
+            // Prefer live authored run data from the POI registry when available.
+            if (_poiRegistry != null && _poiRegistry.TryGetById(normalizedRunId, out var poi) && poi.source is SkiRunLine line)
             {
-                for (int i = 0; i < corridors.Count; i++)
+                if (TryMapRunDifficultyName(line.Difficulty.ToString(), out rank))
+                    return true;
+            }
+
+            if (_mapData != null)
+            {
+                var corridors = _mapData.RunCorridors;
+                if (corridors != null)
                 {
-                    if (string.Equals(corridors[i].id, runId, StringComparison.Ordinal))
+                    for (int i = 0; i < corridors.Count; i++)
                     {
-                        rank = corridors[i].difficultyRank;
-                        return true;
+                        if (string.Equals(corridors[i].id, normalizedRunId, StringComparison.Ordinal))
+                        {
+                            rank = NormalizeRunDifficultyRank(corridors[i].difficultyRank);
+                            return rank >= 0;
+                        }
+                    }
+                }
+
+                var polys = _mapData.Polylines;
+                if (polys != null)
+                {
+                    for (int i = 0; i < polys.Count; i++)
+                    {
+                        if (string.Equals(polys[i].id, normalizedRunId, StringComparison.Ordinal))
+                        {
+                            rank = NormalizeRunDifficultyRank(polys[i].difficultyRank);
+                            return rank >= 0;
+                        }
                     }
                 }
             }
 
-            var polys = _mapData.Polylines;
-            if (polys != null)
+            return false;
+        }
+
+        private static int NormalizeRunDifficultyRank(int rawRank)
+        {
+            if (rawRank >= 0 && rawRank <= 3)
+                return rawRank;
+
+            // Some data paths may serialize green/blue/red/black as 1..4.
+            if (rawRank >= 1 && rawRank <= 4)
+                return rawRank - 1;
+
+            return -1;
+        }
+
+        private static bool TryMapRunDifficultyName(string raw, out int rank)
+        {
+            rank = -1;
+            if (string.IsNullOrWhiteSpace(raw))
+                return false;
+
+            string s = raw.Replace(" ", string.Empty).ToLowerInvariant();
+
+            if (s.Contains("green"))
             {
-                for (int i = 0; i < polys.Count; i++)
+                rank = 0;
+                return true;
+            }
+
+            if (s.Contains("blue"))
+            {
+                rank = 1;
+                return true;
+            }
+
+            if (s.Contains("red"))
+            {
+                rank = 2;
+                return true;
+            }
+
+            if (s.Contains("black"))
+            {
+                rank = 3;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool HasMetaToken(string meta, string token)
+        {
+            if (string.IsNullOrWhiteSpace(meta) || string.IsNullOrWhiteSpace(token))
+                return false;
+
+            return meta.IndexOf(token, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool IsRaceActivityMarker(SkiGame.Map.MapMarker marker)
+        {
+            return HasMetaToken(marker.meta, "activity:race");
+        }
+
+        private static bool IsMedicActivityMarker(SkiGame.Map.MapMarker marker)
+        {
+            return HasMetaToken(marker.meta, "activity:medic");
+        }
+
+        private static bool IsSnowmobileActivityMarker(SkiGame.Map.MapMarker marker)
+        {
+            return HasMetaToken(marker.meta, "activity:snowmobile");
+        }
+
+        public bool CenterOnPolylineById(string polylineId, float minZoom = -1f)
+        {
+            if (!_bound) return false;
+            if (_mapData == null || string.IsNullOrWhiteSpace(polylineId)) return false;
+
+            var list = _mapData.Polylines;
+            if (list == null) return false;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                var p = list[i];
+                if (!p.IsValid) continue;
+                if (p.id != polylineId) continue;
+
+                if (p.Has3DPoints && p.pointsWorld != null && p.pointsWorld.Count > 0)
                 {
-                    if (string.Equals(polys[i].id, runId, StringComparison.Ordinal))
+                    int mid = p.pointsWorld.Count / 2;
+                    return CenterOnWorldPosition(p.pointsWorld[mid], minZoom);
+                }
+
+                if (p.HasXZPoints && p.pointsWorldXZ != null && p.pointsWorldXZ.Count > 0)
+                {
+                    int mid = p.pointsWorldXZ.Count / 2;
+                    var w = p.pointsWorldXZ[mid];
+                    return CenterOnWorldPosition(new Vector3(w.x, 0f, w.y), minZoom);
+                }
+
+                return false;
+            }
+
+            return false;
+        }
+
+        public bool FramePolylineById(string polylineId, float paddingPx = 28f, float minZoom = 0.85f)
+        {
+            if (!_bound) return false;
+            if (_mapData == null || string.IsNullOrWhiteSpace(polylineId)) return false;
+            if (!TryGetViewportSize(out float vw, out float vh)) return false;
+
+            var list = _mapData.Polylines;
+            if (list == null) return false;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                var p = list[i];
+                if (!p.IsValid) continue;
+                if (!string.Equals(p.id, polylineId, StringComparison.Ordinal)) continue;
+
+                bool foundAny = false;
+                float minX = float.MaxValue;
+                float minY = float.MaxValue;
+                float maxX = float.MinValue;
+                float maxY = float.MinValue;
+
+                if (p.Has3DPoints && p.pointsWorld != null)
+                {
+                    for (int k = 0; k < p.pointsWorld.Count; k++)
                     {
-                        rank = polys[i].difficultyRank;
+                        if (!TryProjectWorldToLocal(p.pointsWorld[k], out var local))
+                            continue;
+
+                        foundAny = true;
+                        minX = Mathf.Min(minX, local.x);
+                        minY = Mathf.Min(minY, local.y);
+                        maxX = Mathf.Max(maxX, local.x);
+                        maxY = Mathf.Max(maxY, local.y);
+                    }
+                }
+                else if (p.HasXZPoints && p.pointsWorldXZ != null)
+                {
+                    for (int k = 0; k < p.pointsWorldXZ.Count; k++)
+                    {
+                        if (!TryProjectWorldXZToLocal(p.pointsWorldXZ[k], out var local))
+                            continue;
+
+                        foundAny = true;
+                        minX = Mathf.Min(minX, local.x);
+                        minY = Mathf.Min(minY, local.y);
+                        maxX = Mathf.Max(maxX, local.x);
+                        maxY = Mathf.Max(maxY, local.y);
+                    }
+                }
+
+                if (!foundAny)
+                    return false;
+
+                float width = Mathf.Max(8f, maxX - minX);
+                float height = Mathf.Max(8f, maxY - minY);
+
+                float usableW = Mathf.Max(32f, vw - paddingPx * 2f);
+                float usableH = Mathf.Max(32f, vh - paddingPx * 2f);
+
+                _zoom = Mathf.Max(minZoom, Mathf.Min(usableW / width, usableH / height));
+
+                Vector2 centerLocal = new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
+                CenterViewOnContentPoint(centerLocal);
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool IsActivityMarkerVisible(SkiGame.Map.MapMarker marker)
+        {
+            if (IsRaceActivityMarker(marker))
+                return _showRaceStartOverlays;
+
+            if (IsMedicActivityMarker(marker))
+                return _showMedicTentOverlays;
+
+            if (IsSnowmobileActivityMarker(marker))
+                return _showSnowmobileOverlays;
+
+            return false;
+        }
+
+        private bool IsRaceCourseVisible(string polylineId)
+        {
+            if (!_showRaceStartOverlays)
+                return false;
+
+            return TryFindRaceActivityMarkerForPolyline(polylineId, out _);
+        }
+
+        private bool TryFindRaceActivityMarkerForPolyline(string polylineId, out SkiGame.Map.MapMarker marker)
+        {
+            marker = default;
+
+            if (_mapData == null || _mapData.Markers == null || string.IsNullOrWhiteSpace(polylineId))
+                return false;
+
+            for (int i = 0; i < _mapData.Markers.Count; i++)
+            {
+                var m = _mapData.Markers[i];
+                if (!m.IsValid)
+                    continue;
+
+                if (!IsRaceActivityMarker(m))
+                    continue;
+
+                // Prefer exact marker-source identity when the POI was baked from the same RaceCourseLine.
+                if (m.source is RaceCourseLine race && race != null)
+                {
+                    string raceId = race.RaceId;
+                    string raceName = race.RaceName;
+                    string raceObjectName = race.name; // safer than race.gameObject.name
+
+                    if ((!string.IsNullOrWhiteSpace(raceId) && string.Equals(raceId, polylineId, StringComparison.Ordinal)) ||
+                        string.Equals(raceName, polylineId, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(raceObjectName, polylineId, StringComparison.Ordinal))
+                    {
+                        marker = m;
                         return true;
                     }
+                }
+
+                // Fallback to marker id conventions and display-name matching.
+                if (string.Equals(m.id, polylineId, StringComparison.Ordinal) ||
+                    (!string.IsNullOrWhiteSpace(m.id) && m.id.EndsWith(polylineId, StringComparison.Ordinal)) ||
+                    string.Equals(m.displayName, polylineId, StringComparison.OrdinalIgnoreCase))
+                {
+                    marker = m;
+                    return true;
                 }
             }
 
@@ -1347,6 +2320,8 @@ namespace SkiGame.Map.UI
         public void Refresh()
         {
             if (!_bound) return;
+
+            RefreshStyleIfNeeded();
 
             bool hasData = _mapData != null && _mapData.Projection.IsValid;
             if (_missingLabel != null)
@@ -1810,6 +2785,132 @@ namespace SkiGame.Map.UI
             return false;
         }
 
+        private bool TryFindLiveLiftLineForPolylineId(string polylineId, out LiftLine lift)
+        {
+            lift = null;
+            if (string.IsNullOrWhiteSpace(polylineId))
+                return false;
+
+            LiftLine[] lifts = UnityEngine.Object.FindObjectsOfType<LiftLine>(includeInactive: false);
+            if (lifts == null || lifts.Length == 0)
+                return false;
+
+            for (int i = 0; i < lifts.Length; i++)
+            {
+                LiftLine candidate = lifts[i];
+                if (candidate == null)
+                    continue;
+
+                if (string.Equals(candidate.name, polylineId, StringComparison.Ordinal) ||
+                    string.Equals(candidate.gameObject.name, polylineId, StringComparison.OrdinalIgnoreCase))
+                {
+                    lift = candidate;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void ResolveLiftRequirementForPolyline(
+    string polylineId,
+    out int requiredLevel,
+    out string requiredPassId,
+    out Color baseColor)
+        {
+            requiredLevel = 0;
+            requiredPassId = string.Empty;
+            baseColor = new Color(0.75f, 0.85f, 1f, 0.70f);
+
+            if (string.IsNullOrWhiteSpace(polylineId))
+                return;
+
+            if (_forcedLiftRequiredLevelByPolyline.TryGetValue(polylineId, out int forcedLevel))
+            {
+                requiredLevel = forcedLevel;
+
+                if (_forcedLiftRequiredPassIdByPolyline.TryGetValue(polylineId, out string forcedPassId))
+                    requiredPassId = forcedPassId;
+                else
+                    requiredPassId = string.Empty;
+
+                if (_forcedLiftColorByPolyline.TryGetValue(polylineId, out Color forcedColor))
+                    baseColor = forcedColor;
+                else
+                    baseColor = GetPassLevelMapColor(requiredLevel);
+
+                return;
+            }
+
+            var cfg = SkiPassManager.Instance != null ? SkiPassManager.Instance.Config : null;
+
+            LiftLine liveLift = null;
+
+            // First prefer the direct mapping captured during marker rebuild.
+            if (!_liveLiftByPolylineId.TryGetValue(polylineId, out liveLift) || liveLift == null)
+                TryFindLiveLiftLineForPolylineId(polylineId, out liveLift);
+
+            if (liveLift != null)
+            {
+                requiredLevel = Mathf.Max(0, liveLift.RequiredPassLevel);
+
+                if (cfg != null && !string.IsNullOrWhiteSpace(liveLift.RequiredPassId))
+                {
+                    string normalized = liveLift.RequiredPassId.Trim();
+                    int byId = cfg.GetLevelIndexByPassId(normalized);
+                    if (byId >= 0)
+                    {
+                        requiredPassId = normalized;
+                        requiredLevel = byId;
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(requiredPassId) && cfg != null)
+                {
+                    string fallbackPassId = cfg.GetPassIdForLevel(requiredLevel);
+                    if (!string.IsNullOrWhiteSpace(fallbackPassId))
+                        requiredPassId = fallbackPassId.Trim();
+                }
+
+                baseColor = GetPassLevelMapColor(requiredLevel);
+
+                _liftRequiredLevelByPolyline[polylineId] = requiredLevel;
+
+                if (!string.IsNullOrWhiteSpace(requiredPassId))
+                    _liftRequiredPassIdByPolyline[polylineId] = requiredPassId;
+                else
+                    _liftRequiredPassIdByPolyline.Remove(polylineId);
+
+                _liftRequiredColorByPolyline[polylineId] = baseColor;
+                return;
+            }
+
+            if (_liftRequiredLevelByPolyline.TryGetValue(polylineId, out int cachedLevel))
+                requiredLevel = cachedLevel;
+
+            if (_liftRequiredPassIdByPolyline.TryGetValue(polylineId, out string cachedPassId))
+                requiredPassId = cachedPassId;
+
+            // If the cached pass id is valid, let it correct the cached level before deriving colour.
+            if (cfg != null && !string.IsNullOrWhiteSpace(requiredPassId))
+            {
+                int byId = cfg.GetLevelIndexByPassId(requiredPassId.Trim());
+                if (byId >= 0)
+                    requiredLevel = byId;
+            }
+
+            if (_liftRequiredColorByPolyline.TryGetValue(polylineId, out Color cachedColor))
+            {
+                // Recompute from corrected level when the cached colour may have been built from a stale level.
+                baseColor = GetPassLevelMapColor(requiredLevel);
+                _liftRequiredColorByPolyline[polylineId] = baseColor;
+            }
+            else
+            {
+                baseColor = GetPassLevelMapColor(requiredLevel);
+            }
+        }
+
         private void AddLiftMarkerLink(string polylineId, string markerId, LiftStationRole role)
         {
             if (string.IsNullOrEmpty(polylineId) || string.IsNullOrEmpty(markerId)) return;
@@ -1894,6 +2995,19 @@ namespace SkiGame.Map.UI
             return 0;
         }
 
+        private string GetLiftRequiredPassId(SkiGame.Map.MapMarker m)
+        {
+            if (m.source is LiftLine ll && ll && !string.IsNullOrWhiteSpace(ll.RequiredPassId))
+                return ll.RequiredPassId.Trim();
+
+            int requiredLevel = GetLiftRequiredPassLevel(m);
+            var cfg = SkiPassManager.Instance != null ? SkiPassManager.Instance.Config : null;
+            if (cfg == null)
+                return string.Empty;
+
+            return cfg.GetPassIdForLevel(requiredLevel);
+        }
+
         private Color GetPassLevelMapColor(int level)
         {
             level = Mathf.Max(0, level);
@@ -1926,23 +3040,63 @@ namespace SkiGame.Map.UI
             return fallback[Mathf.Clamp(level, 0, fallback.Length - 1)];
         }
 
-        private void CacheLiftRequirementColour(string liftPolylineId, int requiredLevel)
+        private static Color DimLiftPassColor(Color baseColor, float factor = 0.62f, float alpha = 0.56f)
         {
+            factor = Mathf.Clamp01(factor);
+            alpha = Mathf.Clamp01(alpha);
+
+            float grey = (baseColor.r + baseColor.g + baseColor.b) / 3f;
+            Color desaturated = new Color(
+                Mathf.Lerp(grey, baseColor.r, 0.55f),
+                Mathf.Lerp(grey, baseColor.g, 0.55f),
+                Mathf.Lerp(grey, baseColor.b, 0.55f),
+                1f);
+
+            return new Color(
+                desaturated.r * factor,
+                desaturated.g * factor,
+                desaturated.b * factor,
+                alpha);
+        }
+
+        private static Color VisibleLiftPassColor(Color baseColor, float alpha = 0.82f)
+        {
+            alpha = Mathf.Clamp01(alpha);
+            return new Color(baseColor.r, baseColor.g, baseColor.b, alpha);
+        }
+
+        private void CacheLiftRequirementColour(string liftPolylineId, int requiredLevel, string requiredPassId)
+        {
+            if (string.IsNullOrWhiteSpace(liftPolylineId))
+                return;
+
             requiredLevel = Mathf.Max(0, requiredLevel);
 
-            // If multiple stations report something, keep the max (most restrictive).
+            var cfg = SkiPassManager.Instance != null ? SkiPassManager.Instance.Config : null;
+
+            // Prefer pass-id resolution for colour selection when possible.
+            if (cfg != null && !string.IsNullOrWhiteSpace(requiredPassId))
+            {
+                int resolvedById = cfg.GetLevelIndexByPassId(requiredPassId.Trim());
+                if (resolvedById >= 0)
+                    requiredLevel = resolvedById;
+            }
+
+            // If multiple stations report something, keep the most restrictive resolved level.
             if (_liftRequiredLevelByPolyline.TryGetValue(liftPolylineId, out var existing))
                 requiredLevel = Mathf.Max(existing, requiredLevel);
 
             _liftRequiredLevelByPolyline[liftPolylineId] = requiredLevel;
 
+            if (!string.IsNullOrWhiteSpace(requiredPassId))
+                _liftRequiredPassIdByPolyline[liftPolylineId] = requiredPassId.Trim();
+            else
+                _liftRequiredPassIdByPolyline.Remove(liftPolylineId);
+
             Color c = GetPassLevelMapColor(requiredLevel);
             _liftRequiredColorByPolyline[liftPolylineId] = c;
 
-            // Apply to polyline overrides with your usual alpha feel.
             _polylineColorOverrides[liftPolylineId] = new Color(c.r, c.g, c.b, 0.70f);
-
-            // Also cache accent colour for polyline labels.
             _polylineLabelAccent[liftPolylineId] = new Color(c.r, c.g, c.b, 1f);
         }
 
@@ -1965,6 +3119,18 @@ namespace SkiGame.Map.UI
             _polylineLabelVisuals.Clear();
             _poiOverlayLabels.Clear();
 
+            foreach (var kv in _waypointLabels)
+                kv.Value?.RemoveFromHierarchy();
+
+            if (_activeWaypointRenameField != null)
+            {
+                if (_activeWaypointRenameField.parent != null)
+                    _activeWaypointRenameField.RemoveFromHierarchy();
+
+                _activeWaypointRenameField = null;
+                _activeWaypointRenameId = null;
+            }
+
             _markerHost.Clear();
 
             _markerVisuals.Clear();
@@ -1986,11 +3152,13 @@ namespace SkiGame.Map.UI
             _polylineColorOverrides.Clear();
 
             _liftRequiredLevelByPolyline.Clear();
+            _liftRequiredPassIdByPolyline.Clear();
             _liftRequiredColorByPolyline.Clear();
+            _liveLiftByPolylineId.Clear();
 
             _markerHitTargets.Clear();
             _markerDisplayNames.Clear();
-            _poiAlwaysLabelById.Clear();
+            _poiLabelDisplayOverrides.Clear();
 
             _markerAnchorLocal.Clear();
 
@@ -2061,9 +3229,22 @@ namespace SkiGame.Map.UI
                             var role = DetermineLiftStationRole(m);
                             AddLiftMarkerLink(liftPolyId, m.id, role);
 
-                            // Pass requirement colouring
+                            if (m.source is LiftLine liveLift && liveLift != null)
+                                _liveLiftByPolylineId[liftPolyId] = liveLift;
+
                             int req = GetLiftRequiredPassLevel(m);
-                            CacheLiftRequirementColour(liftPolyId, req);
+                            string requiredPassId = GetLiftRequiredPassId(m);
+
+                            // Prefer the live lift's authored values when available.
+                            if (m.source is LiftLine sourceLift && sourceLift != null)
+                            {
+                                req = Mathf.Max(0, sourceLift.RequiredPassLevel);
+
+                                if (!string.IsNullOrWhiteSpace(sourceLift.RequiredPassId))
+                                    requiredPassId = sourceLift.RequiredPassId.Trim();
+                            }
+
+                            CacheLiftRequirementColour(liftPolyId, req, requiredPassId);
                         }
                     }
 
@@ -2212,11 +3393,33 @@ namespace SkiGame.Map.UI
 
                 var dot = new VisualElement();
                 dot.AddToClassList("map-marker-dot");
+                dot.style.justifyContent = Justify.Center;
+                dot.style.alignItems = Align.Center;
 
-                Color c = GetFallbackCategoryColor(m);
+                var spriteOutline = new VisualElement();
+                spriteOutline.name = "MapMarkerSpriteOutline";
+                spriteOutline.style.position = Position.Absolute;
+                spriteOutline.style.left = 0f;
+                spriteOutline.style.top = 0f;
+                spriteOutline.style.right = 0f;
+                spriteOutline.style.bottom = 0f;
+                spriteOutline.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+                spriteOutline.style.display = DisplayStyle.None;
+                spriteOutline.pickingMode = PickingMode.Ignore;
 
-                if (_style != null && _style.usePOIRegistryMarkerColors && _poiRegistry != null && _poiRegistry.TryGetById(m.id, out var info))
-                    c = info.color;
+                var spriteBody = new VisualElement();
+                spriteBody.name = "MapMarkerSpriteBody";
+                spriteBody.style.position = Position.Absolute;
+                spriteBody.style.left = 0f;
+                spriteBody.style.top = 0f;
+                spriteBody.style.right = 0f;
+                spriteBody.style.bottom = 0f;
+                spriteBody.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+                spriteBody.style.display = DisplayStyle.None;
+                spriteBody.pickingMode = PickingMode.Ignore;
+
+                ResolvedMarkerStyleRule markerStyleRule = ResolveMarkerStyleRuleForPoi(m.type, ResolvePoiCategoryForMarkerId(m.id, m.type));
+                Color c = ResolveMapElementColor(m.color, markerStyleRule, GetPoiMarkerStyle().fillColor.a > 0f ? GetPoiMarkerStyle().fillColor : GetFallbackCategoryColor(m));
 
                 // Lift station markers: colour should reflect the pass tier required by the lift.
                 if (isLiftStationMarker)
@@ -2239,18 +3442,23 @@ namespace SkiGame.Map.UI
                 }
 
                 dot.style.backgroundColor = c;
+                dot.Add(spriteOutline);
+                dot.Add(spriteBody);
 
                 // Cache accent colour for this marker's label (used for the left stripe).
                 _markerLabelAccent[m.id] = new Color(c.r, c.g, c.b, 1f);
 
                 // Lift station markers: overlay ^ or v (use resolved role from prepass)
+                Label glyphLabel = null;
                 if (_liftMarkerRole.TryGetValue(m.id, out var role) && role != LiftStationRole.None)
                 {
-                    dot.style.alignItems = Align.Center;
-                    dot.style.justifyContent = Justify.Center;
-
-                    var glyphLabel = new Label(role == LiftStationRole.Top ? "↑" : "↓");
+                    glyphLabel = new Label(role == LiftStationRole.Top ? "↑" : "↓");
                     glyphLabel.pickingMode = PickingMode.Ignore;
+                    glyphLabel.style.position = Position.Absolute;
+                    glyphLabel.style.left = 0f;
+                    glyphLabel.style.top = 0f;
+                    glyphLabel.style.right = 0f;
+                    glyphLabel.style.bottom = 0f;
                     glyphLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
                     glyphLabel.style.color = Color.white;
                     glyphLabel.style.fontSize = 12;
@@ -2264,21 +3472,18 @@ namespace SkiGame.Map.UI
                 // Cache explicit POI “always label” flag
                 if (m.type != POIType.SkiRun && m.type != POIType.SkiLift)
                 {
-                    bool always = false;
+                    MapUIStyleSettings.MapLabelDisplayMode mode = MapUIStyleSettings.MapLabelDisplayMode.Contextual;
 
-                    // Prefer explicit registry flag (editor-visible)
-                    if (_poiRegistry != null && _poiRegistry.TryGetById(m.id, out var poiInfo))
-                        always = poiInfo.alwaysShowLabel;
+                    if (_poiRegistry != null && _poiRegistry.TryGetById(m.id, out var poiInfo) && poiInfo.hasLabelDisplayOverride)
+                        mode = poiInfo.labelDisplayOverride;
+                    else if (HasAlwaysLabelFlag(m.meta))
+                        mode = MapUIStyleSettings.MapLabelDisplayMode.Always;
 
-                    // Fallback to meta token if you still want it (optional)
-                    if (!always)
-                        always = HasAlwaysLabelFlag(m.meta);
-
-                    _poiAlwaysLabelById[m.id] = always;
+                    _poiLabelDisplayOverrides[m.id] = mode;
                 }
                 else
                 {
-                    _poiAlwaysLabelById[m.id] = false;
+                    _poiLabelDisplayOverrides[m.id] = MapUIStyleSettings.MapLabelDisplayMode.Contextual;
                 }
 
                 var label = new Label(labelText);
@@ -2323,7 +3528,7 @@ namespace SkiGame.Map.UI
                 marker.Add(dot);
                 marker.Add(label);
 
-                _markerVisuals[m.id] = (dot, label);
+                _markerVisuals[m.id] = (dot, spriteOutline, spriteBody, glyphLabel, label);
                 ApplyMarkerVisual(m.id, selected: _selectedMarkerId == m.id);
 
                 // Anchor at the projected coordinate (this element becomes a 0,0 "pivot")
@@ -2395,14 +3600,69 @@ namespace SkiGame.Map.UI
             RebuildWaypointMarkers();
             ApplyLinkedSourceWaypointVisuals();
 
+            RefreshRacePolylineVisualOverrides();
             _polyLayer?.SetColorOverrides(_polylineColorOverrides);
 
+        }
+
+        private void RefreshRacePolylineVisualOverrides()
+        {
+            if (_mapData == null || _mapData.Polylines == null)
+                return;
+
+            for (int i = 0; i < _mapData.Polylines.Count; i++)
+            {
+                var polyline = _mapData.Polylines[i];
+                if (!polyline.IsValid || polyline.lineType != MapLineType.RaceCourse)
+                    continue;
+
+                if (!TryGetRaceCourseLineForPolyline(polyline.id, out var race) || race == null)
+                    continue;
+
+                Color fallback = polyline.color.a > 0.001f
+                    ? polyline.color
+                    : new Color(1f, 1f, 1f, 0.70f);
+
+                Color resolved = race.GetResolvedMapLineColor(fallback);
+                Color opaque = new Color(resolved.r, resolved.g, resolved.b, 1f);
+                _polylineColorOverrides[polyline.id] = opaque;
+                _polylineLabelAccent[polyline.id] = opaque;
+            }
+        }
+
+        public void ForceOverlayLabelRefresh()
+        {
+            RebuildRegionOverlayLabels();
+            LayoutOverlayLabels();
+            ApplyGlobalLabelVisibility();
+            _polyHost?.MarkDirtyRepaint();
+            _markerHost?.MarkDirtyRepaint();
+        }
+
+        private bool TryGetRaceCourseLineForPolyline(string polylineId, out RaceCourseLine race)
+        {
+            race = null;
+
+            if (string.IsNullOrWhiteSpace(polylineId))
+                return false;
+
+            if (TryFindRaceActivityMarkerForPolyline(polylineId, out var marker) &&
+                marker.source is RaceCourseLine markerRace &&
+                markerRace != null)
+            {
+                race = markerRace;
+                return true;
+            }
+
+            return false;
         }
 
         private void RebuildWaypointMarkers()
         {
             if (_markerHost == null || _waypointManager == null)
                 return;
+
+            EnsureLabelOverlay();
 
             var waypoints = _waypointManager.Waypoints;
             if (waypoints == null || waypoints.Count == 0)
@@ -2419,9 +3679,6 @@ namespace SkiGame.Map.UI
                     !string.IsNullOrWhiteSpace(wp.sourceKey) &&
                     wp.sourceKey.StartsWith("marker:", StringComparison.Ordinal);
 
-                // Waypoints linked to existing markers should not spawn their own
-                // standalone waypoint visual. The existing marker itself is styled
-                // via ApplyLinkedSourceWaypointVisuals().
                 if (linkedToExistingMarker)
                     continue;
 
@@ -2438,39 +3695,69 @@ namespace SkiGame.Map.UI
                 dot.AddToClassList("map-waypoint-marker");
                 dot.style.position = Position.Absolute;
                 dot.style.backgroundColor = wp.color;
+                dot.style.justifyContent = Justify.Center;
+                dot.style.alignItems = Align.Center;
                 dot.pickingMode = PickingMode.Position;
+
+                var spriteOutline = new VisualElement();
+                spriteOutline.name = "WaypointSpriteOutline";
+                spriteOutline.style.position = Position.Absolute;
+                spriteOutline.style.left = 0f;
+                spriteOutline.style.top = 0f;
+                spriteOutline.style.right = 0f;
+                spriteOutline.style.bottom = 0f;
+                spriteOutline.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+                spriteOutline.style.display = DisplayStyle.None;
+                spriteOutline.pickingMode = PickingMode.Ignore;
+
+                var spriteBody = new VisualElement();
+                spriteBody.name = "WaypointSpriteBody";
+                spriteBody.style.position = Position.Absolute;
+                spriteBody.style.left = 0f;
+                spriteBody.style.top = 0f;
+                spriteBody.style.right = 0f;
+                spriteBody.style.bottom = 0f;
+                spriteBody.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+                spriteBody.style.display = DisplayStyle.None;
+                spriteBody.pickingMode = PickingMode.Ignore;
+
+                dot.Add(spriteOutline);
+                dot.Add(spriteBody);
 
                 bool selected = _waypointManager.IsWaypointSelected(wp.id);
                 bool active = string.Equals(_waypointManager.ActiveWaypointId, wp.id, StringComparison.Ordinal);
 
+                bool labelEditable = string.IsNullOrWhiteSpace(wp.sourceKey);
+
                 var label = new Label(wp.displayName);
                 label.AddToClassList("map-waypoint-label");
                 label.style.position = Position.Absolute;
-
-                float invZoom = 1f / Mathf.Max(0.0001f, _zoom);
-                float waypointFontSizeScreen = Mathf.Max(9f, ComputeZoomedLabelFontSize(false) - 2f);
-                float waypointFontSizeLocal = waypointFontSizeScreen * invZoom;
-
-                label.style.width = 92f * invZoom;
-                label.style.minWidth = 92f * invZoom;
-                label.style.left = -46f * invZoom;
-                label.style.top = -30f * invZoom;
-                label.style.unityTextAlign = TextAnchor.MiddleCenter;
-                label.style.fontSize = waypointFontSizeLocal;
-                label.style.paddingLeft = 4f * invZoom;
-                label.style.paddingRight = 4f * invZoom;
-                label.style.paddingTop = 1.5f * invZoom;
-                label.style.paddingBottom = 1.5f * invZoom;
                 label.style.whiteSpace = WhiteSpace.NoWrap;
-                label.style.backgroundColor = new Color(0f, 0f, 0f, 0.55f);
-                label.style.color = wp.color;
-                label.style.borderTopLeftRadius = 5f * invZoom;
-                label.style.borderTopRightRadius = 5f * invZoom;
-                label.style.borderBottomLeftRadius = 5f * invZoom;
-                label.style.borderBottomRightRadius = 5f * invZoom;
+                label.style.left = 0f;
+                label.style.top = 0f;
+                label.style.width = StyleKeyword.Auto;
+                label.style.minWidth = StyleKeyword.Auto;
+                label.style.maxWidth = StyleKeyword.None;
+                label.style.unityTextAlign = TextAnchor.MiddleCenter;
                 label.pickingMode = PickingMode.Position;
+                label.style.visibility = Visibility.Hidden;
 
-                bool labelEditable = string.IsNullOrWhiteSpace(wp.sourceKey);
+                // Never let a newly-built waypoint label become visible until it has a valid viewport rect.
+                label.style.display = DisplayStyle.None;
+
+                // If this waypoint already had a valid on-screen placement, restore it immediately.
+                if (_waypointLabelViewportRects.TryGetValue(wp.id, out var cachedRect) &&
+                    float.IsFinite(cachedRect.x) && float.IsFinite(cachedRect.y) &&
+                    float.IsFinite(cachedRect.width) && float.IsFinite(cachedRect.height) &&
+                    cachedRect.width > 0f && cachedRect.height > 0f)
+                {
+                    label.style.left = cachedRect.x;
+                    label.style.top = cachedRect.y;
+                    label.style.width = cachedRect.width;
+                    label.style.height = cachedRect.height;
+                    label.style.display = DisplayStyle.Flex;
+                    label.style.visibility = Visibility.Visible;
+                }
 
                 void OpenRenameEditor()
                 {
@@ -2480,60 +3767,15 @@ namespace SkiGame.Map.UI
                         return;
                     }
 
-                    TextField existingEditor = root.Q<TextField>("WaypointRenameField");
-                    if (existingEditor != null)
-                    {
-                        existingEditor.Focus();
-                        existingEditor.SelectAll();
-                        return;
-                    }
+                    bool selectedNow = _waypointManager != null && _waypointManager.IsWaypointSelected(wp.id);
+                    float renameLabelMultiplier = wp.labelSizeMultiplier > 0f ? Mathf.Max(0.1f, wp.labelSizeMultiplier) : 1f;
 
-                    var textField = new TextField
-                    {
-                        name = "WaypointRenameField",
-                        value = wp.displayName
-                    };
-
-                    textField.style.position = Position.Absolute;
-                    textField.style.width = 110f * invZoom;
-                    textField.style.minWidth = 110f * invZoom;
-                    textField.style.left = -55f * invZoom;
-                    textField.style.top = -30f * invZoom;
-                    textField.style.fontSize = waypointFontSizeLocal;
-                    textField.style.paddingLeft = 5f * invZoom;
-                    textField.style.paddingRight = 5f * invZoom;
-                    textField.style.backgroundColor = new Color(0f, 0f, 0f, 0.90f);
-                    textField.style.color = Color.white;
-                    textField.style.unityTextAlign = TextAnchor.MiddleLeft;
-
-                    void CloseEditor(bool commit)
-                    {
-                        if (commit)
-                            _waypointManager?.RenameWaypoint(wp.id, textField.value);
-
-                        if (textField.parent != null)
-                            root.Remove(textField);
-                    }
-
-                    textField.RegisterCallback<KeyDownEvent>(keyEvt =>
-                    {
-                        if (keyEvt.keyCode == KeyCode.Return || keyEvt.keyCode == KeyCode.KeypadEnter)
-                        {
-                            CloseEditor(commit: true);
-                            keyEvt.StopPropagation();
-                        }
-                        else if (keyEvt.keyCode == KeyCode.Escape)
-                        {
-                            CloseEditor(commit: false);
-                            keyEvt.StopPropagation();
-                        }
-                    });
-
-                    textField.RegisterCallback<FocusOutEvent>(_ => CloseEditor(commit: true));
-
-                    root.Add(textField);
-                    textField.Focus();
-                    textField.SelectAll();
+                    OpenWaypointRenameEditor(
+                        wp.id,
+                        wp.color,
+                        wp.displayName,
+                        selectedNow,
+                        renameLabelMultiplier);
                 }
 
                 void HandleWaypointPointer(PointerUpEvent evt, bool fromLabel)
@@ -2603,9 +3845,7 @@ namespace SkiGame.Map.UI
 
                 label.RegisterCallback<PointerUpEvent>(evt => HandleWaypointPointer(evt, fromLabel: true));
 
-
                 root.Add(dot);
-                root.Add(label);
                 _markerHost.Add(root);
 
                 _waypointMarkerRoots[wp.id] = root;
@@ -2613,27 +3853,73 @@ namespace SkiGame.Map.UI
                 _waypointLabels[wp.id] = label;
                 _waypointAnchorLocal[wp.id] = local;
 
+                // Fully style and normalize the label before it enters the live overlay tree.
                 ApplyWaypointVisual(wp.id, selected, active);
+                ApplyWaypointLabelVisual(wp.id, selected);
+
+                // If we already have a committed rect, restore it now.
+                // Otherwise keep the label hidden until LayoutWaypointLabels() solves one.
+                if (_waypointLabelViewportRects.TryGetValue(wp.id, out var restoredRect) &&
+                    float.IsFinite(restoredRect.x) && float.IsFinite(restoredRect.y) &&
+                    float.IsFinite(restoredRect.width) && float.IsFinite(restoredRect.height) &&
+                    restoredRect.width > 0f && restoredRect.height > 0f)
+                {
+                    SetWaypointLabelViewportRect(wp.id, restoredRect);
+                }
+                else
+                {
+                    label.style.display = DisplayStyle.None;
+                    label.style.visibility = Visibility.Hidden;
+                    SyncWaypointLabelTransformImmediate(label);
+                }
+
+                _labelOverlay.Add(label);
             }
+
+            // Restore the last known-good placement immediately so rebuilds do not flash labels
+            // back to an origin/default position before the next authoritative solve.
+            ApplyCachedWaypointLabelPlacement();
+
+            MarkWaypointLabelLayoutDirty();
+            LayoutWaypointLabels();
         }
 
         private void RefreshWaypointVisuals()
         {
-            // Remove only standalone waypoint visuals.
             foreach (var kv in _waypointMarkerRoots)
                 kv.Value?.RemoveFromHierarchy();
+
+            foreach (var kv in _waypointLabels)
+                kv.Value?.RemoveFromHierarchy();
+
+            if (_activeWaypointRenameField != null)
+            {
+                if (_activeWaypointRenameField.parent != null)
+                    _activeWaypointRenameField.RemoveFromHierarchy();
+
+                _activeWaypointRenameField = null;
+                _activeWaypointRenameId = null;
+            }
 
             _waypointMarkerRoots.Clear();
             _waypointMarkerDots.Clear();
             _waypointLabels.Clear();
             _waypointAnchorLocal.Clear();
 
+            PruneWaypointLayoutCaches();
+
+            MarkWaypointLabelLayoutDirty();
+
             RebuildWaypointMarkers();
             ApplyLinkedSourceWaypointVisuals();
 
-            // Re-apply current selection styling and re-run overlay placement
-            // without tearing down all POI/polyline labels.
+            // Selection visuals can restyle waypoint labels after rebuild.
             UpdateSelectionVisuals();
+
+            // Rebuild must always end with one authoritative waypoint layout pass.
+            MarkWaypointLabelLayoutDirty();
+            LayoutWaypointLabels();
+            UpdateWaypointRenameEditorPosition();
         }
 
         private void ApplyLinkedSourceWaypointVisuals()
@@ -2827,38 +4113,32 @@ namespace SkiGame.Map.UI
                 }
             }
 
-            foreach (var kv in _waypointLabels)
+            // Waypoint labels are viewport-overlay labels.
+            // During pan/zoom, only replay already-valid cached placement.
+            ApplyCachedWaypointLabelPlacement();
+
+            // Keep the rename field anchored without forcing any second layout path.
+            UpdateWaypointRenameEditorPosition();
+
+            // Overlay labels live in viewport space, so they should not receive any extra zoom transform.
+            // Their effective size should come only from ComputeZoomedLabelFontSize(...).
+            void ResetOverlayLabelTransform(Label lab)
             {
-                var lab = kv.Value;
-                if (lab != null)
-                {
-                    lab.style.scale = new Scale(new Vector3(inv, inv, 1f));
+                if (lab == null)
+                    return;
 
-                    float w = lab.resolvedStyle.width > 0 ? lab.resolvedStyle.width : lab.layout.width;
-                    float h = lab.resolvedStyle.height > 0 ? lab.resolvedStyle.height : lab.layout.height;
-                    if (w > 0f && h > 0f)
-                        lab.style.translate = new Translate(-w * 0.5f, -h * 0.5f, 0);
-                }
+                lab.style.scale = new Scale(Vector3.one);
+                lab.style.translate = new Translate(0f, 0f, 0f);
             }
-
-            // Polyline labels: screen-locked, but allow controlled growth when zooming in.
-            float comp = (_style != null) ? Mathf.Clamp01(_style.labelZoomCompensation) : 1f;
-            float invPoly = 1f / Mathf.Pow(z, Mathf.Max(0.0001f, comp));
 
             foreach (var kv in _polylineLabelVisuals)
-            {
-                var lab = kv.Value;
-                if (lab == null) continue;
+                ResetOverlayLabelTransform(kv.Value);
 
-                lab.style.scale = new Scale(new Vector3(invPoly, invPoly, 1f));
+            foreach (var kv in _poiOverlayLabels)
+                ResetOverlayLabelTransform(kv.Value);
 
-                float w = lab.resolvedStyle.width > 0 ? lab.resolvedStyle.width : lab.layout.width;
-                float h = lab.resolvedStyle.height > 0 ? lab.resolvedStyle.height : lab.layout.height;
-                if (w > 0f && h > 0f)
-                {
-                    lab.style.translate = new Translate(-w * 0.5f, -h * 0.5f, 0);
-                }
-            }
+            foreach (var kv in _regionOverlayLabels)
+                ResetOverlayLabelTransform(kv.Value);
 
             // Player marker (screen-locked)
             if (_playerMarker != null)
@@ -3036,6 +4316,15 @@ namespace SkiGame.Map.UI
                 case SkiGame.POI.POICategory.Landmark:
                     return new Color(0.8f, 0.8f, 1f, 1f);
 
+                case SkiGame.POI.POICategory.Race:
+                    return new Color(1.00f, 0.55f, 0.20f, 1f);
+
+                case SkiGame.POI.POICategory.Medical:
+                    return new Color(0.20f, 1.00f, 1.00f, 1f);
+
+                case SkiGame.POI.POICategory.Vehicle:
+                    return new Color(1.00f, 0.90f, 0.25f, 1f);
+
                 default:
                     return marker.color;
             }
@@ -3115,6 +4404,7 @@ namespace SkiGame.Map.UI
                 var label = new Label(labelText);
                 label.AddToClassList("map-polyline-label");
                 label.style.position = Position.Absolute;
+                RegisterOverlayLabelCallbacks(label);
 
                 string polyId = p.id;
                 MakeOverlayLabelInteractive(
@@ -3159,6 +4449,20 @@ namespace SkiGame.Map.UI
 
             if (pts == null || pts.Count < 2)
                 return false;
+
+            if (_style != null &&
+                _style.runLabelAnchorMode == MapUIStyleSettings.RunLabelAnchorMode.LinkedMarker &&
+                p.lineType == MapLineType.SkiRun &&
+                _polylineToMarker.TryGetValue(p.id, out var markerId) &&
+                _markerAnchorLocal.TryGetValue(markerId, out var markerAnchor))
+            {
+                if (TryFindNearestPolylineAnchorAndNormal(pts, markerAnchor, out anchor, out normal))
+                    return true;
+
+                anchor = markerAnchor;
+                normal = Vector2.down;
+                return true;
+            }
 
             anchor = ComputePolylineMidpoint(pts, out _);
             normal = Vector2.down;
@@ -3296,6 +4600,7 @@ namespace SkiGame.Map.UI
                 var label = new Label(text);
                 label.AddToClassList("map-marker-label");
                 label.style.position = Position.Absolute;
+                RegisterOverlayLabelCallbacks(label);
 
                 // Make overlay POI labels selectable.
                 string markerId = m.id;
@@ -3379,6 +4684,116 @@ namespace SkiGame.Map.UI
             return new Vector2(anchorUv.x * _contentSize.x, (1f - anchorUv.y) * _contentSize.y);
         }
 
+        public void SetRegionInteractivity(bool selectable, bool showLabels = true)
+        {
+            _regionsSelectable = selectable;
+            _showRegionOverlayLabels = showLabels;
+
+            if (!_showRegionOverlayLabels)
+            {
+                foreach (var kv in _regionOverlayLabels)
+                {
+                    if (kv.Value != null)
+                        kv.Value.style.display = DisplayStyle.None;
+                }
+            }
+            else
+            {
+                LayoutOverlayLabels();
+            }
+        }
+
+        public bool FrameLiftPolylinesForPassLevel(int passLevel, float paddingPx = 36f, float minZoom = 0.85f)
+        {
+            var cfg = SkiPassManager.Instance != null ? SkiPassManager.Instance.Config : null;
+            string selectedPassId = cfg != null ? cfg.GetPassIdForLevel(passLevel) : string.Empty;
+            return FrameLiftPolylinesForPassId(selectedPassId, passLevel, paddingPx, minZoom);
+        }
+
+        public bool FrameLiftPolylinesForPassId(string selectedPassId, int selectedLevel, float paddingPx = 36f, float minZoom = 0.85f)
+        {
+            if (_mapData == null || _mapData.Polylines == null || !_bound)
+                return false;
+
+            if (!TryGetViewportSize(out float vw, out float vh))
+                return false;
+
+            selectedLevel = Mathf.Max(0, selectedLevel);
+            var cfg = SkiPassManager.Instance != null ? SkiPassManager.Instance.Config : null;
+
+            bool foundAny = false;
+            float minX = float.MaxValue;
+            float minY = float.MaxValue;
+            float maxX = float.MinValue;
+            float maxY = float.MinValue;
+
+            for (int i = 0; i < _mapData.Polylines.Count; i++)
+            {
+                var poly = _mapData.Polylines[i];
+                if (!poly.IsValid || poly.lineType != MapLineType.SkiLift)
+                    continue;
+
+                int requiredLevel = 0;
+                _liftRequiredLevelByPolyline.TryGetValue(poly.id, out requiredLevel);
+
+                bool accessible = selectedLevel >= requiredLevel;
+                if (cfg != null &&
+                    !string.IsNullOrWhiteSpace(selectedPassId) &&
+                    _liftRequiredPassIdByPolyline.TryGetValue(poly.id, out string requiredPassId) &&
+                    !string.IsNullOrWhiteSpace(requiredPassId))
+                {
+                    accessible = cfg.PassGrantsAccessTo(selectedPassId, requiredPassId);
+                }
+
+                if (!accessible)
+                    continue;
+
+                if (poly.Has3DPoints)
+                {
+                    for (int k = 0; k < poly.pointsWorld.Count; k++)
+                    {
+                        if (!TryProjectWorldToLocal(poly.pointsWorld[k], out var local))
+                            continue;
+
+                        foundAny = true;
+                        minX = Mathf.Min(minX, local.x);
+                        minY = Mathf.Min(minY, local.y);
+                        maxX = Mathf.Max(maxX, local.x);
+                        maxY = Mathf.Max(maxY, local.y);
+                    }
+                }
+                else if (poly.HasXZPoints)
+                {
+                    for (int k = 0; k < poly.pointsWorldXZ.Count; k++)
+                    {
+                        if (!TryProjectWorldXZToLocal(poly.pointsWorldXZ[k], out var local))
+                            continue;
+
+                        foundAny = true;
+                        minX = Mathf.Min(minX, local.x);
+                        minY = Mathf.Min(minY, local.y);
+                        maxX = Mathf.Max(maxX, local.x);
+                        maxY = Mathf.Max(maxY, local.y);
+                    }
+                }
+            }
+
+            if (!foundAny)
+                return false;
+
+            float width = Mathf.Max(8f, maxX - minX);
+            float height = Mathf.Max(8f, maxY - minY);
+
+            float usableW = Mathf.Max(32f, vw - paddingPx * 2f);
+            float usableH = Mathf.Max(32f, vh - paddingPx * 2f);
+
+            _zoom = Mathf.Max(minZoom, Mathf.Min(usableW / width, usableH / height));
+
+            Vector2 centerLocal = new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
+            CenterViewOnContentPoint(centerLocal);
+            return true;
+        }
+
         private void RebuildRegionOverlayLabels()
         {
             EnsureLabelOverlay();
@@ -3409,21 +4824,23 @@ namespace SkiGame.Map.UI
                 var label = new Label(text);
                 label.AddToClassList("map-polyline-label");
                 label.style.position = Position.Absolute;
-
-                // Region labels are now the primary selector, so make them a bit easier to hit.
-                label.style.paddingLeft = 8f;
-                label.style.paddingRight = 8f;
-                label.style.paddingTop = 4f;
-                label.style.paddingBottom = 4f;
-                label.style.minHeight = 22f;
+                RegisterOverlayLabelCallbacks(label);
 
                 string regionId = id;
-                MakeOverlayLabelInteractive(label, () => SelectRegion(regionId, zoomToRegion: true));
+                if (_regionsSelectable)
+                    MakeOverlayLabelInteractive(label, () => SelectRegion(regionId, zoomToRegion: true));
 
                 _regionOverlayLabels[id] = label;
                 _labelOverlay.Add(label);
 
-                ApplyRegionOverlayLabelVisual(id, selected: string.Equals(_selectedRegionId, id, StringComparison.Ordinal));
+                // Important: region labels must start hidden.
+                // LayoutOverlayLabels() is the only place that should decide when and where they appear.
+                // If they start visible and the current layout path returns early (for example when a lift is selected),
+                // they can remain at their default 0,0 position in the top-left.
+                label.style.display = DisplayStyle.None;
+                label.style.visibility = Visibility.Hidden;
+
+                ApplyRegionOverlayLabelVisual(id, selected: _regionsSelectable && string.Equals(_selectedRegionId, id, StringComparison.Ordinal));
             }
 
             LayoutOverlayLabels();
@@ -3431,46 +4848,50 @@ namespace SkiGame.Map.UI
 
         private void ApplyPOIOverlayLabelVisual(string markerId, bool selected)
         {
-            if (_style == null) return;
-            if (!_poiOverlayLabels.TryGetValue(markerId, out var label) || label == null) return;
+            if (!_poiOverlayLabels.TryGetValue(markerId, out var label) || label == null)
+                return;
 
-            label.style.unityFontStyleAndWeight = selected ? _style.labelFontStyleSelected : _style.labelFontStyle;
+            ResolvedMapLabelRule rule = ResolveLabelRuleForMarker(markerId);
+            var style = ResolveStandardLabelStyleForRule(rule);
 
-            Color textColor = selected ? _style.labelColorSelected : _style.labelColor;
+            Color accent = _markerLabelAccent.TryGetValue(markerId, out var accentColor)
+                ? accentColor
+                : Color.white;
+
+            Color textColor = selected ? style.selectedColor : style.color;
             if (TryGetLinkedWaypointForMarker(markerId, out var linkedWp))
                 textColor = linkedWp.color;
 
-            label.style.color = textColor;
-
-            if (_markerLabelAccent.TryGetValue(markerId, out var accent))
-            {
-                float stripeW = Mathf.Max(1f, _style.labelAccentStripeWidth);
-                label.style.borderLeftWidth = stripeW;
-                label.style.borderLeftColor = accent;
-
-                float a = Mathf.Clamp01(_style.labelPlateAlpha) * 0.22f;
-                label.style.backgroundColor = new Color(accent.r, accent.g, accent.b, a);
-            }
+            ApplySharedOverlayLabelVisual(
+                label,
+                style,
+                selected,
+                accent,
+                rule.labelSizeMultiplier,
+                textColor);
         }
 
         private void ApplyRegionOverlayLabelVisual(string regionId, bool selected)
         {
-            if (_style == null) return;
-            if (!_regionOverlayLabels.TryGetValue(regionId, out var label) || label == null) return;
-            if (_regionSet == null) return;
+            if (!_regionOverlayLabels.TryGetValue(regionId, out var label) || label == null)
+                return;
+            if (_regionSet == null)
+                return;
 
+            var style = GetLabelStyleById(RegionMajorLabelStyleId);
+
+            Color accent = Color.white;
             var face = _regionSet.GetFaceById(regionId);
-            if (face == null) return;
+            if (face != null && face.borderColor.a > 0.001f)
+                accent = face.borderColor;
 
-            label.style.unityFontStyleAndWeight = selected ? _style.labelFontStyleSelected : _style.labelFontStyle;
-            label.style.color = selected ? _style.labelColorSelected : _style.labelColor;
-
-            Color accent = face.borderColor;
-            label.style.borderLeftWidth = Mathf.Max(1f, _style.labelAccentStripeWidth);
-            label.style.borderLeftColor = accent;
-
-            float a = Mathf.Clamp01(_style.labelPlateAlpha) * 0.28f;
-            label.style.backgroundColor = new Color(accent.r, accent.g, accent.b, a);
+            ApplySharedOverlayLabelVisual(
+                label,
+                style,
+                selected,
+                accent,
+                1f,
+                selected ? style.selectedColor : style.color);
         }
 
         private void LayoutOverlayLabels()
@@ -3490,23 +4911,14 @@ namespace SkiGame.Map.UI
 
             float relativeZoom = _zoom / fitZoom;
 
-            // 1.0 = fully zoomed out / fit-to-viewport.
-            // Fade labels out gradually as the user zooms in past overview.
-            float regionOverviewAlpha = Mathf.Clamp01(1f - Mathf.InverseLerp(1.10f, 2.20f, relativeZoom));
+            ResolvedMapLabelRule regionRule = ResolveRegionLabelRule();
+            float regionOverviewAlpha = EvaluateRevealAlpha(regionRule, relativeZoom);
             bool showRegionOverview = regionOverviewAlpha > 0.02f;
 
             // ---- Helpers ----
             int ComputeFont(bool selected)
             {
-                int baseSize = selected ? _style.labelFontSizeSelected : _style.labelFontSize;
-
-                float z = Mathf.Max(0.0001f, _zoom);
-                float comp = Mathf.Clamp01(_style.labelZoomCompensation);
-                float scaled = baseSize / Mathf.Pow(z, comp);
-
-                int sz = Mathf.RoundToInt(scaled);
-                sz = Mathf.Clamp(sz, _style.labelFontMin, _style.labelFontMax);
-                return sz;
+                return ComputeZoomedLabelFontSize(GetStandardLabelStyle(), selected);
             }
 
             Vector2 Measure(Label l)
@@ -3721,7 +5133,7 @@ namespace SkiGame.Map.UI
             var work = new List<(string id, Label label, Vector2 anchorLocal, Vector2 preferDir, int priority, bool mustShow, float distKey)>(256);
 
             // Minimap mode hides POI/run/lift labels, but region labels should still be allowed.
-            bool suppressNonRegionLabels = _hideMarkerLabels;
+            bool suppressNonRegionLabels = _hideMarkerLabels || !_showNonRegionLabels;
             if (suppressNonRegionLabels)
             {
                 foreach (var kv in _polylineLabelVisuals)
@@ -3759,8 +5171,11 @@ namespace SkiGame.Map.UI
                     _polyAnchorLocal.TryGetValue(_selectedPolylineId, out var polyAnchor))
                 {
                     _polyNormalLocal.TryGetValue(_selectedPolylineId, out var polyN);
+                    ResolvedMapLabelRule selectedPolyRule = TryGetPolylineById(_selectedPolylineId, out var selectedPolyline)
+                        ? ResolveLabelRuleForPolyline(selectedPolyline)
+                        : ResolveFallbackRule(MapUIStyleSettings.MapElementSemantic.SkiRun, POIType.SkiRun, POICategory.None);
 
-                    polyLabel.style.fontSize = ComputeFont(true);
+                    polyLabel.style.fontSize = ComputeZoomedLabelFontSize(ResolveStandardLabelStyleForRule(selectedPolyRule), true, Mathf.Max(0.75f, selectedPolyRule.labelSizeMultiplier));
                     polyLabel.style.opacity = 1f;
                     ApplyPolylineLabelVisual(_selectedPolylineId, selected: true);
 
@@ -3773,7 +5188,8 @@ namespace SkiGame.Map.UI
                     poiLabel != null &&
                     _markerAnchorLocal.TryGetValue(_selectedMarkerId, out var poiAnchor))
                 {
-                    poiLabel.style.fontSize = ComputeFont(true);
+                    ResolvedMapLabelRule selectedMarkerRule = ResolveLabelRuleForMarker(_selectedMarkerId);
+                    poiLabel.style.fontSize = ComputeZoomedLabelFontSize(ResolveStandardLabelStyleForRule(selectedMarkerRule), true, Mathf.Max(0.75f, selectedMarkerRule.labelSizeMultiplier));
                     poiLabel.style.opacity = 1f;
                     ApplyPOIOverlayLabelVisual(_selectedMarkerId, selected: true);
 
@@ -3856,6 +5272,19 @@ namespace SkiGame.Map.UI
                     AddRectToGrid(gridSel, placedRect);
                 }
 
+                if (_regionOverlayLabels.Count > 0)
+                {
+                    foreach (var kv in _regionOverlayLabels)
+                    {
+                        var regionLabel = kv.Value;
+                        if (regionLabel == null)
+                            continue;
+
+                        regionLabel.style.display = DisplayStyle.None;
+                        regionLabel.style.visibility = Visibility.Hidden;
+                    }
+                }
+
                 return;
             }
 
@@ -3885,8 +5314,8 @@ namespace SkiGame.Map.UI
                     bool isRoot = string.Equals(id, MapRegionSet.RootFaceId, StringComparison.Ordinal);
 
                     label.style.fontSize = selected
-                        ? Mathf.Max(ComputeFont(true), 16)
-                        : Mathf.Max(ComputeFont(false), isRoot ? 13 : 12);
+                        ? Mathf.Max(ComputeZoomedLabelFontSize(GetRegionLabelStyle(), true, regionRule.labelSizeMultiplier), 16)
+                        : Mathf.Max(ComputeZoomedLabelFontSize(GetRegionLabelStyle(), false, regionRule.labelSizeMultiplier), isRoot ? 13 : 12);
 
                     label.style.opacity = selected
                         ? 1f
@@ -3926,7 +5355,7 @@ namespace SkiGame.Map.UI
                 return;
 
             // --- Polylines: runs + lifts ---
-            var polyContext = new List<(string id, Label label, Vector2 anchor, Vector2 n, bool selected, float dist)>(128);
+            var polyContext = new List<(string id, Label label, Vector2 anchor, Vector2 n, int priority, int maxCount, float dist)>(128);
 
             foreach (var kv in _polylineLabelVisuals)
             {
@@ -3944,9 +5373,11 @@ namespace SkiGame.Map.UI
 
                 bool isSelected = IsPolylineSelected(p);
 
-                // Simple visibility rule: selected always; otherwise only when zoomed in and layer enabled.
                 bool linkedWaypoint = TryGetLinkedWaypointForPolyline(id, out _);
-                bool show = !showRegionOverview && (isSelected || linkedWaypoint || (layerOn && _zoom >= RunLiftAlwaysVisibleMinZoom));
+                ResolvedMapLabelRule rule = ResolveLabelRuleForPolyline(p);
+                float revealAlpha = EvaluateRevealAlpha(rule, relativeZoom);
+                bool show = !showRegionOverview &&
+                            (isSelected || (layerOn && ShouldDisplayLabelByMode(rule, isSelected, linkedWaypoint) && revealAlpha > 0.02f));
 
                 if (!show)
                 {
@@ -3960,8 +5391,8 @@ namespace SkiGame.Map.UI
                 float dist = (anchor - focusContent).sqrMagnitude;
 
                 // Style
-                label.style.fontSize = ComputeFont(isSelected);
-                label.style.opacity = 1f;
+                label.style.fontSize = ComputeZoomedLabelFontSize(ResolveStandardLabelStyleForRule(rule), isSelected, Mathf.Max(0.75f, rule.labelSizeMultiplier));
+                label.style.opacity = isSelected ? 1f : revealAlpha;
                 ApplyPolylineLabelVisual(id, selected: isSelected);
 
                 if (isSelected)
@@ -3970,26 +5401,33 @@ namespace SkiGame.Map.UI
                 }
                 else
                 {
-                    polyContext.Add((id, label, anchor, n, selected: false, dist: dist));
+                    var profile = ResolveLabelProfileForRule(rule);
+                    polyContext.Add((id, label, anchor, n, profile.labelPriority, profile.maxContextCount, dist));
                 }
             }
 
-            // Cap context polylines by distance to focus
-            polyContext.Sort((a, b) => a.dist.CompareTo(b.dist));
+            polyContext.Sort((a, b) =>
+            {
+                int c = a.priority.CompareTo(b.priority);
+                return c != 0 ? c : a.dist.CompareTo(b.dist);
+            });
+            var polyCounts = new Dictionary<int, int>();
             for (int i = 0; i < polyContext.Count; i++)
             {
-                if (i >= MaxContextRunLiftLabels)
+                var it = polyContext[i];
+                int used = polyCounts.TryGetValue(it.priority, out var count) ? count : 0;
+                int maxCount = it.maxCount > 0 ? it.maxCount : DefaultMaxContextRunLiftLabels;
+                if (used >= maxCount)
                 {
                     polyContext[i].label.style.display = DisplayStyle.None;
                     continue;
                 }
-
-                var it = polyContext[i];
-                work.Add((it.id, it.label, it.anchor, it.n, priority: 5, mustShow: false, distKey: it.dist));
+                polyCounts[it.priority] = used + 1;
+                work.Add((it.id, it.label, it.anchor, it.n, priority: it.priority, mustShow: false, distKey: it.dist));
             }
 
             // --- POIs ---
-            var poiContext = new List<(string id, Label label, Vector2 anchor, bool selected, bool always, float dist)>(128);
+            var poiContext = new List<(string id, Label label, Vector2 anchor, int priority, int maxCount, float dist)>(128);
 
             foreach (var kv in _poiOverlayLabels)
             {
@@ -4004,11 +5442,12 @@ namespace SkiGame.Map.UI
                 }
 
                 bool isSelected = string.Equals(_selectedMarkerId, id, StringComparison.Ordinal);
-                bool always = _poiAlwaysLabelById.TryGetValue(id, out var a) && a;
-
-                // Simple visibility: selected always; otherwise only when zoomed in.
                 bool linkedWaypoint = TryGetLinkedWaypointForMarker(id, out _);
-                bool show = !showRegionOverview && IsMarkerVisibleById(id) && (isSelected || linkedWaypoint || always || _zoom >= PoiVisibleMinZoom);
+                ResolvedMapLabelRule rule = ResolveLabelRuleForMarker(id);
+                float revealAlpha = EvaluateRevealAlpha(rule, relativeZoom);
+                bool show = !showRegionOverview &&
+                            IsMarkerVisibleById(id) &&
+                            (isSelected || (ShouldDisplayLabelByMode(rule, isSelected, linkedWaypoint) && revealAlpha > 0.02f));
                 if (!show)
                 {
                     label.style.display = DisplayStyle.None;
@@ -4023,9 +5462,9 @@ namespace SkiGame.Map.UI
 
                 float dist = (anchor - focusContent).sqrMagnitude;
 
-                label.style.fontSize = ComputeFont(isSelected);
+                label.style.fontSize = ComputeZoomedLabelFontSize(ResolveStandardLabelStyleForRule(rule), isSelected, Mathf.Max(0.75f, rule.labelSizeMultiplier));
                 ApplyPOIOverlayLabelVisual(id, isSelected);
-                label.style.opacity = 1f;
+                label.style.opacity = isSelected ? 1f : revealAlpha;
 
                 if (isSelected)
                 {
@@ -4033,28 +5472,30 @@ namespace SkiGame.Map.UI
                 }
                 else
                 {
-                    poiContext.Add((id, label, anchor, selected: false, always: always, dist: dist));
+                    var profile = ResolveLabelProfileForRule(rule);
+                    poiContext.Add((id, label, anchor, profile.labelPriority, profile.maxContextCount, dist));
                 }
             }
 
-            // Prefer always-label POIs over ordinary ones, then distance
             poiContext.Sort((a, b) =>
             {
-                int c = b.always.CompareTo(a.always);
-                if (c != 0) return c;
-                return a.dist.CompareTo(b.dist);
+                int c = a.priority.CompareTo(b.priority);
+                return c != 0 ? c : a.dist.CompareTo(b.dist);
             });
 
+            var poiCounts = new Dictionary<int, int>();
             for (int i = 0; i < poiContext.Count; i++)
             {
-                if (i >= MaxContextPoiLabels)
+                var it = poiContext[i];
+                int used = poiCounts.TryGetValue(it.priority, out var count) ? count : 0;
+                int maxCount = it.maxCount > 0 ? it.maxCount : DefaultMaxContextPoiLabels;
+                if (used >= maxCount)
                 {
                     poiContext[i].label.style.display = DisplayStyle.None;
                     continue;
                 }
-
-                var it = poiContext[i];
-                work.Add((it.id, it.label, it.anchor, Vector2.down, priority: it.always ? 6 : 7, mustShow: false, distKey: it.dist));
+                poiCounts[it.priority] = used + 1;
+                work.Add((it.id, it.label, it.anchor, Vector2.down, priority: it.priority, mustShow: false, distKey: it.dist));
             }
 
             // Sort by priority, then distance, then id for determinism
@@ -4236,6 +5677,33 @@ namespace SkiGame.Map.UI
 
         }
 
+        public void SetActivityCheckpointMarkers(IReadOnlyList<Vector3> worldPositions, int currentCheckpointIndex, bool hideBaseMarkers)
+        {
+            _activityCheckpointWorldPositions.Clear();
+
+            if (worldPositions != null)
+            {
+                for (int i = 0; i < worldPositions.Count; i++)
+                    _activityCheckpointWorldPositions.Add(worldPositions[i]);
+            }
+
+            _activityCurrentCheckpointIndex = currentCheckpointIndex;
+            _hideBaseMarkersForActivity = hideBaseMarkers;
+
+            RefreshActivityCheckpointMarkers();
+            ApplyLayerVisibility();
+        }
+
+        public void ClearActivityCheckpointMarkers()
+        {
+            _activityCheckpointWorldPositions.Clear();
+            _activityCurrentCheckpointIndex = -1;
+            _hideBaseMarkersForActivity = false;
+
+            RefreshActivityCheckpointMarkers();
+            ApplyLayerVisibility();
+        }
+
         private Vector2 UVToLocal(Vector2 uv)
         {
             uv = ApplyBackgroundInset(uv);
@@ -4250,7 +5718,8 @@ namespace SkiGame.Map.UI
 
         private void ApplyTransform()
         {
-            if (_content == null) return;
+            if (_content == null)
+                return;
 
             _content.transform.position = new Vector3(_pan.x, _pan.y, 0f);
             _content.transform.scale = new Vector3(_zoom, _zoom, 1f);
@@ -4259,11 +5728,24 @@ namespace SkiGame.Map.UI
             _polyLayer?.SetZoom(_zoom);
             _trailLayer?.SetZoom(_zoom);
 
-            // Keep markers/player marker screen-locked if you still want that behavior
+            // Keep marker visuals screen-locked.
             UpdateAllLabelTransformsForZoom();
 
-            // Overlay labels reposition from pan/zoom (no inverse scaling required)
+            // Regular overlay labels live in viewport space, so they must always
+            // reflow when the map pan/zoom transform changes.
             LayoutOverlayLabels();
+
+            // Waypoint labels use a more conservative path to avoid visible jitter.
+            // Reapply the last valid placement immediately, and only run a fresh solve
+            // when some other path has explicitly dirtied their layout.
+            ApplyCachedWaypointLabelPlacement();
+
+            if (_waypointLabelLayoutDirty)
+                LayoutWaypointLabels();
+            else
+                UpdateWaypointRenameEditorPosition();
+
+            _navigationOverlay?.MarkDirtyRepaint();
         }
 
         private static string GetArrowGlyph(Vector2 dir)
@@ -4297,29 +5779,382 @@ namespace SkiGame.Map.UI
             return width > 1f && height > 1f;
         }
 
-        private int ComputeZoomedLabelFontSize(bool selected)
+        private MapUIStyleSettings.MapMarkerVisualStyle GetPoiMarkerStyle() => _style != null ? _style.GetPoiMarkerStyle() : new MapUIStyleSettings.MapMarkerVisualStyle { size = 14f, selectedSize = 18f, borderWidth = 2f, activeBorderWidth = 2f, borderColor = new Color(0f, 0f, 0f, 0.65f), activeBorderColor = new Color(0f, 0f, 0f, 0.65f), fillColor = Color.white };
+        private MapUIStyleSettings.MapMarkerVisualStyle GetWaypointMarkerStyle() => _style != null ? _style.GetWaypointMarkerStyle() : new MapUIStyleSettings.MapMarkerVisualStyle { size = 16f, selectedSize = 20f, borderWidth = 2f, activeBorderWidth = 2f, borderColor = new Color(0f, 0f, 0f, 0.70f), activeBorderColor = Color.white, fillColor = Color.white };
+        private MapUIStyleSettings.MapMarkerVisualStyle GetPlayerMarkerStyle() => _style != null ? _style.GetPlayerMarkerStyle() : new MapUIStyleSettings.MapMarkerVisualStyle { size = 20f, selectedSize = 20f, borderWidth = 2f, activeBorderWidth = 2f, borderColor = new Color(0f, 0f, 0f, 0.75f), activeBorderColor = new Color(0f, 0f, 0f, 0.75f), fillColor = Color.cyan };
+        private MapUIStyleSettings.MapMarkerVisualStyle GetLegendMarkerStyle() => _style != null ? _style.GetLegendMarkerStyle() : new MapUIStyleSettings.MapMarkerVisualStyle { size = 14f, selectedSize = 14f, borderWidth = 2f, activeBorderWidth = 2f, borderColor = new Color(0f, 0f, 0f, 0.65f), activeBorderColor = new Color(0f, 0f, 0f, 0.65f), fillColor = Color.white };
+        private MapUIStyleSettings.MapArrowVisualStyle GetNavigationArrowStyle() => _style != null ? _style.GetNavigationArrowStyle() : new MapUIStyleSettings.MapArrowVisualStyle { size = 22f };
+        private MapUIStyleSettings.MapLabelVisualStyle GetStandardLabelStyle() => _style != null
+            ? _style.GetFallbackStandardLabelStyle()
+            : new MapUIStyleSettings.MapLabelVisualStyle
+            {
+                fontSize = 12,
+                selectedFontSize = 13,
+                fontStyle = FontStyle.Bold,
+                selectedFontStyle = FontStyle.Bold,
+                color = Color.white,
+                selectedColor = Color.white,
+                zoomCompensation = 0.65f,
+                fontMin = 8,
+                fontMax = 18,
+                plateAlpha = 0.78f,
+                accentStripeWidth = 3f,
+                clutteredOpacity = 0.65f,
+                paddingX = 6f,
+                paddingY = 2.5f,
+                offsetY = 18f,
+                cornerRadius = 6f,
+            };
+
+        private MapUIStyleSettings.MapLabelVisualStyle GetWaypointLabelStyle() =>
+            GetLabelStyleById(WaypointEditableLabelStyleId);
+
+        private MapUIStyleSettings.MapLabelVisualStyle GetRegionLabelStyle() =>
+            GetLabelStyleById(RegionMajorLabelStyleId);
+        private MapUIStyleSettings.MapLineVisualStyle GetPoiPolylineStyle() => _style != null ? _style.GetPoiPolylineStyle() : new MapUIStyleSettings.MapLineVisualStyle { widthPx = 2.8f, selectedWidthMultiplier = 1.35f, outlineExtraPx = 2f, outlineExtraSelectedPx = 3f, outlineColor = new Color(0f, 0f, 0f, 0.35f), outlineColorSelected = new Color(0f, 0f, 0f, 0.55f), widthZoomExponent = 0.35f, widthZoomMinMul = 0.70f, widthZoomMaxMul = 1.60f };
+        private MapUIStyleSettings.MapLineVisualStyle GetTrailLineStyle() => _style != null ? _style.GetTrailLineStyle() : new MapUIStyleSettings.MapLineVisualStyle { widthPx = 2f, outlineColor = new Color(0f, 0f, 0f, 0.40f), outlineColorSelected = new Color(0f, 0f, 0f, 0.40f), widthZoomMinMul = 1f, widthZoomMaxMul = 1f };
+
+        private int ComputeZoomedLabelFontSize(bool selected) => ComputeZoomedLabelFontSize(GetStandardLabelStyle(), selected, 1f);
+
+        private int ComputeZoomedLabelFontSize(MapUIStyleSettings.MapLabelVisualStyle style, bool selected, float sizeMultiplier = 1f)
         {
-            if (_style == null)
-                return selected ? 13 : 12;
-
-            int baseSize = selected ? _style.labelFontSizeSelected : _style.labelFontSize;
-
+            int baseSize = selected ? style.selectedFontSize : style.fontSize;
             float z = Mathf.Max(0.0001f, _zoom);
-
-            // Use existing setting, but in the way you actually want:
-            // comp = 1 => constant size, comp = 0 => scale with zoom.
-            float comp = Mathf.Clamp01(_style.labelZoomCompensation);
+            float comp = Mathf.Clamp01(style.zoomCompensation);
             float exp = 1f - comp;
-
-            float scaled = baseSize * Mathf.Pow(z, exp);
+            float scaled = baseSize * Mathf.Pow(z, exp) * Mathf.Max(0f, sizeMultiplier);
             int size = Mathf.RoundToInt(scaled);
-
-            int min = Mathf.Max(6, _style.labelFontMin);
-            int max = Mathf.Max(min, _style.labelFontMax);
+            int min = Mathf.Max(6, style.fontMin);
+            int max = Mathf.Max(min, style.fontMax);
             return Mathf.Clamp(size, min, max);
         }
 
+        private void ApplySharedOverlayLabelVisual(
+    Label label,
+    MapUIStyleSettings.MapLabelVisualStyle style,
+    bool selected,
+    Color accentColor,
+    float sizeMultiplier = 1f,
+    Color? textColorOverride = null)
+        {
+            if (label == null)
+                return;
 
+            int fontSize = ComputeZoomedLabelFontSize(style, selected, sizeMultiplier);
+
+            label.style.fontSize = fontSize;
+            label.style.unityFontStyleAndWeight = selected ? style.selectedFontStyle : style.fontStyle;
+            label.style.color = textColorOverride ?? (selected ? style.selectedColor : style.color);
+
+            float stripeW = Mathf.Max(0f, style.accentStripeWidth);
+            float padX = Mathf.Max(0f, style.paddingX);
+            float padY = Mathf.Max(0f, style.paddingY);
+            float radius = Mathf.Max(0f, style.cornerRadius);
+            float plateAlpha = Mathf.Clamp01(style.plateAlpha);
+
+            label.style.borderLeftWidth = stripeW;
+            label.style.borderLeftColor = accentColor;
+            label.style.backgroundColor = new Color(accentColor.r, accentColor.g, accentColor.b, plateAlpha);
+            label.style.paddingLeft = padX;
+            label.style.paddingRight = padX;
+            label.style.paddingTop = padY;
+            label.style.paddingBottom = padY;
+            label.style.minHeight = 0f;
+
+            label.style.borderTopLeftRadius = radius;
+            label.style.borderTopRightRadius = radius;
+            label.style.borderBottomLeftRadius = radius;
+            label.style.borderBottomRightRadius = radius;
+
+            label.style.width = StyleKeyword.Auto;
+            label.style.minWidth = StyleKeyword.Auto;
+            label.style.maxWidth = StyleKeyword.None;
+
+            label.style.opacity = selected ? 1f : 0.95f;
+        }
+        private float GetWaypointCompactFontSize(bool selected)
+        {
+            var style = GetLabelStyleById(WaypointEditableLabelStyleId);
+            return selected ? style.selectedFontSize : style.fontSize;
+        }
+
+        private float GetRelativeZoom()
+        {
+            if (_viewport == null || !TryGetViewportSize(out float vw, out float vh))
+                return _zoom;
+
+            float fitZoom = Mathf.Min(
+                vw / Mathf.Max(1f, _contentSize.x),
+                vh / Mathf.Max(1f, _contentSize.y));
+
+            return _zoom / Mathf.Max(0.0001f, fitZoom);
+        }
+
+        private static MapUIStyleSettings.MapElementSemantic ResolveSemantic(POIType poiType, POICategory poiCategory)
+        {
+            if (poiType == POIType.SkiRun)
+                return MapUIStyleSettings.MapElementSemantic.SkiRun;
+            if (poiType == POIType.SkiLift)
+                return MapUIStyleSettings.MapElementSemantic.SkiLift;
+
+            return poiCategory switch
+            {
+                POICategory.Resort => MapUIStyleSettings.MapElementSemantic.Resort,
+                POICategory.Shop => MapUIStyleSettings.MapElementSemantic.Shop,
+                POICategory.Kiosk => MapUIStyleSettings.MapElementSemantic.Kiosk,
+                POICategory.Service => MapUIStyleSettings.MapElementSemantic.Service,
+                POICategory.Landmark => MapUIStyleSettings.MapElementSemantic.Landmark,
+                POICategory.Race => MapUIStyleSettings.MapElementSemantic.Race,
+                POICategory.Medical => MapUIStyleSettings.MapElementSemantic.Medical,
+                POICategory.Vehicle => MapUIStyleSettings.MapElementSemantic.Vehicle,
+                POICategory.Custom => MapUIStyleSettings.MapElementSemantic.CustomPoi,
+                _ => MapUIStyleSettings.MapElementSemantic.GenericPoi
+            };
+        }
+
+        private ResolvedMapLabelRule ResolveLabelRuleForMarker(string markerId)
+        {
+            if (string.IsNullOrWhiteSpace(markerId) || !_markerById.TryGetValue(markerId, out var marker))
+                return ResolveFallbackRule(MapUIStyleSettings.MapElementSemantic.GenericPoi, POIType.Unknown, POICategory.None);
+
+            POIType poiType = marker.type;
+            POICategory poiCategory = ResolvePoiCategoryForMarkerId(markerId, poiType);
+            var semantic = MapUIStyleSettings.ResolveSemantic(poiType, poiCategory);
+
+            if (_style != null && _style.TryResolveVisibilityRule(semantic, poiType, poiCategory, out var rule))
+            {
+                return new ResolvedMapLabelRule
+                {
+                    semantic = semantic,
+                    markerDisplayMode = rule.markerDisplayMode,
+                    labelStyleId = string.IsNullOrWhiteSpace(rule.labelStyleId) ? StandardLabelStyleId : rule.labelStyleId,
+                    labelSizeMultiplier = rule.labelSizeMultiplier > 0f ? rule.labelSizeMultiplier : 1f
+                };
+            }
+
+            return ResolveFallbackRule(semantic, poiType, poiCategory);
+        }
+
+        private ResolvedMapLabelRule ResolveLabelRuleForPolyline(MapPolyline polyline)
+        {
+            if (!polyline.IsValid)
+                return ResolveFallbackRule(MapUIStyleSettings.MapElementSemantic.GenericPoi, POIType.Unknown, POICategory.None);
+
+            POIType poiType = POIType.Unknown;
+            POICategory poiCategory = POICategory.None;
+
+            switch (polyline.lineType)
+            {
+                case MapLineType.SkiRun:
+                    poiType = POIType.SkiRun;
+                    break;
+                case MapLineType.SkiLift:
+                    poiType = POIType.SkiLift;
+                    break;
+                case MapLineType.RaceCourse:
+                    poiType = POIType.Custom;
+                    poiCategory = POICategory.Race;
+                    break;
+            }
+
+            var semantic = MapUIStyleSettings.ResolveSemantic(poiType, poiCategory);
+
+            if (_style != null && _style.TryResolveVisibilityRule(semantic, poiType, poiCategory, out var rule))
+            {
+                return new ResolvedMapLabelRule
+                {
+                    semantic = semantic,
+                    markerDisplayMode = rule.markerDisplayMode,
+                    labelStyleId = string.IsNullOrWhiteSpace(rule.labelStyleId) ? StandardLabelStyleId : rule.labelStyleId,
+                    labelSizeMultiplier = rule.labelSizeMultiplier > 0f ? rule.labelSizeMultiplier : 1f
+                };
+            }
+
+            return ResolveFallbackRule(semantic, poiType, poiCategory);
+        }
+
+        private ResolvedMapLabelRule ResolveRegionLabelRule()
+        {
+            return new ResolvedMapLabelRule
+            {
+                semantic = MapUIStyleSettings.MapElementSemantic.Region,
+                markerDisplayMode = MapUIStyleSettings.MapLabelDisplayMode.Contextual,
+                labelStyleId = RegionMajorLabelStyleId,
+                labelSizeMultiplier = 1f
+            };
+        }
+
+        private POICategory ResolvePoiCategoryForMarkerId(string markerId, POIType poiType)
+        {
+            if (_poiRegistry != null && _poiRegistry.TryGetById(markerId, out var poiInfo))
+                return poiInfo.category;
+
+            return poiType == POIType.Custom ? POICategory.Custom : POICategory.None;
+        }
+
+        private ResolvedMapLabelRule ResolveFallbackRule(MapUIStyleSettings.MapElementSemantic semantic, POIType poiType, POICategory poiCategory)
+        {
+            string styleId = StandardLabelStyleId;
+
+            if (semantic == MapUIStyleSettings.MapElementSemantic.Region)
+                styleId = RegionMajorLabelStyleId;
+            else if (poiCategory == POICategory.Resort)
+                styleId = MajorLabelStyleId;
+            else if (poiType == POIType.Custom && (
+                         poiCategory == POICategory.Shop ||
+                         poiCategory == POICategory.Kiosk ||
+                         poiCategory == POICategory.Service ||
+                         poiCategory == POICategory.Vehicle ||
+                         poiCategory == POICategory.Custom))
+                styleId = MinorLabelStyleId;
+
+            return new ResolvedMapLabelRule
+            {
+                semantic = semantic,
+                markerDisplayMode = MapUIStyleSettings.MapLabelDisplayMode.Contextual,
+                labelStyleId = styleId,
+                labelSizeMultiplier = 1f
+            };
+        }
+
+        private ResolvedMarkerStyleRule ResolveMarkerStyleRuleForPoi(POIType type, POICategory category)
+        {
+            var resolved = new ResolvedMarkerStyleRule
+            {
+                markerSizeMultiplier = 1f,
+                colorIsFallbackOnly = true
+            };
+
+            if (_style != null && _style.TryFindBestVisibilityRule(type, category, out var rule))
+            {
+                resolved.hasMarkerSprite = rule.overrideMarkerSprite && rule.markerSprite != null;
+                resolved.markerSprite = rule.markerSprite;
+                resolved.markerSizeMultiplier = rule.overrideMarkerSizeMultiplier ? Mathf.Max(0.1f, rule.markerSizeMultiplier) : 1f;
+                resolved.hasDefaultColor = rule.overrideMarkerDefaultColor;
+                resolved.defaultColor = rule.markerDefaultColor;
+                resolved.colorIsFallbackOnly = rule.markerColorIsFallbackOnly;
+            }
+
+            return resolved;
+        }
+
+        private ResolvedMarkerStyleRule ResolveMarkerStyleRuleForPolyline(MapPolyline polyline)
+        {
+            if (polyline.lineType == MapLineType.SkiLift)
+                return ResolveMarkerStyleRuleForPoi(POIType.SkiLift, POICategory.None);
+
+            if (polyline.lineType == MapLineType.SkiRun)
+                return ResolveMarkerStyleRuleForPoi(POIType.SkiRun, POICategory.None);
+
+            return ResolveMarkerStyleRuleForPoi(POIType.Unknown, POICategory.None);
+        }
+
+        private ResolvedMarkerRule ResolveMarkerRule(POIType poiType, POICategory poiCategory)
+        {
+            var result = new ResolvedMarkerRule
+            {
+                sprite = null,
+                sizeMultiplier = 1f,
+                hasDefaultColor = false,
+                defaultColor = Color.white,
+                colorIsFallbackOnly = true
+            };
+
+            if (_style == null)
+                return result;
+
+            if (_style.TryResolveVisibilityRule(
+                    MapUIStyleSettings.ResolveSemantic(poiType, poiCategory),
+                    poiType,
+                    poiCategory,
+                    out var rule))
+            {
+                if (rule.overrideMarkerSprite)
+                    result.sprite = rule.markerSprite;
+
+                if (rule.overrideMarkerSizeMultiplier && rule.markerSizeMultiplier > 0f)
+                    result.sizeMultiplier = Mathf.Max(0.1f, rule.markerSizeMultiplier);
+
+                if (rule.overrideMarkerDefaultColor)
+                {
+                    result.hasDefaultColor = true;
+                    result.defaultColor = rule.markerDefaultColor;
+                    result.colorIsFallbackOnly = rule.markerColorIsFallbackOnly;
+                }
+            }
+
+            return result;
+        }
+
+        private MapUIStyleSettings.MapLabelVisualStyle ResolveStandardLabelStyleForRule(ResolvedMapLabelRule rule)
+        {
+            return GetLabelStyleById(rule.labelStyleId);
+        }
+
+        private Color ResolveMapElementColor(Color? sourceColor, ResolvedMarkerStyleRule styleRule, Color familyFallbackColor)
+        {
+            bool hasSourceColor = sourceColor.HasValue && sourceColor.Value.a > 0.001f;
+
+            if (styleRule.hasDefaultColor && !styleRule.colorIsFallbackOnly)
+                return styleRule.defaultColor;
+
+            if (hasSourceColor)
+                return sourceColor.Value;
+
+            if (styleRule.hasDefaultColor)
+                return styleRule.defaultColor;
+
+            return familyFallbackColor;
+        }
+
+        private float EvaluateRevealAlpha(ResolvedMapLabelRule rule, float relativeZoom)
+        {
+            var profile = ResolveLabelProfileForRule(rule);
+
+            switch (profile.revealDirection)
+            {
+                case MapUIStyleSettings.MapRevealDirection.Always:
+                    return 1f;
+
+                case MapUIStyleSettings.MapRevealDirection.ZoomOutReveal:
+                    {
+                        float t = Mathf.InverseLerp(profile.fadeStartZoom, profile.fadeEndZoom, relativeZoom);
+                        return 1f - Mathf.Clamp01(t);
+                    }
+
+                case MapUIStyleSettings.MapRevealDirection.ZoomInReveal:
+                default:
+                    {
+                        float t = Mathf.InverseLerp(profile.fadeStartZoom, profile.fadeEndZoom, relativeZoom);
+                        return Mathf.Clamp01(t);
+                    }
+            }
+        }
+
+        private bool ShouldDisplayLabelByMode(ResolvedMapLabelRule rule, bool isSelected, bool linkedWaypoint)
+        {
+            var profile = ResolveLabelProfileForRule(rule);
+
+            switch (profile.labelDisplayMode)
+            {
+                case MapUIStyleSettings.MapLabelDisplayMode.Always:
+                    return true;
+
+                case MapUIStyleSettings.MapLabelDisplayMode.SelectedOnly:
+                    return isSelected || linkedWaypoint;
+
+                default:
+                    return true;
+            }
+        }
+
+        private static bool ShouldDisplayMarkerByMode(ResolvedMapLabelRule rule, bool selected, bool linkedWaypoint)
+        {
+            if (selected || linkedWaypoint)
+                return true;
+
+            return rule.markerDisplayMode != MapUIStyleSettings.MapLabelDisplayMode.SelectedOnly;
+        }
         private Vector2 ApplyBackgroundInset(Vector2 uv)
         {
             if (_mapData == null) return uv;
@@ -4740,6 +6575,15 @@ namespace SkiGame.Map.UI
             if (evt.button != 0 && evt.button != 1)
                 return;
 
+            if (IsEventInsideLegend(evt))
+            {
+                _pointerDown = false;
+                _dragging = false;
+                _activePointerId = -1;
+                evt.StopPropagation();
+                return;
+            }
+
             _pointerButton = evt.button;
             _pointerDown = true;
             _didDrag = false;
@@ -4767,6 +6611,12 @@ namespace SkiGame.Map.UI
 
         private void OnPointerMove(PointerMoveEvent evt)
         {
+            if (IsEventInsideLegend(evt))
+            {
+                evt.StopPropagation();
+                return;
+            }
+
             // Dragging: existing pan logic (keep first so it wins)
             if (_dragging)
             {
@@ -4789,6 +6639,19 @@ namespace SkiGame.Map.UI
 
         private void OnPointerUp(EventBase evtBase)
         {
+            if (IsEventInsideLegend(evtBase))
+            {
+                _pointerDown = false;
+                _dragging = false;
+
+                if (_viewport != null && _activePointerId != -1 && _viewport.HasPointerCapture(_activePointerId))
+                    _viewport.ReleasePointer(_activePointerId);
+
+                _activePointerId = -1;
+                evtBase.StopPropagation();
+                return;
+            }
+
             if (!_pointerDown && !_dragging)
                 return;
 
@@ -4936,7 +6799,8 @@ namespace SkiGame.Map.UI
                     return;
                 }
 
-                if (TryPickMarker(contentLocal, pickDistContent, out var pickedMarker))
+                if (TryPickMarker(contentLocal, pickDistContent, out var pickedMarker) &&
+                    (_markerSelectionFilter == null || _markerSelectionFilter(pickedMarker)))
                 {
                     float markerNow = Time.unscaledTime;
                     bool markerIsDouble =
@@ -5066,7 +6930,9 @@ namespace SkiGame.Map.UI
                     return;
                 }
 
-                if (_polyLayer != null && _polyLayer.TryPick(contentLocal, pickDistContent, out var pickedLine))
+                if (_polyLayer != null &&
+                    _polyLayer.TryPick(contentLocal, pickDistContent, out var pickedLine) &&
+                    (_polylineSelectionFilter == null || _polylineSelectionFilter(pickedLine)))
                 {
                     float now = Time.unscaledTime;
                     bool isDouble =
@@ -5193,7 +7059,6 @@ namespace SkiGame.Map.UI
             _trailLayer?.SetWorldTrail(worldTrailXZ);
         }
 
-
         public void SetTrailSamplingEnabled(bool enabled)
         {
             _trackPlayerTrail = enabled;
@@ -5208,7 +7073,10 @@ namespace SkiGame.Map.UI
         public void ClearPlayerTrail()
         {
             _trailWorldXZ.Clear();
+            _trailSampleTimes.Clear();
+            _trailSampleDistances.Clear();
             _hasLastTrailSample = false;
+            _trailDistanceTravelledMeters = 0f;
             _trailLayer?.SetWorldTrail(_trailWorldXZ);
         }
 
@@ -5220,6 +7088,8 @@ namespace SkiGame.Map.UI
         {
             if (!_bound) return;
             if (_mapData == null || !_mapData.Projection.IsValid) return;
+
+            RefreshStyleIfNeeded();
 
             // Keep viewport sizing in sync with info panel open/close even if geometry events don't fire.
             if (_isScrollViewRoot)
@@ -5262,11 +7132,12 @@ namespace SkiGame.Map.UI
                 if (_trackPlayerMarker && havePlayerLocal)
                 {
                     _playerMarker.style.display = DisplayStyle.Flex;
-                    UpdatePlayerMarkerVisual(playerLocal);
+                    UpdatePlayerMarkerVisual(playerLocal, unscaledDeltaTime);
                 }
                 else
                 {
                     _playerMarker.style.display = DisplayStyle.None;
+                    _hasPlayerMarkerAngle = false;
                 }
             }
 
@@ -5298,6 +7169,8 @@ namespace SkiGame.Map.UI
             // Sample trail at a throttled rate.
             if (_trackPlayerTrail)
                 SamplePlayerTrail();
+
+            RefreshActivityCheckpointMarkers();
         }
 
 
@@ -5315,10 +7188,7 @@ namespace SkiGame.Map.UI
 
         private float GetPlayerMarkerRenderSize()
         {
-            if (_style != null)
-                return Mathf.Max(8f, _style.playerMarkerSize * 1.6f);
-
-            return 20f;
+            return Mathf.Max(8f, GetPlayerMarkerStyle().size);
         }
 
         private bool TryGetPlayerFacingAngle(out float angleDeg)
@@ -5335,7 +7205,7 @@ namespace SkiGame.Map.UI
             if (!TryProjectWorldToUV(_playerTransform.position, out Vector2 uvA))
                 return false;
 
-            if (!TryProjectWorldToUV(_playerTransform.position + flatForward.normalized * 2f, out Vector2 uvB))
+            if (!TryProjectWorldToUV(_playerTransform.position + flatForward.normalized * PlayerMarkerForwardProbeMeters, out Vector2 uvB))
                 return false;
 
             Vector2 a = UVToLocal(uvA);
@@ -5349,21 +7219,49 @@ namespace SkiGame.Map.UI
             return true;
         }
 
-        private void UpdatePlayerMarkerVisual(Vector2 playerLocal)
+        private void UpdatePlayerMarkerVisual(Vector2 playerLocal, float unscaledDeltaTime)
         {
             if (_playerMarker == null)
                 return;
 
             float markerSize = GetPlayerMarkerRenderSize();
-            float half = markerSize * 0.5f;
 
             _playerMarker.style.width = markerSize;
             _playerMarker.style.height = markerSize;
-            _playerMarker.style.left = playerLocal.x - half;
-            _playerMarker.style.top = playerLocal.y - half;
 
-            if (TryGetPlayerFacingAngle(out float angleDeg))
-                _playerMarker.transform.rotation = Quaternion.Euler(0f, 0f, angleDeg);
+            // Important:
+            // The marker already gets centered by the shared translate/scale pass.
+            // So this position should be the actual anchor point, not anchor-minus-half-size.
+            _playerMarker.style.left = playerLocal.x;
+            _playerMarker.style.top = playerLocal.y;
+
+            if (TryGetPlayerFacingAngle(out float targetAngleDeg))
+            {
+                if (!_hasPlayerMarkerAngle)
+                {
+                    _playerMarkerAngleDeg = targetAngleDeg;
+                    _hasPlayerMarkerAngle = true;
+                }
+                else
+                {
+                    float delta = Mathf.Abs(Mathf.DeltaAngle(_playerMarkerAngleDeg, targetAngleDeg));
+                    if (delta >= PlayerMarkerIgnoreAngleDelta)
+                    {
+                        if (delta >= PlayerMarkerSnapAngleDelta)
+                        {
+                            _playerMarkerAngleDeg = targetAngleDeg;
+                        }
+                        else
+                        {
+                            float t = 1f - Mathf.Exp(-Mathf.Max(0f, unscaledDeltaTime) * PlayerMarkerSmoothingPerSecond);
+                            _playerMarkerAngleDeg = Mathf.LerpAngle(_playerMarkerAngleDeg, targetAngleDeg, t);
+                        }
+                    }
+                }
+
+                float spriteOffset = GetPlayerMarkerStyle().spriteRotationOffsetDegrees;
+                _playerMarker.transform.rotation = Quaternion.Euler(0f, 0f, _playerMarkerAngleDeg + spriteOffset);
+            }
         }
 
         public void CenterOnPlayerIfPossible(bool keepZoom = true, float minZoom = 1.0f)
@@ -5468,6 +7366,14 @@ namespace SkiGame.Map.UI
             ClampPanToBounds(vw, vh);
 
             ApplyTransform();
+
+            // Important: overlay labels live in viewport space, not content space.
+            // Programmatic selection/frame paths must explicitly refresh them after pan/zoom changes.
+            LayoutOverlayLabels();
+            LayoutWaypointLabels();
+            _regionLayer?.MarkDirtyRepaint();
+            _polyHost?.MarkDirtyRepaint();
+            _markerHost?.MarkDirtyRepaint();
         }
 
         /// <summary>
@@ -5531,24 +7437,86 @@ namespace SkiGame.Map.UI
             _nextTrailSampleTime = now + Mathf.Max(0.02f, _trailSampleInterval);
 
             Vector2 worldXZ = new Vector2(_playerTransform.position.x, _playerTransform.position.z);
+            float worldDistanceFromLast = 0f;
 
             if (_hasLastTrailSample)
             {
-                float d = Vector2.Distance(worldXZ, _lastTrailSampleWorldXZ);
-                if (d < _trailMinDistanceMeters)
+                worldDistanceFromLast = Vector2.Distance(worldXZ, _lastTrailSampleWorldXZ);
+
+                float breakDistance = _style != null ? Mathf.Max(0f, DefaultTrailBreakDistanceMeters) : 60f;
+                if (breakDistance > 0f && worldDistanceFromLast >= breakDistance)
+                {
+                    _hasLastTrailSample = false;
+                    _lastTrailSampleWorldXZ = worldXZ;
                     return;
+                }
+
+                if (worldDistanceFromLast < _trailMinDistanceMeters)
+                    return;
+            }
+
+            if (!TryProjectWorldToUV(_playerTransform.position, out Vector2 uv))
+                return;
+
+            if (!float.IsFinite(uv.x) || !float.IsFinite(uv.y))
+                return;
+
+            if (uv.x < -0.25f || uv.x > 1.25f || uv.y < -0.25f || uv.y > 1.25f)
+                return;
+
+            if (_trailWorldXZ.Count > 0)
+            {
+                float uvDistance = Vector2.Distance(uv, _trailWorldXZ[_trailWorldXZ.Count - 1]);
+                float outlierWorldDistance = _style != null ? Mathf.Max(0f, DefaultTrailOutlierWorldDistanceMeters) : 45f;
+                float outlierUvDistance = _style != null ? Mathf.Max(0f, DefaultTrailOutlierUvDistance) : 0.12f;
+                if (worldDistanceFromLast > 0f &&
+                    worldDistanceFromLast <= outlierWorldDistance &&
+                    uvDistance >= outlierUvDistance)
+                {
+                    return;
+                }
             }
 
             _hasLastTrailSample = true;
             _lastTrailSampleWorldXZ = worldXZ;
+            _trailDistanceTravelledMeters += worldDistanceFromLast;
+            _trailWorldXZ.Add(uv);
+            _trailSampleTimes.Add(now);
+            _trailSampleDistances.Add(_trailDistanceTravelledMeters);
 
-            _trailWorldXZ.Add(worldXZ);
+            TrimTrailHistory(now);
 
             // Cap memory
             if (_trailWorldXZ.Count > _trailMaxSamples)
-                _trailWorldXZ.RemoveRange(0, _trailWorldXZ.Count - _trailMaxSamples);
+            {
+                int trimCount = _trailWorldXZ.Count - _trailMaxSamples;
+                _trailWorldXZ.RemoveRange(0, trimCount);
+                _trailSampleTimes.RemoveRange(0, trimCount);
+                _trailSampleDistances.RemoveRange(0, trimCount);
+            }
 
             _trailLayer.SetWorldTrail(_trailWorldXZ);
+        }
+
+        private void TrimTrailHistory(float now)
+        {
+            float maxAge = _style != null ? Mathf.Max(0f, DefaultTrailMaxAgeSeconds) : 45f;
+            float maxDistance = _style != null ? Mathf.Max(0f, DefaultTrailMaxDistanceMeters) : 450f;
+
+            while (_trailWorldXZ.Count > 1)
+            {
+                bool trimForAge = maxAge > 0f && _trailSampleTimes.Count > 0 && (now - _trailSampleTimes[0]) > maxAge;
+                bool trimForDistance = maxDistance > 0f && _trailSampleDistances.Count > 0 && (_trailDistanceTravelledMeters - _trailSampleDistances[0]) > maxDistance;
+
+                if (!trimForAge && !trimForDistance)
+                    break;
+
+                _trailWorldXZ.RemoveAt(0);
+                if (_trailSampleTimes.Count > 0)
+                    _trailSampleTimes.RemoveAt(0);
+                if (_trailSampleDistances.Count > 0)
+                    _trailSampleDistances.RemoveAt(0);
+            }
         }
 
         /// <summary>
@@ -5676,31 +7644,234 @@ namespace SkiGame.Map.UI
             return false;
         }
 
-        public void PreviewLiftAccessForPassLevel(int passLevel)
+        public void ClearForcedLiftRequirementOverrides()
         {
-            if (!_bound)
+            _forcedLiftRequiredLevelByPolyline.Clear();
+            _forcedLiftRequiredPassIdByPolyline.Clear();
+            _forcedLiftColorByPolyline.Clear();
+        }
+
+        public void SetForcedLiftRequirementOverride(string polylineId, int requiredLevel, string requiredPassId, Color color)
+        {
+            if (string.IsNullOrWhiteSpace(polylineId))
                 return;
 
-            passLevel = Mathf.Max(0, passLevel);
+            _forcedLiftRequiredLevelByPolyline[polylineId] = Mathf.Max(0, requiredLevel);
 
-            // Reapply only lift overrides for preview.
-            foreach (var kvp in _liftRequiredLevelByPolyline)
+            if (!string.IsNullOrWhiteSpace(requiredPassId))
+                _forcedLiftRequiredPassIdByPolyline[polylineId] = requiredPassId.Trim();
+            else
+                _forcedLiftRequiredPassIdByPolyline.Remove(polylineId);
+
+            _forcedLiftColorByPolyline[polylineId] = color;
+        }
+
+        public void PreviewLiftAccessForPassLevel(int passLevel)
+        {
+            var cfg = SkiPassManager.Instance != null ? SkiPassManager.Instance.Config : null;
+            string selectedPassId = cfg != null ? cfg.GetPassIdForLevel(passLevel) : string.Empty;
+            PreviewLiftAccessForPassId(selectedPassId, passLevel);
+        }
+
+        public void PreviewLiftAccessibilityByOwnedPassIds(ISet<string> ownedAccessPassIds)
+        {
+            if (!_bound || _mapData == null || _mapData.Polylines == null)
+                return;
+
+            for (int i = 0; i < _mapData.Polylines.Count; i++)
             {
-                string polyId = kvp.Key;
-                int required = kvp.Value;
+                var poly = _mapData.Polylines[i];
+                if (!poly.IsValid || poly.lineType != MapLineType.SkiLift)
+                    continue;
 
-                Color baseColor = new Color(0.75f, 0.85f, 1f, 0.70f);
-                if (_liftRequiredColorByPolyline.TryGetValue(polyId, out var c))
-                    baseColor = c;
+                ResolveLiftRequirementForPolyline(
+                    poly.id,
+                    out int requiredLevel,
+                    out string requiredPassId,
+                    out Color baseColor);
 
-                bool accessible = passLevel >= required;
-                _polylineColorOverrides[polyId] = accessible
-                    ? new Color(baseColor.r, baseColor.g, baseColor.b, 0.95f)
-                    : new Color(0.28f, 0.32f, 0.38f, 0.22f);
+                bool unlocked = DoesAccessSetIncludeLiftRequirement(ownedAccessPassIds, requiredPassId, requiredLevel);
+
+                Color displayColor = unlocked
+                    ? VisibleLiftPassColor(baseColor, 0.82f)
+                    : DimLiftPassColor(baseColor, 0.78f, 0.66f);
+
+                _polylineColorOverrides[poly.id] = displayColor;
+                ApplyLiftPreviewMarkerState(poly.id, displayColor);
             }
 
             _polyLayer?.SetColorOverrides(_polylineColorOverrides);
             _polyHost?.MarkDirtyRepaint();
+        }
+
+        public bool FrameLiftPolylinesByOwnedPassIds(ISet<string> ownedAccessPassIds, float paddingPx = 36f, float minZoom = 0.85f)
+        {
+            if (_mapData == null || _mapData.Polylines == null || !_bound)
+                return false;
+
+            if (!TryGetViewportSize(out float vw, out float vh))
+                return false;
+
+            bool foundAny = false;
+            float minX = float.MaxValue;
+            float minY = float.MaxValue;
+            float maxX = float.MinValue;
+            float maxY = float.MinValue;
+
+            for (int i = 0; i < _mapData.Polylines.Count; i++)
+            {
+                var poly = _mapData.Polylines[i];
+                if (!poly.IsValid || poly.lineType != MapLineType.SkiLift)
+                    continue;
+
+                ResolveLiftRequirementForPolyline(
+                    poly.id,
+                    out int requiredLevel,
+                    out string requiredPassId,
+                    out _);
+
+                if (!DoesAccessSetIncludeLiftRequirement(ownedAccessPassIds, requiredPassId, requiredLevel))
+                    continue;
+
+                if (poly.Has3DPoints)
+                {
+                    for (int k = 0; k < poly.pointsWorld.Count; k++)
+                    {
+                        if (!TryProjectWorldToLocal(poly.pointsWorld[k], out var local))
+                            continue;
+
+                        foundAny = true;
+                        minX = Mathf.Min(minX, local.x);
+                        minY = Mathf.Min(minY, local.y);
+                        maxX = Mathf.Max(maxX, local.x);
+                        maxY = Mathf.Max(maxY, local.y);
+                    }
+                }
+                else if (poly.HasXZPoints)
+                {
+                    for (int k = 0; k < poly.pointsWorldXZ.Count; k++)
+                    {
+                        if (!TryProjectWorldXZToLocal(poly.pointsWorldXZ[k], out var local))
+                            continue;
+
+                        foundAny = true;
+                        minX = Mathf.Min(minX, local.x);
+                        minY = Mathf.Min(minY, local.y);
+                        maxX = Mathf.Max(maxX, local.x);
+                        maxY = Mathf.Max(maxY, local.y);
+                    }
+                }
+            }
+
+            if (!foundAny)
+                return false;
+
+            float width = Mathf.Max(8f, maxX - minX);
+            float height = Mathf.Max(8f, maxY - minY);
+
+            float usableW = Mathf.Max(32f, vw - paddingPx * 2f);
+            float usableH = Mathf.Max(32f, vh - paddingPx * 2f);
+
+            _zoom = Mathf.Max(minZoom, Mathf.Min(usableW / width, usableH / height));
+
+            Vector2 centerLocal = new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
+            CenterViewOnContentPoint(centerLocal);
+            return true;
+        }
+
+        private bool DoesAccessSetIncludeLiftRequirement(ISet<string> ownedAccessPassIds, string requiredPassId, int requiredLevel)
+        {
+            if (ownedAccessPassIds != null && ownedAccessPassIds.Count > 0)
+            {
+                if (!string.IsNullOrWhiteSpace(requiredPassId))
+                    return ownedAccessPassIds.Contains(requiredPassId.Trim());
+
+                var cfg = SkiPassManager.Instance != null ? SkiPassManager.Instance.Config : null;
+                if (cfg != null)
+                {
+                    string fallbackPassId = cfg.GetPassIdForLevel(requiredLevel);
+                    if (!string.IsNullOrWhiteSpace(fallbackPassId))
+                        return ownedAccessPassIds.Contains(fallbackPassId.Trim());
+                }
+
+                return false;
+            }
+
+            var manager = SkiPassManager.Instance;
+            var config = manager != null ? manager.Config : null;
+
+            if (config != null && !string.IsNullOrWhiteSpace(requiredPassId))
+            {
+                string currentPassId = config.GetPassIdForLevel(manager != null ? manager.CurrentLevel : 0);
+                return !string.IsNullOrWhiteSpace(currentPassId) &&
+                       config.PassGrantsAccessTo(currentPassId, requiredPassId);
+            }
+
+            return manager != null
+                ? manager.CurrentLevel >= Mathf.Max(0, requiredLevel)
+                : Mathf.Max(0, requiredLevel) <= 0;
+        }
+
+        public void PreviewLiftAccessForPassId(string selectedPassId, int selectedLevel)
+        {
+            if (!_bound || _mapData == null || _mapData.Polylines == null)
+                return;
+
+            selectedLevel = Mathf.Max(0, selectedLevel);
+            var cfg = SkiPassManager.Instance != null ? SkiPassManager.Instance.Config : null;
+
+            for (int i = 0; i < _mapData.Polylines.Count; i++)
+            {
+                var poly = _mapData.Polylines[i];
+                if (!poly.IsValid || poly.lineType != MapLineType.SkiLift)
+                    continue;
+
+                ResolveLiftRequirementForPolyline(
+                    poly.id,
+                    out int requiredLevel,
+                    out string requiredPassId,
+                    out Color baseColor);
+
+                bool unlocked = selectedLevel >= requiredLevel;
+
+                if (cfg != null &&
+                    !string.IsNullOrWhiteSpace(selectedPassId) &&
+                    !string.IsNullOrWhiteSpace(requiredPassId))
+                {
+                    unlocked = cfg.PassGrantsAccessTo(selectedPassId, requiredPassId);
+                }
+
+                Color displayColor = unlocked
+                    ? VisibleLiftPassColor(baseColor, 0.82f)
+                    : DimLiftPassColor(baseColor, 0.62f, 0.56f);
+
+                _polylineColorOverrides[poly.id] = displayColor;
+                ApplyLiftPreviewMarkerState(poly.id, displayColor);
+            }
+
+            _polyLayer?.SetColorOverrides(_polylineColorOverrides);
+            _polyHost?.MarkDirtyRepaint();
+        }
+
+        private void ApplyLiftPreviewMarkerState(string polyId, Color previewColor)
+        {
+            if (string.IsNullOrWhiteSpace(polyId))
+                return;
+
+            if (_liftPolylineToMarkers.TryGetValue(polyId, out var markerIds))
+            {
+                for (int i = 0; i < markerIds.Count; i++)
+                {
+                    string markerId = markerIds[i];
+                    _markerLabelAccent[markerId] = new Color(previewColor.r, previewColor.g, previewColor.b, 1f);
+                    ApplyMarkerVisual(markerId, _selectedMarkerSet.Contains(markerId));
+                }
+            }
+
+            _polylineLabelAccent[polyId] = new Color(previewColor.r, previewColor.g, previewColor.b, 1f);
+
+            if (TryGetPolylineById(polyId, out var poly))
+                ApplyPolylineLabelVisual(polyId, selected: IsPolylineSelected(poly));
         }
 
         /// <summary>
@@ -6115,7 +8286,9 @@ namespace SkiGame.Map.UI
             private MapUIStyleSettings _style;
             private bool _showRuns = true;
             private bool _showLifts = true;
-            private int _maxRunDifficultyRank = 3;
+            private bool _showRaceCourses = true;
+
+            private readonly HashSet<int> _visibleRunDifficultyRanks = new() { 0, 1, 2, 3 };
 
             private struct CachedLine
             {
@@ -6135,6 +8308,8 @@ namespace SkiGame.Map.UI
             private readonly List<CachedRunCorridor> _runCache = new();
 
             private IReadOnlyDictionary<string, Color> _colorOverrides;
+
+            private PointOfInterestRegistry _poiRegistry;
 
             public MapPolylineLayer()
             {
@@ -6168,11 +8343,25 @@ namespace SkiGame.Map.UI
                 MarkDirtyRepaint();
             }
 
-            public void SetFilterState(bool showRuns, bool showLifts, int maxRunDifficultyRank)
+            public void SetFilterState(bool showRuns, bool showLifts, bool showRaceCourses, IReadOnlyCollection<int> visibleRunDifficultyRanks)
             {
                 _showRuns = showRuns;
                 _showLifts = showLifts;
-                _maxRunDifficultyRank = Mathf.Max(0, maxRunDifficultyRank);
+                _showRaceCourses = showRaceCourses;
+
+                _visibleRunDifficultyRanks.Clear();
+                if (visibleRunDifficultyRanks != null)
+                {
+                    foreach (var rank in visibleRunDifficultyRanks)
+                        _visibleRunDifficultyRanks.Add(rank);
+                }
+
+                MarkDirtyRepaint();
+            }
+
+            public void SetPOIRegistry(PointOfInterestRegistry registry)
+            {
+                _poiRegistry = registry;
                 MarkDirtyRepaint();
             }
 
@@ -6184,18 +8373,57 @@ namespace SkiGame.Map.UI
 
             private bool IsVisible(MapPolyline line)
             {
-                if (line.lineType == MapLineType.SkiRun)
-                    return _showRuns && line.difficultyRank <= _maxRunDifficultyRank;
+                switch (line.lineType)
+                {
+                    case MapLineType.SkiRun:
+                        {
+                            if (!_showRuns)
+                                return false;
 
-                if (line.lineType == MapLineType.SkiLift)
-                    return _showLifts;
+                            int rank = ResolveRunDifficultyRank(line.id, line.difficultyRank);
+                            if (rank < 0)
+                                return _visibleRunDifficultyRanks.Count >= DefaultRunDifficultyRanks.Length;
 
-                return true;
+                            return _visibleRunDifficultyRanks.Contains(rank);
+                        }
+
+                    case MapLineType.SkiLift:
+                        return _showLifts;
+
+                    case MapLineType.RaceCourse:
+                        return _showRaceCourses;
+
+                    default:
+                        return true;
+                }
             }
 
             private bool IsVisible(MapRunCorridor corridor)
             {
-                return _showRuns && corridor.difficultyRank <= _maxRunDifficultyRank;
+                if (!_showRuns)
+                    return false;
+
+                int rank = ResolveRunDifficultyRank(corridor.id, corridor.difficultyRank);
+                if (rank < 0)
+                    return _visibleRunDifficultyRanks.Count >= DefaultRunDifficultyRanks.Length;
+
+                return _visibleRunDifficultyRanks.Contains(rank);
+            }
+
+            private int ResolveRunDifficultyRank(string runId, int bakedRank)
+            {
+                string normalizedRunId = runId;
+                int suffixIndex = normalizedRunId.LastIndexOf("__", StringComparison.Ordinal);
+                if (suffixIndex > 0)
+                    normalizedRunId = normalizedRunId.Substring(0, suffixIndex);
+
+                if (_poiRegistry != null && _poiRegistry.TryGetById(normalizedRunId, out var poi) && poi.source is SkiRunLine line)
+                {
+                    if (TryMapRunDifficultyName(line.Difficulty.ToString(), out int authoredRank))
+                        return authoredRank;
+                }
+
+                return NormalizeRunDifficultyRank(bakedRank);
             }
 
             public bool TryPick(Vector2 contentLocal, float maxDistancePx, out MapPolyline picked)
@@ -6222,11 +8450,15 @@ namespace SkiGame.Map.UI
                     if (c.src.lineType == MapLineType.SkiRun && HasRunCorridor(c.src.id))
                         continue;
 
+                    float pickDistancePx = c.src.lineType == MapLineType.RaceCourse
+                        ? maxDistancePx * 1.75f
+                        : maxDistancePx;
+
                     Rect b = c.bounds;
-                    b.xMin -= maxDistancePx;
-                    b.yMin -= maxDistancePx;
-                    b.xMax += maxDistancePx;
-                    b.yMax += maxDistancePx;
+                    b.xMin -= pickDistancePx;
+                    b.yMin -= pickDistancePx;
+                    b.xMax += pickDistancePx;
+                    b.yMax += pickDistancePx;
 
                     if (!b.Contains(contentLocal))
                         continue;
@@ -6238,7 +8470,8 @@ namespace SkiGame.Map.UI
                     for (int k = 0; k < pts.Count - 1; k++)
                     {
                         float dSqr = DistPointToSegmentSqr(contentLocal, pts[k], pts[k + 1]);
-                        if (dSqr < bestSqr)
+                        float allowedSqr = pickDistancePx * pickDistancePx;
+                        if (dSqr <= allowedSqr && dSqr < bestSqr)
                         {
                             bestSqr = dSqr;
                             bestIdx = i;
@@ -6273,8 +8506,33 @@ namespace SkiGame.Map.UI
                 if (!_showRuns || _runCache.Count == 0)
                     return;
 
-                float outlineWidth = 1.8f / Mathf.Max(0.0001f, _zoom);
-                float selectedOutlineWidth = 3.1f / Mathf.Max(0.0001f, _zoom);
+                float zoomMul = 1f;
+                if (_style != null)
+                {
+                    var lineStyle = _style.GetPoiPolylineStyle();
+                    float exp = Mathf.Clamp01(lineStyle.widthZoomExponent);
+                    zoomMul = Mathf.Pow(Mathf.Max(0.0001f, _zoom), exp);
+                    zoomMul = Mathf.Clamp(zoomMul, lineStyle.widthZoomMinMul, lineStyle.widthZoomMaxMul);
+                }
+
+                var runAreaStyle = _style != null
+                    ? _style.GetRunAreaStyle()
+                    : new MapUIStyleSettings.MapAreaVisualStyle
+                    {
+                        outlineWidthPx = 1.8f,
+                        outlineWidthSelectedPx = 3.1f,
+                        fillOpacity = 0.24f,
+                        fillOpacitySelected = 0.42f,
+                        outlineOpacity = 0.92f,
+                        outlineOpacitySelected = 1f
+                    };
+
+                float outlineWidth = (runAreaStyle.outlineWidthPx * zoomMul) / Mathf.Max(0.0001f, _zoom);
+                float selectedOutlineWidth = (runAreaStyle.outlineWidthSelectedPx * zoomMul) / Mathf.Max(0.0001f, _zoom);
+                float fillOpacity = runAreaStyle.fillOpacity;
+                float fillOpacitySelected = runAreaStyle.fillOpacitySelected;
+                float outlineOpacity = runAreaStyle.outlineOpacity;
+                float outlineOpacitySelected = runAreaStyle.outlineOpacitySelected;
 
                 for (int i = 0; i < _runCache.Count; i++)
                 {
@@ -6296,11 +8554,13 @@ namespace SkiGame.Map.UI
                         baseColor.r,
                         baseColor.g,
                         baseColor.b,
-                        selected ? 0.42f : 0.24f);
+                        selected ? fillOpacitySelected : fillOpacity);
 
-                    Color outline = _style != null
-                        ? (selected ? _style.outlineColorSelected : new Color(baseColor.r, baseColor.g, baseColor.b, 0.92f))
-                        : (selected ? new Color(1f, 1f, 1f, 0.95f) : new Color(baseColor.r, baseColor.g, baseColor.b, 0.85f));
+                    Color outline = new Color(
+                        baseColor.r,
+                        baseColor.g,
+                        baseColor.b,
+                        selected ? outlineOpacitySelected : outlineOpacity);
 
                     AppendClosedPath(p, c.localPolygon);
                     p.fillColor = fill;
@@ -6329,29 +8589,44 @@ namespace SkiGame.Map.UI
                     if (pts == null || pts.Count < 2)
                         continue;
 
-                    float runW = _style != null ? _style.runWidthPx : 2.8f;
-                    float liftW = _style != null ? _style.liftWidthPx : 2.1f;
-
-                    float screenW = (line.lineType == MapLineType.SkiLift) ? liftW : runW;
+                    var lineStyle = _style != null ? _style.GetPoiPolylineStyle() : new MapUIStyleSettings.MapLineVisualStyle
+                    {
+                        widthPx = 2.8f,
+                        selectedWidthMultiplier = 1.35f,
+                        outlineExtraPx = 2f,
+                        outlineExtraSelectedPx = 3f,
+                        outlineColor = new Color(0f, 0f, 0f, 0.35f),
+                        outlineColorSelected = new Color(0f, 0f, 0f, 0.55f),
+                        widthZoomExponent = 0.35f,
+                        widthZoomMinMul = 0.70f,
+                        widthZoomMaxMul = 1.60f
+                    };
+                    float screenW = lineStyle.widthPx;
                     float zoomMul = 1f;
                     if (_style != null)
                     {
-                        float exp = Mathf.Clamp01(_style.polylineWidthZoomExponent);
+                        float exp = Mathf.Clamp01(lineStyle.widthZoomExponent);
                         zoomMul = Mathf.Pow(Mathf.Max(0.0001f, _zoom), exp);
-                        zoomMul = Mathf.Clamp(zoomMul, _style.polylineWidthZoomMinMul, _style.polylineWidthZoomMaxMul);
+                        zoomMul = Mathf.Clamp(zoomMul, lineStyle.widthZoomMinMul, lineStyle.widthZoomMaxMul);
                     }
 
                     float w = (screenW * zoomMul) / _zoom;
                     bool selected = (!string.IsNullOrEmpty(_selectedId) && line.id == _selectedId);
-                    float selMul = _style != null ? _style.selectedWidthMultiplier : 1.35f;
+                    float selMul = lineStyle.selectedWidthMultiplier;
 
-                    Color outlineCol = _style != null
-                        ? (selected ? _style.outlineColorSelected : _style.outlineColor)
-                        : new Color(0f, 0f, 0f, selected ? 0.55f : 0.35f);
+                    var polylineStyle = _style != null
+                         ? _style.GetPoiPolylineStyle()
+                         : new MapUIStyleSettings.MapLineVisualStyle
+                         {
+                             outlineColor = new Color(0f, 0f, 0f, 0.35f),
+                             outlineColorSelected = new Color(0f, 0f, 0f, 0.55f)
+                         };
 
-                    float outlineExtra = _style != null
-                        ? (selected ? _style.outlineExtraSelectedPx : _style.outlineExtraPx)
-                        : (selected ? 3.0f : 2.0f);
+                    Color outlineCol = selected
+                        ? polylineStyle.outlineColorSelected
+                        : polylineStyle.outlineColor;
+
+                    float outlineExtra = selected ? lineStyle.outlineExtraSelectedPx : lineStyle.outlineExtraPx;
 
                     p.strokeColor = outlineCol;
                     p.lineWidth = ((screenW + outlineExtra) * zoomMul) / _zoom;
@@ -6361,7 +8636,7 @@ namespace SkiGame.Map.UI
                     if (_colorOverrides != null && _colorOverrides.TryGetValue(line.id, out var ov))
                         baseColor = ov;
 
-                    p.strokeColor = selected ? new Color(baseColor.r, baseColor.g, baseColor.b, 1f) : baseColor;
+                    p.strokeColor = baseColor;
                     p.lineWidth = selected ? (w * selMul) : w;
                     Stroke(p, pts);
                 }
@@ -6700,6 +8975,7 @@ namespace SkiGame.Map.UI
             private Vector2 _contentSize;
             private Camera _cam;
             private float _zoom = 1f;
+            private MapUIStyleSettings _style;
 
             private bool _enabled = true;
 
@@ -6732,6 +9008,12 @@ namespace SkiGame.Map.UI
                 MarkDirtyRepaint();
             }
 
+            public void SetStyle(MapUIStyleSettings style)
+            {
+                _style = style;
+                MarkDirtyRepaint();
+            }
+
             public void SetEnabled(bool enabled)
             {
                 _enabled = enabled;
@@ -6754,10 +9036,7 @@ namespace SkiGame.Map.UI
 
                 for (int i = 0; i < _worldTrail.Count; i++)
                 {
-                    if (!TryProjectWorldToUV(new Vector3(_worldTrail[i].x, 0f, _worldTrail[i].y), out Vector2 uv))
-                        continue;
-
-                    uv = ApplyInset(uv, _data.BackgroundUvMin, _data.BackgroundUvMax);
+                    Vector2 uv = ApplyInset(_worldTrail[i], _data.BackgroundUvMin, _data.BackgroundUvMax);
                     _localPts.Add(new Vector2(uv.x * _contentSize.x, (1f - uv.y) * _contentSize.y));
                 }
             }
@@ -6771,19 +9050,38 @@ namespace SkiGame.Map.UI
                 p.lineCap = LineCap.Round;
                 p.lineJoin = LineJoin.Round;
 
-                // Slightly thinner than runs; stable in screen space.
-                float screenW = 2.0f;
+                var trailStyle = _style != null
+                    ? _style.GetTrailLineStyle()
+                    : new MapUIStyleSettings.MapLineVisualStyle
+                    {
+                        widthPx = 2.0f,
+                        outlineColor = new Color(0f, 0f, 0f, 0.40f)
+                    };
+
+                float screenW = Mathf.Max(0.1f, trailStyle.widthPx);
                 float w = screenW / _zoom;
+                float outlineWidth = (screenW + 2.0f) / _zoom;
+                Color mainColor = DefaultTrailColor;
+                Color outlineColor = trailStyle.outlineColor.a > 0.001f
+                    ? trailStyle.outlineColor
+                    : DefaultTrailOutlineColor;
+                float fadePower = DefaultTrailFadePower;
+                float minAlpha = DefaultTrailMinAlpha;
+                int segmentCount = _localPts.Count - 1;
 
-                // Outline
-                p.strokeColor = new Color(0f, 0f, 0f, 0.40f);
-                p.lineWidth = (screenW + 2.0f) / _zoom;
-                Stroke(p, _localPts);
+                for (int i = 1; i < _localPts.Count; i++)
+                {
+                    float t = segmentCount <= 1 ? 1f : i / (float)segmentCount;
+                    float alpha = Mathf.Lerp(minAlpha, 1f, Mathf.Pow(t, fadePower));
 
-                // Main (cyan-ish, matches player dot)
-                p.strokeColor = Color.mediumSlateBlue;
-                p.lineWidth = w;
-                Stroke(p, _localPts);
+                    p.strokeColor = new Color(outlineColor.r, outlineColor.g, outlineColor.b, outlineColor.a * alpha);
+                    p.lineWidth = outlineWidth;
+                    Stroke(p, _localPts[i - 1], _localPts[i]);
+
+                    p.strokeColor = new Color(mainColor.r, mainColor.g, mainColor.b, mainColor.a * alpha);
+                    p.lineWidth = w;
+                    Stroke(p, _localPts[i - 1], _localPts[i]);
+                }
             }
 
             private bool TryProjectWorldToUV(Vector3 worldPos, out Vector2 uv)
@@ -6873,20 +9171,134 @@ namespace SkiGame.Map.UI
                     p.LineTo(pts[i]);
                 p.Stroke();
             }
+
+            private static void Stroke(Painter2D p, Vector2 a, Vector2 b)
+            {
+                p.BeginPath();
+                p.MoveTo(a);
+                p.LineTo(b);
+                p.Stroke();
+            }
         }
 
         public void ApplyStyle(MapUIStyleSettings style)
         {
-            _style = style;
-            _regionLayer?.SetStyle(style);
-            _polyLayer?.SetStyle(style);
-            ApplyPlayerMarkerStyle();
-            _dirty = true;
+            if (!ReferenceEquals(_style, style))
+            {
+                if (_style != null)
+                    _style.RuntimeStyleChanged -= HandleRuntimeStyleChanged;
+
+                _style = style;
+
+                if (_style != null)
+                    _style.RuntimeStyleChanged += HandleRuntimeStyleChanged;
+            }
+
+            ReapplyStyleState();
         }
 
         public void SetPOIRegistry(PointOfInterestRegistry registry)
         {
+            if (ReferenceEquals(_poiRegistry, registry))
+            {
+                _polyLayer?.SetPOIRegistry(registry);
+                RefreshRacePolylineVisualOverrides();
+                RebuildLegendUI();
+                _dirty = true;
+                return;
+            }
+
+            if (_poiRegistry != null)
+                _poiRegistry.OnChanged -= HandlePoiRegistryChanged;
+
             _poiRegistry = registry;
+
+            if (_poiRegistry != null)
+                _poiRegistry.OnChanged += HandlePoiRegistryChanged;
+
+            _polyLayer?.SetPOIRegistry(registry);
+            RefreshRacePolylineVisualOverrides();
+            RebuildLegendUI();
+            _dirty = true;
+        }
+
+        private void HandleRuntimeStyleChanged(MapUIStyleSettings changedStyle)
+        {
+            if (!ReferenceEquals(_style, changedStyle))
+                return;
+
+            ReapplyStyleState();
+        }
+
+        private void HandlePoiRegistryChanged(IReadOnlyList<POIInfo> _)
+        {
+            RefreshRacePolylineVisualOverrides();
+            RebuildLegendUI();
+            _dirty = true;
+
+            if (_bound)
+                Refresh();
+        }
+
+        private void RefreshStyleIfNeeded()
+        {
+            if (_style == null)
+            {
+                _appliedStyleRevision = -1;
+                return;
+            }
+
+            if (_appliedStyleRevision == _style.Revision)
+                return;
+
+            ReapplyStyleState();
+        }
+
+        private void ReapplyStyleState()
+        {
+            _appliedStyleRevision = _style != null ? _style.Revision : -1;
+
+            _regionLayer?.SetStyle(_style);
+            _polyLayer?.SetStyle(_style);
+            _trailLayer?.SetStyle(_style);
+            ApplyPlayerMarkerStyle();
+
+            foreach (var kv in _markerVisuals)
+                ApplyMarkerVisual(kv.Key, _selectedMarkerSet.Contains(kv.Key));
+
+            foreach (var kv in _polylineLabelVisuals)
+            {
+                bool selected = TryGetPolylineById(kv.Key, out var polyline) && IsPolylineSelected(polyline);
+                ApplyPolylineLabelVisual(kv.Key, selected);
+            }
+
+            foreach (var kv in _poiOverlayLabels)
+                ApplyPOIOverlayLabelVisual(kv.Key, _selectedMarkerSet.Contains(kv.Key));
+
+            foreach (var kv in _regionOverlayLabels)
+                ApplyRegionOverlayLabelVisual(kv.Key, _regionsSelectable && string.Equals(_selectedRegionId, kv.Key, StringComparison.Ordinal));
+
+            if (_waypointManager != null)
+            {
+                foreach (var kv in _waypointMarkerDots)
+                {
+                    bool selected = _waypointManager.IsWaypointSelected(kv.Key);
+                    bool active = string.Equals(_waypointManager.ActiveWaypointId, kv.Key, StringComparison.Ordinal);
+                    ApplyWaypointVisual(kv.Key, selected, active);
+                    ApplyWaypointLabelVisual(kv.Key, selected);
+                }
+
+                MarkWaypointLabelLayoutDirty();
+            }
+
+            RebuildLegendUI();
+            UpdateAllLabelTransformsForZoom();
+            _polyLayer?.SetColorOverrides(_polylineColorOverrides);
+            _polyHost?.MarkDirtyRepaint();
+            _markerHost?.MarkDirtyRepaint();
+            _navigationOverlay?.MarkDirtyRepaint();
+            LayoutOverlayLabels();
+            LayoutWaypointLabels();
             _dirty = true;
         }
 
@@ -6916,18 +9328,72 @@ namespace SkiGame.Map.UI
             if (_playerMarker == null)
                 return;
 
-            float s = Mathf.Max(16f, (_style != null ? _style.playerMarkerSize * 2.0f : 26f));
+            var playerStyle = GetPlayerMarkerStyle();
+            bool useSprite = playerStyle.sprite != null;
+            float s = Mathf.Max(16f, playerStyle.size);
             _playerMarker.style.width = s;
             _playerMarker.style.height = s;
             _playerMarker.style.backgroundColor = Color.clear;
 
-            Color bodyColor = _style != null ? _style.playerMarkerColor : Color.mediumSlateBlue;
-            Color outlineColor = _style != null ? _style.playerBorderColor : new Color(0f, 0f, 0f, 0.75f);
+            _playerMarker.style.transformOrigin = useSprite
+                ? new TransformOrigin(new Length(50, LengthUnit.Percent), new Length(50, LengthUnit.Percent), 0f)
+                : new TransformOrigin(new Length(50, LengthUnit.Percent), new Length(75, LengthUnit.Percent), 0f);
+
+            Color bodyColor = playerStyle.fillColor;
+            Color outlineColor = playerStyle.borderColor;
 
             var baseCircle = _playerMarker.Q<VisualElement>("MapPlayerMarkerBase");
             var arrowBody = _playerMarker.Q<VisualElement>("MapPlayerMarkerArrow");
             var arrowOutline = _playerMarker.Q<VisualElement>("MapPlayerMarkerArrowOutline");
             var centerDot = _playerMarker.Q<VisualElement>("MapPlayerMarkerCenter");
+            var spriteOutlineVisual = _playerMarker.Q<VisualElement>("MapPlayerMarkerSpriteOutline");
+            var spriteVisual = _playerMarker.Q<VisualElement>("MapPlayerMarkerSprite");
+            float border = Mathf.Max(1f, playerStyle.borderWidth);
+
+            if (spriteVisual != null)
+            {
+                spriteVisual.style.display = useSprite ? DisplayStyle.Flex : DisplayStyle.None;
+                if (useSprite)
+                {
+                    spriteVisual.style.backgroundImage = new StyleBackground(playerStyle.sprite);
+                    spriteVisual.style.unityBackgroundImageTintColor = bodyColor;
+                    float inset = border;
+                    spriteVisual.style.left = inset;
+                    spriteVisual.style.top = inset;
+                    spriteVisual.style.right = inset;
+                    spriteVisual.style.bottom = inset;
+                }
+                else
+                {
+                    spriteVisual.style.backgroundImage = StyleKeyword.None;
+                    spriteVisual.style.left = 0f;
+                    spriteVisual.style.top = 0f;
+                    spriteVisual.style.right = 0f;
+                    spriteVisual.style.bottom = 0f;
+                }
+            }
+
+            if (spriteOutlineVisual != null)
+            {
+                spriteOutlineVisual.style.display = useSprite ? DisplayStyle.Flex : DisplayStyle.None;
+                if (useSprite)
+                {
+                    spriteOutlineVisual.style.backgroundImage = new StyleBackground(playerStyle.sprite);
+                    spriteOutlineVisual.style.unityBackgroundImageTintColor = outlineColor;
+                }
+                else
+                {
+                    spriteOutlineVisual.style.backgroundImage = StyleKeyword.None;
+                }
+            }
+
+            if (baseCircle != null) baseCircle.style.display = useSprite ? DisplayStyle.None : DisplayStyle.Flex;
+            if (arrowBody != null) arrowBody.style.display = useSprite ? DisplayStyle.None : DisplayStyle.Flex;
+            if (arrowOutline != null) arrowOutline.style.display = useSprite ? DisplayStyle.None : DisplayStyle.Flex;
+            if (centerDot != null) centerDot.style.display = useSprite ? DisplayStyle.None : DisplayStyle.Flex;
+
+            if (useSprite)
+                return;
 
             if (baseCircle != null)
             {
@@ -6941,7 +9407,6 @@ namespace SkiGame.Map.UI
                 baseCircle.style.top = circleTop;
                 baseCircle.style.backgroundColor = bodyColor;
 
-                float border = Mathf.Max(1.5f, (_style != null ? _style.playerBorderWidth : 2f));
                 baseCircle.style.borderLeftWidth = border;
                 baseCircle.style.borderRightWidth = border;
                 baseCircle.style.borderTopWidth = border;
@@ -6991,45 +9456,187 @@ namespace SkiGame.Map.UI
 
         private void ApplyMarkerVisual(string id, bool selected)
         {
-            if (_style == null) return;
-            if (!_markerVisuals.TryGetValue(id, out var v)) return;
+            if (!_markerVisuals.TryGetValue(id, out var v))
+                return;
 
-            float s = Mathf.Max(1f, selected ? _style.markerSizeSelected : _style.markerSize);
-            v.dot.style.width = s;
-            v.dot.style.height = s;
+            MapUIStyleSettings.MapMarkerVisualStyle markerStyle = _style != null
+                ? _style.GetPoiMarkerStyle()
+                : default;
 
-            float bw = Mathf.Max(0f, _style.markerBorderWidth);
-            v.dot.style.borderLeftWidth = bw;
-            v.dot.style.borderRightWidth = bw;
-            v.dot.style.borderTopWidth = bw;
-            v.dot.style.borderBottomWidth = bw;
+            float markerSize = _style != null
+                ? (selected ? markerStyle.selectedSize : markerStyle.size)
+                : (selected ? 16f : 12f);
 
-            v.dot.style.borderLeftColor = _style.markerBorderColor;
-            v.dot.style.borderRightColor = _style.markerBorderColor;
-            v.dot.style.borderTopColor = _style.markerBorderColor;
-            v.dot.style.borderBottomColor = _style.markerBorderColor;
+            Sprite explicitSprite = null;
+            float explicitSizeMultiplier = 1f;
+            POIType poiType = POIType.Unknown;
+            POICategory poiCategory = POICategory.None;
+            Color poiColor = Color.clear;
 
-            v.dot.style.borderTopLeftRadius = 999;
-            v.dot.style.borderTopRightRadius = 999;
-            v.dot.style.borderBottomLeftRadius = 999;
-            v.dot.style.borderBottomRightRadius = 999;
-
-            v.label.style.fontSize = selected ? _style.labelFontSizeSelected : _style.labelFontSize;
-
-            v.label.style.unityFontStyleAndWeight = selected ? _style.labelFontStyleSelected : _style.labelFontStyle;
-            v.label.style.color = selected ? _style.labelColorSelected : _style.labelColor;
-
-            // Accent stripe + plate tint to visually link label to marker.
-            if (_markerLabelAccent.TryGetValue(id, out var accent))
+            if (_poiRegistry != null && _poiRegistry.TryGetById(id, out var poiInfo))
             {
-                float stripeW = Mathf.Max(1f, _style.labelAccentStripeWidth);
-                v.label.style.borderLeftWidth = stripeW;
-                v.label.style.borderLeftColor = accent;
-
-                float a = Mathf.Clamp01(_style.labelPlateAlpha) * 0.22f; // subtle tint
-                v.label.style.backgroundColor = new Color(accent.r, accent.g, accent.b, a);
+                explicitSprite = poiInfo.markerSprite;
+                explicitSizeMultiplier = poiInfo.markerSizeMultiplier > 0f ? Mathf.Max(0.1f, poiInfo.markerSizeMultiplier) : 1f;
+                poiType = poiInfo.type;
+                poiCategory = poiInfo.category;
+                poiColor = poiInfo.color;
             }
 
+            ResolvedMarkerRule rule = ResolveMarkerRule(poiType, poiCategory);
+
+            Sprite markerSprite = explicitSprite != null
+                ? explicitSprite
+                : (rule.sprite != null ? rule.sprite : (_style != null ? markerStyle.sprite : null));
+
+            float sizeMultiplier = !Mathf.Approximately(explicitSizeMultiplier, 1f)
+                ? explicitSizeMultiplier
+                : rule.sizeMultiplier;
+
+            bool useSprite = markerSprite != null;
+
+            bool linkedWaypoint = TryGetLinkedWaypointForMarker(id, out _);
+            bool explicitAlways =
+                _poiLabelDisplayOverrides.TryGetValue(id, out var displayMode) &&
+                displayMode == MapUIStyleSettings.MapLabelDisplayMode.Always;
+            bool isCoreNavigation = poiType == POIType.SkiRun || poiType == POIType.SkiLift;
+            bool isCustomUserPoi = poiType == POIType.Custom && poiCategory == POICategory.Custom;
+
+            float zoomT = Mathf.InverseLerp(GetMarkerFadeInStartZoom(), GetMarkerFadeInEndZoom(), _zoom);
+
+            float contextOpacity;
+            if (selected)
+            {
+                contextOpacity = 1f;
+            }
+            else if (linkedWaypoint || explicitAlways || isCustomUserPoi)
+            {
+                contextOpacity = Mathf.Lerp(0.82f, 1f, zoomT);
+            }
+            else if (isCoreNavigation)
+            {
+                contextOpacity = Mathf.Lerp(0.72f, 0.95f, zoomT);
+            }
+            else
+            {
+                contextOpacity = Mathf.Lerp(0.45f, 0.92f, zoomT);
+            }
+
+            float contextScale;
+            if (selected)
+                contextScale = 1f;
+            else if (linkedWaypoint || isCustomUserPoi)
+                contextScale = Mathf.Lerp(0.96f, 1f, zoomT);
+            else if (isCoreNavigation)
+                contextScale = Mathf.Lerp(0.93f, 1f, zoomT);
+            else
+                contextScale = Mathf.Lerp(0.88f, 1f, zoomT);
+
+            float s = Mathf.Max(1f, markerSize * Mathf.Max(0.1f, sizeMultiplier) * contextScale);
+            v.dot.style.width = s;
+            v.dot.style.height = s;
+            v.dot.style.opacity = contextOpacity;
+
+            float bw = _style != null ? Mathf.Max(0f, markerStyle.borderWidth) : 1f;
+            Color borderColor = _style != null ? markerStyle.borderColor : new Color(0f, 0f, 0f, 0.65f);
+
+            Color fillColor = _markerLabelAccent.TryGetValue(id, out var accentColor) ? accentColor : Color.white;
+            if (rule.hasDefaultColor && (!rule.colorIsFallbackOnly || fillColor == Color.white || fillColor.a <= 0f))
+                fillColor = rule.defaultColor;
+            if (poiColor.a > 0f)
+                fillColor = poiColor;
+
+            if (useSprite)
+            {
+                v.dot.style.backgroundColor = Color.clear;
+                v.dot.style.borderLeftWidth = 0f;
+                v.dot.style.borderRightWidth = 0f;
+                v.dot.style.borderTopWidth = 0f;
+                v.dot.style.borderBottomWidth = 0f;
+                v.dot.style.borderTopLeftRadius = 0f;
+                v.dot.style.borderTopRightRadius = 0f;
+                v.dot.style.borderBottomLeftRadius = 0f;
+                v.dot.style.borderBottomRightRadius = 0f;
+
+                if (v.spriteOutline != null)
+                {
+                    v.spriteOutline.style.display = DisplayStyle.Flex;
+                    v.spriteOutline.style.backgroundImage = new StyleBackground(markerSprite);
+                    v.spriteOutline.style.unityBackgroundImageTintColor = borderColor;
+                    v.spriteOutline.style.left = 0f;
+                    v.spriteOutline.style.top = 0f;
+                    v.spriteOutline.style.right = 0f;
+                    v.spriteOutline.style.bottom = 0f;
+                }
+
+                if (v.spriteBody != null)
+                {
+                    v.spriteBody.style.display = DisplayStyle.Flex;
+                    v.spriteBody.style.backgroundImage = new StyleBackground(markerSprite);
+                    v.spriteBody.style.unityBackgroundImageTintColor = fillColor;
+                    v.spriteBody.style.left = bw;
+                    v.spriteBody.style.top = bw;
+                    v.spriteBody.style.right = bw;
+                    v.spriteBody.style.bottom = bw;
+                }
+            }
+            else
+            {
+                if (v.spriteOutline != null)
+                {
+                    v.spriteOutline.style.display = DisplayStyle.None;
+                    v.spriteOutline.style.backgroundImage = StyleKeyword.None;
+                }
+
+                if (v.spriteBody != null)
+                {
+                    v.spriteBody.style.display = DisplayStyle.None;
+                    v.spriteBody.style.backgroundImage = StyleKeyword.None;
+                    v.spriteBody.style.left = 0f;
+                    v.spriteBody.style.top = 0f;
+                    v.spriteBody.style.right = 0f;
+                    v.spriteBody.style.bottom = 0f;
+                }
+
+                v.dot.style.backgroundColor = fillColor;
+                v.dot.style.borderLeftWidth = bw;
+                v.dot.style.borderRightWidth = bw;
+                v.dot.style.borderTopWidth = bw;
+                v.dot.style.borderBottomWidth = bw;
+                v.dot.style.borderLeftColor = borderColor;
+                v.dot.style.borderRightColor = borderColor;
+                v.dot.style.borderTopColor = borderColor;
+                v.dot.style.borderBottomColor = borderColor;
+                v.dot.style.borderTopLeftRadius = 999f;
+                v.dot.style.borderTopRightRadius = 999f;
+                v.dot.style.borderBottomLeftRadius = 999f;
+                v.dot.style.borderBottomRightRadius = 999f;
+            }
+
+            MapUIStyleSettings.MapLabelVisualStyle labelStyle = _style != null
+                ? _style.GetFallbackStandardLabelStyle()
+                : default;
+
+            int labelFontSize = _style != null ? (selected ? labelStyle.selectedFontSize : labelStyle.fontSize) : (selected ? 13 : 12);
+            FontStyle labelFontStyle = _style != null ? (selected ? labelStyle.selectedFontStyle : labelStyle.fontStyle) : FontStyle.Bold;
+            Color labelColor = _style != null ? (selected ? labelStyle.selectedColor : labelStyle.color) : Color.white;
+
+            v.label.style.fontSize = labelFontSize;
+            v.label.style.unityFontStyleAndWeight = labelFontStyle;
+            v.label.style.color = labelColor;
+
+            float stripeW = Mathf.Max(1f, _style != null ? labelStyle.accentStripeWidth : 3f);
+            v.label.style.borderLeftWidth = stripeW;
+            v.label.style.borderLeftColor = fillColor;
+
+            float plateAlpha = Mathf.Clamp01(_style != null ? labelStyle.plateAlpha : 0.78f) * 0.22f;
+            v.label.style.backgroundColor = new Color(fillColor.r, fillColor.g, fillColor.b, plateAlpha);
+
+            if (v.glyph != null)
+                v.glyph.style.display = useSprite ? DisplayStyle.None : DisplayStyle.Flex;
+
+            float invZoom = 1f / Mathf.Max(0.0001f, _zoom);
+            v.dot.style.scale = new Scale(new Vector3(invZoom, invZoom, 1f));
+            v.dot.style.translate = new Translate(-s * 0.5f, -s * 0.5f, 0f);
         }
 
         private void ApplyWaypointVisual(string id, bool selected, bool active)
@@ -7037,77 +9644,1035 @@ namespace SkiGame.Map.UI
             if (!_waypointMarkerDots.TryGetValue(id, out var dot) || dot == null)
                 return;
 
-            float size = 16f;
-            float borderWidth = 2f;
-            Color borderColor = new Color(0f, 0f, 0f, 0.70f);
+            var markerStyle = GetWaypointMarkerStyle();
+            float size = selected ? markerStyle.selectedSize : markerStyle.size;
+            float borderWidth = active ? markerStyle.activeBorderWidth : markerStyle.borderWidth;
+            Color borderColor = active ? markerStyle.activeBorderColor : markerStyle.borderColor;
 
-            if (_style != null)
-            {
-                size = selected ? _style.waypointMarkerSizeSelected : _style.waypointMarkerSize;
-                borderWidth = active
-                    ? _style.waypointMarkerBorderWidthActive
-                    : _style.waypointMarkerBorderWidth;
-                borderColor = active
-                    ? _style.waypointMarkerBorderColorActive
-                    : _style.waypointMarkerBorderColor;
-            }
-            else
-            {
-                if (selected)
-                    size = 20f;
+            Sprite markerSprite = markerStyle.sprite;
+            float sizeMultiplier = 1f;
+            Color bodyColor = markerStyle.fillColor.a > 0.001f ? markerStyle.fillColor : Color.white;
 
-                if (active)
-                    borderColor = Color.white;
+            if (_waypointManager != null && _waypointManager.TryGetWaypoint(id, out var waypoint))
+            {
+                if (waypoint.markerSprite != null)
+                    markerSprite = waypoint.markerSprite;
+
+                sizeMultiplier = waypoint.markerSizeMultiplier > 0f ? Mathf.Max(0.1f, waypoint.markerSizeMultiplier) : 1f;
+                bodyColor = waypoint.color.a > 0.001f ? waypoint.color : bodyColor;
             }
 
-            size = Mathf.Max(1f, size);
+            size = Mathf.Max(1f, size * sizeMultiplier);
             borderWidth = Mathf.Max(0f, borderWidth);
 
             dot.style.width = size;
             dot.style.height = size;
 
-            dot.style.borderLeftWidth = borderWidth;
-            dot.style.borderRightWidth = borderWidth;
-            dot.style.borderTopWidth = borderWidth;
-            dot.style.borderBottomWidth = borderWidth;
+            var spriteOutline = dot.Q<VisualElement>("WaypointSpriteOutline");
+            var spriteBody = dot.Q<VisualElement>("WaypointSpriteBody");
+            bool useSprite = markerSprite != null;
 
-            dot.style.borderLeftColor = borderColor;
-            dot.style.borderRightColor = borderColor;
-            dot.style.borderTopColor = borderColor;
-            dot.style.borderBottomColor = borderColor;
+            if (useSprite)
+            {
+                dot.style.backgroundColor = Color.clear;
+                dot.style.borderLeftWidth = 0f;
+                dot.style.borderRightWidth = 0f;
+                dot.style.borderTopWidth = 0f;
+                dot.style.borderBottomWidth = 0f;
+                dot.style.borderTopLeftRadius = 0f;
+                dot.style.borderTopRightRadius = 0f;
+                dot.style.borderBottomLeftRadius = 0f;
+                dot.style.borderBottomRightRadius = 0f;
 
-            dot.style.borderTopLeftRadius = 999f;
-            dot.style.borderTopRightRadius = 999f;
-            dot.style.borderBottomLeftRadius = 999f;
-            dot.style.borderBottomRightRadius = 999f;
+                if (spriteOutline != null)
+                {
+                    spriteOutline.style.display = DisplayStyle.Flex;
+                    spriteOutline.style.backgroundImage = new StyleBackground(markerSprite);
+                    spriteOutline.style.unityBackgroundImageTintColor = borderColor;
+                    spriteOutline.style.left = 0f;
+                    spriteOutline.style.top = 0f;
+                    spriteOutline.style.right = 0f;
+                    spriteOutline.style.bottom = 0f;
+                }
+
+                if (spriteBody != null)
+                {
+                    spriteBody.style.display = DisplayStyle.Flex;
+                    spriteBody.style.backgroundImage = new StyleBackground(markerSprite);
+                    spriteBody.style.unityBackgroundImageTintColor = bodyColor;
+                    spriteBody.style.left = borderWidth;
+                    spriteBody.style.top = borderWidth;
+                    spriteBody.style.right = borderWidth;
+                    spriteBody.style.bottom = borderWidth;
+                }
+            }
+            else
+            {
+                if (spriteOutline != null)
+                {
+                    spriteOutline.style.display = DisplayStyle.None;
+                    spriteOutline.style.backgroundImage = StyleKeyword.None;
+                }
+
+                if (spriteBody != null)
+                {
+                    spriteBody.style.display = DisplayStyle.None;
+                    spriteBody.style.backgroundImage = StyleKeyword.None;
+                    spriteBody.style.left = 0f;
+                    spriteBody.style.top = 0f;
+                    spriteBody.style.right = 0f;
+                    spriteBody.style.bottom = 0f;
+                }
+
+                dot.style.backgroundColor = bodyColor;
+                dot.style.borderLeftWidth = borderWidth;
+                dot.style.borderRightWidth = borderWidth;
+                dot.style.borderTopWidth = borderWidth;
+                dot.style.borderBottomWidth = borderWidth;
+                dot.style.borderLeftColor = borderColor;
+                dot.style.borderRightColor = borderColor;
+                dot.style.borderTopColor = borderColor;
+                dot.style.borderBottomColor = borderColor;
+                dot.style.borderTopLeftRadius = 999f;
+                dot.style.borderTopRightRadius = 999f;
+                dot.style.borderBottomLeftRadius = 999f;
+                dot.style.borderBottomRightRadius = 999f;
+            }
+
+            float invZoom = 1f / Mathf.Max(0.0001f, _zoom);
+            dot.style.scale = new Scale(new Vector3(invZoom, invZoom, 1f));
+            dot.style.translate = new Translate(-size * 0.5f, -size * 0.5f, 0f);
+        }
+
+        private Vector2 MeasureWaypointLabelSize(Label label)
+        {
+            if (label == null)
+                return new Vector2(40f, 18f);
+
+            var measured = label.MeasureTextSize(label.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined);
+
+            float w = measured.x;
+            float h = measured.y;
+
+            if (w <= 0f)
+                w = label.resolvedStyle.width > 0f ? label.resolvedStyle.width : 40f;
+
+            if (h <= 0f)
+                h = label.resolvedStyle.height > 0f ? label.resolvedStyle.height : 18f;
+
+            return new Vector2(
+                Mathf.Ceil(w + 8f),
+                Mathf.Ceil(h + 6f));
+        }
+
+        private void SyncWaypointLabelTransformImmediate(Label label)
+        {
+            if (label == null)
+                return;
+
+            // Waypoint labels now live in _labelOverlay, so they are already in viewport space.
+            // They must not be inverse-scaled or anchor-translated like marker-local labels.
+            label.style.scale = new Scale(Vector3.one);
+            label.style.translate = new Translate(0f, 0f, 0f);
+        }
+
+        private void SetWaypointLabelViewportRect(string waypointId, Rect rect)
+        {
+            if (!_waypointLabels.TryGetValue(waypointId, out var label) || label == null)
+                return;
+
+            if (!float.IsFinite(rect.x) || !float.IsFinite(rect.y) ||
+                !float.IsFinite(rect.width) || !float.IsFinite(rect.height) ||
+                rect.width <= 0f || rect.height <= 0f)
+            {
+                label.style.display = DisplayStyle.None;
+                label.style.visibility = Visibility.Hidden;
+                return;
+            }
+
+            // Waypoint labels are viewport overlay labels.
+            // Their position should be the final viewport rect directly.
+            label.style.visibility = Visibility.Hidden;
+            label.style.display = DisplayStyle.Flex;
+
+            label.style.left = Mathf.Round(rect.x);
+            label.style.top = Mathf.Round(rect.y);
+            label.style.width = Mathf.Ceil(rect.width);
+            label.style.height = Mathf.Ceil(rect.height);
+
+            SyncWaypointLabelTransformImmediate(label);
+            label.style.visibility = Visibility.Visible;
+        }
+
+        private void MarkWaypointLabelLayoutDirty()
+        {
+            _waypointLabelLayoutDirty = true;
+        }
+
+        //private void ScheduleWaypointLayoutRefresh()
+        //{
+        //    // Intentionally disabled.
+        //    //
+        //    // Waypoint labels now have one authoritative placement path:
+        //    // LayoutWaypointLabels().
+        //    //
+        //    // A deferred scheduled pass after rename open/close was still causing
+        //    // transient placement churn and brief incorrect positions.
+        //}
+
+        private void PruneWaypointLayoutCaches()
+        {
+            if (_waypointManager == null)
+            {
+                _waypointLabelViewportRects.Clear();
+                _waypointLabelScreenOffsets.Clear();
+                return;
+            }
+
+            var validIds = new HashSet<string>();
+            var waypoints = _waypointManager.Waypoints;
+            if (waypoints != null)
+            {
+                for (int i = 0; i < waypoints.Count; i++)
+                {
+                    var wp = waypoints[i];
+                    if (!string.IsNullOrWhiteSpace(wp.id))
+                        validIds.Add(wp.id);
+                }
+            }
+
+            var rectKeys = new List<string>(_waypointLabelViewportRects.Keys);
+            for (int i = 0; i < rectKeys.Count; i++)
+            {
+                if (!validIds.Contains(rectKeys[i]))
+                    _waypointLabelViewportRects.Remove(rectKeys[i]);
+            }
+
+            var offsetKeys = new List<string>(_waypointLabelScreenOffsets.Keys);
+            for (int i = 0; i < offsetKeys.Count; i++)
+            {
+                if (!validIds.Contains(offsetKeys[i]))
+                    _waypointLabelScreenOffsets.Remove(offsetKeys[i]);
+            }
+        }
+
+        private void ApplyCachedWaypointLabelPlacement()
+        {
+            if (_waypointLabels.Count == 0)
+                return;
+
+            bool showLabels = _showNonRegionLabels && !_hideMarkerLabels;
+            if (!showLabels)
+            {
+                foreach (var kv in _waypointLabels)
+                {
+                    if (kv.Value != null)
+                    {
+                        kv.Value.style.display = DisplayStyle.None;
+                        kv.Value.style.visibility = Visibility.Hidden;
+                    }
+                }
+
+                return;
+            }
+
+            foreach (var kv in _waypointLabels)
+            {
+                string id = kv.Key;
+                Label label = kv.Value;
+                if (label == null)
+                    continue;
+
+                bool selected = _waypointManager != null && _waypointManager.IsWaypointSelected(id);
+                ApplyWaypointLabelVisual(id, selected);
+
+                if (!ShouldShowWaypointLabel(id, selected))
+                {
+                    label.style.display = DisplayStyle.None;
+                    label.style.visibility = Visibility.Hidden;
+                    continue;
+                }
+
+                if (_waypointMarkerRoots.TryGetValue(id, out var root) &&
+                    root != null &&
+                    root.resolvedStyle.display == DisplayStyle.None)
+                {
+                    label.style.display = DisplayStyle.None;
+                    label.style.visibility = Visibility.Hidden;
+                    continue;
+                }
+
+                if (_waypointLabelViewportRects.TryGetValue(id, out var rect) &&
+                    float.IsFinite(rect.x) && float.IsFinite(rect.y) &&
+                    float.IsFinite(rect.width) && float.IsFinite(rect.height) &&
+                    rect.width > 0f && rect.height > 0f)
+                {
+                    SetWaypointLabelViewportRect(id, rect);
+                }
+                else
+                {
+                    // Critical: uncached labels stay hidden until the authoritative solver places them.
+                    label.style.display = DisplayStyle.None;
+                    label.style.visibility = Visibility.Hidden;
+                }
+            }
+        }
+
+        private bool ShouldRelayoutWaypointLabels()
+        {
+            if (_waypointLabelLayoutDirty)
+                return true;
+
+            if (_lastWaypointLayoutZoom < 0f)
+                return true;
+
+            float zoomDelta = Mathf.Abs(_zoom - _lastWaypointLayoutZoom);
+            if (zoomDelta >= WaypointLayoutZoomThreshold)
+                return true;
+
+            if ((_pan - _lastWaypointLayoutPan).sqrMagnitude >= WaypointLayoutPanThresholdPx * WaypointLayoutPanThresholdPx)
+                return true;
+
+            return false;
+        }
+
+        private bool CanRunSettledWaypointLayout()
+        {
+            return (Time.unscaledTime - _lastWaypointLayoutTime) >= WaypointLayoutSettleDelay;
+        }
+
+        private void CommitWaypointLayoutState()
+        {
+            _lastWaypointLayoutZoom = _zoom;
+            _lastWaypointLayoutPan = _pan;
+            _lastWaypointLayoutTime = Time.unscaledTime;
+            _waypointLabelLayoutDirty = false;
+        }
+
+        private MapUIStyleSettings.MapLabelStyleProfile GetWaypointLabelProfile()
+        {
+            return _style != null
+                ? _style.GetStandardLabelProfileById(WaypointEditableLabelStyleId)
+                : _style.GetFallbackStandardLabelProfile();
+        }
+
+        private float EvaluateWaypointRevealAlpha(bool selected)
+        {
+            var profile = GetWaypointLabelProfile();
+            if (selected)
+                return 1f;
+
+            float relativeZoom = GetRelativeZoom();
+
+            switch (profile.revealDirection)
+            {
+                case MapUIStyleSettings.MapRevealDirection.Always:
+                    return 1f;
+
+                case MapUIStyleSettings.MapRevealDirection.ZoomOutReveal:
+                    {
+                        float t = Mathf.InverseLerp(profile.fadeStartZoom, profile.fadeEndZoom, relativeZoom);
+                        return 1f - Mathf.Clamp01(t);
+                    }
+
+                case MapUIStyleSettings.MapRevealDirection.ZoomInReveal:
+                default:
+                    {
+                        float t = Mathf.InverseLerp(profile.fadeStartZoom, profile.fadeEndZoom, relativeZoom);
+                        return Mathf.Clamp01(t);
+                    }
+            }
+        }
+
+        private bool ShouldShowWaypointLabel(string waypointId, bool selected)
+        {
+            if (!_showNonRegionLabels || _hideMarkerLabels)
+                return false;
+
+            if (_waypointManager == null || string.IsNullOrWhiteSpace(waypointId))
+                return false;
+
+            if (!_waypointManager.TryGetWaypoint(waypointId, out var wp))
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(_activeWaypointRenameId) &&
+                string.Equals(_activeWaypointRenameId, waypointId, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var profile = GetWaypointLabelProfile();
+
+            if (selected)
+                return true;
+
+            switch (profile.labelDisplayMode)
+            {
+                case MapUIStyleSettings.MapLabelDisplayMode.Always:
+                    return EvaluateWaypointRevealAlpha(selected) > 0.02f;
+
+                case MapUIStyleSettings.MapLabelDisplayMode.SelectedOnly:
+                    return false;
+
+                case MapUIStyleSettings.MapLabelDisplayMode.Contextual:
+                default:
+                    return EvaluateWaypointRevealAlpha(selected) > 0.02f;
+            }
+        }
+
+        private void CloseWaypointRenameEditor(bool commit)
+        {
+            if (_activeWaypointRenameField == null)
+                return;
+
+            string waypointId = _activeWaypointRenameId;
+            string newValue = _activeWaypointRenameField.value;
+
+            if (commit && !string.IsNullOrWhiteSpace(waypointId))
+                _waypointManager?.RenameWaypoint(waypointId, newValue);
+
+            if (_activeWaypointRenameField.parent != null)
+                _activeWaypointRenameField.RemoveFromHierarchy();
+
+            _activeWaypointRenameField = null;
+            _activeWaypointRenameId = null;
+
+            MarkWaypointLabelLayoutDirty();
+            LayoutWaypointLabels();
+            UpdateWaypointRenameEditorPosition();
+        }
+
+        private void UpdateWaypointRenameEditorPosition()
+        {
+            if (_activeWaypointRenameField == null || string.IsNullOrWhiteSpace(_activeWaypointRenameId))
+                return;
+
+            if (!_waypointAnchorLocal.TryGetValue(_activeWaypointRenameId, out var anchorLocal))
+                return;
+
+            Vector2 anchorViewport = _pan + anchorLocal * _zoom;
+
+            // Use authored dimensions first so first-frame placement is deterministic.
+            float width = _activeWaypointRenameField.resolvedStyle.width;
+            if (width <= 1f)
+                width = _activeWaypointRenameField.layout.width;
+            if (width <= 1f)
+                width = 112f;
+
+            float height = _activeWaypointRenameField.resolvedStyle.height;
+            if (height <= 1f)
+                height = _activeWaypointRenameField.layout.height;
+            if (height <= 1f)
+                height = 20f;
+
+            Vector2 center = anchorViewport + _activeWaypointRenameScreenOffset;
+
+            if (TryGetViewportSize(out float vw, out float vh))
+            {
+                center.x = Mathf.Clamp(center.x, 2f + width * 0.5f, vw - 2f - width * 0.5f);
+                center.y = Mathf.Clamp(center.y, 2f + height * 0.5f, vh - 2f - height * 0.5f);
+            }
+
+            float newLeft = Mathf.Round(center.x - width * 0.5f);
+            float newTop = Mathf.Round(center.y - height * 0.5f);
+
+            float currentLeft = _activeWaypointRenameField.resolvedStyle.left;
+            float currentTop = _activeWaypointRenameField.resolvedStyle.top;
+
+            if (!float.IsFinite(currentLeft) || Mathf.Abs(currentLeft - newLeft) > 0.25f)
+                _activeWaypointRenameField.style.left = newLeft;
+
+            if (!float.IsFinite(currentTop) || Mathf.Abs(currentTop - newTop) > 0.25f)
+                _activeWaypointRenameField.style.top = newTop;
+        }
+
+        private void OpenWaypointRenameEditor(string waypointId, Color accent, string initialValue, bool selectedNow, float labelSizeMultiplier)
+        {
+            EnsureLabelOverlay();
+
+            if (_labelOverlay == null || string.IsNullOrWhiteSpace(waypointId))
+                return;
+
+            if (_activeWaypointRenameField != null)
+            {
+                if (string.Equals(_activeWaypointRenameId, waypointId, StringComparison.Ordinal))
+                {
+                    _activeWaypointRenameField.Focus();
+                    _activeWaypointRenameField.SelectAll();
+                    return;
+                }
+
+                CloseWaypointRenameEditor(commit: true);
+            }
+
+            int renameFontSize = Mathf.RoundToInt(GetWaypointCompactFontSize(selectedNow) * Mathf.Max(0.1f, labelSizeMultiplier));
+
+            var textField = new TextField
+            {
+                name = "WaypointRenameField",
+                value = initialValue
+            };
+
+            StyleWaypointRenameField(textField, accent, 1f, renameFontSize);
+
+            textField.RegisterCallback<KeyDownEvent>(keyEvt =>
+            {
+                if (keyEvt.keyCode == KeyCode.Return || keyEvt.keyCode == KeyCode.KeypadEnter)
+                {
+                    CloseWaypointRenameEditor(commit: true);
+                    keyEvt.StopPropagation();
+                }
+                else if (keyEvt.keyCode == KeyCode.Escape)
+                {
+                    CloseWaypointRenameEditor(commit: false);
+                    keyEvt.StopPropagation();
+                }
+            });
+
+            textField.RegisterCallback<FocusOutEvent>(_ => CloseWaypointRenameEditor(commit: true));
+
+            _activeWaypointRenameField = textField;
+            _activeWaypointRenameId = waypointId;
+
+            // Hide the underlying waypoint label immediately so there is no pre-layout frame
+            // where it can briefly render from a stale/default state.
+            if (_waypointLabels.TryGetValue(waypointId, out var renameSourceLabel) && renameSourceLabel != null)
+            {
+                renameSourceLabel.style.display = DisplayStyle.None;
+                renameSourceLabel.style.visibility = Visibility.Hidden;
+                SyncWaypointLabelTransformImmediate(renameSourceLabel);
+            }
+
+            // Keep the field in the live overlay tree but invisible until its first
+            // deterministic viewport rect has been written.
+            textField.style.display = DisplayStyle.Flex;
+            textField.style.visibility = Visibility.Hidden;
+
+            _labelOverlay.Add(textField);
+            UpdateWaypointRenameEditorPosition();
+            textField.style.visibility = Visibility.Visible;
+
+            textField.Focus();
+            textField.SelectAll();
+
+            MarkWaypointLabelLayoutDirty();
+            LayoutWaypointLabels();
+            UpdateWaypointRenameEditorPosition();
+        }
+
+        private List<Rect> CollectVisibleOverlayLabelRects(bool includeWaypointLabels = false)
+        {
+            var rects = new List<Rect>(64);
+
+            void CollectFrom(Dictionary<string, Label> labels)
+            {
+                foreach (var kv in labels)
+                {
+                    Label label = kv.Value;
+                    if (label == null || label.resolvedStyle.display == DisplayStyle.None)
+                        continue;
+
+                    Rect r = label.worldBound;
+                    if (r.width <= 0f || r.height <= 0f)
+                        continue;
+
+                    rects.Add(new Rect(
+                        r.x - _viewport.worldBound.x,
+                        r.y - _viewport.worldBound.y,
+                        r.width,
+                        r.height));
+                }
+            }
+
+            // These are true external blockers for waypoint labels.
+            CollectFrom(_polylineLabelVisuals);
+            CollectFrom(_poiOverlayLabels);
+            CollectFrom(_regionOverlayLabels);
+
+            // IMPORTANT:
+            // Do NOT include existing waypoint label rects when solving waypoint labels.
+            // Doing so causes the solver to treat last frame's waypoint placement as occupied,
+            // which makes labels bounce between alternate slots across repeated layout passes.
+            if (includeWaypointLabels)
+                CollectFrom(_waypointLabels);
+
+            // The active rename field is still a real blocker.
+            if (_activeWaypointRenameField != null &&
+                _activeWaypointRenameField.resolvedStyle.display != DisplayStyle.None)
+            {
+                Rect r = _activeWaypointRenameField.worldBound;
+                if (r.width > 0f && r.height > 0f)
+                {
+                    rects.Add(new Rect(
+                        r.x - _viewport.worldBound.x,
+                        r.y - _viewport.worldBound.y,
+                        r.width,
+                        r.height));
+                }
+            }
+
+            return rects;
+        }
+
+        private void StyleWaypointRenameField(TextField textField, Color accent, float invZoom, int fontSize)
+        {
+            if (textField == null)
+                return;
+
+            var style = GetLabelStyleById(WaypointEditableLabelStyleId);
+
+            float stripeWidth = Mathf.Max(2f, style.accentStripeWidth);
+            float padX = Mathf.Max(4f, style.paddingX);
+            float padY = Mathf.Max(2f, style.paddingY);
+            float radius = Mathf.Max(4f, style.cornerRadius);
+
+            int compactFontSize = Mathf.Clamp(
+                Mathf.RoundToInt(GetWaypointCompactFontSize(selected: false)),
+                style.fontMin,
+                style.fontMax);
+
+            float width = 112f;
+            float height = 20f;
+
+            Color plate = new Color(0.08f, 0.11f, 0.16f, Mathf.Clamp01(style.plateAlpha + 0.10f));
+
+            textField.style.position = Position.Absolute;
+            textField.style.width = width;
+            textField.style.minWidth = width;
+            textField.style.maxWidth = width;
+            textField.style.height = height;
+            textField.style.minHeight = height;
+            textField.style.maxHeight = height;
+
+            textField.style.marginLeft = 0f;
+            textField.style.marginRight = 0f;
+            textField.style.marginTop = 0f;
+            textField.style.marginBottom = 0f;
+
+            textField.style.paddingLeft = stripeWidth + padX;
+            textField.style.paddingRight = padX;
+            textField.style.paddingTop = padY;
+            textField.style.paddingBottom = padY;
+
+            textField.style.backgroundColor = plate;
+            textField.style.color = Color.white;
+            textField.style.unityTextAlign = TextAnchor.MiddleLeft;
+            textField.style.fontSize = compactFontSize;
+            textField.style.unityFontStyleAndWeight = FontStyle.Bold;
+
+            textField.style.borderLeftWidth = stripeWidth;
+            textField.style.borderRightWidth = 0f;
+            textField.style.borderTopWidth = 0f;
+            textField.style.borderBottomWidth = 0f;
+
+            textField.style.borderLeftColor = accent;
+            textField.style.borderRightColor = Color.clear;
+            textField.style.borderTopColor = Color.clear;
+            textField.style.borderBottomColor = Color.clear;
+
+            textField.style.borderTopLeftRadius = radius;
+            textField.style.borderTopRightRadius = radius;
+            textField.style.borderBottomLeftRadius = radius;
+            textField.style.borderBottomRightRadius = radius;
+
+            void StyleInputElement(VisualElement input)
+            {
+                if (input == null)
+                    return;
+
+                input.style.backgroundColor = plate;
+                input.style.color = Color.white;
+                input.style.unityTextAlign = TextAnchor.MiddleLeft;
+                input.style.marginLeft = 0f;
+                input.style.marginRight = 0f;
+                input.style.marginTop = 0f;
+                input.style.marginBottom = 0f;
+                input.style.paddingLeft = stripeWidth + padX;
+                input.style.paddingRight = padX;
+                input.style.paddingTop = padY;
+                input.style.paddingBottom = padY;
+                input.style.borderLeftWidth = 0f;
+                input.style.borderRightWidth = 0f;
+                input.style.borderTopWidth = 0f;
+                input.style.borderBottomWidth = 0f;
+                input.style.height = height;
+                input.style.minHeight = height;
+                input.style.maxHeight = height;
+                input.style.fontSize = compactFontSize;
+                input.style.unityFontStyleAndWeight = FontStyle.Bold;
+            }
+
+            StyleInputElement(textField.Q(className: "unity-text-input"));
+            StyleInputElement(textField.Q(TextField.textInputUssName));
+            StyleInputElement(textField.Q("unity-text-input"));
+
+            foreach (var child in textField.Children())
+                StyleInputElement(child);
+        }
+
+        private void LayoutWaypointLabels()
+        {
+            if (_labelOverlay == null || _viewport == null || _waypointManager == null)
+                return;
+
+            if (_waypointLabels.Count == 0)
+                return;
+
+            if (!TryGetViewportSize(out float vw, out float vh))
+                return;
+
+            bool showLabels = _showNonRegionLabels && !_hideMarkerLabels;
+
+            if (!showLabels)
+            {
+                foreach (var kv in _waypointLabels)
+                {
+                    if (kv.Value != null)
+                    {
+                        kv.Value.style.display = DisplayStyle.None;
+                        kv.Value.style.visibility = Visibility.Hidden;
+                    }
+                }
+
+                UpdateWaypointRenameEditorPosition();
+                return;
+            }
+
+            float now = Time.unscaledTime;
+            bool zoomChangedEnough =
+                _lastWaypointLayoutZoom < 0f ||
+                Mathf.Abs(_zoom - _lastWaypointLayoutZoom) >= WaypointLayoutZoomThreshold;
+
+            bool panChangedEnough =
+                float.IsInfinity(_lastWaypointLayoutPan.x) ||
+                Vector2.Distance(_pan, _lastWaypointLayoutPan) >= WaypointLayoutPanThresholdPx;
+
+            bool settleElapsed =
+                (now - _lastWaypointLayoutTime) >= WaypointLayoutSettleDelay;
+
+            // During light transform churn, keep cached placement stable instead of constantly re-solving.
+            if (!_waypointLabelLayoutDirty && !zoomChangedEnough && !panChangedEnough && !settleElapsed)
+            {
+                ApplyCachedWaypointLabelPlacement();
+                UpdateWaypointRenameEditorPosition();
+                return;
+            }
+
+            // Only collect non-waypoint overlay blockers here.
+            // Waypoint labels should block one another only within THIS solve pass.
+            var occupied = CollectVisibleOverlayLabelRects(includeWaypointLabels: false);
+
+            const float margin = 2f;
+            const float baseDistance = 18f;
+            const float diagonalDistance = 14f;
+
+            Vector2[] slotDirections =
+            {
+        new Vector2(0f, -1f),   // above
+        new Vector2(1f, -1f),   // upper-right
+        new Vector2(-1f, -1f),  // upper-left
+        new Vector2(1f, 0f),    // right
+        new Vector2(-1f, 0f),   // left
+        new Vector2(0f, 1f),    // below
+        new Vector2(1f, 1f),    // lower-right
+        new Vector2(-1f, 1f),   // lower-left
+    };
+
+            float[] slotDistances =
+            {
+        baseDistance,
+        diagonalDistance,
+        diagonalDistance,
+        baseDistance,
+        baseDistance,
+        baseDistance,
+        diagonalDistance,
+        diagonalDistance,
+    };
+
+            bool RectOverlapsAny(Rect rect, List<Rect> others)
+            {
+                for (int i = 0; i < others.Count; i++)
+                {
+                    if (others[i].Overlaps(rect))
+                        return true;
+                }
+
+                return false;
+            }
+
+            for (int i = 0; i < _waypointManager.Waypoints.Count; i++)
+            {
+                var wp = _waypointManager.Waypoints[i];
+                if (string.IsNullOrWhiteSpace(wp.id))
+                    continue;
+
+                if (!_waypointLabels.TryGetValue(wp.id, out var label) || label == null)
+                    continue;
+
+                bool selected = _waypointManager.IsWaypointSelected(wp.id);
+
+                ApplyWaypointLabelVisual(wp.id, selected);
+
+                if (!ShouldShowWaypointLabel(wp.id, selected))
+                {
+                    label.style.display = DisplayStyle.None;
+                    label.style.visibility = Visibility.Hidden;
+                    continue;
+                }
+
+                if (!_waypointAnchorLocal.TryGetValue(wp.id, out var anchorLocal))
+                {
+                    label.style.display = DisplayStyle.None;
+                    label.style.visibility = Visibility.Hidden;
+                    continue;
+                }
+
+                Vector2 anchorViewport = _pan + anchorLocal * _zoom;
+                Vector2 size = MeasureWaypointLabel(label);
+
+                int cachedSlot = 0;
+                if (_waypointLabelScreenOffsets.TryGetValue(wp.id, out var cachedOffset) && cachedOffset.sqrMagnitude > 0.0001f)
+                {
+                    float bestDot = float.NegativeInfinity;
+                    for (int s = 0; s < slotDirections.Length; s++)
+                    {
+                        Vector2 dir = slotDirections[s].normalized;
+                        float dot = Vector2.Dot(cachedOffset.normalized, dir);
+                        if (dot > bestDot)
+                        {
+                            bestDot = dot;
+                            cachedSlot = s;
+                        }
+                    }
+                }
+
+                Rect bestRect = default;
+                Vector2 bestOffset = default;
+                bool found = false;
+
+                for (int attempt = 0; attempt < slotDirections.Length; attempt++)
+                {
+                    int slot = (cachedSlot + attempt) % slotDirections.Length;
+                    Vector2 dir = slotDirections[slot].normalized;
+                    Vector2 center = anchorViewport + dir * slotDistances[slot];
+
+                    Rect rect = new Rect(
+                        Mathf.Round(center.x - size.x * 0.5f),
+                        Mathf.Round(center.y - size.y * 0.5f),
+                        size.x,
+                        size.y);
+
+                    rect.x = Mathf.Clamp(rect.x, margin, vw - margin - rect.width);
+                    rect.y = Mathf.Clamp(rect.y, margin, vh - margin - rect.height);
+
+                    if (RectOverlapsAny(rect, occupied))
+                        continue;
+
+                    bestRect = rect;
+                    bestOffset = new Vector2(
+                        rect.center.x - anchorViewport.x,
+                        rect.center.y - anchorViewport.y);
+
+                    found = true;
+                    break;
+                }
+
+                if (!found)
+                {
+                    // Fall back to cached rect if it is still sane.
+                    if (_waypointLabelViewportRects.TryGetValue(wp.id, out var cachedRect))
+                    {
+                        bestRect = cachedRect;
+                        bestOffset = new Vector2(
+                            cachedRect.center.x - anchorViewport.x,
+                            cachedRect.center.y - anchorViewport.y);
+                        found = true;
+                    }
+                }
+
+                if (!found)
+                {
+                    // Last-resort default: stable position above.
+                    Vector2 center = anchorViewport + Vector2.up * -baseDistance;
+                    bestRect = new Rect(
+                        Mathf.Clamp(Mathf.Round(center.x - size.x * 0.5f), margin, vw - margin - size.x),
+                        Mathf.Clamp(Mathf.Round(center.y - size.y * 0.5f), margin, vh - margin - size.y),
+                        size.x,
+                        size.y);
+
+                    bestOffset = new Vector2(
+                        bestRect.center.x - anchorViewport.x,
+                        bestRect.center.y - anchorViewport.y);
+                }
+
+                SetWaypointLabelViewportRect(wp.id, bestRect);
+                label.style.display = DisplayStyle.Flex;
+                label.style.visibility = Visibility.Visible;
+
+                _waypointLabelViewportRects[wp.id] = bestRect;
+                _waypointLabelScreenOffsets[wp.id] = bestOffset;
+
+                // Only now should waypoint labels block later waypoint labels in this same solve.
+                occupied.Add(bestRect);
+            }
+
+            _lastWaypointLayoutZoom = _zoom;
+            _lastWaypointLayoutPan = _pan;
+            _lastWaypointLayoutTime = now;
+            _waypointLabelLayoutDirty = false;
+
+            UpdateWaypointRenameEditorPosition();
+        }
+
+        private Vector2 MeasureWaypointLabel(Label label)
+        {
+            if (label == null)
+                return new Vector2(48f, 20f);
+
+            var measured = label.MeasureTextSize(
+                label.text ?? string.Empty,
+                0f,
+                MeasureMode.Undefined,
+                0f,
+                MeasureMode.Undefined);
+
+            float width = measured.x;
+            float height = measured.y;
+
+            var resolved = label.resolvedStyle;
+
+            float paddingLeft = float.IsNaN(resolved.paddingLeft) ? 0f : resolved.paddingLeft;
+            float paddingRight = float.IsNaN(resolved.paddingRight) ? 0f : resolved.paddingRight;
+            float paddingTop = float.IsNaN(resolved.paddingTop) ? 0f : resolved.paddingTop;
+            float paddingBottom = float.IsNaN(resolved.paddingBottom) ? 0f : resolved.paddingBottom;
+
+            float borderLeft = float.IsNaN(resolved.borderLeftWidth) ? 0f : resolved.borderLeftWidth;
+            float borderRight = float.IsNaN(resolved.borderRightWidth) ? 0f : resolved.borderRightWidth;
+            float borderTop = float.IsNaN(resolved.borderTopWidth) ? 0f : resolved.borderTopWidth;
+            float borderBottom = float.IsNaN(resolved.borderBottomWidth) ? 0f : resolved.borderBottomWidth;
+
+            width += paddingLeft + paddingRight + borderLeft + borderRight;
+            height += paddingTop + paddingBottom + borderTop + borderBottom;
+
+            // Small safety margin so collision tests are a touch conservative and stable.
+            width += 6f;
+            height += 4f;
+
+            width = Mathf.Max(24f, Mathf.Ceil(width));
+            height = Mathf.Max(16f, Mathf.Ceil(height));
+
+            return new Vector2(width, height);
+        }
+
+        private void ApplyWaypointLabelVisual(string id, bool selected)
+        {
+            if (!_waypointLabels.TryGetValue(id, out var label) || label == null)
+                return;
+
+            var profile = GetWaypointLabelProfile();
+            var style = profile.style;
+
+            Color accent = Color.white;
+            float labelSizeMultiplier = 1f;
+
+            if (_waypointManager != null && _waypointManager.TryGetWaypoint(id, out var waypoint))
+            {
+                accent = waypoint.color;
+                labelSizeMultiplier = waypoint.labelSizeMultiplier > 0f ? Mathf.Max(0.1f, waypoint.labelSizeMultiplier) : 1f;
+                label.text = waypoint.displayName;
+            }
+
+            ApplySharedOverlayLabelVisual(
+                label,
+                style,
+                selected,
+                accent,
+                labelSizeMultiplier,
+                selected ? style.selectedColor : style.color);
+
+            float revealAlpha = EvaluateWaypointRevealAlpha(selected);
+            label.style.opacity = selected ? 1f : revealAlpha;
+
+            // Do not touch display here.
+            // LayoutWaypointLabels() owns show/hide, while rebuild paths already keep
+            // genuinely unplaced labels hidden until they have a rect.
+            SyncWaypointLabelTransformImmediate(label);
         }
 
         private void ApplyPolylineLabelVisual(string id, bool selected)
         {
-            if (_style == null) return;
-            if (!_polylineLabelVisuals.TryGetValue(id, out var label)) return;
+            if (!_polylineLabelVisuals.TryGetValue(id, out var label) || label == null)
+                return;
 
-            label.style.fontSize = ComputeZoomedLabelFontSize(selected);
-            label.style.unityFontStyleAndWeight = selected ? _style.labelFontStyleSelected : _style.labelFontStyle;
+            ResolvedMapLabelRule rule = _mapData != null && TryGetPolylineById(id, out var polyline)
+                ? ResolveLabelRuleForPolyline(polyline)
+                : ResolveFallbackRule(MapUIStyleSettings.MapElementSemantic.SkiRun, POIType.SkiRun, POICategory.None);
 
-            Color textColor = selected ? _style.labelColorSelected : _style.labelColor;
+            var style = ResolveStandardLabelStyleForRule(rule);
 
+            Color accent = _polylineLabelAccent != null && _polylineLabelAccent.TryGetValue(id, out var accentColor)
+                ? accentColor
+                : Color.white;
+
+            Color textColor = selected ? style.selectedColor : style.color;
             if (TryGetLinkedWaypointForPolyline(id, out var linkedWp))
                 textColor = linkedWp.color;
 
-            label.style.color = textColor;
+            ApplySharedOverlayLabelVisual(
+                label,
+                style,
+                selected,
+                accent,
+                rule.labelSizeMultiplier,
+                textColor);
+        }
 
-            if (_polylineLabelAccent != null && _polylineLabelAccent.TryGetValue(id, out var accent))
+        private MapUIStyleSettings.MapLabelStyleProfile GetLabelProfileById(string styleId)
+        {
+            if (_style != null)
+                return _style.GetStandardLabelProfileById(styleId);
+
+            return new MapUIStyleSettings.MapLabelStyleProfile
             {
-                float stripeW = Mathf.Max(1f, _style.labelAccentStripeWidth);
-                label.style.borderLeftWidth = stripeW;
-                label.style.borderLeftColor = accent;
+                id = StandardLabelStyleId,
+                displayName = "Standard",
+                labelDisplayMode = MapUIStyleSettings.MapLabelDisplayMode.Contextual,
+                revealDirection = MapUIStyleSettings.MapRevealDirection.ZoomInReveal,
+                fadeStartZoom = DefaultPoiLabelRevealZoom,
+                fadeEndZoom = 2.40f,
+                labelPriority = 8,
+                maxContextCount = DefaultMaxContextPoiLabels,
+                style = new MapUIStyleSettings.MapLabelVisualStyle
+                {
+                    fontSize = 12,
+                    selectedFontSize = 13,
+                    fontStyle = FontStyle.Bold,
+                    selectedFontStyle = FontStyle.Bold,
+                    color = new Color(1f, 1f, 1f, 0.96f),
+                    selectedColor = Color.white,
+                    zoomCompensation = 0.65f,
+                    fontMin = 8,
+                    fontMax = 18,
+                    plateAlpha = 0.78f,
+                    accentStripeWidth = 3f,
+                    clutteredOpacity = 0.65f,
+                    paddingX = 6f,
+                    paddingY = 2.5f,
+                    offsetY = 18f,
+                    cornerRadius = 6f,
+                }
+            };
+        }
 
-                float a = Mathf.Clamp01(_style.labelPlateAlpha) * 0.22f;
-                label.style.backgroundColor = new Color(accent.r, accent.g, accent.b, a);
-            }
+        private MapUIStyleSettings.MapLabelVisualStyle GetLabelStyleById(string styleId)
+        {
+            return GetLabelProfileById(styleId).style;
+        }
 
-            label.style.opacity = 1f;
+        private MapUIStyleSettings.MapLabelStyleProfile ResolveLabelProfileForRule(ResolvedMapLabelRule rule)
+        {
+            return GetLabelProfileById(rule.labelStyleId);
         }
 
         private Color GetPolylineDisplayColor(SkiGame.Map.MapPolyline p)
@@ -7178,8 +10743,13 @@ namespace SkiGame.Map.UI
 
             _polyLayer?.SetSelected(_selectedPolylineId);
 
-            // Re-run overlay placement so selected label wins
+            // Re-run overlay placement so selected label wins.
             LayoutOverlayLabels();
+
+            if (_waypointLabelLayoutDirty)
+                LayoutWaypointLabels();
+            else
+                ApplyCachedWaypointLabelPlacement();
         }
 
         private bool IsWorldMarkerPositionUsable(Vector3 p)
@@ -7332,6 +10902,11 @@ namespace SkiGame.Map.UI
                 return false;
             }
 
+            if (poly.lineType == MapLineType.RaceCourse)
+            {
+                return TryFindRaceActivityMarkerForPolyline(polylineId, out marker);
+            }
+
             return false;
         }
 
@@ -7367,18 +10942,185 @@ namespace SkiGame.Map.UI
             return hit;
         }
 
+        private VisualElement EnsureSingleNavigationArrow(ref VisualElement arrowField, string name, float fontSize = 18f)
+        {
+            if (_navigationOverlay == null)
+                return null;
+
+            if (arrowField != null)
+                return arrowField;
+
+            var arrow = new VisualElement();
+            arrow.name = name;
+            arrow.pickingMode = PickingMode.Ignore;
+            arrow.style.position = Position.Absolute;
+            arrow.style.justifyContent = Justify.Center;
+            arrow.style.alignItems = Align.Center;
+            arrow.style.display = DisplayStyle.None;
+
+            var glyph = new Label("▲");
+            glyph.name = $"{name}_Glyph";
+            glyph.pickingMode = PickingMode.Ignore;
+            glyph.style.fontSize = fontSize;
+            glyph.style.unityFontStyleAndWeight = FontStyle.Bold;
+            glyph.style.unityTextAlign = TextAnchor.MiddleCenter;
+            arrow.Add(glyph);
+
+            _navigationOverlay.Add(arrow);
+            arrowField = arrow;
+            return arrow;
+        }
+
+        private void HideSingleNavigationArrow(VisualElement arrow)
+        {
+            if (arrow != null)
+                arrow.style.display = DisplayStyle.None;
+        }
+
+        private void ShowDirectionalArrow(VisualElement arrow, Vector2 playerViewport, Vector2 targetViewport, Color color, float orbitRadius = 26f, float edgePadding = 14f)
+        {
+            if (arrow == null)
+                return;
+
+            Label glyph = arrow.Q<Label>($"{arrow.name}_Glyph");
+
+            float viewportWidth = Mathf.Max(1f, _viewport.resolvedStyle.width);
+            float viewportHeight = Mathf.Max(1f, _viewport.resolvedStyle.height);
+
+            float minX = edgePadding;
+            float maxX = viewportWidth - edgePadding;
+            float minY = edgePadding;
+            float maxY = viewportHeight - edgePadding;
+
+            Vector2 dir = targetViewport - playerViewport;
+            float sqr = dir.sqrMagnitude;
+            if (sqr < 4f)
+            {
+                arrow.style.display = DisplayStyle.None;
+                return;
+            }
+
+            Vector2 n = dir.normalized;
+
+            bool targetVisible =
+                targetViewport.x >= minX && targetViewport.x <= maxX &&
+                targetViewport.y >= minY && targetViewport.y <= maxY;
+
+            Vector2 arrowPos = targetVisible
+                ? playerViewport + n * orbitRadius
+                : GetRayRectIntersection(playerViewport, n, minX, maxX, minY, maxY);
+
+            var arrowStyle = GetNavigationArrowStyle();
+            bool useSprite = arrowStyle.sprite != null;
+            if (useSprite)
+            {
+                float size = Mathf.Max(8f, arrowStyle.size);
+                float angle = Mathf.Atan2(n.y, n.x) * Mathf.Rad2Deg + arrowStyle.spriteRotationOffsetDegrees;
+
+                arrow.style.width = size;
+                arrow.style.height = size;
+                arrow.style.backgroundImage = new StyleBackground(arrowStyle.sprite);
+                arrow.style.unityBackgroundImageTintColor = color;
+                arrow.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+                arrow.style.left = arrowPos.x - (size * 0.5f);
+                arrow.style.top = arrowPos.y - (size * 0.5f);
+                arrow.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+                if (glyph != null)
+                    glyph.style.display = DisplayStyle.None;
+            }
+            else
+            {
+                arrow.style.width = StyleKeyword.Auto;
+                arrow.style.height = StyleKeyword.Auto;
+                arrow.style.backgroundImage = StyleKeyword.None;
+                arrow.style.left = arrowPos.x - 8f;
+                arrow.style.top = arrowPos.y - 10f;
+                arrow.transform.rotation = Quaternion.identity;
+                if (glyph != null)
+                {
+                    glyph.text = GetArrowGlyph(n);
+                    glyph.style.color = color;
+                    glyph.style.display = DisplayStyle.Flex;
+                }
+            }
+
+            arrow.style.display = DisplayStyle.Flex;
+        }
+
+        private void UpdateActiveNavigationTargetArrow(bool havePlayerLocal, Vector2 playerLocal)
+        {
+            HideSingleNavigationArrow(_activeNavigationArrow);
+
+            if (!havePlayerLocal || _navigationOverlay == null)
+                return;
+
+            if (!NavigationTargetController.TryGetActiveState(out var state))
+                return;
+
+            // Waypoints are already handled by the waypoint arrow pool.
+            if (state.request.kind == NavigationTargetKind.Waypoint)
+                return;
+
+            if (!state.request.showWorldBeacon && !state.request.showHud)
+                return;
+
+            if (!TryProjectWorldToLocal(state.beaconWorldPosition, out var targetLocal))
+                return;
+
+            Vector2 playerViewport = ContentToViewport(playerLocal);
+            Vector2 targetViewport = ContentToViewport(targetLocal);
+
+            var arrow = EnsureSingleNavigationArrow(ref _activeNavigationArrow, "ActiveNavigationArrow");
+
+            Color color = state.request.accentColor.a > 0f
+                ? state.request.accentColor
+                : new Color(0.36f, 0.74f, 1f, 1f);
+
+            ShowDirectionalArrow(arrow, playerViewport, targetViewport, color);
+        }
+
+        private void UpdateActivityCheckpointArrow(bool havePlayerLocal, Vector2 playerLocal)
+        {
+            HideSingleNavigationArrow(_activityCheckpointArrow);
+
+            if (!havePlayerLocal || _navigationOverlay == null)
+                return;
+
+            if (_activityCurrentCheckpointIndex < 0 || _activityCurrentCheckpointIndex >= _activityCheckpointWorldPositions.Count)
+                return;
+
+            if (!TryProjectWorldToLocal(_activityCheckpointWorldPositions[_activityCurrentCheckpointIndex], out var checkpointLocal))
+                return;
+
+            Vector2 playerViewport = ContentToViewport(playerLocal);
+            Vector2 checkpointViewport = ContentToViewport(checkpointLocal);
+
+            var arrow = EnsureSingleNavigationArrow(ref _activityCheckpointArrow, "ActivityCheckpointArrow");
+
+            Color color = new Color(0.12f, 0.95f, 0.25f, 1f); // current checkpoint green
+            ShowDirectionalArrow(arrow, playerViewport, checkpointViewport, color);
+        }
+
         private void EnsureWaypointArrowElement(string waypointId)
         {
             if (_navigationOverlay == null || string.IsNullOrWhiteSpace(waypointId) || _waypointNavArrows.ContainsKey(waypointId))
                 return;
 
-            var arrow = new Label("▲");
+            var arrow = new VisualElement();
             arrow.name = $"WaypointNavArrow_{waypointId}";
             arrow.pickingMode = PickingMode.Ignore;
             arrow.style.position = Position.Absolute;
-            arrow.style.fontSize = 18f;
-            arrow.style.unityFontStyleAndWeight = FontStyle.Bold;
+            arrow.style.justifyContent = Justify.Center;
+            arrow.style.alignItems = Align.Center;
             arrow.style.display = DisplayStyle.None;
+
+            var glyph = new Label("▲");
+            glyph.name = $"{arrow.name}_Glyph";
+            glyph.pickingMode = PickingMode.Ignore;
+            glyph.style.fontSize = 18f;
+            glyph.style.unityFontStyleAndWeight = FontStyle.Bold;
+            glyph.style.unityTextAlign = TextAnchor.MiddleCenter;
+            arrow.Add(glyph);
 
             _waypointNavArrows[waypointId] = arrow;
             _navigationOverlay.Add(arrow);
@@ -7437,9 +11179,12 @@ namespace SkiGame.Map.UI
                     kv.Value.style.display = DisplayStyle.None;
             }
 
+            HideSingleNavigationArrow(_activeNavigationArrow);
+            HideSingleNavigationArrow(_activityCheckpointArrow);
+
             _selectedWaypointConnector?.Hide();
 
-            if (!havePlayerLocal || _waypointManager == null || _waypointManager.Waypoints == null)
+            if (!havePlayerLocal)
                 return;
 
             float viewportWidth = Mathf.Max(1f, _viewport.resolvedStyle.width);
@@ -7457,40 +11202,79 @@ namespace SkiGame.Map.UI
                 float minY = edgePadding;
                 float maxY = viewportHeight - edgePadding;
 
-                for (int i = 0; i < _waypointManager.Waypoints.Count; i++)
+                if (_waypointManager != null && _waypointManager.Waypoints != null)
                 {
-                    var wp = _waypointManager.Waypoints[i];
-                    if (!_waypointNavArrows.TryGetValue(wp.id, out var arrow) || arrow == null)
-                        continue;
+                    for (int i = 0; i < _waypointManager.Waypoints.Count; i++)
+                    {
+                        var wp = _waypointManager.Waypoints[i];
+                        if (!_waypointNavArrows.TryGetValue(wp.id, out var arrow) || arrow == null)
+                            continue;
 
-                    if (!TryProjectWorldToLocal(wp.worldPosition, out var waypointLocal))
-                        continue;
+                        if (!TryProjectWorldToLocal(wp.worldPosition, out var waypointLocal))
+                            continue;
 
-                    Vector2 waypointViewport = ContentToViewport(waypointLocal);
-                    Vector2 dir = waypointViewport - playerViewport;
-                    float sqr = dir.sqrMagnitude;
-                    if (sqr < 4f)
-                        continue;
+                        Vector2 waypointViewport = ContentToViewport(waypointLocal);
+                        Vector2 dir = waypointViewport - playerViewport;
+                        float sqr = dir.sqrMagnitude;
+                        if (sqr < 4f)
+                            continue;
 
-                    Vector2 n = dir.normalized;
+                        Vector2 n = dir.normalized;
 
-                    bool waypointVisible =
-                        waypointViewport.x >= minX && waypointViewport.x <= maxX &&
-                        waypointViewport.y >= minY && waypointViewport.y <= maxY;
+                        bool waypointVisible =
+                            waypointViewport.x >= minX && waypointViewport.x <= maxX &&
+                            waypointViewport.y >= minY && waypointViewport.y <= maxY;
 
-                    Vector2 arrowPos = waypointVisible
-                        ? playerViewport + n * orbitRadius
-                        : GetRayRectIntersection(playerViewport, n, minX, maxX, minY, maxY);
+                        Vector2 arrowPos = waypointVisible
+                            ? playerViewport + n * orbitRadius
+                            : GetRayRectIntersection(playerViewport, n, minX, maxX, minY, maxY);
+                        var arrowStyle = GetNavigationArrowStyle();
+                        bool useSprite = arrowStyle.sprite != null;
+                        var glyph = arrow.Q<Label>($"{arrow.name}_Glyph");
 
-                    arrow.text = GetArrowGlyph(n);
-                    arrow.style.left = arrowPos.x - 8f;
-                    arrow.style.top = arrowPos.y - 10f;
-                    arrow.style.color = wp.color;
-                    arrow.style.display = DisplayStyle.Flex;
+                        if (useSprite)
+                        {
+                            float size = Mathf.Max(8f, arrowStyle.size);
+                            float angle = Mathf.Atan2(n.y, n.x) * Mathf.Rad2Deg + arrowStyle.spriteRotationOffsetDegrees;
+                            arrow.style.width = size;
+                            arrow.style.height = size;
+                            arrow.style.backgroundImage = new StyleBackground(arrowStyle.sprite);
+                            arrow.style.unityBackgroundImageTintColor = wp.color;
+                            arrow.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+                            arrow.style.left = arrowPos.x - (size * 0.5f);
+                            arrow.style.top = arrowPos.y - (size * 0.5f);
+                            arrow.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+                            if (glyph != null)
+                                glyph.style.display = DisplayStyle.None;
+                        }
+                        else
+                        {
+                            arrow.style.width = StyleKeyword.Auto;
+                            arrow.style.height = StyleKeyword.Auto;
+                            arrow.style.backgroundImage = StyleKeyword.None;
+                            arrow.style.left = arrowPos.x - 8f;
+                            arrow.style.top = arrowPos.y - 10f;
+                            arrow.transform.rotation = Quaternion.identity;
+                            if (glyph != null)
+                            {
+                                glyph.text = GetArrowGlyph(n);
+                                glyph.style.color = wp.color;
+                                glyph.style.display = DisplayStyle.Flex;
+                            }
+                        }
+
+                        arrow.style.display = DisplayStyle.Flex;
+                    }
                 }
+
+                UpdateActiveNavigationTargetArrow(havePlayerLocal, playerLocal);
+                UpdateActivityCheckpointArrow(havePlayerLocal, playerLocal);
 
                 return;
             }
+
+            if (_waypointManager == null || _waypointManager.Waypoints == null)
+                return;
 
             if (!string.IsNullOrWhiteSpace(_waypointManager.SelectedWaypointId) &&
                 _waypointManager.TryGetWaypoint(_waypointManager.SelectedWaypointId, out var selectedWp) &&
@@ -7499,6 +11283,9 @@ namespace SkiGame.Map.UI
                 Vector2 targetViewport = ContentToViewport(selectedLocal);
                 _selectedWaypointConnector?.Show(playerViewport, targetViewport, selectedWp.color);
             }
+
+            UpdateActiveNavigationTargetArrow(havePlayerLocal, playerLocal);
+            UpdateActivityCheckpointArrow(havePlayerLocal, playerLocal);
         }
 
         private Vector3 ResolveSourceAnchor(SkiGame.Map.MapMarker marker, Vector3 fallback)

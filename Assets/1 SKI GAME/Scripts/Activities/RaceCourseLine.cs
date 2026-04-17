@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
+using SkiGame.Audio;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using SkiGame.UI;
 using SkiGame.Activities;
 using SkiGame.Runs;
+using SkiGame.Progression;
+using SkiGame.Tricks;
+using TimeWeather;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -32,6 +36,10 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         public bool overrideFailOnStack = false;
         public bool failOnStack = false;
         [Min(0f)] public float optionalTimeLimitSeconds = 0f;
+        [Range(1, 99)] public int requiredPlacementToClear = 99;
+        [Min(0)] public int optionalTrickScoreThreshold = 0;
+        public TrickScoreEmphasis trickScoreEmphasis = TrickScoreEmphasis.Balanced;
+        public TrickRequirementDefinition requiredTrickRule = new TrickRequirementDefinition();
 
         public string GetResolvedName()
         {
@@ -85,6 +93,18 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
     [SerializeField] private string raceName = "New Race";
     [SerializeField] private string raceId;
 
+    [SerializeField] private string regionId;
+
+    [Header("Championship Progression")]
+    [SerializeField] private bool isRegionalChampionship = false;
+    [Min(1)][SerializeField] private int championshipRequiredLeagueNumber = 3;
+
+    // New preferred reward path.
+    [SerializeField] private string championshipPermanentPassIdReward = "";
+
+    // Legacy fallback reward path.
+    [Min(0)][SerializeField] private int championshipPermanentPassLevelReward = -1;
+
     [Header("Prompt / Start")]
     [SerializeField] private InputActionReference interactAction;
     [SerializeField] private bool requireHold = false;
@@ -93,8 +113,18 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
     [Min(1)][SerializeField] private int defaultLeagueNumber = 1;
     [SerializeField] private int promptPriority = 60;
 
+    [SerializeField] private InputActionReference previousLeagueAction;
+    [SerializeField] private InputActionReference nextLeagueAction;
+    [SerializeField] private bool tapInteractCyclesNextLeague = true;
+
     [Header("Authoring")]
     [SerializeField] private List<Vector3> pointsWorld = new List<Vector3>();
+
+    [Header("Map Visuals")]
+    [SerializeField] private bool overrideMapLineColor;
+    [SerializeField] private Color mapLineColor = new Color(0.27f, 0.76f, 1f, 0.95f);
+    [SerializeField] private bool syncHostRendererColorToMapLine = true;
+    [SerializeField] private List<Renderer> mapColorSyncRenderers = new List<Renderer>();
 
     [Header("Course")]
     [SerializeField] private float courseWidthMeters = 18f;
@@ -110,14 +140,24 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
     [SerializeField] private float startCountdownSeconds = 3f;
     [SerializeField] private bool snapPlayerToStartOnBegin = true;
     [SerializeField] private bool alignPlayerToStartOnBegin = true;
+    [SerializeField][Min(0f)] private float playerStartBackOffsetMeters = 6f;
+    [SerializeField][Min(0.01f)] private float leagueSelectionCooldownSeconds = 0.12f;
+
+    private float _lastLeagueSelectionTime = -999f;
 
     [Header("Rules")]
     [SerializeField] private bool failIfTooFarOffCourse = true;
     [SerializeField] private float offCourseGraceSeconds = 2f;
+    [SerializeField] private float skisOffGraceSeconds = 4f;
     [SerializeField] private bool failIfProgressSkipsUntouchedCheckpoint = true;
     [SerializeField] private float skipUntouchedCheckpointMeters = 50f;
     [SerializeField] private bool failOnStackDefault = false;
     [SerializeField] private float defaultTimeLimitSeconds = 0f;
+    [SerializeField] private float startStackRecoveryGraceSeconds = 1f;
+    [SerializeField] private LayerMask safeStartGroundMask = ~0;
+    [SerializeField][Min(0.05f)] private float safeStartGroundProbeUp = 4f;
+    [SerializeField][Min(0.25f)] private float safeStartGroundProbeDown = 12f;
+    [SerializeField][Min(0f)] private float safeStartHoverHeight = 0.35f;
 
     [Header("NPC")]
     [SerializeField] private bool hasNpcOpponents = true;
@@ -137,6 +177,13 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         new RaceLeagueDefinition { leagueNumber = 3, displayName = "League 3" },
         new RaceLeagueDefinition { leagueNumber = 4, displayName = "League 4" },
     };
+
+    [Header("Rewards")]
+    [SerializeField][Min(0)] private int completionReward = 75;
+    [SerializeField][Min(0)] private int firstTimeLeagueCompletionBonus = 50;
+    [SerializeField][Min(0)] private int firstPlaceBonus = 50;
+    [SerializeField][Min(0)] private int secondPlaceBonus = 25;
+    [SerializeField][Min(0)] private int thirdPlaceBonus = 10;
 
     [Header("Checkpoint Visuals")]
     [SerializeField] private Material checkpointMaterial;
@@ -171,16 +218,47 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
     private int _nextCheckpointIndex;
     private float _attemptTime;
     private float _offCourseTimer;
+    private float _skisOffTimer;
+    private float _startStackRecoveryRemaining;
     private GameObject _activePlayerRoot;
     private SkiController _activePlayerSkiController;
+    private WalkingController _activePlayerWalkingController;
+    private SkierTrickTracker _activePlayerTrickTracker;
 
     private RaceRuntimeState _runtimeState = RaceRuntimeState.Idle;
     private float _countdownRemaining;
+    private int _lastCountdownWholeSeconds = -1;
+    private Vector3 _countdownStartPlayerPosition;
+    private Quaternion _countdownStartPlayerRotation = Quaternion.identity;
+    private bool _hasCountdownStartPose;
 
     private int _lastResolvedPlacement = -1;
     private int _lastResolvedEntrantCount = 0;
 
     private MountainActivityManager _boundActivityManager;
+
+    private int _selectedLeagueNumber;
+
+    private int _lastRewardGranted = 0;
+    private bool _lastLeagueCompletedForFirstTime = false;
+    private int _lastUnlockedLeagueNumber = 0;
+    private bool _lastPersonalBestImproved = false;
+    private bool _lastChampionshipCompletedForFirstTime = false;
+    private string _lastChampionshipRewardSummary = string.Empty;
+    private float _lastCompletionTimeSeconds = -1f;
+
+    private bool _previousLeagueWasPressed;
+
+    private int _lastAttemptLeagueNumber;
+    private GameObject _lastAttemptPlayerRoot;
+    private GameObject _pendingStartPlayerRoot;
+    private string _lastFailureReason = string.Empty;
+    private int _attemptAccumulatedTrickScore;
+    private int _attemptBestTrickScore;
+    private bool _attemptMatchedRequiredTrick;
+    private string _lastLeagueObjectiveSummary = string.Empty;
+
+    private bool _ownsExternalTimePause;
 
     public string RaceName => string.IsNullOrWhiteSpace(raceName) ? name : raceName.Trim();
     public string RaceId => raceId;
@@ -202,6 +280,10 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
 
     public float CountdownRemainingSeconds => Mathf.Max(0f, _countdownRemaining);
     public float AttemptTimeSeconds => _attemptTime;
+    public float OffCourseGraceSecondsRemaining => Mathf.Max(0f, offCourseGraceSeconds - _offCourseTimer);
+    public float SkisOffGraceSecondsRemaining => Mathf.Max(0f, skisOffGraceSeconds - _skisOffTimer);
+    public bool IsOffCourseWarningActive => _attemptActive && failIfTooFarOffCourse && _offCourseTimer > 0f;
+    public bool IsSkisOffWarningActive => _attemptActive && _activePlayerWalkingController != null && !_activePlayerWalkingController.SkisOn;
     public int CurrentCheckpointIndex => _nextCheckpointIndex;
     public int CheckpointCount => generatedCheckpoints != null ? generatedCheckpoints.Count : 0;
     public int ActiveLeagueNumber => _activeLeagueNumber;
@@ -218,11 +300,42 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
     public int LastResolvedPlacement => _lastResolvedPlacement;
     public int LastResolvedEntrantCount => _lastResolvedEntrantCount;
 
+    public int SelectedLeagueNumber => GetNormalizedSelectedLeagueNumber();
+    public bool CanShowLeagueSelection => _playerRootInTrigger != null && !_attemptActive && pointsWorld != null && pointsWorld.Count >= 2;
+
+    public int LastRewardGranted => _lastRewardGranted;
+    public bool LastLeagueCompletedForFirstTime => _lastLeagueCompletedForFirstTime;
+    public int LastUnlockedLeagueNumber => _lastUnlockedLeagueNumber;
+    public bool LastPersonalBestImproved => _lastPersonalBestImproved;
+    public bool LastChampionshipCompletedForFirstTime => _lastChampionshipCompletedForFirstTime;
+    public string LastChampionshipRewardSummary => _lastChampionshipRewardSummary;
+    public float LastCompletionTimeSeconds => _lastCompletionTimeSeconds;
+
+    public int CompletionReward => completionReward;
+    public int FirstTimeLeagueCompletionBonus => firstTimeLeagueCompletionBonus;
+    public int FirstPlaceBonus => firstPlaceBonus;
+    public int SecondPlaceBonus => secondPlaceBonus;
+    public int ThirdPlaceBonus => thirdPlaceBonus;
+
+    public int LastAttemptLeagueNumber => _lastAttemptLeagueNumber;
+    public string LastFailureReason => _lastFailureReason;
+    public string LastLeagueObjectiveSummary => _lastLeagueObjectiveSummary;
+
+    public string RegionId => string.IsNullOrWhiteSpace(regionId) ? string.Empty : regionId.Trim();
+    public bool IsRegionalChampionship => isRegionalChampionship;
+    public int ChampionshipRequiredLeagueNumber => Mathf.Max(1, championshipRequiredLeagueNumber);
+    public string ChampionshipPermanentPassIdReward => championshipPermanentPassIdReward;
+    public int ChampionshipPermanentPassLevelReward => championshipPermanentPassLevelReward;
+    public bool OverrideMapLineColor => overrideMapLineColor;
+    public Color MapLineColor => mapLineColor;
+
     private void Awake()
     {
         EnsureRaceId();
         MarkDistanceCacheDirty();
         ResolveGeneratedCheckpoints();
+        _selectedLeagueNumber = GetHighestUnlockedLeagueNumber();
+        ApplyConfiguredMapVisuals();
     }
 
     private void OnEnable()
@@ -242,6 +355,7 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
     {
         EnsureRaceId();
         MarkDistanceCacheDirty();
+        CacheDefaultMapColorSyncRenderers();
     }
 
     private void OnValidate()
@@ -261,6 +375,9 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         ResolveGeneratedCheckpoints();
         PruneInvalidCheckpointOverrides();
 
+        _selectedLeagueNumber = GetNormalizedSelectedLeagueNumber();
+        ApplyConfiguredMapVisuals();
+
 #if UNITY_EDITOR
         if (!Application.isPlaying && rebuildGeneratedCheckpointsOnValidate)
             QueueCheckpointVisualRefresh();
@@ -275,13 +392,24 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
 
         if (_attemptActive && _runtimeState == RaceRuntimeState.Countdown)
         {
+            HoldPlayerAtCountdownStart();
+
+            int countdownWholeSeconds = Mathf.CeilToInt(_countdownRemaining);
+            if (countdownWholeSeconds > 0 && countdownWholeSeconds != _lastCountdownWholeSeconds)
+            {
+                _lastCountdownWholeSeconds = countdownWholeSeconds;
+                GameAudio.PlayWorld(GameAudioCueId.RaceCountdownTick, StartWorldPosition);
+            }
+
             _countdownRemaining -= Time.deltaTime;
             if (_countdownRemaining <= 0f)
             {
                 _countdownRemaining = 0f;
                 _attemptTime = 0f;
                 _runtimeState = RaceRuntimeState.Racing;
+                GameAudio.PlayWorld(GameAudioCueId.RaceCountdownGo, StartWorldPosition);
                 RefreshCheckpointVisualStates();
+                TryConsumeCurrentCheckpointIfAlreadyOverlapping();
             }
 
             return;
@@ -303,6 +431,7 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         }
 
         _attemptTime += Time.deltaTime;
+        _startStackRecoveryRemaining = Mathf.Max(0f, _startStackRecoveryRemaining - Time.deltaTime);
 
         float resolvedTimeLimit = GetResolvedTimeLimit(_activeLeagueNumber);
         if (resolvedTimeLimit > 0f && _attemptTime > resolvedTimeLimit)
@@ -311,8 +440,28 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
             return;
         }
 
+        if (_activePlayerWalkingController != null && !_activePlayerWalkingController.SkisOn)
+        {
+            _skisOffTimer += Time.deltaTime;
+            if (_skisOffTimer > skisOffGraceSeconds)
+            {
+                FailRace("Skis removed for too long");
+                return;
+            }
+        }
+        else
+        {
+            _skisOffTimer = 0f;
+        }
+
         if (_activePlayerSkiController != null && GetResolvedFailOnStack(_activeLeagueNumber) && _activePlayerSkiController.IsStacked)
         {
+            if (_startStackRecoveryRemaining > 0f)
+            {
+                RecoverPlayerFromStartStack();
+                return;
+            }
+
             FailRace("Stacked");
             return;
         }
@@ -366,54 +515,99 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         }
     }
 
+    public Vector3 GetPlayerStartWorldPosition()
+    {
+        Vector3 startPos = StartWorldPosition;
+        Vector3 forward = StartForward.sqrMagnitude > 0.0001f
+            ? StartForward.normalized
+            : transform.forward;
+
+        return startPos - forward * Mathf.Max(0f, playerStartBackOffsetMeters);
+    }
+
     private void HandleStartInput()
     {
-        if (_playerRootInTrigger == null) return;
-        if (interactAction == null || interactAction.action == null) return;
-        if (pointsWorld == null || pointsWorld.Count < 2) return;
+        if (_attemptActive)
+            return;
 
-        var mgr = MountainActivityManager.Instance;
-        if (mgr == null) return;
+        if (_playerRootInTrigger == null || pointsWorld == null || pointsWorld.Count < 2)
+        {
+            _wasPressed = false;
+            _held = 0f;
+            _enterArmed = false;
+            return;
+        }
 
-        var action = interactAction.action;
-        if (!action.enabled) action.Enable();
+        if (interactAction == null || interactAction.action == null)
+            return;
 
-        bool pressed = action.IsPressed();
+        var interact = interactAction.action;
+        if (!interact.enabled)
+            interact.Enable();
+
+        if (previousLeagueAction != null && previousLeagueAction.action != null && !previousLeagueAction.action.enabled)
+            previousLeagueAction.action.Enable();
+
+        bool interactPressed = interact.IsPressed();
+        bool interactPressedThisFrame = interact.WasPressedThisFrame();
+        bool interactReleasedThisFrame = interact.WasReleasedThisFrame();
+
+        bool previousPressedThisFrame =
+            (previousLeagueAction != null && previousLeagueAction.action != null && previousLeagueAction.action.WasPressedThisFrame()) ||
+            (Keyboard.current != null && Keyboard.current.qKey.wasPressedThisFrame);
 
         if (!_enterArmed)
         {
-            if (!pressed) _enterArmed = true;
+            if (!interactPressed)
+                _enterArmed = true;
+
             _wasPressed = false;
             _held = 0f;
             return;
         }
 
-        if (!pressed)
+        if (previousPressedThisFrame)
         {
-            _wasPressed = false;
-            _held = 0f;
+            SelectPreviousLeague();
             return;
         }
 
-        if (!_wasPressed)
+        if (interactPressedThisFrame)
         {
             _wasPressed = true;
             _held = 0f;
-
-            if (!requireHold)
-                TriggerStart();
-
             return;
         }
 
-        if (requireHold)
+        if (_wasPressed && interactPressed)
         {
             _held += Time.unscaledDeltaTime;
+
             if (_held >= holdSeconds)
             {
                 _held = -999f;
                 TriggerStart();
+                return;
             }
+        }
+
+        if (interactReleasedThisFrame)
+        {
+            bool wasTap = _held >= 0f && _held < holdSeconds;
+
+            _wasPressed = false;
+            _held = 0f;
+
+            if (wasTap)
+                SelectNextLeague();
+
+            return;
+        }
+
+        if (!interactPressed)
+        {
+            _wasPressed = false;
+            _held = 0f;
         }
     }
 
@@ -428,11 +622,578 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
             return;
         }
 
-        var mgr = MountainActivityManager.Instance;
-        if (mgr == null)
+        TryStartSelectedLeague();
+    }
+
+    public void SelectNextLeague()
+    {
+        TryStepLeague(1);
+    }
+
+    public void SelectPreviousLeague()
+    {
+        TryStepLeague(-1);
+    }
+
+    private void TryStepLeague(int direction)
+    {
+        if (leagues == null || leagues.Count == 0)
             return;
 
-        mgr.TryStart(MountainActivityKind.Race, this, RaceName, DefaultLeagueNumber);
+        if (Time.unscaledTime - _lastLeagueSelectionTime < leagueSelectionCooldownSeconds)
+            return;
+
+        int current = GetNormalizedSelectedLeagueNumber();
+        int currentIndex = GetLeagueIndex(current);
+        if (currentIndex < 0)
+        {
+            _selectedLeagueNumber = GetHighestUnlockedLeagueNumber();
+            _lastLeagueSelectionTime = Time.unscaledTime;
+            return;
+        }
+
+        int step = direction >= 0 ? 1 : -1;
+        int nextIndex = currentIndex;
+
+        for (int i = 0; i < leagues.Count; i++)
+        {
+            nextIndex += step;
+
+            if (nextIndex < 0)
+                nextIndex = leagues.Count - 1;
+            else if (nextIndex >= leagues.Count)
+                nextIndex = 0;
+
+            RaceLeagueDefinition candidate = leagues[nextIndex];
+            if (candidate != null && IsLeagueUnlocked(candidate.leagueNumber))
+            {
+                _selectedLeagueNumber = Mathf.Max(1, candidate.leagueNumber);
+                _lastLeagueSelectionTime = Time.unscaledTime;
+                GameAudio.PlayUi(GameAudioCueId.UiNavigate, 0.85f);
+                return;
+            }
+        }
+
+        _lastLeagueSelectionTime = Time.unscaledTime;
+    }
+
+    public Color GetResolvedMapLineColor(Color fallback)
+    {
+        return overrideMapLineColor ? mapLineColor : fallback;
+    }
+
+    private void ApplyConfiguredMapVisuals()
+    {
+        if (!syncHostRendererColorToMapLine)
+            return;
+
+        CacheDefaultMapColorSyncRenderers();
+        ApplyColourToMapSyncRenderers(mapLineColor);
+    }
+
+    private void CacheDefaultMapColorSyncRenderers()
+    {
+        if (mapColorSyncRenderers == null)
+            mapColorSyncRenderers = new List<Renderer>();
+
+        for (int i = mapColorSyncRenderers.Count - 1; i >= 0; i--)
+        {
+            if (mapColorSyncRenderers[i] == null)
+                mapColorSyncRenderers.RemoveAt(i);
+        }
+
+        if (mapColorSyncRenderers.Count > 0)
+            return;
+
+        GetComponents(mapColorSyncRenderers);
+    }
+
+    private void ApplyColourToMapSyncRenderers(Color colour)
+    {
+        if (mapColorSyncRenderers == null)
+            return;
+
+        for (int i = 0; i < mapColorSyncRenderers.Count; i++)
+            SetRendererColour(mapColorSyncRenderers[i], colour);
+    }
+
+    public bool TryStartSelectedLeague()
+    {
+        int leagueNumber = GetNormalizedSelectedLeagueNumber();
+
+        if (!CanShowLeagueSelection)
+            return false;
+
+        if (!IsLeagueUnlocked(leagueNumber))
+        {
+            ShowLockedLeaguePopup(leagueNumber);
+            return false;
+        }
+
+        var mgr = MountainActivityManager.Instance;
+        if (mgr == null || !mgr.CanStart(MountainActivityKind.Race, this))
+            return false;
+
+        _lastCountdownWholeSeconds = Mathf.CeilToInt(startCountdownSeconds);
+        return mgr.TryStart(MountainActivityKind.Race, this, RaceName, leagueNumber);
+    }
+
+    private void ShowLockedLeaguePopup(int leagueNumber)
+    {
+        int requiredLeague = GetPreviousLeagueNumber(leagueNumber);
+        string targetLeagueName = GetLeagueDisplayName(leagueNumber);
+
+        string body = requiredLeague > 0
+            ? $"Win {GetLeagueDisplayName(requiredLeague)} before entering {targetLeagueName}"
+            : $"You cannot enter {targetLeagueName} yet";
+
+        LiftAccessPopupBus.RaiseCustomDenied("Race Locked", body);
+    }
+
+    public bool CanStartLeague(int leagueNumber)
+    {
+        if (!CanShowLeagueSelection)
+            return false;
+
+        if (!IsLeagueUnlocked(leagueNumber))
+            return false;
+
+        var mgr = MountainActivityManager.Instance;
+        return mgr != null && mgr.CanStart(MountainActivityKind.Race, this);
+    }
+
+    public bool IsLeagueUnlocked(int leagueNumber)
+    {
+        leagueNumber = Mathf.Max(1, leagueNumber);
+
+        if (IsRegionalChampionship)
+            return IsChampionshipUnlocked();
+
+        int previousLeague = GetPreviousLeagueNumber(leagueNumber);
+        if (previousLeague <= 0)
+            return true;
+
+        return HasWonLeague(previousLeague);
+    }
+
+    public bool IsChampionshipUnlocked()
+    {
+        if (!IsRegionalChampionship)
+            return true;
+
+        RaceCourseLine[] allRaces = FindObjectsOfType<RaceCourseLine>(includeInactive: true);
+        int requiredLeague = ChampionshipRequiredLeagueNumber;
+        bool foundEligibleStandardRace = false;
+
+        for (int i = 0; i < allRaces.Length; i++)
+        {
+            RaceCourseLine race = allRaces[i];
+            if (race == null || race == this || race.IsRegionalChampionship)
+                continue;
+
+            if (!string.Equals(race.RegionId, RegionId, System.StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            foundEligibleStandardRace = true;
+            if (!race.HasCompletedLeague(requiredLeague))
+                return false;
+        }
+
+        return foundEligibleStandardRace;
+    }
+
+    public int GetChampionshipCompletedStandardRaceCount()
+    {
+        if (!IsRegionalChampionship)
+            return 0;
+
+        RaceCourseLine[] allRaces = FindObjectsOfType<RaceCourseLine>(includeInactive: true);
+        int completed = 0;
+        int requiredLeague = ChampionshipRequiredLeagueNumber;
+
+        for (int i = 0; i < allRaces.Length; i++)
+        {
+            RaceCourseLine race = allRaces[i];
+            if (race == null || race == this || race.IsRegionalChampionship)
+                continue;
+
+            if (!string.Equals(race.RegionId, RegionId, System.StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (race.HasCompletedLeague(requiredLeague))
+                completed++;
+        }
+
+        return completed;
+    }
+
+    public int GetChampionshipTotalStandardRaceCount()
+    {
+        if (!IsRegionalChampionship)
+            return 0;
+
+        RaceCourseLine[] allRaces = FindObjectsOfType<RaceCourseLine>(includeInactive: true);
+        int total = 0;
+
+        for (int i = 0; i < allRaces.Length; i++)
+        {
+            RaceCourseLine race = allRaces[i];
+            if (race == null || race == this || race.IsRegionalChampionship)
+                continue;
+
+            if (string.Equals(race.RegionId, RegionId, System.StringComparison.OrdinalIgnoreCase))
+                total++;
+        }
+
+        return total;
+    }
+
+    public string BuildChampionshipLockReason()
+    {
+        if (!IsRegionalChampionship)
+            return string.Empty;
+
+        int total = GetChampionshipTotalStandardRaceCount();
+        int completed = GetChampionshipCompletedStandardRaceCount();
+        if (total <= 0)
+            return "No qualifying regional races found.";
+
+        if (completed >= total)
+            return "Unlocked";
+
+        return $"Complete League {ChampionshipRequiredLeagueNumber} on all regional races ({completed}/{total}).";
+    }
+
+    public bool HasCompletedLeague(int leagueNumber)
+    {
+        return PlayerPrefs.GetInt(GetLeagueCompletedKey(leagueNumber), 0) == 1;
+    }
+
+    public bool HasWonLeague(int leagueNumber)
+    {
+        return GetBestPlacement(leagueNumber) == 1;
+    }
+
+    public int GetBestPlacement(int leagueNumber)
+    {
+        return PlayerPrefs.GetInt(GetLeagueBestPlacementKey(leagueNumber), -1);
+    }
+
+    public float GetBestTimeSeconds(int leagueNumber)
+    {
+        return PlayerPrefs.GetFloat(GetLeagueBestTimeKey(leagueNumber), -1f);
+    }
+
+    public int GetPreviousLeagueNumber(int leagueNumber)
+    {
+        if (leagues == null || leagues.Count == 0)
+            return 0;
+
+        int idx = GetLeagueIndex(leagueNumber);
+        if (idx <= 0)
+            return 0;
+
+        return Mathf.Max(1, leagues[idx - 1].leagueNumber);
+    }
+
+    public int GetNextLeagueNumber(int leagueNumber)
+    {
+        if (leagues == null || leagues.Count == 0)
+            return 0;
+
+        int idx = GetLeagueIndex(leagueNumber);
+        if (idx < 0 || idx >= leagues.Count - 1)
+            return 0;
+
+        return Mathf.Max(1, leagues[idx + 1].leagueNumber);
+    }
+
+    private int GetNormalizedSelectedLeagueNumber()
+    {
+        if (leagues == null || leagues.Count == 0)
+            return Mathf.Max(1, defaultLeagueNumber);
+
+        int candidate = Mathf.Max(1, _selectedLeagueNumber);
+        if (GetLeague(candidate) != null && IsLeagueUnlocked(candidate))
+            return candidate;
+
+        int fallback = GetHighestUnlockedLeagueNumber();
+        if (GetLeague(fallback) != null)
+            return fallback;
+
+        return Mathf.Max(1, leagues[0].leagueNumber);
+    }
+
+    public int GetHighestUnlockedLeagueNumber()
+    {
+        if (leagues == null || leagues.Count == 0)
+            return Mathf.Max(1, defaultLeagueNumber);
+
+        int highestUnlocked = 0;
+        for (int i = 0; i < leagues.Count; i++)
+        {
+            RaceLeagueDefinition league = leagues[i];
+            if (league == null)
+                continue;
+
+            if (IsLeagueUnlocked(league.leagueNumber))
+                highestUnlocked = Mathf.Max(highestUnlocked, Mathf.Max(1, league.leagueNumber));
+        }
+
+        if (highestUnlocked > 0)
+            return highestUnlocked;
+
+        int fallback = Mathf.Max(1, defaultLeagueNumber);
+        return GetLeague(fallback) != null ? fallback : Mathf.Max(1, leagues[0].leagueNumber);
+    }
+
+    private int GetLeagueIndex(int leagueNumber)
+    {
+        if (leagues == null)
+            return -1;
+
+        for (int i = 0; i < leagues.Count; i++)
+        {
+            if (leagues[i] != null && leagues[i].leagueNumber == leagueNumber)
+                return i;
+        }
+
+        return -1;
+    }
+
+    private string GetRacePrefPrefix()
+    {
+        return $"skigame.slot.{GameSaveSystem.ActiveSlotId}.race.{raceId}.";
+    }
+
+    private string GetLeagueCompletedKey(int leagueNumber)
+    {
+        return $"{GetRacePrefPrefix()}league.{Mathf.Max(1, leagueNumber)}.completed";
+    }
+
+    private string GetLeagueBestPlacementKey(int leagueNumber)
+    {
+        return $"{GetRacePrefPrefix()}league.{Mathf.Max(1, leagueNumber)}.bestPlacement";
+    }
+
+    private string GetLeagueBestTimeKey(int leagueNumber)
+    {
+        return $"{GetRacePrefPrefix()}league.{Mathf.Max(1, leagueNumber)}.bestTime";
+    }
+
+    private string GetLeagueCompletionOrderKey(int leagueNumber)
+    {
+        return $"{GetRacePrefPrefix()}league.{Mathf.Max(1, leagueNumber)}.completionOrder";
+    }
+
+    private static string GetRacePrefPrefixForSlot(string raceId, int slotId)
+    {
+        return $"skigame.slot.{Mathf.Clamp(slotId, 0, GameSaveSystem.MaxSlots - 1)}.race.{raceId}.";
+    }
+
+    private static string GetLeagueCompletionSequenceCounterKeyForSlot(int slotId)
+    {
+        return $"skigame.slot.{Mathf.Clamp(slotId, 0, GameSaveSystem.MaxSlots - 1)}.race.completionSequenceCounter";
+    }
+
+    private string GetLeagueCompletionSequenceCounterKey()
+    {
+        return GetLeagueCompletionSequenceCounterKeyForSlot(GameSaveSystem.ActiveSlotId);
+    }
+
+    private int EnsureLeagueCompletionOrderRecorded(int leagueNumber)
+    {
+        leagueNumber = Mathf.Max(1, leagueNumber);
+
+        if (!HasCompletedLeague(leagueNumber))
+            return 0;
+
+        string orderKey = GetLeagueCompletionOrderKey(leagueNumber);
+        int existingOrder = PlayerPrefs.GetInt(orderKey, 0);
+        if (existingOrder > 0)
+            return existingOrder;
+
+        string counterKey = GetLeagueCompletionSequenceCounterKey();
+        int nextOrder = Mathf.Max(1, PlayerPrefs.GetInt(counterKey, 0) + 1);
+        PlayerPrefs.SetInt(counterKey, nextOrder);
+        PlayerPrefs.SetInt(orderKey, nextOrder);
+        PlayerPrefs.Save();
+        return nextOrder;
+    }
+
+    public int GetLeagueCompletionOrder(int leagueNumber, bool createIfMissing = false)
+    {
+        leagueNumber = Mathf.Max(1, leagueNumber);
+
+        if (!HasCompletedLeague(leagueNumber))
+            return 0;
+
+        return createIfMissing
+            ? EnsureLeagueCompletionOrderRecorded(leagueNumber)
+            : PlayerPrefs.GetInt(GetLeagueCompletionOrderKey(leagueNumber), 0);
+    }
+
+    public static void ClearPersistentProgressForSlot(int slotId)
+    {
+        slotId = Mathf.Clamp(slotId, 0, GameSaveSystem.MaxSlots - 1);
+        PlayerPrefs.DeleteKey(GetLeagueCompletionSequenceCounterKeyForSlot(slotId));
+
+        RaceCourseLine[] races = FindObjectsOfType<RaceCourseLine>(includeInactive: true);
+        if (races == null || races.Length == 0)
+        {
+            PlayerPrefs.Save();
+            return;
+        }
+
+        for (int i = 0; i < races.Length; i++)
+        {
+            RaceCourseLine race = races[i];
+            if (race == null)
+                continue;
+
+            race.EnsureRaceId();
+            if (string.IsNullOrWhiteSpace(race.raceId))
+                continue;
+
+            string prefix = GetRacePrefPrefixForSlot(race.raceId, slotId);
+
+            if (race.leagues != null)
+            {
+                for (int l = 0; l < race.leagues.Count; l++)
+                {
+                    RaceLeagueDefinition league = race.leagues[l];
+                    if (league == null)
+                        continue;
+
+                    int leagueNumber = Mathf.Max(1, league.leagueNumber);
+                    PlayerPrefs.DeleteKey($"{prefix}league.{leagueNumber}.completed");
+                    PlayerPrefs.DeleteKey($"{prefix}league.{leagueNumber}.bestPlacement");
+                    PlayerPrefs.DeleteKey($"{prefix}league.{leagueNumber}.bestTime");
+                    PlayerPrefs.DeleteKey($"{prefix}league.{leagueNumber}.completionOrder");
+                }
+            }
+        }
+
+        PlayerPrefs.Save();
+    }
+    private int GetPlacementBonus(int placement)
+    {
+        switch (placement)
+        {
+            case 1: return firstPlaceBonus;
+            case 2: return secondPlaceBonus;
+            case 3: return thirdPlaceBonus;
+            default: return 0;
+        }
+    }
+
+    private void ResolveCompletionRewardsAndProgression()
+    {
+        int placement = RaceActivityService.Instance != null
+            ? RaceActivityService.Instance.FinishedNpcCount + 1
+            : 1;
+
+        int entrantCount = (RaceActivityService.Instance != null
+            ? RaceActivityService.Instance.ActiveNpcCount
+            : 0) + 1;
+
+        SetResolvedPlacement(placement, entrantCount);
+
+        _lastRewardGranted = 0;
+        _lastLeagueCompletedForFirstTime = false;
+        _lastUnlockedLeagueNumber = 0;
+        _lastPersonalBestImproved = false;
+        _lastChampionshipCompletedForFirstTime = false;
+        _lastChampionshipRewardSummary = string.Empty;
+
+        int leagueNumber = Mathf.Max(1, _activeLeagueNumber);
+        bool firstTimeCompletion = !HasCompletedLeague(leagueNumber);
+        bool hadWonBefore = HasWonLeague(leagueNumber);
+
+        PlayerPrefs.SetInt(GetLeagueCompletedKey(leagueNumber), 1);
+        EnsureLeagueCompletionOrderRecorded(leagueNumber);
+
+        int previousBestPlacement = GetBestPlacement(leagueNumber);
+        float previousBestTime = GetBestTimeSeconds(leagueNumber);
+
+        bool improvedPlacement =
+            previousBestPlacement <= 0 ||
+            placement < previousBestPlacement ||
+            (placement == previousBestPlacement && (previousBestTime < 0f || _attemptTime < previousBestTime));
+
+        if (improvedPlacement)
+        {
+            PlayerPrefs.SetInt(GetLeagueBestPlacementKey(leagueNumber), placement);
+            PlayerPrefs.SetFloat(GetLeagueBestTimeKey(leagueNumber), _attemptTime);
+            _lastPersonalBestImproved = true;
+        }
+
+        int reward = completionReward + GetPlacementBonus(placement);
+        if (firstTimeCompletion)
+            reward += firstTimeLeagueCompletionBonus;
+
+        var statsMgr = PlayerStatsManager.Instance;
+        if (statsMgr != null && statsMgr.Profile != null && reward > 0)
+        {
+            ProgressionEventRecorder.AddCurrency(statsMgr.Profile, reward);
+            statsMgr.Save();
+        }
+
+        if (statsMgr != null && statsMgr.Profile != null)
+        {
+            ProgressionEventRecorder.RecordRaceCompletion(
+                statsMgr.Profile,
+                RaceId,
+                placement,
+                _lastPersonalBestImproved);
+            statsMgr.Save();
+        }
+
+        if (firstTimeCompletion && IsRegionalChampionship)
+        {
+            bool newlyCompleted = false;
+            bool changed = false;
+
+            if (!string.IsNullOrWhiteSpace(championshipPermanentPassIdReward))
+            {
+                changed = RaceRescueProgression.TryMarkRaceChampionshipCompleted(
+                    RaceId,
+                    championshipPermanentPassIdReward,
+                    out newlyCompleted);
+            }
+            else if (championshipPermanentPassLevelReward >= 0)
+            {
+                changed = RaceRescueProgression.TryMarkRaceChampionshipCompleted(
+                    RaceId,
+                    championshipPermanentPassLevelReward,
+                    out newlyCompleted);
+            }
+
+            if (changed)
+            {
+                SkiPassManager passManager = SkiPassManager.Instance != null ? SkiPassManager.Instance : FindObjectOfType<SkiPassManager>();
+                if (passManager != null)
+                    passManager.ApplyPermanentUnlocksFromProfile(equipBestUnlocked: true);
+            }
+
+            if (newlyCompleted)
+            {
+                _lastChampionshipCompletedForFirstTime = true;
+                _lastChampionshipRewardSummary = GetChampionshipRewardSummary();
+            }
+        }
+
+        _lastRewardGranted = reward;
+        _lastLeagueCompletedForFirstTime = firstTimeCompletion;
+
+        if (placement == 1 && !hadWonBefore)
+        {
+            int nextLeague = GetNextLeagueNumber(leagueNumber);
+            if (nextLeague > 0)
+                _lastUnlockedLeagueNumber = nextLeague;
+        }
+
+        PlayerPrefs.Save();
     }
 
     private void HandleActivityStarted(MountainActivityKind kind, MonoBehaviour source, string displayName, int variantNumber)
@@ -440,8 +1201,14 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         if (kind != MountainActivityKind.Race || source != this)
             return;
 
-        Debug.Log($"[RaceCourseLine] HandleActivityStarted received for '{RaceName}' on {name}. PlayerInTrigger={_playerRootInTrigger != null}", this);
-        BeginAttempt(_playerRootInTrigger, variantNumber);
+        GameObject startPlayerRoot = _pendingStartPlayerRoot != null
+            ? _pendingStartPlayerRoot
+            : _playerRootInTrigger;
+
+        _pendingStartPlayerRoot = null;
+
+        Debug.Log($"[RaceCourseLine] HandleActivityStarted received for '{RaceName}' on {name}. PlayerRoot={(startPlayerRoot != null ? startPlayerRoot.name : "null")}", this);
+        BeginAttempt(startPlayerRoot, variantNumber);
     }
 
     private void HandleActivityCompleted(MountainActivityKind kind, MonoBehaviour source, string displayName)
@@ -470,20 +1237,51 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
             return;
         }
 
+        if (playerRoot == null)
+        {
+            FailRace("Player missing");
+            return;
+        }
+
         Debug.Log($"[RaceCourseLine] BeginAttempt on '{RaceName}'. Generated checkpoints: {(generatedCheckpoints != null ? generatedCheckpoints.Count : 0)}", this);
 
         ResolveGeneratedCheckpoints();
 
         _attemptActive = true;
         _activeLeagueNumber = Mathf.Max(1, leagueNumber);
+        _lastAttemptLeagueNumber = _activeLeagueNumber;
         _nextCheckpointIndex = 0;
         _attemptTime = 0f;
         _offCourseTimer = 0f;
+        _skisOffTimer = 0f;
+        _startStackRecoveryRemaining = Mathf.Max(0f, startStackRecoveryGraceSeconds);
         _activePlayerRoot = playerRoot;
-        _activePlayerSkiController = playerRoot != null ? playerRoot.GetComponentInParent<SkiController>() : null;
+        _lastAttemptPlayerRoot = playerRoot;
+        _activePlayerSkiController = playerRoot.GetComponentInParent<SkiController>();
+        _activePlayerWalkingController = playerRoot.GetComponentInParent<WalkingController>();
+        _attemptAccumulatedTrickScore = 0;
+        _attemptBestTrickScore = 0;
+        _attemptMatchedRequiredTrick = false;
+        _lastLeagueObjectiveSummary = BuildLeagueObjectiveSummary(_activeLeagueNumber);
+        _lastFailureReason = string.Empty;
+        BindActivePlayerTrickTracker();
 
-        if (snapPlayerToStartOnBegin && playerRoot != null)
+        ApplyRaceTimePause(true);
+
+        if (PlayerStatsManager.Instance != null && PlayerStatsManager.Instance.Profile != null)
+        {
+            ProgressionEventRecorder.RecordRaceStart(PlayerStatsManager.Instance.Profile);
+            PlayerStatsManager.Instance.Save();
+        }
+
+        PreparePlayerForRaceStart(playerRoot);
+
+        if (snapPlayerToStartOnBegin)
             SnapPlayerToStart(playerRoot);
+
+        _countdownStartPlayerPosition = playerRoot.transform.position;
+        _countdownStartPlayerRotation = playerRoot.transform.rotation;
+        _hasCountdownStartPose = true;
 
         _countdownRemaining = Mathf.Max(0f, startCountdownSeconds);
         _runtimeState = _countdownRemaining > 0f
@@ -498,12 +1296,18 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
             SetGeneratedCheckpointTriggersEnabled(true);
             RefreshCheckpointVisualStates();
 
+            if (_runtimeState == RaceRuntimeState.Racing)
+                TryConsumeCurrentCheckpointIfAlreadyOverlapping();
+
             Debug.Log($"[RaceCourseLine] Checkpoints enabled for '{RaceName}'. RuntimeState={_runtimeState}", this);
         }
     }
 
     private void ResetAttemptState()
     {
+        ApplyRaceTimePause(false);
+        UnbindActivePlayerTrickTracker();
+
         _attemptActive = false;
         _runtimeState = RaceRuntimeState.Idle;
         _countdownRemaining = 0f;
@@ -511,14 +1315,75 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         _nextCheckpointIndex = 0;
         _attemptTime = 0f;
         _offCourseTimer = 0f;
+        _skisOffTimer = 0f;
+        _startStackRecoveryRemaining = 0f;
         _activePlayerRoot = null;
         _activePlayerSkiController = null;
+        _activePlayerWalkingController = null;
+        _attemptAccumulatedTrickScore = 0;
+        _attemptBestTrickScore = 0;
+        _attemptMatchedRequiredTrick = false;
+        _lastLeagueObjectiveSummary = string.Empty;
+        _hasCountdownStartPose = false;
+
+        _wasPressed = false;
+        _held = 0f;
 
         if (Application.isPlaying)
         {
             RefreshCheckpointVisualStates();
             SetGeneratedCheckpointTriggersEnabled(false);
             SetCheckpointVisualsVisible(false);
+        }
+    }
+
+    private void BindActivePlayerTrickTracker()
+    {
+        UnbindActivePlayerTrickTracker();
+
+        if (_activePlayerRoot == null)
+            return;
+
+        _activePlayerTrickTracker = _activePlayerRoot.GetComponentInChildren<SkierTrickTracker>(true);
+        if (_activePlayerTrickTracker == null)
+            _activePlayerTrickTracker = _activePlayerRoot.GetComponentInParent<SkierTrickTracker>();
+
+        if (_activePlayerTrickTracker != null)
+            _activePlayerTrickTracker.OnTrickResolved += HandleAttemptTrickResolved;
+    }
+
+    private void UnbindActivePlayerTrickTracker()
+    {
+        if (_activePlayerTrickTracker == null)
+            return;
+
+        _activePlayerTrickTracker.OnTrickResolved -= HandleAttemptTrickResolved;
+        _activePlayerTrickTracker = null;
+    }
+
+    private void HandleAttemptTrickResolved(SkierTrickTracker.TrickResult result)
+    {
+        if (!_attemptActive || !result.success)
+            return;
+
+        RaceLeagueDefinition league = GetLeague(_activeLeagueNumber);
+        int resolvedScore = result.comboScore;
+        if (league != null)
+        {
+            TrickScoreBreakdown breakdown = TrickActivityRules.Score(
+                TrickActivityRules.CreateDescriptor(result),
+                history: null,
+                emphasis: league.trickScoreEmphasis);
+            resolvedScore = breakdown.finalScore;
+        }
+
+        _attemptAccumulatedTrickScore += Mathf.Max(0, resolvedScore);
+        _attemptBestTrickScore = Mathf.Max(_attemptBestTrickScore, resolvedScore);
+
+        if (league != null && league.requiredTrickRule != null && !league.requiredTrickRule.IsEmpty())
+        {
+            if (TrickActivityRules.Matches(league.requiredTrickRule, TrickActivityRules.CreateDescriptor(result)))
+                _attemptMatchedRequiredTrick = true;
         }
     }
 
@@ -627,6 +1492,13 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
 
         _nextCheckpointIndex++;
         RefreshCheckpointVisualStates();
+
+        if (_nextCheckpointIndex >= generatedCheckpoints.Count)
+        {
+            CompleteRace();
+            return true;
+        }
+
         return true;
     }
 
@@ -656,6 +1528,20 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
 
     private void CompleteRace()
     {
+        int placement = RaceActivityService.Instance != null
+            ? RaceActivityService.Instance.FinishedNpcCount + 1
+            : 1;
+
+        if (!TryEvaluateLeagueObjectives(placement, out string objectiveFailure))
+        {
+            FailRace(objectiveFailure);
+            return;
+        }
+
+        _lastFailureReason = string.Empty;
+        _lastCompletionTimeSeconds = _attemptTime;
+        ResolveCompletionRewardsAndProgression();
+
         var mgr = MountainActivityManager.Instance;
         if (mgr != null)
             mgr.Complete(MountainActivityKind.Race, this, "Finished");
@@ -663,9 +1549,116 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
 
     private void FailRace(string reason)
     {
+        _lastFailureReason = string.IsNullOrWhiteSpace(reason) ? "Race failed" : reason;
+        _lastCompletionTimeSeconds = -1f;
+
         var mgr = MountainActivityManager.Instance;
         if (mgr != null)
-            mgr.Fail(MountainActivityKind.Race, this, reason);
+            mgr.Fail(MountainActivityKind.Race, this, _lastFailureReason);
+    }
+
+    public void SetSelectedLeagueExternal(int leagueNumber)
+    {
+        if (leagues == null || leagues.Count == 0)
+            return;
+
+        leagueNumber = Mathf.Max(1, leagueNumber);
+        if (GetLeague(leagueNumber) == null)
+            return;
+
+        if (!IsLeagueUnlocked(leagueNumber))
+            leagueNumber = GetHighestUnlockedLeagueNumber();
+
+        _selectedLeagueNumber = leagueNumber;
+    }
+
+    public bool CanStartLeagueExternal(int leagueNumber)
+    {
+        leagueNumber = Mathf.Max(1, leagueNumber);
+
+        if (_attemptActive)
+            return false;
+
+        if (pointsWorld == null || pointsWorld.Count < 2)
+            return false;
+
+        if (!IsLeagueUnlocked(leagueNumber))
+            return false;
+
+        var mgr = MountainActivityManager.Instance;
+        return mgr != null && mgr.CanStart(MountainActivityKind.Race, this);
+    }
+
+    public bool TryStartLeagueExternal(GameObject playerRoot, int leagueNumber)
+    {
+        leagueNumber = Mathf.Max(1, leagueNumber);
+
+        if (playerRoot == null)
+            return false;
+
+        if (pointsWorld == null || pointsWorld.Count < 2)
+            return false;
+
+        if (!IsLeagueUnlocked(leagueNumber))
+        {
+            ShowLockedLeaguePopup(leagueNumber);
+            return false;
+        }
+
+        var mgr = MountainActivityManager.Instance;
+        if (mgr == null || !mgr.CanStart(MountainActivityKind.Race, this))
+            return false;
+
+        _selectedLeagueNumber = leagueNumber;
+        _pendingStartPlayerRoot = playerRoot;
+
+        return mgr.TryStart(MountainActivityKind.Race, this, RaceName, leagueNumber);
+    }
+
+    public bool TryRestartLastAttempt()
+    {
+        if (_attemptActive)
+            return false;
+
+        int restartLeague = Mathf.Max(1, _lastAttemptLeagueNumber > 0 ? _lastAttemptLeagueNumber : SelectedLeagueNumber);
+
+        GameObject playerRoot = _lastAttemptPlayerRoot != null
+            ? _lastAttemptPlayerRoot
+            : _playerRootInTrigger;
+
+        if (playerRoot == null)
+            return false;
+
+        var mgr = MountainActivityManager.Instance;
+        if (mgr == null || !mgr.CanStart(MountainActivityKind.Race, this))
+            return false;
+
+        _pendingStartPlayerRoot = playerRoot;
+        return mgr.TryStart(MountainActivityKind.Race, this, RaceName, restartLeague);
+    }
+
+    private void ApplyRaceTimePause(bool paused)
+    {
+        var tc = TimeController.instance != null ? TimeController.instance : FindObjectOfType<TimeController>();
+        if (tc == null)
+            return;
+
+        if (paused)
+        {
+            if (_ownsExternalTimePause)
+                return;
+
+            tc.PushExternalPause();
+            _ownsExternalTimePause = true;
+        }
+        else
+        {
+            if (!_ownsExternalTimePause)
+                return;
+
+            tc.PopExternalPause();
+            _ownsExternalTimePause = false;
+        }
     }
 
     public RaceLeagueDefinition GetLeague(int leagueNumber)
@@ -684,8 +1677,37 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
 
     public string GetLeagueDisplayName(int leagueNumber)
     {
+        if (IsRegionalChampionship)
+            return "Championship";
+
         var l = GetLeague(leagueNumber);
         return l != null ? l.GetResolvedName() : $"League {Mathf.Max(1, leagueNumber)}";
+    }
+
+    public string GetChampionshipRewardSummary()
+    {
+        if (!IsRegionalChampionship)
+            return string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(championshipPermanentPassIdReward))
+        {
+            SkiPassManager mgr = SkiPassManager.Instance != null ? SkiPassManager.Instance : FindObjectOfType<SkiPassManager>();
+            SkiPassConfigSO cfg = mgr != null ? mgr.Config : null;
+
+            if (cfg != null)
+            {
+                var pass = cfg.GetByPassId(championshipPermanentPassIdReward);
+                if (pass != null)
+                    return $"{pass.displayName} unlocked permanently";
+            }
+
+            return $"{championshipPermanentPassIdReward} unlocked permanently";
+        }
+
+        if (championshipPermanentPassLevelReward < 0)
+            return string.Empty;
+
+        return $"Pass tier L{championshipPermanentPassLevelReward} unlocked permanently";
     }
 
     public float GetResolvedTimeLimit(int leagueNumber)
@@ -704,6 +1726,80 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
             return l.failOnStack;
 
         return failOnStackDefault;
+    }
+
+    public string BuildLeagueObjectiveSummary(int leagueNumber)
+    {
+        RaceLeagueDefinition league = GetLeague(leagueNumber);
+        if (league == null)
+            return string.Empty;
+
+        List<string> goals = new List<string>();
+
+        if (league.requiredPlacementToClear >= 99)
+            goals.Add("Finish the race");
+        else if (league.requiredPlacementToClear > 1)
+            goals.Add($"Place {ToOrdinal(league.requiredPlacementToClear)} or better");
+        else
+            goals.Add("Win the race");
+
+        if (league.optionalTimeLimitSeconds > 0f)
+            goals.Add($"Beat {league.optionalTimeLimitSeconds:0.0}s");
+
+        if (league.optionalTrickScoreThreshold > 0)
+            goals.Add($"Score {league.optionalTrickScoreThreshold}+ trick pts");
+
+        if (league.requiredTrickRule != null && !league.requiredTrickRule.IsEmpty())
+            goals.Add(league.requiredTrickRule.BuildSummary());
+
+        return string.Join(" • ", goals);
+    }
+
+    private bool TryEvaluateLeagueObjectives(int placement, out string failureReason)
+    {
+        failureReason = string.Empty;
+        RaceLeagueDefinition league = GetLeague(_activeLeagueNumber);
+        if (league == null)
+            return true;
+
+        int requiredPlacement = Mathf.Max(1, league.requiredPlacementToClear);
+        if (requiredPlacement < 99 && placement > requiredPlacement)
+        {
+            failureReason = requiredPlacement <= 1
+                ? "League objective failed: finish in 1st."
+                : $"League objective failed: place {ToOrdinal(requiredPlacement)} or better.";
+            return false;
+        }
+
+        if (league.optionalTrickScoreThreshold > 0 && _attemptAccumulatedTrickScore < league.optionalTrickScoreThreshold)
+        {
+            failureReason = $"League objective failed: score {league.optionalTrickScoreThreshold}+ trick points.";
+            return false;
+        }
+
+        if (league.requiredTrickRule != null && !league.requiredTrickRule.IsEmpty() && !_attemptMatchedRequiredTrick)
+        {
+            failureReason = $"League objective failed: {league.requiredTrickRule.BuildSummary()}.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static string ToOrdinal(int value)
+    {
+        value = Mathf.Max(1, value);
+        int mod100 = value % 100;
+        if (mod100 is >= 11 and <= 13)
+            return $"{value}th";
+
+        return (value % 10) switch
+        {
+            1 => $"{value}st",
+            2 => $"{value}nd",
+            3 => $"{value}rd",
+            _ => $"{value}th"
+        };
     }
 
     public void AddPointWorld(Vector3 point)
@@ -1140,6 +2236,49 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         return go.transform;
     }
 
+    private void TryConsumeCurrentCheckpointIfAlreadyOverlapping()
+    {
+        if (!_attemptActive || _runtimeState != RaceRuntimeState.Racing)
+            return;
+
+        if (_nextCheckpointIndex < 0 || _nextCheckpointIndex >= _runtimeCheckpointObjects.Count)
+            return;
+
+        GameObject checkpointObject = _runtimeCheckpointObjects[_nextCheckpointIndex];
+        if (checkpointObject == null || !checkpointObject.activeInHierarchy)
+            return;
+
+        BoxCollider box = checkpointObject.GetComponent<BoxCollider>();
+        if (box == null || !box.enabled)
+            return;
+
+        Vector3 worldCenter = checkpointObject.transform.TransformPoint(box.center);
+        Vector3 halfExtents = Vector3.Scale(box.size * 0.5f, checkpointObject.transform.lossyScale);
+        Quaternion orientation = checkpointObject.transform.rotation;
+
+        Collider[] hits = Physics.OverlapBox(
+            worldCenter,
+            halfExtents,
+            orientation,
+            ~0,
+            QueryTriggerInteraction.Collide);
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            if (ColliderBelongsToActivePlayer(hits[i]))
+            {
+                Vector3 audioPosition = checkpointObject != null
+                    ? checkpointObject.transform.position
+                    : worldCenter;
+
+                _nextCheckpointIndex++;
+                GameAudio.PlayWorld(GameAudioCueId.RaceCheckpoint, audioPosition);
+                RefreshCheckpointVisualStates();
+                break;
+            }
+        }
+    }
+
     private void EnsureRuntimeCheckpointVisuals()
     {
         if (!Application.isPlaying)
@@ -1212,16 +2351,41 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         RefreshCheckpointVisualStates();
     }
 
-    private void SetRendererColour(Renderer renderer, Color colour)
+    private static readonly int ColorId = Shader.PropertyToID("_Color");
+    private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+    private static MaterialPropertyBlock _sharedPropertyBlock;
+
+    private static void SetRendererColour(Renderer renderer, Color colour)
     {
         if (renderer == null)
             return;
 
-        var block = new MaterialPropertyBlock();
-        renderer.GetPropertyBlock(block);
-        block.SetColor("_Color", colour);
-        block.SetColor("_BaseColor", colour);
-        renderer.SetPropertyBlock(block);
+        Material referenceMaterial = null;
+
+        if (renderer.sharedMaterials != null && renderer.sharedMaterials.Length > 0)
+            referenceMaterial = renderer.sharedMaterials[0];
+
+        if (referenceMaterial == null)
+            return;
+
+        bool hasColor = referenceMaterial.HasProperty(ColorId);
+        bool hasBaseColor = referenceMaterial.HasProperty(BaseColorId);
+
+        if (!hasColor && !hasBaseColor)
+            return;
+
+        if (_sharedPropertyBlock == null)
+            _sharedPropertyBlock = new MaterialPropertyBlock();
+
+        renderer.GetPropertyBlock(_sharedPropertyBlock);
+
+        if (hasColor)
+            _sharedPropertyBlock.SetColor(ColorId, colour);
+
+        if (hasBaseColor)
+            _sharedPropertyBlock.SetColor(BaseColorId, colour);
+
+        renderer.SetPropertyBlock(_sharedPropertyBlock);
     }
 
     private void RefreshCheckpointVisualStates()
@@ -1450,13 +2614,18 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         if (leagues == null)
             leagues = new List<RaceLeagueDefinition>();
 
+        for (int i = leagues.Count - 1; i >= 0; i--)
+        {
+            if (leagues[i] == null)
+                leagues.RemoveAt(i);
+        }
+
         var used = new HashSet<int>();
         for (int i = 0; i < leagues.Count; i++)
         {
             var l = leagues[i];
-            if (l == null) continue;
-
             l.leagueNumber = Mathf.Max(1, l.leagueNumber);
+
             while (used.Contains(l.leagueNumber))
                 l.leagueNumber++;
 
@@ -1465,6 +2634,8 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
             if (string.IsNullOrWhiteSpace(l.displayName))
                 l.displayName = $"League {l.leagueNumber}";
         }
+
+        leagues.Sort((a, b) => a.leagueNumber.CompareTo(b.leagueNumber));
     }
 
     private void MarkDistanceCacheDirty()
@@ -1661,14 +2832,29 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         return true;
     }
 
+    public bool TryGetActivePlayerRaceState(out float distanceAlong, out float lateralDistance)
+    {
+        distanceAlong = 0f;
+        lateralDistance = float.PositiveInfinity;
+
+        if (_activePlayerRoot == null)
+            return false;
+
+        return TryProjectPointOntoCourse(_activePlayerRoot.transform.position, out distanceAlong, out lateralDistance, out _);
+    }
+
     public Vector3 GetNpcStartSlotWorldPosition(int slotIndex)
     {
         Vector3 origin = StartWorldPosition + npcStartAreaOffset;
         Vector3 forward = StartForward.sqrMagnitude > 0.0001f ? StartForward.normalized : transform.forward;
         Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
 
-        int row = slotIndex / 3;
-        int col = slotIndex % 3;
+        // Keep the whole front row clear so the player has buffer space during
+        // countdown and cannot spawn intersecting an NPC.
+        int rawGridIndex = slotIndex + 3;
+
+        int row = rawGridIndex / 3;
+        int col = rawGridIndex % 3;
 
         float lateral = (col - 1) * npcLaneSpacingMeters;
         float back = row * npcRowSpacingMeters;
@@ -1750,10 +2936,18 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         if (playerRoot == null)
             return;
 
-        Vector3 startPos = StartWorldPosition;
+        Vector3 startPos = GetPlayerStartWorldPosition();
         Vector3 forward = StartForward.sqrMagnitude > 0.0001f ? StartForward : transform.forward;
+        Vector3 safeStartPos = ResolveSafeStartPosition(startPos, forward);
 
-        playerRoot.transform.position = startPos;
+        Rigidbody playerRb = playerRoot.GetComponentInParent<Rigidbody>();
+        if (playerRb != null)
+        {
+            playerRb.linearVelocity = Vector3.zero;
+            playerRb.angularVelocity = Vector3.zero;
+        }
+
+        playerRoot.transform.position = safeStartPos;
 
         if (alignPlayerToStartOnBegin)
         {
@@ -1761,6 +2955,105 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
             if (flatForward.sqrMagnitude > 0.0001f)
                 playerRoot.transform.rotation = Quaternion.LookRotation(flatForward.normalized, Vector3.up);
         }
+
+        if (_activePlayerSkiController != null)
+        {
+            _activePlayerSkiController.ResetStackStateSilently(snapUpright: true, forwardHint: forward);
+            _activePlayerSkiController.SnapToGroundClearance(resetDownwardVelocity: true, iterations: 3);
+        }
+    }
+
+    private void PreparePlayerForRaceStart(GameObject playerRoot)
+    {
+        if (playerRoot == null)
+            return;
+
+        if (_activePlayerWalkingController == null)
+            _activePlayerWalkingController = playerRoot.GetComponentInParent<WalkingController>();
+
+        if (_activePlayerWalkingController != null)
+            _activePlayerWalkingController.ForceEnterSkiMode();
+
+        if (_activePlayerSkiController == null)
+            _activePlayerSkiController = playerRoot.GetComponentInParent<SkiController>();
+
+        Vector3 forward = StartForward.sqrMagnitude > 0.0001f ? StartForward : transform.forward;
+        if (_activePlayerSkiController != null)
+            _activePlayerSkiController.ResetStackStateSilently(snapUpright: true, forwardHint: forward);
+    }
+
+    private void RecoverPlayerFromStartStack()
+    {
+        if (_activePlayerRoot == null)
+            return;
+
+        PreparePlayerForRaceStart(_activePlayerRoot);
+        if (snapPlayerToStartOnBegin)
+            SnapPlayerToStart(_activePlayerRoot);
+    }
+
+    private void HoldPlayerAtCountdownStart()
+    {
+        if (_activePlayerRoot == null || !_hasCountdownStartPose)
+            return;
+
+        _activePlayerRoot.transform.SetPositionAndRotation(_countdownStartPlayerPosition, _countdownStartPlayerRotation);
+
+        if (_activePlayerWalkingController != null)
+        {
+            _activePlayerWalkingController.ClearExternalMove();
+            _activePlayerWalkingController.ForceEnterSkiMode();
+        }
+
+        if (_activePlayerSkiController != null)
+            _activePlayerSkiController.ResetStackStateSilently(snapUpright: true, forwardHint: _countdownStartPlayerRotation * Vector3.forward);
+
+        Rigidbody playerRb = _activePlayerRoot.GetComponentInParent<Rigidbody>();
+        if (playerRb != null)
+        {
+            playerRb.linearVelocity = Vector3.zero;
+            playerRb.angularVelocity = Vector3.zero;
+        }
+    }
+
+    private Vector3 ResolveSafeStartPosition(Vector3 desiredStartPos, Vector3 forward)
+    {
+        Vector3 probeOrigin = desiredStartPos + Vector3.up * Mathf.Max(0.05f, safeStartGroundProbeUp);
+        if (Physics.Raycast(probeOrigin, Vector3.down, out RaycastHit hit, safeStartGroundProbeUp + safeStartGroundProbeDown, safeStartGroundMask, QueryTriggerInteraction.Ignore))
+        {
+            Vector3 grounded = hit.point + hit.normal * Mathf.Max(0f, safeStartHoverHeight);
+            grounded += Vector3.ProjectOnPlane(forward, Vector3.up).normalized * 0.05f;
+            return grounded;
+        }
+
+        return desiredStartPos + Vector3.up * Mathf.Max(0f, safeStartHoverHeight);
+    }
+
+    private static string GetBindingDisplay(InputActionReference actionReference, string fallback)
+    {
+        if (actionReference == null || actionReference.action == null)
+            return string.IsNullOrWhiteSpace(fallback) ? "-" : fallback;
+
+        string display = InputPromptResolver.GetBindingDisplay(actionReference.action);
+        if (!string.IsNullOrWhiteSpace(display))
+            return display.Trim();
+
+        return string.IsNullOrWhiteSpace(fallback) ? "-" : fallback;
+    }
+
+    private string GetInteractBindingDisplay()
+    {
+        return GetBindingDisplay(interactAction, "E");
+    }
+
+    private string GetPreviousLeagueBindingDisplay()
+    {
+        return GetBindingDisplay(previousLeagueAction, "Q");
+    }
+
+    private string GetNextLeagueBindingDisplay()
+    {
+        return GetBindingDisplay(nextLeagueAction, "E");
     }
 
     public bool IsPromptAvailable
@@ -1776,8 +3069,37 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         }
     }
 
-    public string PromptActionText => "Interact";
-    public string PromptDescriptionText => $"{promptText} ({GetLeagueDisplayName(DefaultLeagueNumber)})";
+    public string PromptActionText => $"Hold {GetInteractBindingDisplay()} to start race";
+    public string PromptDescriptionText
+    {
+        get
+        {
+            string previousBinding = GetPreviousLeagueBindingDisplay();
+            string nextBinding = GetNextLeagueBindingDisplay();
+            string cyclePrompt = $"Tap {previousBinding} or {nextBinding} to change leagues";
+
+            int leagueNumber = SelectedLeagueNumber;
+            string leagueName = GetLeagueDisplayName(leagueNumber);
+
+            if (IsRegionalChampionship)
+            {
+                if (IsChampionshipUnlocked())
+                    return cyclePrompt;
+
+                return $"{cyclePrompt} • {BuildChampionshipLockReason()}";
+            }
+
+            if (IsLeagueUnlocked(leagueNumber))
+                return cyclePrompt;
+
+            int requiredLeague = GetPreviousLeagueNumber(leagueNumber);
+            if (requiredLeague > 0)
+                return $"{cyclePrompt} • {leagueName} locked - win {GetLeagueDisplayName(requiredLeague)}";
+
+            return cyclePrompt;
+        }
+    }
+
     public bool PromptUsesHold => requireHold;
     public float PromptHoldDuration => holdSeconds;
     public Vector3 PromptWorldPosition => GetFirstPoint();

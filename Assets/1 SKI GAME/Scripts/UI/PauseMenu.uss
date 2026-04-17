@@ -2,192 +2,695 @@
     flex-grow: 1;
     width: 100%;
     height: 100%;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
-    background-color: rgba(0, 0, 0, 0.42);
+    background-color: rgba(6, 10, 18, 0.62);
+    color: rgb(244, 248, 255);
     -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .pause-shell {
-    width: 1100px;
-    max-width: 94%;
-    height: 680px;
-    max-height: 92%;
+    flex-grow: 1;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+}
+
+.pause-screen,
+.screen {
+    flex-grow: 1;
+    width: 100%;
+    height: 100%;
+}
+
+.hero-card {
+    width: 520px;
+    max-width: 92%;
+    padding: 28px;
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+    background-color: rgba(10, 16, 28, 0.97);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    align-items: center;
+    flex-grow: 0;
+    color: rgb(244, 248, 255);
+}
+
+.hero-title {
+    font-size: 64px;
+    color: rgb(248, 251, 255);
+    -unity-text-align: middle-center;
+    margin-bottom: 8px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
+}
+
+.hero-subtitle {
+    font-size: 16px;
+    color: rgba(226, 235, 246, 0.78);
+    -unity-text-align: middle-center;
+    white-space: normal;
+    margin-bottom: 22px;
+}
+
+.hero-actions {
+    width: 100%;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.hero-footnote {
+    font-size: 12px;
+    color: rgba(226, 235, 246, 0.58);
+    -unity-text-align: middle-center;
+}
+
+.page-card,
+.pause-card {
+    width: 100%;
+    height: 100%;
+    padding: 22px;
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+    background-color: rgba(10, 16, 28, 0.97);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    color: rgb(244, 248, 255);
+}
+
+.page-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.page-title {
+    font-size: 30px;
+    color: rgb(248, 251, 255);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
+}
+
+.content-row {
+    flex-grow: 1;
     flex-direction: row;
     gap: 18px;
 }
 
-.pause-sidebar {
-    width: 260px;
-    padding: 18px;
-    border-radius: 20px;
-    background-color: rgba(10, 14, 22, 0.9);
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.08);
+.slot-column {
+    width: 380px;
+    min-width: 340px;
+    gap: 12px;
 }
 
-.pause-title {
-    font-size: 30px;
-    -unity-font-style: bold;
-    color: rgb(245, 248, 252);
-    margin-bottom: 6px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
+.slot-button {
+    min-height: 96px;
+    padding: 0;
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+    background-color: rgba(24, 36, 58, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    color: rgb(244, 248, 255);
 }
 
-.pause-subtitle {
+.slot-button:hover {
+    background-color: rgba(91, 196, 255, 0.10);
+}
+
+.slot-button.selected,
+.slot-button.is-selected {
+    background-color: rgba(230, 189, 61, 0.18);
+    border-left-color: rgba(255, 239, 179, 0.40);
+    border-right-color: rgba(255, 239, 179, 0.40);
+    border-top-color: rgba(255, 239, 179, 0.40);
+    border-bottom-color: rgba(255, 239, 179, 0.40);
+}
+
+.slot-content {
+    flex-grow: 1;
+    justify-content: center;
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 14px;
+    padding-bottom: 14px;
+}
+
+.slot-title {
+    font-size: 18px;
+    color: rgb(248, 251, 255);
+    margin-bottom: 4px;
+}
+
+.slot-sub {
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.64);
-    margin-bottom: 18px;
+    color: rgba(226, 235, 246, 0.74);
     white-space: normal;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
-.pause-nav {
-    gap: 10px;
-}
-
-.pause-nav-button {
-    min-height: 44px;
-    border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.05);
-    color: rgba(255, 255, 255, 0.92);
-    -unity-font-style: bold;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.pause-nav-button.is-active {
-    background-color: rgba(120, 190, 255, 0.18);
-}
-
-.pause-main {
+.preview-column {
     flex-grow: 1;
     padding: 20px;
-    border-radius: 20px;
-    background-color: rgba(10, 14, 22, 0.9);
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.08);
-    overflow: hidden;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+    background-color: rgba(24, 36, 58, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
-.pause-page-title {
-    font-size: 24px;
-    -unity-font-style: bold;
-    color: rgb(245, 248, 252);
-    margin-bottom: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
-}
-
-.pause-button-list {
-    gap: 10px;
-}
-
-.pause-action-button {
-    min-height: 48px;
-    border-radius: 14px;
-    font-size: 15px;
-    -unity-font-style: bold;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.pause-scroll {
-    flex-grow: 1;
-    overflow: hidden;
-}
-
-.pause-section {
-    margin-bottom: 16px;
-    padding: 14px;
-    border-radius: 16px;
-    background-color: rgba(255, 255, 255, 0.04);
-}
-
-.pause-section-title {
-    font-size: 17px;
-    -unity-font-style: bold;
-    color: rgb(245, 248, 252);
-    margin-bottom: 10px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.pause-section-body {
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.76);
-    white-space: normal;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.pause-setting-row {
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 10px;
-}
-
-.pause-setting-label {
-    width: 180px;
+.preview-heading {
     font-size: 14px;
-    color: rgba(255, 255, 255, 0.84);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgb(241, 199, 74);
+    margin-bottom: 4px;
 }
 
-.pause-setting-value {
-    width: 70px;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.7);
-    -unity-text-align: upper-right;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+.preview-title {
+    font-size: 24px;
+    color: rgb(248, 251, 255);
+    margin-bottom: 4px;
 }
 
-.pause-setting-slider,
-.pause-setting-dropdown,
-.pause-setting-toggle {
-    flex-grow: 1;
-}
-
-.pause-controls-note {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
+.preview-subtitle {
+    font-size: 14px;
+    color: rgba(226, 235, 246, 0.74);
     margin-bottom: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
-.pause-rebind-list {
-    gap: 8px;
+.preview-divider {
+    height: 1px;
+    margin-top: 4px;
+    margin-bottom: 12px;
+    background-color: rgba(255, 255, 255, 0.08);
 }
 
-.pause-rebind-row {
+.kv-row {
     flex-direction: row;
+    justify-content: space-between;
     align-items: center;
-    gap: 12px;
-    padding: 12px;
-    border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.04);
     margin-bottom: 8px;
 }
 
-.pause-rebind-action {
-    width: 220px;
-    font-size: 14px;
-    color: rgb(245, 248, 252);
-    -unity-font-style: bold;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+.kv-key {
+    color: rgba(226, 235, 246, 0.74);
 }
 
-.pause-rebind-binding {
+.kv-value {
+    color: rgb(248, 251, 255);
+    -unity-text-align: upper-right;
+}
+
+.preview-spacer {
     flex-grow: 1;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.76);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
-.pause-rebind-button {
-    min-width: 110px;
-    min-height: 38px;
-    border-radius: 10px;
-    -unity-font-style: bold;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+.preview-actions {
+    gap: 10px;
+}
+
+.settings-scroll {
+    flex-grow: 1;
+}
+
+.settings-group {
+    margin-bottom: 16px;
+    padding: 16px;
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+    background-color: rgba(24, 36, 58, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.group-title {
+    font-size: 18px;
+    color: rgb(248, 251, 255);
+    margin-bottom: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
+}
+
+.setting-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.setting-label {
+    width: 170px;
+    font-size: 14px;
+    color: rgba(244, 248, 255, 0.88);
+}
+
+.setting-slider {
+    flex-grow: 1;
+}
+
+.setting-dropdown {
+    flex-grow: 1;
+}
+
+.setting-value {
+    width: 70px;
+    font-size: 13px;
+    color: rgba(226, 235, 246, 0.78);
+    -unity-text-align: upper-right;
+}
+
+.setting-toggle {
+    flex-grow: 1;
+    align-items: flex-end;
+}
+
+.settings-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.menu-button {
+    height: 46px;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    font-size: 15px;
+    color: rgb(223, 244, 255);
+    background-color: rgba(91, 196, 255, 0.14);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.30);
+    border-right-color: rgba(91, 196, 255, 0.30);
+    border-top-color: rgba(91, 196, 255, 0.30);
+    border-bottom-color: rgba(91, 196, 255, 0.30);
+}
+
+.menu-button:hover {
+    background-color: rgba(91, 196, 255, 0.22);
+}
+
+.menu-button:active {
+    background-color: rgba(91, 196, 255, 0.28);
+}
+
+.menu-button-primary {
+    background-color: rgba(91, 196, 255, 0.95);
+    color: rgb(14, 22, 34);
+    border-left-color: rgba(220, 245, 255, 0.55);
+    border-right-color: rgba(220, 245, 255, 0.55);
+    border-top-color: rgba(220, 245, 255, 0.55);
+    border-bottom-color: rgba(220, 245, 255, 0.55);
+}
+
+.menu-button-primary:hover {
+    background-color: rgba(91, 196, 255, 1.0);
+}
+
+.menu-button-danger {
+    background-color: rgba(230, 189, 61, 0.95);
+    color: rgb(18, 24, 34);
+    border-left-color: rgba(255, 239, 179, 0.55);
+    border-right-color: rgba(255, 239, 179, 0.55);
+    border-top-color: rgba(255, 239, 179, 0.55);
+    border-bottom-color: rgba(255, 239, 179, 0.55);
+}
+
+.menu-button-danger:hover {
+    background-color: rgba(230, 189, 61, 1.0);
+}
+
+.small-button {
+    min-width: 120px;
+    height: 40px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    font-size: 14px;
+    color: rgb(223, 244, 255);
+    background-color: rgba(91, 196, 255, 0.14);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.30);
+    border-right-color: rgba(91, 196, 255, 0.30);
+    border-top-color: rgba(91, 196, 255, 0.30);
+    border-bottom-color: rgba(91, 196, 255, 0.30);
+}
+
+.small-button:hover {
+    background-color: rgba(91, 196, 255, 0.22);
+}
+
+.modal {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-card {
+    width: 460px;
+    max-width: 92%;
+    padding: 22px;
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+    background-color: rgba(10, 16, 28, 0.98);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.10);
+    border-right-color: rgba(255, 255, 255, 0.10);
+    border-top-color: rgba(255, 255, 255, 0.10);
+    border-bottom-color: rgba(255, 255, 255, 0.10);
+}
+
+.modal-title {
+    font-size: 26px;
+    color: rgb(248, 251, 255);
+    margin-bottom: 12px;
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
+}
+
+.modal-body {
+    font-size: 14px;
+    color: rgba(244, 248, 255, 0.88);
+    white-space: normal;
+    margin-bottom: 16px;
+}
+
+.modal-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.controls-note,
+.settings-note {
+    font-size: 12px;
+    color: rgba(226, 235, 246, 0.60);
+    margin-bottom: 12px;
 }
 
 .is-hidden {
     display: none;
+}
+
+    /* ---------- Shared settings / controls field standardization ---------- */
+
+.setting-label {
+    width: 170px;
+    font-size: 14px;
+    color: rgba(244, 248, 255, 0.90);
+}
+
+.setting-value {
+    width: 70px;
+    font-size: 13px;
+    color: rgba(226, 235, 246, 0.78);
+    -unity-text-align: upper-right;
+}
+
+.settings-note,
+.controls-note {
+    font-size: 12px;
+    color: rgba(226, 235, 246, 0.60);
+    white-space: normal;
+}
+
+/* DropdownField */
+.setting-dropdown {
+    flex-grow: 1;
+    min-height: 38px;
+    padding-left: 10px;
+    padding-right: 10px;
+    color: rgb(244, 248, 255);
+    background-color: rgba(24, 36, 58, 0.92);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.24);
+    border-right-color: rgba(91, 196, 255, 0.24);
+    border-top-color: rgba(91, 196, 255, 0.24);
+    border-bottom-color: rgba(91, 196, 255, 0.24);
+}
+
+.setting-dropdown > .unity-base-field__label {
+    display: none;
+}
+
+.setting-dropdown > .unity-base-field__input {
+    min-height: 36px;
+    padding-left: 0;
+    padding-right: 0;
+    color: rgb(244, 248, 255);
+    background-color: rgba(0, 0, 0, 0);
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+}
+
+.setting-dropdown .unity-popup-field__text {
+    color: rgb(244, 248, 255);
+}
+
+.setting-dropdown .unity-popup-field__arrow {
+    color: rgb(176, 229, 255);
+}
+
+/* Slider */
+.setting-slider {
+    flex-grow: 1;
+    min-height: 32px;
+}
+
+.setting-slider > .unity-base-field__label {
+    display: none;
+}
+
+.setting-slider > .unity-base-field__input {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.setting-slider .unity-dragger-horizontal {
+    height: 16px;
+}
+
+.setting-slider .unity-tracker-horizontal {
+    height: 8px;
+    background-color: rgba(255, 255, 255, 0.10);
+    border-top-left-radius: 999px;
+    border-top-right-radius: 999px;
+    border-bottom-left-radius: 999px;
+    border-bottom-right-radius: 999px;
+}
+
+.setting-slider .unity-dragger-horizontal__track {
+    background-color: rgb(91, 196, 255);
+    border-top-left-radius: 999px;
+    border-top-right-radius: 999px;
+    border-bottom-left-radius: 999px;
+    border-bottom-right-radius: 999px;
+}
+
+.setting-slider .unity-dragger-horizontal__dragger {
+    width: 16px;
+    height: 16px;
+    background-color: rgb(241, 199, 74);
+    border-top-left-radius: 999px;
+    border-top-right-radius: 999px;
+    border-bottom-left-radius: 999px;
+    border-bottom-right-radius: 999px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 244, 214, 0.65);
+    border-right-color: rgba(255, 244, 214, 0.65);
+    border-top-color: rgba(255, 244, 214, 0.65);
+    border-bottom-color: rgba(255, 244, 214, 0.65);
+}
+
+/* Toggle */
+.setting-toggle {
+    flex-grow: 1;
+    min-height: 28px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.setting-toggle > .unity-base-field__label {
+    display: none;
+}
+
+.setting-toggle > .unity-base-field__input {
+    margin-left: auto;
+}
+
+.setting-toggle .unity-checkmark {
+    width: 22px;
+    height: 22px;
+    background-color: rgba(24, 36, 58, 0.92);
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.24);
+    border-right-color: rgba(91, 196, 255, 0.24);
+    border-top-color: rgba(91, 196, 255, 0.24);
+    border-bottom-color: rgba(91, 196, 255, 0.24);
+}
+
+.setting-toggle:checked .unity-checkmark {
+    background-color: rgba(91, 196, 255, 0.95);
+    border-left-color: rgba(220, 245, 255, 0.55);
+    border-right-color: rgba(220, 245, 255, 0.55);
+    border-top-color: rgba(220, 245, 255, 0.55);
+    border-bottom-color: rgba(220, 245, 255, 0.55);
+}
+
+/* Rebind list */
+.controls-rebind-list {
+    gap: 10px;
+    padding-top: 2px;
+    padding-bottom: 6px;
+}
+
+.controls-rebind-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    background-color: rgba(24, 36, 58, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    margin-bottom: 8px;
+}
+
+.controls-rebind-row.is-listening {
+    background-color: rgba(91, 196, 255, 0.16);
+    border-left-color: rgba(91, 196, 255, 0.36);
+    border-right-color: rgba(91, 196, 255, 0.36);
+    border-top-color: rgba(91, 196, 255, 0.36);
+    border-bottom-color: rgba(91, 196, 255, 0.36);
+}
+
+.controls-rebind-action {
+    width: 220px;
+    font-size: 14px;
+    color: rgb(248, 251, 255);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.controls-rebind-binding {
+    flex-grow: 1;
+    font-size: 14px;
+    color: rgba(226, 235, 246, 0.78);
+}
+
+.controls-rebind-binding.is-listening {
+    color: rgb(248, 251, 255);
+}
+
+.controls-rebind-btn {
+    min-width: 110px;
+    height: 40px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    font-size: 14px;
+    color: rgb(223, 244, 255);
+    background-color: rgba(91, 196, 255, 0.14);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.30);
+    border-right-color: rgba(91, 196, 255, 0.30);
+    border-top-color: rgba(91, 196, 255, 0.30);
+    border-bottom-color: rgba(91, 196, 255, 0.30);
+}
+
+.controls-rebind-btn:hover {
+    background-color: rgba(91, 196, 255, 0.22);
+}
+
+.controls-status {
+    flex-grow: 1;
+    font-size: 13px;
+    color: rgb(241, 199, 74);
+    white-space: normal;
 }

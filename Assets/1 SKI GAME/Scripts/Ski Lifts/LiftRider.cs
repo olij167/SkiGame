@@ -1,3 +1,4 @@
+using SkiGame.Audio;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using SkiGame.Progression;
@@ -53,6 +54,16 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
     private bool _prevSkiEnabled;
     private bool _prevWalkEnabled;
 
+    private LiftBoardGate _nearbyBoardGate;
+
+    private LiftBoardGate _activeQueueGate;
+    private LiftLine _authorizedBoardLine;
+    private bool _queuedViaAutoBoarding;
+    private bool _hadPreferredModeBeforeQueue;
+    private bool _preferredSkiModeBeforeQueue = true;
+
+    public LiftBoardGate NearbyBoardGate => _nearbyBoardGate;
+
     /// <summary>
     /// True while the rider is currently attached to a lift carrier (chair or T-bar).
     /// Exposed for VFX/audio gating.
@@ -69,6 +80,8 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
     /// </summary>
     public bool IsTBarMode => isAttached && !isChairMode;
     public LiftLine CurrentLiftLine => currentCarrier != null ? currentCarrier.line : null;
+
+    public LiftCarrier CurrentCarrier => currentCarrier;
     private void Awake()
     {
         if (!rb) rb = GetComponent<Rigidbody>();
@@ -97,6 +110,10 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
         }
     }
 
+    public void SetNearbyBoardGate(LiftBoardGate gate)
+    {
+        _nearbyBoardGate = gate;
+    }
 
     /// <summary>
     /// Callback from the Input System for the configured lift input action.
@@ -139,7 +156,7 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
                 _blockAttachUntilRelease = true;
             }
 
-            return; // important: don’t fall through into attach logic while attached
+            return; // important: donâ€™t fall through into attach logic while attached
         }
 
         // T-bar logic: must hold; release detaches
@@ -155,23 +172,42 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
         if (!isAttached && !_blockAttachUntilRelease)
         {
             if (wasPressedThisFrame)
+            {
+                if (ShouldUseGateBoarding())
+                {
+                    _nearbyBoardGate.TryJoinQueue(this);
+                    return;
+                }
+
                 TryAttachToNearbyCarrier();
+            }
         }
     }
 
     private void FixedUpdate()
     {
         // Attachment assist: while held or buffered, keep attempting to attach.
-        if (!isAttached && !_blockAttachUntilRelease)
+        if (!isAttached)
         {
-            bool shouldTryAttach =
-                (holdToAttach && liftInputHeld) ||
-                (Time.time <= _attachBufferUntilTime);
+            if (_activeQueueGate != null)
+                UpdateAutoQueueMovement();
 
-            if (shouldTryAttach && Time.time >= _nextAttachAttemptTime)
+            if (!_blockAttachUntilRelease)
             {
-                _nextAttachAttemptTime = Time.time + attachAttemptInterval;
-                TryAttachToNearbyCarrier();
+                bool shouldTryAttach =
+                    (holdToAttach && liftInputHeld) ||
+                    (Time.time <= _attachBufferUntilTime);
+
+                if (ShouldUseGateBoarding())
+                {
+                    if (shouldTryAttach && !_nearbyBoardGate.IsQueued(this))
+                        _nearbyBoardGate.TryJoinQueue(this);
+                }
+                else if (shouldTryAttach && Time.time >= _nextAttachAttemptTime)
+                {
+                    _nextAttachAttemptTime = Time.time + attachAttemptInterval;
+                    TryAttachToNearbyCarrier();
+                }
             }
         }
 
@@ -255,6 +291,23 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
         currentCarrier = carrier;
         isAttached = true;
         isChairMode = (carrier.mode == LiftCarrierMode.Chair);
+        GameAudio.PlayWorld(isChairMode ? GameAudioCueId.LiftAttachChair : GameAudioCueId.LiftAttachTBar, transform.position);
+
+        if (walkingController != null)
+            walkingController.ClearExternalMove();
+
+        AutoSkiApproachDriver skiApproach = GetComponent<AutoSkiApproachDriver>();
+        if (skiApproach != null)
+            skiApproach.StopApproach(this);
+
+        if (walkingController != null)
+        {
+            walkingController.SetWalkPresentationKeepsSkisEquipped(false);
+            walkingController.RefreshEquipmentPresentation();
+        }
+
+        _activeQueueGate = null;
+        _queuedViaAutoBoarding = false;
 
         string liftId = null;
         if (carrier != null && carrier.line != null)
@@ -267,8 +320,17 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
         if (isChairMode)
         {
             // Cache previous states so detach restores correctly
-            _prevSkiEnabled = (skiController != null && skiController.enabled);
-            _prevWalkEnabled = (walkingController != null && walkingController.enabled);
+            if (_hadPreferredModeBeforeQueue)
+            {
+                _prevSkiEnabled = _preferredSkiModeBeforeQueue;
+                _prevWalkEnabled = !_preferredSkiModeBeforeQueue;
+                _hadPreferredModeBeforeQueue = false;
+            }
+            else
+            {
+                _prevSkiEnabled = (skiController != null && skiController.enabled);
+                _prevWalkEnabled = (walkingController != null && walkingController.enabled);
+            }
 
             if (rb)
             {
@@ -308,6 +370,7 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
     public void OnDetachedFromCarrier(LiftCarrier carrier)
     {
         if (carrier != currentCarrier) return;
+        GameAudio.PlayWorld(GameAudioCueId.LiftDetach, transform.position);
         // Common detach behaviour
         transform.SetParent(null);
 
@@ -328,8 +391,40 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
         }
 
         // Restore prior controller state
-        if (skiController) skiController.enabled = _prevSkiEnabled;
-        if (walkingController) walkingController.enabled = _prevWalkEnabled;
+        if (IsPlayerControlled())
+        {
+            if (walkingController)
+            {
+                walkingController.enabled = true;
+                walkingController.SetWalkPresentationKeepsSkisEquipped(false);
+                walkingController.ForceEnterSkiMode();
+            }
+
+            if (skiController)
+                skiController.enabled = true;
+
+            if (walkingController)
+                walkingController.enabled = true;
+        }
+        else
+        {
+            if (walkingController)
+            {
+                walkingController.enabled = true;
+                walkingController.SetWalkPresentationKeepsSkisEquipped(false);
+
+                if (_prevSkiEnabled)
+                    walkingController.ForceEnterSkiMode();
+                else
+                    walkingController.ForceEnterWalkMode();
+            }
+
+            if (skiController)
+                skiController.enabled = _prevSkiEnabled;
+
+            if (walkingController)
+                walkingController.enabled = _prevWalkEnabled;
+        }
 
         // Nudge down a bit so we don't hover
         transform.position += Vector3.down * detachDownOffset;
@@ -337,6 +432,28 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
         isAttached = false;
         currentCarrier = null;
 
+    }
+
+    private void CancelQueueAutoBoarding()
+    {
+        LiftBoardGate gate = _activeQueueGate;
+        if (gate == null)
+            return;
+
+        gate.LeaveQueue(this);
+
+        AutoSkiApproachDriver skiApproach = GetComponent<AutoSkiApproachDriver>();
+        if (skiApproach != null)
+            skiApproach.StopApproach(this);
+
+        if (walkingController != null)
+        {
+            walkingController.ClearExternalMove();
+            walkingController.SetWalkPresentationKeepsSkisEquipped(false);
+            walkingController.ForceEnterSkiMode();
+        }
+
+        _queuedViaAutoBoarding = false;
     }
 
     private void RequestDetach()
@@ -366,6 +483,32 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
             p.IncrementLiftRideCount(liftId, session: true);
             p.IncrementLiftRideCount(liftId, session: false);
         }
+    }
+
+    private bool ShouldSuppressDirectCarrierPrompt(LiftCarrier carrier)
+    {
+        if (carrier == null)
+            return false;
+
+        if (!IsPlayerControlled())
+            return false;
+
+        LiftLine line = carrier.line;
+        if (line == null)
+            return false;
+
+        // If this lift line now requires gate-based boarding for players,
+        // never show the legacy direct-to-carrier prompt.
+        return line.HasPlayerBoardingGates;
+    }
+
+    private LiftCarrier FindBestPromptCarrier()
+    {
+        LiftCarrier carrier = FindBestNearbyCarrierForPrompt();
+        if (ShouldSuppressDirectCarrierPrompt(carrier))
+            return null;
+
+        return carrier;
     }
 
     private LiftCarrier FindBestNearbyCarrierForPrompt()
@@ -431,7 +574,10 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
             if (isAttached)
                 return true;
 
-            return FindBestNearbyCarrierForPrompt() != null;
+            if (_nearbyBoardGate != null && _nearbyBoardGate.ShouldInterceptPlayerAttach(this))
+                return true;
+
+            return FindBestPromptCarrier() != null;
         }
     }
 
@@ -444,7 +590,18 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
             if (isAttached)
                 return isChairMode ? "Leave Lift" : "Release T-Bar";
 
-            var carrier = FindBestNearbyCarrierForPrompt();
+            if (_nearbyBoardGate != null && _nearbyBoardGate.ShouldInterceptPlayerAttach(this))
+            {
+                if (_nearbyBoardGate.IsQueued(this))
+                {
+                    int idx = _nearbyBoardGate.GetQueueIndex(this);
+                    return idx <= 0 ? "Boarding Lift" : $"Joining Queue ({idx + 1})";
+                }
+
+                return "Join Lift Queue";
+            }
+
+            var carrier = FindBestPromptCarrier();
             if (carrier == null)
                 return string.Empty;
 
@@ -452,9 +609,8 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
             if (line != null)
             {
                 var passMgr = SkiPassManager.Instance;
-                int required = Mathf.Max(0, line.RequiredPassLevel);
 
-                if (passMgr != null && !passMgr.CanUseLift(required))
+                if (passMgr != null && !passMgr.CanUseLift(line))
                 {
                     string requiredName = line.GetRequiredPassDisplayName();
                     return $"Upgrade your pass to {requiredName} at the kiosk to use this ski lift";
@@ -468,6 +624,132 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
         }
     }
 
+    private bool IsPlayerControlled()
+    {
+        return !CompareTag("NPC") && !transform.root.CompareTag("NPC");
+    }
+
+    private bool ShouldUseGateBoarding()
+    {
+        return IsPlayerControlled() &&
+               _nearbyBoardGate != null &&
+               _nearbyBoardGate.ShouldInterceptPlayerAttach(this);
+    }
+
+    public bool RequiresBoardAuthorization(LiftLine line)
+    {
+        return IsPlayerControlled() &&
+               line != null &&
+               line.HasPlayerBoardingGates;
+    }
+
+    public bool HasBoardAuthorizationFor(LiftLine line)
+    {
+        return line != null && _authorizedBoardLine == line;
+    }
+
+    public void GrantBoardAuthorization(LiftBoardGate gate)
+    {
+        _authorizedBoardLine = gate != null ? gate.line : null;
+    }
+
+    public void ConsumeBoardAuthorization(LiftLine line)
+    {
+        if (_authorizedBoardLine == line)
+            _authorizedBoardLine = null;
+    }
+
+    public void OnJoinedLiftQueue(LiftBoardGate gate)
+    {
+        _activeQueueGate = gate;
+        GameAudio.PlayWorld(GameAudioCueId.LiftQueueJoin, gate != null ? gate.transform.position : transform.position, 0.85f);
+
+        if (!IsPlayerControlled())
+            return;
+
+        _queuedViaAutoBoarding = true;
+
+        if (walkingController != null)
+        {
+            _preferredSkiModeBeforeQueue = walkingController.SkisOn;
+            _hadPreferredModeBeforeQueue = true;
+            walkingController.ForceEnterSkiMode();
+            walkingController.ClearExternalMove();
+        }
+        else if (skiController != null)
+        {
+            _preferredSkiModeBeforeQueue = skiController.enabled;
+            _hadPreferredModeBeforeQueue = true;
+            skiController.enabled = true;
+        }
+    }
+
+    public void OnLeftLiftQueue(LiftBoardGate gate)
+    {
+        if (_activeQueueGate == gate)
+            _activeQueueGate = null;
+
+        GameAudio.PlayWorld(GameAudioCueId.LiftQueueLeave, gate != null ? gate.transform.position : transform.position, 0.8f);
+
+        AutoSkiApproachDriver skiApproach = GetComponent<AutoSkiApproachDriver>();
+        if (skiApproach != null)
+            skiApproach.StopApproach(this);
+
+        if (walkingController != null)
+        {
+            walkingController.ClearExternalMove();
+            walkingController.SetWalkPresentationKeepsSkisEquipped(false);
+
+            if (!isAttached)
+                walkingController.ForceEnterSkiMode();
+        }
+
+        _queuedViaAutoBoarding = false;
+
+        if (gate == null || gate.line == null || _authorizedBoardLine == gate.line)
+            _authorizedBoardLine = null;
+    }
+
+    private void UpdateAutoQueueMovement()
+    {
+        if (_activeQueueGate == null || skiController == null || currentCarrier != null)
+            return;
+
+        AutoSkiApproachDriver skiApproach = GetComponent<AutoSkiApproachDriver>();
+        if (skiApproach == null)
+            skiApproach = gameObject.AddComponent<AutoSkiApproachDriver>();
+
+        if (skiApproach.CancelRequested)
+        {
+            CancelQueueAutoBoarding();
+            return;
+        }
+
+        int queueIndex = _activeQueueGate.GetQueueIndex(this);
+        if (queueIndex < 0)
+        {
+            skiApproach.StopApproach(this);
+            return;
+        }
+
+        Vector3 target = _activeQueueGate.GetQueueTargetPosition(this);
+        Vector3 to = target - skiController.transform.position;
+        to.y = 0f;
+
+        float distance = to.magnitude;
+        float arriveDistance = 0.65f;
+
+        if (distance <= arriveDistance)
+        {
+            skiApproach.StopApproach(this);
+            return;
+        }
+
+        walkingController?.ForceEnterSkiMode();
+        skiApproach.BeginApproach(this, target, 0.82f, arriveDistance, allowPoles: distance > 2.5f);
+        skiApproach.UpdateApproachTarget(target, 0.82f, arriveDistance, allowPoles: distance > 2.5f);
+    }
+
     public bool PromptUsesHold => false;
     public float PromptHoldDuration => 0f;
 
@@ -475,10 +757,13 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
     {
         get
         {
+            if (_nearbyBoardGate != null && _nearbyBoardGate.boardingPoint != null)
+                return _nearbyBoardGate.boardingPoint.position;
+
             if (currentCarrier != null)
                 return currentCarrier.attachPoint != null ? currentCarrier.attachPoint.position : currentCarrier.transform.position;
 
-            var carrier = FindBestNearbyCarrierForPrompt();
+            var carrier = FindBestPromptCarrier();
             if (carrier != null)
                 return carrier.attachPoint != null ? carrier.attachPoint.position : carrier.transform.position;
 

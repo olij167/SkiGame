@@ -1,7 +1,7 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" editor-extension-mode="False">
     <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/UI/MainMenu.uss?fileID=7433441132597879392&amp;guid=5eda19afd96ffa44a900c7c338707bda&amp;type=3#MainMenu" />
     <ui:VisualElement name="Root" class="root">
-        <ui:VisualElement name="Background" class="background" />
+        <ui:VisualElement name="Background" class="background" style="background-image: url(&quot;project://database/Assets/Materials%20Collection/4%20Snow%20Materials/Textures/snow_2_tga.tga?fileID=2800000&amp;guid=9eccbb07d6b64db459a718c90fcb504e&amp;type=3#snow_2_tga&quot;);" />
         <ui:VisualElement name="Shell" class="shell">
             <ui:VisualElement name="Panel_Home" class="screen home-screen">
                 <ui:VisualElement class="hero-card">

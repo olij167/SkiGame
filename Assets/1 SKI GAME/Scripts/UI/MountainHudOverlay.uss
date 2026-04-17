@@ -1,7 +1,7 @@
 .overlay-root {
     flex-grow: 1;
     background-color: rgba(0, 0, 0, 0);
-    color: rgb(245, 245, 245);
+    color: rgb(244, 248, 255);
     -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
@@ -14,30 +14,9 @@
     overflow: hidden;
 }
 
-.map-content {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 1024px;
-    height: 1024px;
-}
-
-.map-background {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 1024px;
-    height: 1024px;
-}
-
-.map-polylines {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 1024px;
-    height: 1024px;
-}
-
+.map-content,
+.map-background,
+.map-polylines,
 .map-markers {
     position: absolute;
     left: 0;
@@ -47,7 +26,7 @@
 }
 
 .panel {
-    background-color: rgb(8, 12, 18);
+    background-color: rgba(10, 16, 28, 0.95);
     border-top-left-radius: 16px;
     border-top-right-radius: 16px;
     border-bottom-left-radius: 16px;
@@ -80,25 +59,28 @@
 
 .top-strip-time {
     font-size: 18px;
-    -unity-font-style: bold;
     min-width: 80px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgb(248, 251, 255);
 }
 
 .top-strip-weather {
     min-width: 150px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgba(226, 235, 246, 0.92);
 }
 
 .top-strip-location {
     flex-grow: 1;
-    -unity-font-style: bold;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgb(248, 251, 255);
+}
+
+.top-strip-currency {
+    min-width: 120px;
+    color: rgba(255, 225, 136, 0.98);
+    unity-text-align: middle-center;
 }
 
 .top-strip-hint {
-    color: rgba(255, 255, 255, 0.75);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgba(226, 235, 246, 0.78);
 }
 
 .left-rail {
@@ -152,230 +134,627 @@
 
 .panel-title {
     font-size: 16px;
-    -unity-font-style: bold;
+    color: rgb(248, 251, 255);
     -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
 }
 
-.context-title {
-    font-size: 18px;
-    -unity-font-style: bold;
+.context-panel {
+    flex-grow: 1;
+    min-height: 260px;
+    padding-bottom: 12px;
+    background:
+        linear-gradient(180deg, rgba(24, 36, 58, 0.42) 0%, rgba(10, 16, 28, 0.00) 120px),
+        rgba(10, 16, 28, 0.95);
+}
+
+.stats-panel {
+    min-height: 180px;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(91, 196, 255, 0.06) 0%, rgba(10, 16, 28, 0.00) 110px),
+        rgba(10, 16, 28, 0.95);
+}
+
+.goals-panel {
+    flex-grow: 1;
+    min-height: 300px;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(91, 196, 255, 0.06) 0%, rgba(10, 16, 28, 0.00) 120px),
+        rgba(10, 16, 28, 0.95);
+}
+
+.context-hero {
+    flex-direction: row;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    padding: 10px;
+    border-radius: 12px;
+    background-color: rgba(24, 36, 58, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.context-icon {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    margin-right: 8px;
+    padding-top: 4px;
+    border-radius: 10px;
+    background-color: rgba(91, 196, 255, 0.12);
+    color: rgb(223, 244, 255);
+    unity-text-align: middle-center;
+    font-size: 16px;
+    display: flex;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.20);
+    border-right-color: rgba(91, 196, 255, 0.20);
+    border-top-color: rgba(91, 196, 255, 0.20);
+    border-bottom-color: rgba(91, 196, 255, 0.20);
+}
+
+.context-panel {
+    flex-grow: 1;
+    min-height: 260px;
+    padding-bottom: 10px;
+    background:
+        linear-gradient(180deg, rgba(24, 36, 58, 0.34) 0%, rgba(10, 16, 28, 0.00) 95px),
+        rgba(10, 16, 28, 0.95);
+}
+
+.context-hero {
+    flex-direction: row;
+    align-items: flex-start;
     margin-bottom: 6px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    padding: 8px 10px;
+    border-radius: 12px;
+    background-color: rgba(24, 36, 58, 0.88);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.context-icon {
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    margin-right: 8px;
+    padding-top: 3px;
+    border-radius: 9px;
+    background-color: rgba(91, 196, 255, 0.12);
+    color: rgb(223, 244, 255);
+    unity-text-align: middle-center;
+    font-size: 14px;
+    display: flex;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.18);
+    border-right-color: rgba(91, 196, 255, 0.18);
+    border-top-color: rgba(91, 196, 255, 0.18);
+    border-bottom-color: rgba(91, 196, 255, 0.18);
+}
+
+.context-hero-copy {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.context-title-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+}
+
+.context-title {
+    flex-grow: 1;
+    min-width: 0;
+    font-size: 15px;
+    margin-bottom: 0;
+    color: rgb(248, 251, 255);
+    white-space: normal;
+}
+
+.context-status-pill {
+    padding-left: 7px;
+    padding-right: 7px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    min-height: 18px;
+    border-radius: 12px;
+    font-size: 9px;
+    color: rgb(247, 224, 140);
+    background-color: rgba(230, 189, 61, 0.14);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(230, 189, 61, 0.20);
+    border-right-color: rgba(230, 189, 61, 0.20);
+    border-top-color: rgba(230, 189, 61, 0.20);
+    border-bottom-color: rgba(230, 189, 61, 0.20);
+    -unity-text-align: middle-center;
+    flex-shrink: 0;
 }
 
 .context-body {
     white-space: normal;
-    line-height: 18px;
-    color: rgba(255, 255, 255, 0.92);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    line-height: 15px;
+    color: rgba(244, 248, 255, 0.86);
+    font-size: 11px;
+    max-height: 32px;
+    overflow: hidden;
 }
 
-.stats-body {
+.context-guidance-box {
+    margin-bottom: 6px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background-color: rgba(91, 196, 255, 0.07);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.16);
+    border-right-color: rgba(91, 196, 255, 0.16);
+    border-top-color: rgba(91, 196, 255, 0.16);
+    border-bottom-color: rgba(91, 196, 255, 0.16);
+}
+
+.context-guidance {
+    color: rgba(223, 244, 255, 0.86);
+    font-size: 10px;
+    line-height: 14px;
     white-space: normal;
-    line-height: 18px;
-    color: rgba(255, 255, 255, 0.92);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    max-height: 28px;
+    overflow: hidden;
+}
+
+.context-meta-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 6px;
+}
+
+.context-meta-chip {
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    border-radius: 11px;
+    background-color: rgba(24, 36, 58, 0.90);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.context-meta-chip.is-accent {
+    background-color: rgba(230, 189, 61, 0.13);
+    border-left-color: rgba(230, 189, 61, 0.20);
+    border-right-color: rgba(230, 189, 61, 0.20);
+    border-top-color: rgba(230, 189, 61, 0.20);
+    border-bottom-color: rgba(230, 189, 61, 0.20);
+}
+
+.context-meta-chip-label {
+    font-size: 9px;
+    color: rgba(226, 235, 246, 0.56);
+    margin-bottom: 1px;
+}
+
+.context-meta-chip-value {
+    font-size: 11px;
+    color: rgb(248, 251, 255);
+}
+
+.context-highlights {
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.context-highlight-card {
+    width: 100%;
+    min-width: 0;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background-color: rgba(24, 36, 58, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.06);
+    border-right-color: rgba(255, 255, 255, 0.06);
+    border-top-color: rgba(255, 255, 255, 0.06);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2px 8px;
+}
+
+.context-highlight-card.is-positive {
+    background-color: rgba(91, 196, 255, 0.14);
+    border-left-color: rgba(91, 196, 255, 0.22);
+    border-right-color: rgba(91, 196, 255, 0.22);
+    border-top-color: rgba(91, 196, 255, 0.22);
+    border-bottom-color: rgba(91, 196, 255, 0.22);
+}
+
+.context-highlight-card.is-warning {
+    background-color: rgba(230, 189, 61, 0.13);
+    border-left-color: rgba(230, 189, 61, 0.20);
+    border-right-color: rgba(230, 189, 61, 0.20);
+    border-top-color: rgba(230, 189, 61, 0.20);
+    border-bottom-color: rgba(230, 189, 61, 0.20);
+}
+
+.context-highlight-title {
+    font-size: 10px;
+    color: rgba(226, 235, 246, 0.58);
+    margin-bottom: 0;
+    max-width: 42%;
+}
+
+.context-highlight-value {
+    font-size: 13px;
+    color: rgb(248, 251, 255);
+    margin-bottom: 0;
+    flex-grow: 1;
+    min-width: 0;
+    -unity-text-align: upper-right;
+}
+
+.context-highlight-detail {
+    width: 100%;
+    margin-top: 2px;
+    font-size: 10px;
+    line-height: 13px;
+    color: rgba(226, 235, 246, 0.74);
+    white-space: normal;
+}
+
+.context-meta-chip.is-accent {
+    background-color: rgba(230, 189, 61, 0.14);
+    border-left-color: rgba(230, 189, 61, 0.22);
+    border-right-color: rgba(230, 189, 61, 0.22);
+    border-top-color: rgba(230, 189, 61, 0.22);
+    border-bottom-color: rgba(230, 189, 61, 0.22);
+}
+
+.context-meta-chip-label {
+    font-size: 10px;
+    color: rgba(226, 235, 246, 0.60);
+    margin-bottom: 1px;
+}
+
+.context-meta-chip-value {
+    font-size: 12px;
+    color: rgb(248, 251, 255);
+}
+
+.context-highlights {
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.context-highlight-card {
+    width: 100%;
+    min-width: 0;
+    padding: 8px;
+    border-radius: 12px;
+    background-color: rgba(24, 36, 58, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.06);
+    border-right-color: rgba(255, 255, 255, 0.06);
+    border-top-color: rgba(255, 255, 255, 0.06);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.context-highlight-card.is-positive {
+    background-color: rgba(91, 196, 255, 0.16);
+    border-left-color: rgba(91, 196, 255, 0.24);
+    border-right-color: rgba(91, 196, 255, 0.24);
+    border-top-color: rgba(91, 196, 255, 0.24);
+    border-bottom-color: rgba(91, 196, 255, 0.24);
+}
+
+.context-highlight-card.is-warning {
+    background-color: rgba(230, 189, 61, 0.14);
+    border-left-color: rgba(230, 189, 61, 0.22);
+    border-right-color: rgba(230, 189, 61, 0.22);
+    border-top-color: rgba(230, 189, 61, 0.22);
+    border-bottom-color: rgba(230, 189, 61, 0.22);
 }
 
 .attempts-list {
-    margin-top: 8px;
-    max-height: 220px;
+    margin-top: 2px;
+    max-height: 180px;
+    padding-top: 0;
 }
+
 
 .attempt-row {
     margin-top: 4px;
     margin-bottom: 4px;
-    padding-left: 8px;
-    padding-right: 8px;
-    padding-top: 6px;
-    padding-bottom: 6px;
-    background-color: rgba(255, 255, 255, 0.04);
-    border-radius: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    background-color: rgba(24, 36, 58, 0.92);
+    border-radius: 12px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
 .attempt-row-label {
     white-space: normal;
     font-size: 11px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    line-height: 16px;
+    color: rgba(244, 248, 255, 0.88);
 }
 
-.segmented-row {
+.stats-mode-summary {
+    margin-bottom: 6px;
+    padding: 7px 9px;
+    border-radius: 12px;
+    background-color: rgba(91, 196, 255, 0.10);
+    color: rgba(223, 244, 255, 0.92);
+    font-size: 11px;
+    display: flex;
+}
+
+.stats-grid {
     flex-direction: row;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
-.segment-button {
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+.stat-tile {
+    width: 48.5%;
+    min-width: 0;
+    min-height: 70px;
+    padding: 9px;
+    border-radius: 14px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.00) 100%),
+        rgba(24, 36, 58, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.06);
+    border-right-color: rgba(255, 255, 255, 0.06);
+    border-top-color: rgba(255, 255, 255, 0.06);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+    justify-content: space-between;
 }
 
-.mini-button {
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+.stat-tile.is-accent {
+    background:
+        linear-gradient(180deg, rgba(91,196,255,0.12) 0%, rgba(91,196,255,0.00) 100%),
+        rgba(24, 36, 58, 0.92);
+    border-left-color: rgba(91, 196, 255, 0.22);
+    border-right-color: rgba(91, 196, 255, 0.22);
+    border-top-color: rgba(91, 196, 255, 0.22);
+    border-bottom-color: rgba(91, 196, 255, 0.22);
 }
 
-.pass-level-button {
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+.stat-tile-label {
+    font-size: 11px;
+    color: rgba(226, 235, 246, 0.64);
+    white-space: normal;
 }
 
-.pass-buy-button {
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.goal-subtab-button {
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.map-layer-button {
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.map-button {
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.list-row {
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.segment-button {
-    background-color: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.95);
-    min-height: 26px;
-}
-
-.goal-subtab-button {
-    background-color: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.95);
-    min-height: 26px;
-}
-
-.pass-level-button {
-    background-color: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.95);
-    min-height: 26px;
-}
-
-.mini-button {
-    background-color: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.95);
-    min-height: 26px;
-}
-
-.map-layer-button {
-    background-color: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.95);
-    min-height: 26px;
-}
-
-.segment-button.is-selected {
-    background-color: rgba(255, 255, 255, 0.18);
-}
-
-.goal-subtab-button.is-selected {
-    background-color: rgba(255, 255, 255, 0.18);
-}
-
-.pass-level-button.is-selected {
-    background-color: rgba(255, 255, 255, 0.18);
-}
-
-.map-layer-button.is-selected {
-    background-color: rgba(255, 255, 255, 0.18);
+.stat-tile-value {
+    font-size: 19px;
+    color: rgb(248, 251, 255);
+    margin-top: 6px;
 }
 
 .goals-list {
     flex-grow: 1;
     flex-shrink: 1;
     min-height: 0;
+    padding-top: 2px;
 }
 
-.list-row {
+.task-card {
+    margin-bottom: 8px;
+    padding: 10px;
+    border-radius: 14px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.00) 100%),
+        rgba(24, 36, 58, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.06);
+    border-right-color: rgba(255, 255, 255, 0.06);
+    border-top-color: rgba(255, 255, 255, 0.06);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.task-card.is-actionable {
+    background:
+        linear-gradient(180deg, rgba(91,196,255,0.12) 0%, rgba(91,196,255,0.00) 100%),
+        rgba(24, 36, 58, 0.92);
+    border-left-color: rgba(91, 196, 255, 0.26);
+    border-right-color: rgba(91, 196, 255, 0.26);
+    border-top-color: rgba(91, 196, 255, 0.26);
+    border-bottom-color: rgba(91, 196, 255, 0.26);
+}
+
+.task-card.is-claimed {
+    opacity: 0.82;
+}
+
+.task-card-toprow {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
     margin-bottom: 6px;
-    min-height: 44px;
+}
+
+.task-card-title {
+    flex-grow: 1;
+    min-width: 0;
+    color: rgb(248, 251, 255);
+    font-size: 14px;
+    white-space: normal;
+}
+
+.task-card-tier {
     padding-left: 8px;
     padding-right: 8px;
-    background-color: rgba(255, 255, 255, 0.05);
-    color: white;
-    justify-content: space-between;
-    align-items: center;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-radius: 12px;
+    background-color: rgba(230, 189, 61, 0.14);
+    color: rgb(247, 224, 140);
+    font-size: 10px;
+    flex-shrink: 0;
 }
 
-.list-row.is-actionable {
-    background-color: rgba(43, 119, 214, 0.35);
+.task-card-status {
+    margin-bottom: 6px;
+    color: rgba(226, 235, 246, 0.76);
+    font-size: 11px;
 }
 
-.list-row-title {
-    flex-grow: 1;
-    -unity-font-style: bold;
-    white-space: normal;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.list-row-value {
-    color: rgba(255, 255, 255, 0.85);
-    margin-left: 8px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.achievement-category-row {
-    display: none;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 6px;
+.task-progress-track {
+    height: 8px;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    overflow: hidden;
     margin-bottom: 8px;
 }
 
-.achievement-grid {
+.task-progress-fill {
+    height: 100%;
+    background-color: rgba(91, 196, 255, 0.95);
+    border-radius: 12px;
+}
+
+.task-card-bottomrow {
     flex-direction: row;
-    flex-wrap: wrap;
     justify-content: space-between;
-    align-content: flex-start;
-    align-items: flex-start;
+    align-items: center;
+    gap: 10px;
+}
+
+.task-card-reward {
+    color: rgb(241, 199, 74);
+    font-size: 12px;
+}
+
+.task-action-button {
+    min-width: 96px;
+    min-height: 34px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 10px;
+    background-color: rgba(91, 196, 255, 0.95);
+    color: rgb(14, 22, 34);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(220, 245, 255, 0.55);
+    border-right-color: rgba(220, 245, 255, 0.55);
+    border-top-color: rgba(220, 245, 255, 0.55);
+    border-bottom-color: rgba(220, 245, 255, 0.55);
+}
+
+.task-action-button:disabled {
+    background-color: rgba(91, 196, 255, 0.12);
+    color: rgba(223, 244, 255, 0.55);
+    border-left-color: rgba(91, 196, 255, 0.16);
+    border-right-color: rgba(91, 196, 255, 0.16);
+    border-top-color: rgba(91, 196, 255, 0.16);
+    border-bottom-color: rgba(91, 196, 255, 0.16);
+}
+
+.achievement-category-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 6px;
+    min-height: 38px;
+    height: 38px;
+    margin-bottom: 8px;
+    align-items: stretch;
+    justify-content: space-between;
+}
+
+.achievement-category-row.is-hidden {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.achievement-scroll {
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.achievement-grid {
+    flex-direction: column;
+    flex-wrap: nowrap;
     width: 100%;
     min-width: 0;
 }
 
 .achievement-card {
-    width: 48.5%;
+    width: 100%;
     min-width: 0;
-    height: 196px;
-    padding-left: 10px;
-    padding-right: 10px;
+    min-height: 108px;
+    height: auto;
+    padding-left: 12px;
+    padding-right: 12px;
     padding-top: 10px;
     padding-bottom: 10px;
     margin-bottom: 8px;
-    background-color: rgba(255, 255, 255, 0.05);
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.00) 100%),
+        rgba(24, 36, 58, 0.92);
     border-radius: 14px;
     border-left-width: 1px;
     border-right-width: 1px;
@@ -385,134 +764,110 @@
     border-right-color: rgba(255, 255, 255, 0.07);
     border-top-color: rgba(255, 255, 255, 0.07);
     border-bottom-color: rgba(255, 255, 255, 0.07);
-    flex-grow: 0;
-    flex-shrink: 0;
-    justify-content: flex-start;
     overflow: hidden;
 }
 
-.achievement-card-icon {
-    font-size: 22px;
-    margin-bottom: 6px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.achievement-card-title {
-    -unity-font-style: bold;
-    white-space: normal;
-    margin-bottom: 6px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.achievement-card-state {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.72);
-    white-space: normal;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.achievement-card-state.is-complete {
-    color: rgb(180, 235, 180);
-}
-
-.achievement-empty-state {
-    width: 100%;
-    padding-left: 12px;
-    padding-right: 12px;
-    padding-top: 14px;
-    padding-bottom: 14px;
-    white-space: normal;
-    color: rgba(255, 255, 255, 0.72);
-    background-color: rgba(255, 255, 255, 0.04);
-    border-radius: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
 .achievement-card.is-complete {
-    background-color: rgba(86, 150, 104, 0.18);
-    border-left-color: rgba(180, 235, 180, 0.22);
-    border-right-color: rgba(180, 235, 180, 0.22);
-    border-top-color: rgba(180, 235, 180, 0.22);
-    border-bottom-color: rgba(180, 235, 180, 0.22);
+    background:
+        linear-gradient(180deg, rgba(91,196,255,0.12) 0%, rgba(91,196,255,0.00) 100%),
+        rgba(24, 36, 58, 0.92);
+    border-left-color: rgba(91, 196, 255, 0.24);
+    border-right-color: rgba(91, 196, 255, 0.24);
+    border-top-color: rgba(91, 196, 255, 0.24);
+    border-bottom-color: rgba(91, 196, 255, 0.24);
 }
 
 .achievement-card-toprow {
     flex-direction: row;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
+    gap: 10px;
     margin-bottom: 6px;
+}
+
+.achievement-card-icon {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    margin-bottom: 0;
+    padding-top: 2px;
+    border-radius: 8px;
+    background-color: rgba(230, 189, 61, 0.14);
+    color: rgb(247, 224, 140);
+    unity-text-align: middle-center;
+    font-size: 15px;
+}
+
+.achievement-card-title {
+    flex-grow: 1;
+    min-width: 0;
+    margin-bottom: 0;
+    color: rgb(248, 251, 255);
+    font-size: 13px;
+    white-space: normal;
+}
+
+.achievement-card-state {
+    min-width: 0;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-radius: 12px;
+    font-size: 10px;
+    color: rgba(226, 235, 246, 0.84);
+    background-color: rgba(255, 255, 255, 0.06);
+    white-space: nowrap;
+}
+
+.achievement-card-state.is-complete {
+    color: rgb(176, 229, 255);
+    background-color: rgba(91, 196, 255, 0.12);
 }
 
 .achievement-card-description {
+    min-width: 0;
     white-space: normal;
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.82);
-    margin-bottom: 6px;
-    max-height: 32px;
+    color: rgba(244, 248, 255, 0.82);
+    margin-bottom: 4px;
+    max-height: 30px;
     overflow: hidden;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .achievement-card-requirement {
+    min-width: 0;
     white-space: normal;
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.72);
+    font-size: 10px;
+    color: rgba(226, 235, 246, 0.66);
     margin-bottom: 8px;
-    max-height: 32px;
+    max-height: 28px;
     overflow: hidden;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .achievement-progress-track {
     height: 6px;
     background-color: rgba(255, 255, 255, 0.08);
-    border-radius: 999px;
+    border-radius: 12px;
     overflow: hidden;
-    margin-top: auto;
     margin-bottom: 6px;
 }
 
 .achievement-progress-fill {
     height: 100%;
-    background-color: rgba(83, 170, 255, 0.9);
-    border-radius: 999px;
-}
-
-.achievement-card-progress {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.78);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.achievement-card-title {
-    min-width: 0;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.achievement-card-description {
-    min-width: 0;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.achievement-card-requirement {
-    min-width: 0;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    background-color: rgba(91, 196, 255, 0.95);
+    border-radius: 12px;
 }
 
 .achievement-card-progress {
     min-width: 0;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.achievement-card-state {
-    min-width: 0;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    font-size: 10px;
+    color: rgba(226, 235, 246, 0.74);
 }
 
 .pass-current {
-    -unity-font-style: bold;
     margin-bottom: 8px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgb(248, 251, 255);
 }
 
 .pass-levels-list {
@@ -541,7 +896,7 @@
     align-items: stretch;
     gap: 6px;
     margin-bottom: 0;
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(24, 36, 58, 0.92);
     border-radius: 12px;
     border-left-width: 1px;
     border-right-width: 1px;
@@ -558,29 +913,36 @@
     font-size: 10px;
     white-space: normal;
     unity-text-align: upper-left;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgba(244, 248, 255, 0.88);
 }
 
 .pass-buy-button {
     min-width: 0;
     height: auto;
-    background-color: rgba(43, 119, 214, 0.35);
-    color: white;
+    background-color: rgba(91, 196, 255, 0.95);
+    color: rgb(14, 22, 34);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(220, 245, 255, 0.55);
+    border-right-color: rgba(220, 245, 255, 0.55);
+    border-top-color: rgba(220, 245, 255, 0.55);
+    border-bottom-color: rgba(220, 245, 255, 0.55);
 }
 
 .pass-expiry-meta {
     margin-top: 2px;
     margin-bottom: 8px;
-    color: rgba(255, 255, 255, 0.78);
+    color: rgba(226, 235, 246, 0.78);
     -unity-text-align: upper-center;
     font-size: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .pass-expiry-bar {
     height: 10px;
     margin-bottom: 10px;
-    border-radius: 999px;
+    border-radius: 12px;
     background-color: rgba(255, 255, 255, 0.12);
     overflow: hidden;
 }
@@ -588,8 +950,8 @@
 .pass-expiry-fill {
     height: 100%;
     width: 100%;
-    border-radius: 999px;
-    background-color: rgba(74, 174, 255, 0.95);
+    border-radius: 12px;
+    background-color: rgba(91, 196, 255, 0.95);
 }
 
 .map-layer-bar {
@@ -599,18 +961,34 @@
     translate: -50% 0;
     flex-direction: row;
     gap: 6px;
-    background-color: rgba(8, 12, 18, 0.72);
+    background-color: rgba(10, 16, 28, 0.84);
     border-radius: 14px;
     padding-left: 8px;
     padding-right: 8px;
     padding-top: 6px;
     padding-bottom: 6px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .map-button {
     position: absolute;
-    background-color: rgba(8, 12, 18, 0.72);
-    color: rgba(255, 255, 255, 0.95);
+    background-color: rgba(10, 16, 28, 0.84);
+    color: rgba(244, 248, 255, 0.96);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.3);
+    border-right-color: rgba(91, 196, 255, 0.3);
+    border-top-color: rgba(91, 196, 255, 0.3);
+    border-bottom-color: rgba(91, 196, 255, 0.3);
 }
 
 .map-button-reset {
@@ -631,8 +1009,8 @@
     position: absolute;
     top: 76px;
     bottom: 16px;
-    left: 360px;
-    right: 370px;
+    left: 365px;
+    right: 365px;
     min-width: 0;
     min-height: 0;
     overflow: hidden;
@@ -642,22 +1020,23 @@
     position: absolute;
     right: 14px;
     top: 14px;
-    width: 220px;
-    max-width: 220px;
-
-    padding-left: 10px;
-    padding-right: 10px;
-    padding-top: 10px;
-    padding-bottom: 10px;
-
-    border-radius: 16px;
-    background-color: rgba(8, 12, 18, 0.82);
-
+    width: 200px;
+    max-width: 200px;
+    max-height: 420px;
+    flex-direction: column;
+    flex-grow: 0;
+    flex-shrink: 0;
+    overflow: hidden;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    border-radius: 14px;
+    background-color: rgba(10, 16, 28, 0.86);
     border-left-width: 1px;
     border-right-width: 1px;
     border-top-width: 1px;
     border-bottom-width: 1px;
-
     border-left-color: rgba(255,255,255,0.08);
     border-right-color: rgba(255,255,255,0.08);
     border-top-color: rgba(255,255,255,0.08);
@@ -665,18 +1044,16 @@
 }
 
 .map-legend-title {
-    font-size: 12px;
-    unity-font-style: bold;
-    color: rgba(255,255,255,0.96);
-    margin-bottom: 8px;
+    font-size: 11px;
+    color: rgb(248, 251, 255);
+    margin-bottom: 6px;
 }
 
 .map-legend-section-label {
-    margin-top: 6px;
-    margin-bottom: 5px;
-    font-size: 10px;
-    unity-font-style: bold;
-    color: rgba(255,255,255,0.72);
+    margin-top: 5px;
+    margin-bottom: 4px;
+    font-size: 9px;
+    color: rgba(226,235,246,0.74);
 }
 
 .map-legend-row {
@@ -692,43 +1069,68 @@
 }
 
 .map-legend-chip {
-    min-height: 24px;
+    min-height: 22px;
+    width: 100%;
     padding-left: 8px;
     padding-right: 8px;
-    padding-top: 4px;
-    padding-bottom: 4px;
-
+    padding-top: 3px;
+    padding-bottom: 3px;
     flex-direction: row;
     align-items: center;
     gap: 6px;
-
-    border-radius: 999px;
-    background-color: rgba(255,255,255,0.08);
+    border-radius: 12px;
+    background-color: rgba(24,36,58,0.92);
+    opacity: 0.68;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.05);
+    border-right-color: rgba(255,255,255,0.05);
+    border-top-color: rgba(255,255,255,0.05);
+    border-bottom-color: rgba(255,255,255,0.05);
 }
 
 .map-legend-chip.is-on {
-    background-color: rgba(255,255,255,0.18);
+    background-color: rgba(91,196,255,0.16);
+    opacity: 1.0;
+    border-left-color: rgba(91,196,255,0.24);
+    border-right-color: rgba(91,196,255,0.24);
+    border-top-color: rgba(91,196,255,0.24);
+    border-bottom-color: rgba(91,196,255,0.24);
 }
 
-.map-legend-chip-compact {
-    min-width: 0;
+.map-legend-chip:hover {
+    background-color: rgba(91,196,255,0.10);
+}
+
+.map-legend-chip.is-on:hover {
+    background-color: rgba(91,196,255,0.20);
+}
+
+.map-legend-chip-text {
+    font-size: 9px;
+    color: rgba(226,235,246,0.74);
+}
+
+.map-legend-chip.is-on .map-legend-chip-text {
+    color: rgba(244,248,255,0.96);
 }
 
 .map-legend-chip-dot {
     width: 8px;
     height: 8px;
-    border-radius: 999px;
-    background-color: rgba(255,255,255,0.34);
+    min-width: 8px;
+    min-height: 8px;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    opacity: 0.55;
 }
 
 .map-legend-chip.is-on .map-legend-chip-dot {
-    background-color: rgba(255,255,255,0.92);
-}
-
-.map-legend-chip-text {
-    font-size: 10px;
-    unity-font-style: bold;
-    color: rgba(255,255,255,0.88);
+    opacity: 1.0;
 }
 
 .legend-chip-run .map-legend-chip-dot { background-color: rgba(90,200,255,0.95); }
@@ -747,336 +1149,1090 @@
 .is-difficulty-red .map-legend-chip-dot { background-color: rgba(242,77,77,0.95); }
 .is-difficulty-black .map-legend-chip-dot { background-color: rgba(230,230,230,0.95); }
 
-.context-meta-row {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 8px;
-}
+.legend-chip-difficulty-green .map-legend-chip-dot { background-color: rgba(65,217,65,0.95); }
+.legend-chip-difficulty-blue .map-legend-chip-dot { background-color: rgba(64,128,255,0.95); }
+.legend-chip-difficulty-red .map-legend-chip-dot { background-color: rgba(242,77,77,0.95); }
+.legend-chip-difficulty-black .map-legend-chip-dot { background-color: rgba(230,230,230,0.95); }
 
-.context-meta-chip {
-    padding-left: 8px;
-    padding-right: 8px;
-    padding-top: 4px;
-    padding-bottom: 4px;
-    border-radius: 16px;
-    background-color: rgba(255, 255, 255, 0.08);
-}
-
-.context-meta-chip.is-accent {
-    background-color: rgba(83, 170, 255, 0.22);
-}
-
-.context-meta-chip-label {
-    font-size: 10px;
-    color: rgba(255, 255, 255, 0.68);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.context-meta-chip-value {
-    font-size: 11px;
-    -unity-font-style: bold;
-    color: rgba(255, 255, 255, 0.96);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.context-highlights {
-    margin-top: 8px;
-    gap: 6px;
-}
-
-.context-highlight-card {
+.header-close-button,
+.segment-button,
+.goal-subtab-button,
+.pass-level-button,
+.mini-button,
+.map-layer-button,
+.pass-current-button {
+    min-height: 32px;
     padding-left: 10px;
     padding-right: 10px;
-    padding-top: 8px;
-    padding-bottom: 8px;
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-left-color: rgba(255, 255, 255, 0.06);
-    border-right-color: rgba(255, 255, 255, 0.06);
-    border-top-color: rgba(255, 255, 255, 0.06);
-    border-bottom-color: rgba(255, 255, 255, 0.06);
-}
-
-.context-highlight-title {
-    -unity-font-style: bold;
-    margin-bottom: 2px;
-    white-space: normal;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.context-highlight-value {
-    color: rgba(255, 255, 255, 0.92);
-    margin-bottom: 2px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.context-highlight-detail {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.68);
-    white-space: normal;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.stats-grid {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 4px;
-    align-content: flex-start;
-}
-
-.stat-tile {
-    width: 48%;
-    min-height: auto;
-    padding-left: 8px;
-    padding-right: 8px;
-    padding-top: 7px;
-    padding-bottom: 7px;
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-left-color: rgba(255, 255, 255, 0.06);
-    border-right-color: rgba(255, 255, 255, 0.06);
-    border-top-color: rgba(255, 255, 255, 0.06);
-    border-bottom-color: rgba(255, 255, 255, 0.06);
-    height: auto;
-}
-
-.stat-tile.is-accent {
-    background-color: rgba(83, 170, 255, 0.12);
-    border-left-color: rgba(83, 170, 255, 0.28);
-    border-right-color: rgba(83, 170, 255, 0.28);
-    border-top-color: rgba(83, 170, 255, 0.28);
-    border-bottom-color: rgba(83, 170, 255, 0.28);
-}
-
-.stat-tile-label {
-    font-size: 10px;
-    color: rgba(255, 255, 255, 0.68);
-    margin-bottom: 0;
-    white-space: normal;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.stat-tile-value {
-    font-size: 16px;
-    -unity-font-style: bold;
-    color: rgba(255, 255, 255, 0.98);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.task-card {
-    margin-bottom: 8px;
-    padding-left: 10px;
-    padding-right: 10px;
-    padding-top: 10px;
-    padding-bottom: 10px;
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 14px;
-    border-left-width: 1px;
-    border-right-width: 1px;
-    border-top-width: 1px;
-    border-bottom-width: 1px;
-    border-left-color: rgba(255, 255, 255, 0.07);
-    border-right-color: rgba(255, 255, 255, 0.07);
-    border-top-color: rgba(255, 255, 255, 0.07);
-    border-bottom-color: rgba(255, 255, 255, 0.07);
-}
-
-.task-card.is-actionable {
-    background-color: rgba(43, 119, 214, 0.2);
-    border-left-color: rgba(83, 170, 255, 0.32);
-    border-right-color: rgba(83, 170, 255, 0.32);
-    border-top-color: rgba(83, 170, 255, 0.32);
-    border-bottom-color: rgba(83, 170, 255, 0.32);
-}
-
-.task-card.is-claimed {
-    background-color: rgba(86, 150, 104, 0.14);
-}
-
-.task-card-toprow {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 8px;
-    margin-bottom: 6px;
-}
-
-.task-card-title {
-    flex-grow: 1;
-    -unity-font-style: bold;
-    white-space: normal;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.task-card-tier {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.68);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.task-card-status {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.78);
-    margin-bottom: 6px;
-    white-space: normal;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.task-card-bottomrow {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    margin-top: 8px;
-}
-
-.task-card-reward {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.78);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.task-progress-track {
-    height: 6px;
-    background-color: rgba(255, 255, 255, 0.08);
-    border-radius: 999px;
-    overflow: hidden;
-}
-
-.task-progress-fill {
-    height: 100%;
-    background-color: rgba(83, 170, 255, 0.9);
-    border-radius: 999px;
-}
-
-.task-action-button {
-    min-width: 84px;
-    background-color: rgba(83, 170, 255, 0.22);
-    color: rgba(255, 255, 255, 0.96);
     border-top-left-radius: 12px;
     border-top-right-radius: 12px;
     border-bottom-left-radius: 12px;
     border-bottom-right-radius: 12px;
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(223, 244, 255);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.30);
+    border-right-color: rgba(91, 196, 255, 0.30);
+    border-top-color: rgba(91, 196, 255, 0.30);
+    border-bottom-color: rgba(91, 196, 255, 0.30);
 }
 
-.stats-mode-summary {
-    margin-top: 2px;
-    margin-bottom: 6px;
+.header-close-button:hover,
+.segment-button:hover,
+.goal-subtab-button:hover,
+.pass-level-button:hover,
+.mini-button:hover,
+.map-layer-button:hover,
+.pass-current-button:hover {
+    background-color: rgba(91, 196, 255, 0.22);
+}
+
+.header-close-button.is-selected,
+.segment-button.is-selected,
+.goal-subtab-button.is-selected,
+.pass-level-button.is-selected,
+.map-layer-button.is-selected {
+    background-color: rgba(230, 189, 61, 0.95);
+    color: rgb(18, 24, 34);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgba(255, 239, 179, 0.55);
+    border-right-color: rgba(255, 239, 179, 0.55);
+    border-top-color: rgba(255, 239, 179, 0.55);
+    border-bottom-color: rgba(255, 239, 179, 0.55);
+}
+
+.context-history-button {
+    min-height: 30px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 10px;
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(223, 244, 255);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.24);
+    border-right-color: rgba(91, 196, 255, 0.24);
+    border-top-color: rgba(91, 196, 255, 0.24);
+    border-bottom-color: rgba(91, 196, 255, 0.24);
+}
+
+.context-history-button:disabled {
+    opacity: 0.45;
+}
+
+.task-action-button:hover,
+.pass-current-button:hover {
+    background-color: rgba(91, 196, 255, 0.22);
+}
+
+.goal-subtab-button {
+    flex-grow: 1;
+    min-width: 0;
+    min-height: 34px;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-radius: 11px;
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(223, 244, 255);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.28);
+    border-right-color: rgba(91, 196, 255, 0.28);
+    border-top-color: rgba(91, 196, 255, 0.28);
+    border-bottom-color: rgba(91, 196, 255, 0.28);
+    -unity-text-align: middle-center;
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.68);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.goal-subtab-button.is-selected {
+    background-color: rgba(230, 189, 61, 0.95);
+    color: rgb(18, 24, 34);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgba(255, 239, 179, 0.55);
+    border-right-color: rgba(255, 239, 179, 0.55);
+    border-top-color: rgba(255, 239, 179, 0.55);
+    border-bottom-color: rgba(255, 239, 179, 0.55);
+}
+
+.achievement-card-header {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.achievement-card-titleblock {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.achievement-card-subtitle {
+    margin-top: 2px;
+    font-size: 10px;
+    color: rgba(226, 235, 246, 0.72);
+    white-space: normal;
+}
+
+.achievement-card-footer {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.achievement-card-category {
+    font-size: 10px;
+    color: rgba(226, 235, 246, 0.60);
+    background-color: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 3px 8px;
+}
+
+.achievement-card.is-close {
+    background:
+        linear-gradient(180deg, rgba(230,189,61,0.12) 0%, rgba(255,255,255,0.00) 100%),
+        rgba(24, 36, 58, 0.94);
+    border-left-color: rgba(230, 189, 61, 0.28);
+    border-right-color: rgba(230, 189, 61, 0.28);
+    border-top-color: rgba(230, 189, 61, 0.28);
+    border-bottom-color: rgba(230, 189, 61, 0.28);
+}
+
+.achievement-card.is-performance .achievement-card-icon {
+    background-color: rgba(83, 170, 255, 0.14);
+    color: rgb(176, 229, 255);
+}
+
+.achievement-card.is-exploration .achievement-card-icon {
+    background-color: rgba(99, 210, 170, 0.14);
+    color: rgb(171, 245, 218);
+}
+
+.achievement-card.is-mastery .achievement-card-icon {
+    background-color: rgba(230, 189, 61, 0.16);
+    color: rgb(247, 224, 140);
+}
+
+.achievement-card.is-complete {
+    background:
+        linear-gradient(180deg, rgba(91,196,255,0.14) 0%, rgba(255,255,255,0.00) 100%),
+        rgba(24, 36, 58, 0.96);
+    border-left-color: rgba(91, 196, 255, 0.30);
+    border-right-color: rgba(91, 196, 255, 0.30);
+    border-top-color: rgba(91, 196, 255, 0.30);
+    border-bottom-color: rgba(91, 196, 255, 0.30);
+}
+
+.achievement-card-title {
+    font-size: 14px;
+    color: rgb(248, 251, 255);
+}
+
+.achievement-card-description {
+    font-size: 11px;
+    color: rgba(244, 248, 255, 0.84);
+    margin-bottom: 6px;
+    max-height: 32px;
+    overflow: hidden;
+}
+
+.goal-subtab-row {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+    min-height: 46px;
+    margin-top: 2px;
+    margin-bottom: 8px;
+}
+
+.goal-subtab-button,
+.achievement-category-button {
+    flex-grow: 1;
+    flex-basis: 0;
+    min-width: 0;
+    height: 42px;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-radius: 12px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.08);
+    border-right-color: rgba(255,255,255,0.08);
+    border-top-color: rgba(255,255,255,0.08);
+    border-bottom-color: rgba(255,255,255,0.08);
+    background-color: rgba(255,255,255,0.035);
+    color: rgba(231, 239, 248, 0.78);
+    unity-text-align: middle-center;
+    font-size: 10px;
+    -unity-font-style: bold;
+}
+
+.goal-subtab-button:hover,
+.achievement-category-button:hover {
+    background-color: rgba(255,255,255,0.06);
+    color: rgb(245, 249, 255);
+}
+
+.goal-subtab-button.is-selected,
+.achievement-category-button.is-selected {
+    background:
+        linear-gradient(180deg, rgba(109, 201, 255, 0.18) 0%, rgba(109, 201, 255, 0.06) 100%);
+    border-left-color: rgba(109, 201, 255, 0.34);
+    border-right-color: rgba(109, 201, 255, 0.34);
+    border-top-color: rgba(109, 201, 255, 0.34);
+    border-bottom-color: rgba(109, 201, 255, 0.34);
+    color: rgb(248, 251, 255);
+}
+
+.goal-subtab-button .unity-button__text,
+.achievement-category-button .unity-button__text {
+    white-space: normal;
+    -unity-text-align: middle-center;
+    unity-text-align: middle-center;
+    font-size: 10px;
+    line-height: 12px;
+}
+
+.goal-subtab-button.is-selected .unity-button__text,
+.achievement-category-button.is-selected .unity-button__text {
+    color: rgb(248, 251, 255);
+}
+
+.achievement-panel {
+    flex-grow: 1;
+    min-height: 0;
+    flex-direction: column;
+}
+
+.achievement-header-shell {
+    flex-shrink: 0;
+    min-height: 48px;
+    margin-bottom: 8px;
+}
+
+.achievement-category-row {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+    min-height: 48px;
+    height: 48px;
+}
+
+.achievement-scroll {
+    flex-grow: 1;
+    min-height: 0;
+    flex-shrink: 1;
+}
+
+.goal-subtab-button,
+.achievement-category-button {
+    flex-grow: 1;
+    flex-basis: 0;
+    min-width: 0;
+    height: 44px;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-radius: 12px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91,196,255,0.22);
+    border-right-color: rgba(91,196,255,0.22);
+    border-top-color: rgba(91,196,255,0.22);
+    border-bottom-color: rgba(91,196,255,0.22);
+    background-color: rgba(91,196,255,0.08);
+    color: rgba(223,244,255,0.82);
+    unity-text-align: middle-center;
+    font-size: 10px;
+    -unity-font-style: bold;
+}
+
+.goal-subtab-button:hover,
+.achievement-category-button:hover {
+    background-color: rgba(91,196,255,0.14);
+    color: rgb(245,249,255);
+}
+
+.goal-subtab-button.is-selected,
+.achievement-category-button.is-selected {
+    background:
+        linear-gradient(180deg, rgba(91,196,255,0.28) 0%, rgba(91,196,255,0.12) 100%);
+    color: rgb(248,251,255);
+    border-left-color: rgba(168,226,255,0.52);
+    border-right-color: rgba(168,226,255,0.52);
+    border-top-color: rgba(168,226,255,0.52);
+    border-bottom-color: rgba(168,226,255,0.52);
+}
+
+.goal-subtab-button .unity-button__text,
+.achievement-category-button .unity-button__text {
+    white-space: normal;
+    -unity-text-align: middle-center;
+    unity-text-align: middle-center;
+    font-size: 10px;
+    line-height: 11px;
+}
+
+        .achievement-grid {
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: 8px;
+    padding-bottom: 4px;
+}
+
+.achievement-card {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.00) 100%),
+        rgba(24, 36, 58, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.07);
+    border-right-color: rgba(255,255,255,0.07);
+    border-top-color: rgba(255,255,255,0.07);
+    border-bottom-color: rgba(255,255,255,0.07);
+    overflow: hidden;
+}
+
+.achievement-card.is-compact {
+    min-height: 74px;
+}
+
+.achievement-card.is-expanded {
+    min-height: 142px;
+    background:
+        linear-gradient(180deg, rgba(91,196,255,0.08) 0%, rgba(255,255,255,0.00) 100%),
+        rgba(24, 36, 58, 0.96);
+    border-left-color: rgba(91,196,255,0.28);
+    border-right-color: rgba(91,196,255,0.28);
+    border-top-color: rgba(91,196,255,0.28);
+    border-bottom-color: rgba(91,196,255,0.28);
+}
+
+.achievement-card.is-complete-unclaimed {
+    background:
+        linear-gradient(180deg, rgba(230,189,61,0.20) 0%, rgba(230,189,61,0.03) 100%),
+        rgba(24, 36, 58, 0.96);
+    border-left-color: rgba(255,224,128,0.46);
+    border-right-color: rgba(255,224,128,0.46);
+    border-top-color: rgba(255,224,128,0.46);
+    border-bottom-color: rgba(255,224,128,0.46);
+}
+
+.achievement-card.is-complete-claimed {
+    background:
+        linear-gradient(180deg, rgba(168,132,34,0.16) 0%, rgba(168,132,34,0.03) 100%),
+        rgba(24, 36, 58, 0.94);
+    border-left-color: rgba(184,148,44,0.32);
+    border-right-color: rgba(184,148,44,0.32);
+    border-top-color: rgba(184,148,44,0.32);
+    border-bottom-color: rgba(184,148,44,0.32);
+}
+
+.achievement-card-state.is-claimable {
+    background-color: rgba(230,189,61,0.95);
+    color: rgb(18,24,34);
+}
+
+.achievement-card-state.is-claimed {
+    background-color: rgba(145,114,30,0.82);
+    color: rgb(249,236,182);
+}
+
+.achievement-progress-track {
+    height: 6px;
+    background-color: rgba(255,255,255,0.08);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.achievement-progress-fill {
+    height: 100%;
+    background-color: rgba(91,196,255,0.95);
+    border-radius: 999px;
+}
+
+.achievement-card-reward {
+    margin-top: 6px;
+    color: rgba(255,237,170,0.92);
+    font-size: 10px;
+    white-space: normal;
+}
+
+.achievement-claim-button {
+    margin-left: auto;
+    min-height: 28px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 10px;
+    background-color: rgba(230,189,61,0.95);
+    color: rgb(18,24,34);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,239,179,0.55);
+    border-right-color: rgba(255,239,179,0.55);
+    border-top-color: rgba(255,239,179,0.55);
+    border-bottom-color: rgba(255,239,179,0.55);
+}
+
+.panel-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    min-height: 44px;
+}
+
+.segmented-row {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 6px;
+    flex-shrink: 0;
+    min-height: 36px;
+    height: 36px;
+}
+
+.header-close-button,
+.segment-button,
+.goal-subtab-button,
+.pass-level-button,
+.mini-button,
+.map-layer-button,
+.pass-current-button {
+    min-height: 32px;
+    height: 32px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(223, 244, 255);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.30);
+    border-right-color: rgba(91, 196, 255, 0.30);
+    border-top-color: rgba(91, 196, 255, 0.30);
+    border-bottom-color: rgba(91, 196, 255, 0.30);
+}
+
+.header-close-button.is-selected,
+.segment-button.is-selected,
+.goal-subtab-button.is-selected,
+.pass-level-button.is-selected,
+.map-layer-button.is-selected {
+    background-color: rgba(91, 196, 255, 0.95);
+    color: rgb(18, 24, 34);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(220, 245, 255, 0.70);
+    border-right-color: rgba(220, 245, 255, 0.70);
+    border-top-color: rgba(220, 245, 255, 0.70);
+    border-bottom-color: rgba(220, 245, 255, 0.70);
+}
+
+.goal-subtab-row,
+.achievement-category-row {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+    min-height: 42px;
+    height: 42px;
+    margin-top: 2px;
+    margin-bottom: 8px;
+}
+
+.goal-subtab-button,
+.achievement-category-button {
+    flex-grow: 1;
+    flex-basis: 0;
+    min-width: 0;
+    height: 42px;
+    min-height: 42px;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-radius: 12px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91,196,255,0.22);
+    border-right-color: rgba(91,196,255,0.22);
+    border-top-color: rgba(91,196,255,0.22);
+    border-bottom-color: rgba(91,196,255,0.22);
+    background-color: rgba(91,196,255,0.08);
+    color: rgba(223,244,255,0.82);
+    unity-text-align: middle-center;
+    font-size: 10px;
+    -unity-font-style: bold;
+}
+
+.goal-subtab-button.is-selected,
+.achievement-category-button.is-selected {
+    background: linear-gradient(180deg, rgba(91,196,255,0.28) 0%, rgba(91,196,255,0.12) 100%);
+    color: rgb(248,251,255);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(168,226,255,0.52);
+    border-right-color: rgba(168,226,255,0.52);
+    border-top-color: rgba(168,226,255,0.52);
+    border-bottom-color: rgba(168,226,255,0.52);
+}
+
+.goals-panel {
+    flex-grow: 1;
+    min-height: 300px;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(91, 196, 255, 0.06) 0%, rgba(10, 16, 28, 0.00) 120px),
+        rgba(10, 16, 28, 0.95);
+}
+
+.goals-list,
+.quest-panel,
+.achievement-panel {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+}
+
+.quest-panel {
+    flex-direction: column;
+    overflow: hidden;
+    padding-top: 2px;
+}
+
+.quest-list {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+    padding-right: 2px;
+}
+
+.achievement-panel {
+    flex-direction: column;
+}
+
+.achievement-header-shell {
+    flex-shrink: 0;
+    min-height: 42px;
+    height: 42px;
+    margin-bottom: 8px;
 }
 
 .achievement-scroll {
     flex-grow: 1;
     flex-shrink: 1;
     min-height: 0;
-    min-width: 0;
 }
 
-.achievement-scroll > .unity-scroll-view__content-container {
+.achievement-grid {
     flex-direction: column;
-    align-content: stretch;
+    width: 100%;
     min-width: 0;
+    gap: 6px;
+    padding-bottom: 4px;
 }
 
-.goals-panel {
-    flex-grow: 1;
-    min-height: 300px;
+.achievement-card {
+    width: 100%;
+    min-width: 0;
+    padding: 8px 10px;
+    border-radius: 14px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.00) 100%),
+        rgba(24, 36, 58, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.07);
+    border-right-color: rgba(255,255,255,0.07);
+    border-top-color: rgba(255,255,255,0.07);
+    border-bottom-color: rgba(255,255,255,0.07);
+    overflow: hidden;
 }
 
-.attempts-list {
-    margin-top: 8px;
-    max-height: 220px;
-    flex-shrink: 0;
+.achievement-card.is-compact {
+    min-height: 58px;
 }
 
-.top-weather-group {
+.achievement-card.is-expanded {
+    min-height: 132px;
+    background:
+        linear-gradient(180deg, rgba(91,196,255,0.08) 0%, rgba(255,255,255,0.00) 100%),
+        rgba(24, 36, 58, 0.96);
+    border-left-color: rgba(91,196,255,0.28);
+    border-right-color: rgba(91,196,255,0.28);
+    border-top-color: rgba(91,196,255,0.28);
+    border-bottom-color: rgba(91,196,255,0.28);
+}
+
+.achievement-card-header {
     flex-direction: row;
     align-items: center;
-    gap: 6px;
-    min-width: 150px;
+    gap: 8px;
+    margin-bottom: 6px;
 }
 
-.top-strip-weather-icon {
+.achievement-card-icon {
     width: 24px;
     min-width: 24px;
-    -unity-text-align: middle-center;
-    font-size: 16px;
-    color: rgba(255, 255, 255, 0.95);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    height: 24px;
+    border-radius: 7px;
+    font-size: 13px;
+    padding-top: 1px;
 }
 
-.top-strip-weather {
-    min-width: 0;
-    flex-shrink: 1;
+.achievement-card-title {
+    font-size: 12px;
+    color: rgb(248, 251, 255);
+}
+
+.achievement-card-subtitle {
+    margin-top: 1px;
+    font-size: 9px;
+    color: rgba(226, 235, 246, 0.70);
     white-space: normal;
 }
 
-.context-hero {
+.achievement-card-state {
+    padding: 3px 7px;
+    border-radius: 10px;
+    font-size: 9px;
+    white-space: nowrap;
+}
+
+.achievement-progress-track {
+    height: 5px;
+    background-color: rgba(255,255,255,0.08);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 2px;
+}
+
+.achievement-card-footer {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    margin-top: 5px;
+}
+
+.achievement-card-progress {
+    font-size: 9px;
+    color: rgba(226, 235, 246, 0.74);
+}
+
+.achievement-card-category {
+    font-size: 9px;
+    color: rgba(226, 235, 246, 0.60);
+    background-color: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 2px 6px;
+}
+
+.achievement-card-expandhint {
+    margin-left: 4px;
+    font-size: 12px;
+    color: rgba(223,244,255,0.70);
+    min-width: 14px;
+    unity-text-align: middle-center;
+}
+
+.achievement-card.is-compact .achievement-card-category {
+    display: none;
+}
+
+.achievement-card.is-compact .achievement-card-description,
+.achievement-card.is-compact .achievement-card-reward,
+.achievement-card.is-compact .achievement-claim-button {
+    display: none;
+}
+
+.quest-card {
+    position: relative;
+    margin-bottom: 8px;
+    padding: 12px 12px 10px 12px;
+    border-radius: 16px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.00) 100%),
+        rgba(19, 29, 47, 0.96);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.09);
+    border-right-color: rgba(255,255,255,0.09);
+    border-top-color: rgba(255,255,255,0.09);
+    border-bottom-color: rgba(255,255,255,0.09);
+    overflow: hidden;
+}
+
+.quest-card-accent {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    border-top-left-radius: 18px;
+    border-bottom-left-radius: 18px;
+}
+
+.quest-card.is-tracked {
+    background:
+        linear-gradient(180deg, rgba(132,214,255,0.12) 0%, rgba(255,255,255,0.00) 100%),
+        rgba(20, 31, 50, 0.98);
+    border-left-color: rgba(132,214,255,0.34);
+    border-right-color: rgba(132,214,255,0.24);
+    border-top-color: rgba(132,214,255,0.24);
+    border-bottom-color: rgba(132,214,255,0.24);
+}
+
+.quest-card.is-completed {
+    opacity: 0.82;
+}
+
+.quest-card-header {
     flex-direction: row;
     align-items: flex-start;
-    gap: 10px;
-    margin-bottom: 10px;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 5px;
 }
 
-.context-icon {
-    width: 40px;
-    min-width: 40px;
-    height: 40px;
-    padding-top: 7px;
-    border-radius: 12px;
-    background-color: rgba(83, 170, 255, 0.16);
-    -unity-text-align: upper-center;
-    font-size: 20px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
-}
-
-.context-hero-copy {
+.quest-card-titleblock {
     flex-grow: 1;
     min-width: 0;
 }
 
-.context-title-row {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 8px;
-    margin-bottom: 4px;
+.quest-card-title {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: rgb(248, 251, 255);
+    white-space: normal;
 }
 
-.context-status-pill {
-    flex-shrink: 0;
-    padding-left: 8px;
-    padding-right: 8px;
+.quest-card-subtitle {
+    margin-top: 2px;
+    font-size: 10px;
+    color: rgba(226, 235, 246, 0.74);
+    white-space: normal;
+}
+
+.quest-card-status {
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 10px;
+    white-space: nowrap;
+    color: rgb(223, 244, 255);
+    background-color: rgba(91, 196, 255, 0.12);
+}
+
+.quest-card-status.is-complete {
+    color: rgb(247, 224, 140);
+    background-color: rgba(230, 189, 61, 0.14);
+}
+
+.quest-card-description {
+    font-size: 11px;
+    line-height: 14px;
+    color: rgba(236, 242, 250, 0.86);
+    white-space: normal;
+    margin-bottom: 8px;
+}
+
+.quest-card-stage-description {
+    font-size: 10px;
+    line-height: 14px;
+    color: rgba(208, 220, 236, 0.72);
+    white-space: normal;
+    margin-bottom: 8px;
+}
+
+.quest-card-progress-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.quest-card-progress-label {
+    flex-grow: 1;
+    min-width: 0;
+    font-size: 10px;
+    color: rgba(223, 233, 246, 0.76);
+}
+
+.quest-card-progress-percent {
+    font-size: 10px;
+    color: rgba(248, 251, 255, 0.92);
+}
+
+.quest-card-progress-track {
+    height: 8px;
+    margin-bottom: 10px;
+    background-color: rgba(255,255,255,0.08);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.quest-card-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+}
+
+.quest-objective-list {
+    flex-direction: column;
+    gap: 6px;
+}
+
+.quest-objective-row {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background-color: rgba(17, 26, 42, 0.88);
+}
+
+.quest-objective-row.is-complete {
+    background-color: rgba(91, 196, 255, 0.10);
+}
+
+.quest-objective-check {
+    width: 16px;
+    min-width: 16px;
+    font-size: 11px;
+    color: rgba(226, 235, 246, 0.62);
+    -unity-text-align: upper-center;
+}
+
+.quest-objective-row.is-complete .quest-objective-check {
+    color: rgb(247, 224, 140);
+}
+
+.quest-objective-copy {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.quest-objective-prompt {
+    align-self: flex-start;
+    margin-bottom: 4px;
+    padding-left: 9px;
+    padding-right: 9px;
     padding-top: 4px;
     padding-bottom: 4px;
     border-radius: 999px;
-    background-color: rgba(83, 170, 255, 0.18);
-    color: rgba(255, 255, 255, 0.96);
     font-size: 10px;
+    color: rgb(233, 243, 252);
     -unity-font-style: bold;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
-.context-guidance-box {
-    margin-bottom: 10px;
+.quest-objective-title {
+    font-size: 12px;
+    color: rgb(248, 251, 255);
+    white-space: normal;
+}
+
+.quest-objective-description {
+    margin-top: 3px;
+    font-size: 10px;
+    line-height: 13px;
+    color: rgba(219, 230, 243, 0.68);
+    white-space: normal;
+}
+
+.quest-objective-progress-track {
+    height: 6px;
+    margin-top: 7px;
+    margin-bottom: 4px;
+    background-color: rgba(255,255,255,0.08);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.quest-objective-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+}
+
+.quest-objective-progress {
+    margin-top: 2px;
+    font-size: 10px;
+    color: rgba(223, 244, 255, 0.80);
+}
+
+.quest-card-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.quest-track-button {
+    min-width: 92px;
+    min-height: 30px;
     padding-left: 10px;
     padding-right: 10px;
+    border-radius: 10px;
+    background-color: rgba(91, 196, 255, 0.12);
+    color: rgb(223, 244, 255);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.24);
+    border-right-color: rgba(91, 196, 255, 0.24);
+    border-top-color: rgba(91, 196, 255, 0.24);
+    border-bottom-color: rgba(91, 196, 255, 0.24);
+}
+
+.quest-track-button.is-active {
+    background-color: rgba(91, 196, 255, 0.92);
+    color: rgb(14, 22, 34);
+    border-left-color: rgba(220, 245, 255, 0.55);
+    border-right-color: rgba(220, 245, 255, 0.55);
+    border-top-color: rgba(220, 245, 255, 0.55);
+    border-bottom-color: rgba(220, 245, 255, 0.55);
+}
+
+.quest-empty-state {
+    font-size: 11px;
+    color: rgba(226, 235, 246, 0.70);
+    white-space: normal;
+    padding: 10px 4px;
+}
+
+.rescue-dispatch-panel {
+    margin-bottom: 8px;
+    padding: 10px;
+    border-radius: 12px;
+    background-color: rgba(18, 29, 47, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.rescue-dispatch-meta {
+    margin-bottom: 3px;
+    color: rgba(226, 235, 246, 0.86);
+    font-size: 11px;
+    white-space: normal;
+}
+
+.rescue-dispatch-actions {
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.rescue-dispatch-button {
+    min-height: 30px;
+}
+
+.rescue-dispatch-status {
+    margin-top: 8px;
+    color: rgba(255, 229, 164, 0.92);
+    font-size: 11px;
+    white-space: normal;
+}
+
+    .pass-panel {
+    min-height: 280px;
+    overflow: hidden;
+    gap: 8px;
+}
+
+.pass-info-view,
+.pass-lift-detail-view {
+    flex-grow: 1;
+    gap: 8px;
+}
+
+.pass-permanent-summary {
+    color: rgba(226, 235, 246, 0.86);
+    font-size: 11px;
+    white-space: normal;
+    margin-bottom: 4px;
+}
+
+.pass-overview-list,
+.pass-lift-list {
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.pass-entry-button,
+.pass-lift-button {
+    min-height: 54px;
+    margin-bottom: 6px;
+    white-space: normal;
+    -unity-text-align: upper-left;
+    justify-content: flex-start;
     padding-top: 8px;
     padding-bottom: 8px;
-    border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.05);
+    padding-left: 10px;
+    padding-right: 10px;
+    background-color: rgba(24, 36, 58, 0.92);
+    color: rgb(244, 248, 255);
     border-left-width: 1px;
     border-right-width: 1px;
     border-top-width: 1px;
@@ -1085,27 +2241,1028 @@
     border-right-color: rgba(255, 255, 255, 0.06);
     border-top-color: rgba(255, 255, 255, 0.06);
     border-bottom-color: rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
 }
 
-.context-guidance {
-    white-space: normal;
+.pass-entry-button.is-current {
+    border-left-color: rgba(91, 196, 255, 0.75);
+    border-right-color: rgba(91, 196, 255, 0.75);
+    border-top-color: rgba(91, 196, 255, 0.75);
+    border-bottom-color: rgba(91, 196, 255, 0.75);
+}
+
+.pass-entry-button.is-permanent {
+    background-color: rgba(230, 189, 61, 0.14);
+    border-left-color: rgba(230, 189, 61, 0.45);
+    border-right-color: rgba(230, 189, 61, 0.45);
+    border-top-color: rgba(230, 189, 61, 0.45);
+    border-bottom-color: rgba(230, 189, 61, 0.45);
+}
+
+.pass-detail-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.pass-detail-title {
+    flex-grow: 1;
+    color: rgb(248, 251, 255);
+    font-size: 16px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+}
+
+.pass-detail-meta {
+    color: rgba(226, 235, 246, 0.82);
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.78);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    white-space: normal;
 }
 
-.context-highlight-card.is-positive {
-    background-color: rgba(86, 150, 104, 0.14);
-    border-left-color: rgba(180, 235, 180, 0.18);
-    border-right-color: rgba(180, 235, 180, 0.18);
-    border-top-color: rgba(180, 235, 180, 0.18);
-    border-bottom-color: rgba(180, 235, 180, 0.18);
+.rescue-sos-button {
+    background-color: rgba(230, 189, 61, 0.95);
+    color: rgb(18, 24, 34);
+    border-left-color: rgba(255, 239, 179, 0.55);
+    border-right-color: rgba(255, 239, 179, 0.55);
+    border-top-color: rgba(255, 239, 179, 0.55);
+    border-bottom-color: rgba(255, 239, 179, 0.55);
 }
 
-.context-highlight-card.is-warning {
-    background-color: rgba(214, 146, 43, 0.14);
-    border-left-color: rgba(255, 211, 138, 0.18);
-    border-right-color: rgba(255, 211, 138, 0.18);
-    border-top-color: rgba(255, 211, 138, 0.18);
-    border-bottom-color: rgba(255, 211, 138, 0.18);
+.overlay-screen-fade {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 1);
+    opacity: 0;
+    pointer-events: none;
 }
+
+.pass-panel {
+    min-height: 280px;
+    overflow: hidden;
+    gap: 6px;
+}
+
+.pass-panel-header {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 6px;
+    min-height: auto;
+    margin-bottom: 6px;
+}
+
+.pass-tab-row {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 6px;
+    min-height: 32px;
+    height: 32px;
+}
+
+.pass-tab-button {
+    flex-grow: 1;
+    flex-basis: 0;
+    min-width: 0;
+    height: 32px;
+    min-height: 32px;
+    padding-left: 6px;
+    padding-right: 6px;
+    font-size: 10px;
+    -unity-text-align: middle-center;
+}
+
+.pass-info-view,
+.pass-lift-detail-view {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+    gap: 6px;
+}
+
+.pass-current {
+    font-size: 14px;
+    color: rgb(248, 251, 255);
+    white-space: normal;
+}
+
+.pass-expiry-meta,
+.pass-permanent-summary,
+.pass-detail-meta {
+    font-size: 10px;
+    line-height: 14px;
+    color: rgba(226, 235, 246, 0.84);
+    white-space: normal;
+}
+
+.pass-overview-list,
+.pass-lift-list,
+.rescue-dispatch-scroll {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+}
+
+.pass-entry-button,
+.pass-lift-button {
+    min-height: 44px;
+    margin-bottom: 5px;
+    padding: 7px 9px;
+    font-size: 11px;
+    white-space: normal;
+    -unity-text-align: middle-left;
+    justify-content: center;
+    align-items: flex-start;
+    border-radius: 12px;
+}
+
+.pass-detail-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.pass-detail-title {
+    flex-grow: 1;
+    min-width: 0;
+    font-size: 14px;
+    -unity-text-align: middle-left;
+}
+
+.pass-back-button {
+    min-width: 60px;
+    flex-shrink: 0;
+}
+
+.rescue-dispatch-scroll {
+    padding-right: 2px;
+}
+
+.rescue-dispatch-content {
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 4px;
+}
+
+.rescue-dispatch-panel {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+    margin-bottom: 0;
+    padding: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+}
+
+.rescue-dispatch-summary-card,
+.rescue-dispatch-status-card {
+    padding: 8px 9px;
+    border-radius: 12px;
+    background-color: rgba(18, 29, 47, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.rescue-dispatch-rank {
+    color: rgb(248, 251, 255);
+}
+
+.rescue-dispatch-meta {
+    margin-bottom: 3px;
+    font-size: 10px;
+    line-height: 13px;
+    color: rgba(226, 235, 246, 0.84);
+    white-space: normal;
+}
+
+.rescue-dispatch-actions {
+    flex-direction: column;
+    gap: 5px;
+}
+
+.rescue-dispatch-button {
+    min-height: 28px;
+    height: 28px;
+    padding-left: 8px;
+    padding-right: 8px;
+    font-size: 10px;
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+.rescue-dispatch-status {
+    font-size: 10px;
+    line-height: 13px;
+    color: rgba(255, 229, 164, 0.92);
+    white-space: normal;
+}
+
+.rescue-sos-button {
+    margin-top: 2px;
+}
+
+    .pass-panel {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow: hidden;
+    min-height: 280px;
+    gap: 0;
+}
+
+.pass-panel-header {
+    flex-shrink: 0;
+    flex-grow: 0;
+    min-height: auto;
+    margin-bottom: 8px;
+    padding-bottom: 0;
+}
+
+.pass-tab-row {
+    flex-shrink: 0;
+    flex-grow: 0;
+}
+
+.pass-info-view,
+.pass-lift-detail-view,
+.rescue-dispatch-scroll {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+    margin-top: 0;
+}
+
+.pass-current-list {
+    flex-direction: column;
+    min-height: 64px;
+    max-height: 180px;
+    flex-shrink: 0;
+    margin-bottom: 6px;
+}
+
+.pass-current-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 34px;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.pass-current-row-left {
+    flex-direction: row;
+    align-items: center;
+    min-width: 0;
+    max-width: 40%;
+    flex-shrink: 1;
+    flex-grow: 1;
+}
+
+.pass-current-row-right {
+    flex-direction: row;
+    align-content: stretch;
+    align-items: stretch;
+    align-self: stretch;
+    flex-grow: 1;
+    min-width: 132px;
+    max-width: 60%;
+}
+
+.pass-current-chip {
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    color: rgb(244, 248, 255);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
+    -unity-text-align: middle-center;
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.pass-current-status {
+    color: rgb(247, 250, 255);
+    font-size: 12px;
+    min-width: 72px;
+    -unity-text-align: middle-center;
+    align-self: stretch;
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.pass-current-progress-wrap {
+    position: relative;
+    min-width: 168px;
+    height: 22px;
+    justify-content: center;
+    align-content: stretch;
+    align-items: stretch;
+    align-self: center;
+}
+
+.pass-current-progress-track {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.pass-current-progress-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+    background-color: rgba(91, 196, 255, 0.92);
+}
+
+.pass-current-progress-label {
+    position: relative;
+    align-self: center;
+    -unity-text-align: middle-center;
+    color: rgb(247, 250, 255);
+    font-size: 11px;
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.pass-current-empty {
+    color: rgba(226, 234, 245, 0.58);
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+.rescue-dispatch-scroll {
+    padding-top: 2px;
+}
+
+.rescue-dispatch-scroll > .unity-scroll-view__content-container {
+    padding-top: 0;
+}
+
+.quest-list {
+    padding-right: 4px;
+}
+
+.quest-card {
+    margin-bottom: 6px;
+    padding: 8px 10px 8px 10px;
+    border-radius: 14px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.00) 100%),
+        rgba(19, 29, 47, 0.95);
+}
+
+.quest-card.is-primary {
+    background:
+        linear-gradient(180deg, rgba(132,214,255,0.18) 0%, rgba(255,255,255,0.00) 100%),
+        rgba(22, 34, 55, 0.99);
+    border-left-color: rgba(132,214,255,0.42);
+    border-right-color: rgba(132,214,255,0.30);
+    border-top-color: rgba(132,214,255,0.30);
+    border-bottom-color: rgba(132,214,255,0.30);
+}
+
+.quest-card.is-collapsed {
+    min-height: 0;
+}
+
+.quest-card-header {
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.quest-card-header-actions {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.quest-card-title {
+    font-size: 14px;
+    line-height: 15px;
+}
+
+.quest-card-subtitle {
+    margin-top: 1px;
+    font-size: 9px;
+    line-height: 11px;
+}
+
+.quest-card-pin-indicator {
+    margin-top: 4px;
+    align-self: flex-start;
+    padding: 2px 6px 2px 6px;
+    border-radius: 6px;
+    background-color: rgba(132,214,255,0.10);
+    color: rgba(220,243,255,0.88);
+    font-size: 8px;
+    letter-spacing: 0.7px;
+    -unity-font-style: bold;
+}
+
+.quest-expand-button,
+.quest-primary-button,
+.quest-track-button {
+    min-width: 44px;
+    height: 22px;
+    min-height: 22px;
+    padding-left: 6px;
+    padding-right: 6px;
+    border-radius: 7px;
+    font-size: 9px;
+    flex-grow: 0;
+    flex-shrink: 0;
+    unity-text-align: middle-center;
+    justify-content: center;
+    align-items: center;
+    -unity-font-style: bold;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: rgba(232, 240, 248, 0.86);
+    border-left-color: rgba(255,255,255,0.10);
+    border-right-color: rgba(255,255,255,0.10);
+    border-top-color: rgba(255,255,255,0.10);
+    border-bottom-color: rgba(255,255,255,0.10);
+}
+
+.quest-track-button:hover {
+    background-color: rgba(255,255,255,0.11);
+    border-left-color: rgba(255,255,255,0.18);
+    border-right-color: rgba(255,255,255,0.18);
+    border-top-color: rgba(255,255,255,0.18);
+    border-bottom-color: rgba(255,255,255,0.18);
+}
+
+.quest-primary-button:hover {
+    background-color: rgba(132,214,255,0.12);
+    border-left-color: rgba(132,214,255,0.24);
+    border-right-color: rgba(132,214,255,0.24);
+    border-top-color: rgba(132,214,255,0.24);
+    border-bottom-color: rgba(132,214,255,0.24);
+    color: rgba(240,248,255,0.96);
+}
+
+.quest-card-prompt {
+    align-self: flex-start;
+    margin-bottom: 4px;
+    padding: 3px 6px 3px 6px;
+    border-radius: 6px;
+    font-size: 9px;
+    line-height: 11px;
+    color: rgb(233, 243, 252);
+    -unity-font-style: bold;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255,255,255,0.06);
+    border-right-color: rgba(255,255,255,0.06);
+    border-top-color: rgba(255,255,255,0.06);
+    border-bottom-color: rgba(255,255,255,0.06);
+}
+
+.quest-card-progress-row {
+    margin-bottom: 3px;
+}
+
+.quest-card-progress-label,
+.quest-card-progress-percent {
+    font-size: 9px;
+}
+
+.quest-card-progress-track {
+    height: 5px;
+    margin-bottom: 0;
+}
+
+.quest-card-body {
+    margin-top: 6px;
+}
+
+.quest-card-description,
+.quest-card-stage-description {
+    margin-bottom: 5px;
+}
+
+.quest-card-description {
+    font-size: 10px;
+    line-height: 12px;
+}
+
+.quest-card-stage-description {
+    font-size: 9px;
+    line-height: 11px;
+}
+
+.quest-objective-list {
+    gap: 3px;
+}
+
+.quest-objective-row {
+    padding: 4px 6px 4px 6px;
+    border-radius: 8px;
+    gap: 6px;
+}
+
+.quest-objective-check {
+    width: 12px;
+    min-width: 12px;
+    font-size: 9px;
+}
+
+.quest-objective-title {
+    font-size: 10px;
+    line-height: 12px;
+}
+
+.quest-objective-progress-track {
+    height: 4px;
+    margin-top: 3px;
+    margin-bottom: 1px;
+}
+
+.quest-objective-progress {
+    font-size: 9px;
+}
+
+.quest-primary-button.is-active,
+.quest-track-button.is-active {
+    background-color: rgba(91, 196, 255, 0.92);
+    color: rgb(14, 22, 34);
+    border-left-color: rgba(220, 245, 255, 0.55);
+    border-right-color: rgba(220, 245, 255, 0.55);
+    border-top-color: rgba(220, 245, 255, 0.55);
+    border-bottom-color: rgba(220, 245, 255, 0.55);
+}
+
+.quest-focus-card--calm {
+    gap: 8px;
+}
+
+.objective-card-header {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.objective-card-title-block {
+    flex-grow: 1;
+    gap: 2px;
+}
+
+.objective-card-kicker {
+    font-size: 11px;
+    color: rgba(214,223,233,0.78);
+    unity-font-style: bold;
+}
+
+.objective-card-title {
+    font-size: 14px;
+    unity-font-style: bold;
+    color: rgba(248,250,252,0.98);
+}
+
+.objective-card-glyph {
+    min-width: 22px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.86);
+    -unity-text-align: middle-center;
+    margin-top: 1px;
+}
+
+.objective-divider {
+    height: 1px;
+    background-color: rgba(255,255,255,0.08);
+}
+
+.objective-directive-row {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.objective-directive-kicker {
+    min-width: 34px;
+    font-size: 10px;
+    unity-font-style: bold;
+    color: rgba(200,210,222,0.62);
+    -unity-text-align: upper-left;
+}
+
+.objective-directive-text {
+    flex-grow: 1;
+    font-size: 12px;
+    color: rgba(244,247,251,0.94);
+    white-space: normal;
+}
+
+.objective-progress-wrap {
+    gap: 4px;
+}
+
+.activity-status-chip--quiet {
+    background-color: rgba(255,255,255,0.03);
+    color: rgba(250,252,255,0.94);
+}
+
+.activity-league-row.is-championship {
+    justify-content: center;
+}
+
+.activity-league-title.is-championship {
+    flex-grow: 1;
+    -unity-text-align: middle-center;
+}
+
+.activity-metric-chip--flat {
+    background-color: rgba(255,255,255,0.02);
+    padding: 7px 10px;
+}
+
+.activity-metric-glyph {
+    min-width: 16px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.86);
+    -unity-text-align: middle-center;
+}
+
+.activity-metric-line {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+
+.activity-metric-line-label {
+    font-size: 11px;
+    color: rgba(208,217,228,0.78);
+    unity-font-style: bold;
+    white-space: nowrap;
+}
+
+.activity-metric-line-separator {
+    font-size: 11px;
+    color: rgba(208,217,228,0.50);
+    white-space: nowrap;
+}
+
+.activity-metric-line-value {
+    flex-grow: 1;
+    font-size: 12px;
+    color: rgba(248,250,252,0.96);
+    unity-font-style: bold;
+    white-space: nowrap;
+}
+
+.quest-secondary-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+}
+
+.quest-secondary-dot {
+    width: 8px;
+    height: 8px;
+    margin-left: 2px;
+    border-top-left-radius: 999px;
+    border-top-right-radius: 999px;
+    border-bottom-left-radius: 999px;
+    border-bottom-right-radius: 999px;
+    align-self: center;
+    flex-shrink: 0;
+}
+
+.quest-secondary-text-block {
+    flex-grow: 1;
+    gap: 2px;
+}
+
+.quest-secondary-title {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(244,247,251,0.92);
+}
+
+.quest-secondary-subtitle {
+    font-size: 10px;
+    color: rgba(205,214,225,0.62);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.quest-secondary-pips {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+}
+
+.quest-secondary-pip {
+    width: 16px;
+    height: 3px;
+    border-top-left-radius: 999px;
+    border-top-right-radius: 999px;
+    border-bottom-left-radius: 999px;
+    border-bottom-right-radius: 999px;
+}
+
+.quest-tracker-card.is-secondary {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
+    gap: 0;
+    background-color: rgba(255,255,255,0.02);
+}
+
+.quest-tracker-card.is-secondary .quest-tracker-accent,
+.quest-tracker-card.is-secondary .quest-tracker-objective,
+.quest-tracker-card.is-secondary .quest-tracker-prompt,
+.quest-tracker-card.is-secondary .quest-tracker-objective-track,
+.quest-tracker-card.is-secondary .quest-tracker-progress {
+    display: none;
+}
+
+.activity-control-chip {
+    background-color: rgba(255,255,255,0.03);
+}
+
+.activity-binding-action-chip {
+    min-height: 30px;
+    padding-left: 8px;
+    padding-right: 10px;
+}
+
+.activity-binding-inline-card {
+    background-color: rgba(11, 20, 34, 0.88);
+}
+
+.activity-objective {
+    display: none;
+}
+
+.objective-card-kicker {
+    font-size: 12px;
+    color: rgba(226,234,243,0.88);
+    unity-font-style: bold;
+    white-space: normal;
+}
+
+.objective-card-title {
+    font-size: 16px;
+    unity-font-style: bold;
+    color: rgba(248,250,252,0.99);
+    white-space: normal;
+}
+
+.objective-card-glyph {
+    min-width: 24px;
+    font-size: 15px;
+    color: rgba(255,255,255,0.92);
+    -unity-text-align: middle-center;
+    margin-top: 1px;
+}
+
+.objective-directive-row {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.objective-directive-kicker {
+    min-width: 28px;
+    font-size: 9px;
+    unity-font-style: normal;
+    color: rgba(198,208,220,0.48);
+    -unity-text-align: upper-left;
+    white-space: normal;
+}
+
+.objective-directive-text {
+    flex-grow: 1;
+    font-size: 13px;
+    color: rgba(248,250,252,0.98);
+    unity-font-style: bold;
+    white-space: normal;
+}
+
+.activity-progress-text {
+    font-size: 12px;
+    color: rgba(236,242,248,0.88);
+    white-space: normal;
+}
+
+.activity-meta-line {
+    font-size: 12px;
+    color: rgba(230,236,244,0.78);
+    white-space: normal;
+}
+
+.activity-status-chip {
+    font-size: 12px;
+    color: rgba(250,252,255,0.94);
+    white-space: normal;
+}
+
+.activity-league-title {
+    min-height: 36px;
+    padding: 8px 12px;
+    font-size: 13px;
+    unity-font-style: bold;
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+
+.activity-binding-card-label {
+    -unity-text-align: middle-center;
+    unity-font-style: bold;
+    font-size: 12px;
+    color: rgba(255,255,255,0.98);
+    white-space: nowrap;
+}
+
+.activity-control-text {
+    font-size: 12px;
+    color: rgba(245,247,251,0.94);
+    white-space: normal;
+}
+
+.activity-binding-inline-label {
+    -unity-text-align: middle-center;
+    unity-font-style: bold;
+    font-size: 11px;
+    color: rgba(255,255,255,0.98);
+    white-space: nowrap;
+}
+
+.activity-metric-line-label {
+    font-size: 12px;
+    color: rgba(216,224,233,0.86);
+    unity-font-style: bold;
+    white-space: normal;
+}
+
+.activity-metric-line-separator {
+    font-size: 12px;
+    color: rgba(208,217,228,0.58);
+    white-space: nowrap;
+}
+
+.activity-metric-line-value {
+    flex-grow: 1;
+    font-size: 12px;
+    color: rgba(248,250,252,0.98);
+    unity-font-style: bold;
+    white-space: normal;
+}
+
+.activity-metric-glyph {
+    min-width: 18px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.90);
+    -unity-text-align: middle-center;
+}
+
+.quest-tracker-card-title {
+    font-size: 13px;
+    unity-font-style: bold;
+    color: rgba(245,247,251,0.96);
+    white-space: normal;
+}
+
+.quest-tracker-objective {
+    font-size: 12px;
+    color: rgba(232,238,245,0.84);
+    white-space: normal;
+}
+
+.quest-tracker-progress {
+    font-size: 12px;
+    color: rgba(236,242,248,0.82);
+    white-space: normal;
+}
+
+.quest-secondary-title {
+    font-size: 12px;
+    unity-font-style: bold;
+    color: rgba(244,247,251,0.94);
+    white-space: normal;
+}
+
+.quest-secondary-subtitle {
+    font-size: 11px;
+    color: rgba(214,223,233,0.72);
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+}
+
+.quest-tracker-card.is-secondary {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
+    gap: 6px;
+    background-color: rgba(255,255,255,0.02);
+}
+
+.quest-tracker-card.is-secondary .quest-tracker-accent {
+    display: flex;
+    height: 3px;
+    margin-bottom: 2px;
+}
+
+.quest-secondary-row {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 8px;
+    min-height: 34px;
+}
+
+.quest-secondary-text-block {
+    flex-grow: 1;
+    gap: 3px;
+}
+
+.quest-secondary-pips {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+    margin-top: 2px;
+}
+
+.quest-footer-prompt {
+    font-size: 12px;
+}
+
+#Btn_QuestSummaryToggle {
+    font-size: 12px;
+    unity-font-style: bold;
+}
+
+.activity-fail-modal-title {
+    font-size: 20px;
+    unity-font-style: bold;
+    color: rgba(255,255,255,0.99);
+    white-space: normal;
+}
+
+.activity-fail-modal-body {
+    font-size: 13px;
+    color: rgba(233,239,247,0.90);
+    white-space: normal;
+}
+

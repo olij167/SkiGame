@@ -1,11 +1,12 @@
 .shop-root {
     flex-direction: column;
+    flex-grow: 1;
     padding-left: 12px;
     padding-right: 12px;
     padding-top: 10px;
     padding-bottom: 10px;
-    background-color: rgba(0, 0, 0, 0.35);
-    flex-grow: 1;
+    background-color: rgba(6, 10, 18, 0.62);
+    color: rgb(244, 248, 255);
     -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
@@ -17,9 +18,8 @@
 }
 
 .shop-title {
-    font-size: 18px;
-    unity-font-style: bold;
-    color: white;
+    font-size: 24px;
+    color: rgb(248, 251, 255);
     -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
 }
 
@@ -30,15 +30,28 @@
 
 .shop-currency {
     margin-right: 10px;
-    color: white;
-    unity-font-style: bold;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgb(248, 251, 255);
+    font-size: 14px;
 }
 
 .shop-exit {
-    padding-left: 10px;
-    padding-right: 10px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    min-height: 40px;
+    padding-left: 12px;
+    padding-right: 12px;
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(223, 244, 255);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.36);
+    border-right-color: rgba(91, 196, 255, 0.36);
+    border-top-color: rgba(91, 196, 255, 0.36);
+    border-bottom-color: rgba(91, 196, 255, 0.36);
 }
 
 .shop-body {
@@ -50,10 +63,18 @@
     width: 320px;
     padding: 10px;
     margin-right: 10px;
-    background-color: rgba(0, 0, 0, 0.25);
-    border-radius: 10px;
+    background-color: rgba(10, 16, 28, 0.95);
+    border-radius: 16px;
     flex-shrink: 0;
     flex-direction: column;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .shop-content-column {
@@ -65,30 +86,47 @@
     margin-right: 10px;
     align-items: center;
     justify-content: flex-end;
-    background-color: rgba(0, 0, 0, 0.05);
-    border-radius: 10px;
+    background-color: rgba(14, 22, 36, 0.92);
+    border-radius: 16px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
 .preview-hint {
     margin-bottom: 10px;
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(226, 235, 246, 0.66);
     font-size: 11px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .loadout-panel {
-    width: 260px;
+    width: 30%;
+    min-width: 300px;
+    max-width: 420px;
     padding: 10px;
-    background-color: rgba(0, 0, 0, 0.25);
-    border-radius: 10px;
-    flex-shrink: 0;
+    background-color: rgba(16, 24, 40, 0.94);
+    border-radius: 16px;
+    flex-shrink: 1;
     flex-direction: column;
+    align-items: stretch;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .panel-title {
-    unity-font-style: bold;
     margin-bottom: 8px;
-    color: white;
+    color: rgb(248, 251, 255);
     -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&guid=281591823e5a02d439cd5679a23ed27e&type=3#Slackey");
 }
 
@@ -109,17 +147,39 @@
 .tab-btn {
     flex-grow: 0;
     margin-right: 6px;
-    background-color: rgb(53, 53, 53);
-    color: white;
+    min-height: 38px;
+    padding-left: 10px;
+    padding-right: 10px;
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(223, 244, 255);
     text-overflow: clip;
     flex-direction: column;
     font-size: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.3);
+    border-right-color: rgba(91, 196, 255, 0.3);
+    border-top-color: rgba(91, 196, 255, 0.3);
+    border-bottom-color: rgba(91, 196, 255, 0.3);
 }
 
 .tab-btn.is-active {
-    background-color: rgba(255, 255, 255, 0.2);
-    unity-font-style: bold;
+    background-color: rgba(230, 189, 61, 0.95);
+    color: rgb(18, 24, 34);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgba(255, 239, 179, 0.55);
+    border-right-color: rgba(255, 239, 179, 0.55);
+    border-top-color: rgba(255, 239, 179, 0.55);
+    border-bottom-color: rgba(255, 239, 179, 0.55);
 }
 
 .tab-btn.is-disabled {
@@ -127,16 +187,32 @@
 }
 
 .options-list {
-    background-color: rgba(0, 0, 0, 0.15);
-    border-radius: 8px;
+    background-color: rgba(24, 36, 58, 0.92);
+    border-radius: 12px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
 .detail-panel {
     flex-grow: 1;
     padding: 10px;
     margin-top: 8px;
-    background-color: rgba(0, 0, 0, 0.15);
-    border-radius: 8px;
+    background-color: rgba(24, 36, 58, 0.92);
+    border-radius: 12px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
 .detail-header {
@@ -157,29 +233,24 @@
 }
 
 .detail-name {
-    color: white;
+    color: rgb(248, 251, 255);
     margin-top: 4px;
-    unity-font-style: bold;
     font-size: 15px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .detail-desc {
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(244, 248, 255, 0.88);
     font-size: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .detail-meta {
     margin-top: 6px;
     margin-bottom: 8px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .detail-meta-line {
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(226, 235, 246, 0.78);
     font-size: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .detail-actions {
@@ -190,11 +261,30 @@
 .action-btn {
     flex-grow: 1;
     margin-right: 8px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    min-height: 40px;
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(223, 244, 255);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.3);
+    border-right-color: rgba(91, 196, 255, 0.3);
+    border-top-color: rgba(91, 196, 255, 0.3);
+    border-bottom-color: rgba(91, 196, 255, 0.3);
 }
 
 .action-btn.primary {
-    unity-font-style: bold;
+    background-color: rgba(91, 196, 255, 0.95);
+    color: rgb(14, 22, 34);
+    border-left-color: rgba(220, 245, 255, 0.55);
+    border-right-color: rgba(220, 245, 255, 0.55);
+    border-top-color: rgba(220, 245, 255, 0.55);
+    border-bottom-color: rgba(220, 245, 255, 0.55);
 }
 
 .is-hidden {
@@ -210,11 +300,19 @@
     padding-bottom: 8px;
     margin-bottom: 6px;
     border-radius: 10px;
-    background-color: rgba(0, 0, 0, 0.12);
+    background-color: rgba(24, 36, 58, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
 .option-row:hover {
-    background-color: rgba(0, 0, 0, 0.18);
+    background-color: rgba(91, 196, 255, 0.1);
 }
 
 .option-icon {
@@ -233,18 +331,16 @@
 }
 
 .option-name {
-    color: white;
+    color: rgb(248, 251, 255);
     font-size: 12px;
     margin-top: 0;
     margin-bottom: 0;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .option-meta {
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(226, 235, 246, 0.6);
     font-size: 10px;
     margin-top: 1px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .option-right {
@@ -254,10 +350,8 @@
 }
 
 .option-price {
-    color: rgba(255, 255, 255, 0.85);
-    unity-font-style: bold;
+    color: rgba(244, 248, 255, 0.88);
     font-size: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .option-badge {
@@ -267,22 +361,33 @@
     padding-bottom: 3px;
     border-radius: 999px;
     font-size: 10px;
-    unity-font-style: bold;
-    color: rgba(255, 255, 255, 0.9);
-    background-color: rgba(255, 255, 255, 0.07);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    color: rgba(244, 248, 255, 0.92);
+    background-color: rgba(91, 196, 255, 0.14);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.24);
+    border-right-color: rgba(91, 196, 255, 0.24);
+    border-top-color: rgba(91, 196, 255, 0.24);
+    border-bottom-color: rgba(91, 196, 255, 0.24);
 }
 
 .option-badge.is-equipped {
-    background-color: rgba(0, 255, 160, 0.16);
+    background-color: rgba(91, 196, 255, 0.16);
 }
 
 .option-badge.is-owned {
-    background-color: rgba(255, 255, 255, 0.09);
+    background-color: rgba(255, 255, 255, 0.08);
 }
 
 .option-badge.is-preview {
-    background-color: rgba(255, 210, 80, 0.14);
+    background-color: rgba(230, 189, 61, 0.16);
+    color: rgb(247, 224, 140);
+    border-left-color: rgba(230, 189, 61, 0.24);
+    border-right-color: rgba(230, 189, 61, 0.24);
+    border-top-color: rgba(230, 189, 61, 0.24);
+    border-bottom-color: rgba(230, 189, 61, 0.24);
 }
 
 .color-swatch {
@@ -314,12 +419,19 @@
     padding: 10px;
     margin-top: 8px;
     border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.04);
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    background-color: rgba(24, 36, 58, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
 .loadout-row-btn:hover {
-    background-color: rgba(255, 255, 255, 0.07);
+    background-color: rgba(91, 196, 255, 0.1);
 }
 
 .loadout-text {
@@ -329,27 +441,23 @@
 }
 
 .loadout-title {
-    color: rgba(255, 255, 255, 0.9);
+    color: rgb(248, 251, 255);
     font-size: 12px;
-    unity-font-style: bold;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .loadout-sub {
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(226, 235, 246, 0.6);
     font-size: 10px;
     margin-top: 1px;
     -unity-text-align: lower-left;
     white-space: normal;
     text-overflow: ellipsis;
     flex-grow: 1;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .loadout-chevron {
-    color: rgba(255, 255, 255, 0.35);
+    color: rgba(226, 235, 246, 0.4);
     margin-left: 6px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .loadout-gear-row {
@@ -359,7 +467,15 @@
     margin-top: 10px;
     padding: 10px;
     border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.04);
+    background-color: rgba(24, 36, 58, 0.92);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.05);
+    border-right-color: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
 .loadout-slot {
@@ -368,7 +484,7 @@
     min-width: 120px;
     border-radius: 12px;
     padding: 10px;
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(24, 36, 58, 0.92);
     position: relative;
     justify-content: center;
 }
@@ -379,7 +495,7 @@
     flex-shrink: 0;
     border-radius: 12px;
     padding: 10px;
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(24, 36, 58, 0.92);
 }
 
 .loadout-pattern {
@@ -388,15 +504,13 @@
     flex-shrink: 0;
     border-radius: 12px;
     padding: 10px;
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(24, 36, 58, 0.92);
     flex-direction: column;
 }
 
 .slot-title {
-    color: rgba(255, 255, 255, 0.85);
+    color: rgb(248, 251, 255);
     font-size: 11px;
-    unity-font-style: bold;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .slot-title.small {
@@ -405,10 +519,9 @@
 }
 
 .slot-sub {
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(226, 235, 246, 0.6);
     font-size: 10px;
     margin-top: 2px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .pattern-thumb {
@@ -430,40 +543,43 @@
     position: relative;
     top: auto;
     right: auto;
-    padding-left: 2px;
-    padding-right: 2px;
-    padding-top: 2px;
-    padding-bottom: 2px;
-    border-radius: 6px;
-    font-size: 10px;
-    unity-font-style: bold;
-    color: rgba(255, 255, 255, 0.92);
-    background-color: rgba(255, 255, 255, 0.07);
-    flex-direction: column;
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-    border-bottom-left-radius: 0;
-    margin-top: 0;
-    margin-right: 0;
-    left: auto;
-    flex-grow: 0;
-    -unity-text-align: lower-center;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    border-radius: 999px;
+    font-size: 9px;
+    color: rgba(244, 248, 255, 0.92);
+    background-color: rgba(91, 196, 255, 0.14);
     flex-shrink: 0;
-    align-items: flex-start;
-    align-self: flex-start;
-    justify-content: flex-start;
-    display: flex;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    align-self: center;
+    -unity-text-align: middle-center;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.24);
+    border-right-color: rgba(91, 196, 255, 0.24);
+    border-top-color: rgba(91, 196, 255, 0.24);
+    border-bottom-color: rgba(91, 196, 255, 0.24);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+    border-bottom-left-radius: 12px;
 }
 
 .loadout-badge.is-equipped {
-    background-color: rgba(0, 255, 160, 0.14);
+    background-color: rgba(91, 196, 255, 0.16);
 }
 
 .loadout-badge.is-preview {
-    background-color: rgba(255, 210, 80, 0.14);
-    position: absolute;
+    background-color: rgba(230, 189, 61, 0.16);
+    color: rgb(247, 224, 140);
+    position: relative;
+    border-left-color: rgba(230, 189, 61, 0.24);
+    border-right-color: rgba(230, 189, 61, 0.24);
+    border-top-color: rgba(230, 189, 61, 0.24);
+    border-bottom-color: rgba(230, 189, 61, 0.24);
 }
 
 .color-overlay {
@@ -480,9 +596,16 @@
 .color-popover {
     width: 320px;
     padding: 12px;
-    background-color: rgba(15, 15, 15, 0.95);
-    border-radius: 12px;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+    background-color: rgba(10, 16, 28, 0.98);
+    border-radius: 16px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .color-popover-header {
@@ -496,6 +619,14 @@
     height: 46px;
     border-radius: 10px;
     margin-bottom: 10px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.1);
+    border-right-color: rgba(255, 255, 255, 0.1);
+    border-top-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
 .hsv-row {
@@ -506,10 +637,9 @@
 
 .hsv-label {
     width: 18px;
-    color: rgba(255, 255, 255, 0.75);
+    color: rgba(226, 235, 246, 0.78);
     font-size: 11px;
     unity-text-align: middle-left;
-    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
 }
 
 .color-slider {
@@ -527,11 +657,574 @@
     width: 28px;
     height: 28px;
     border-radius: 8px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .loadout-top-row {
     flex-direction: row;
     align-items: stretch;
-    gap: 10px;
+    gap: 8px;
     margin-top: 6px;
+    margin-bottom: 8px;
+}
+
+.eye-controls-column {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 8px;
+    min-width: 0;
+    margin-right: 8px;
+}
+
+.eye-style-column {
+    flex-direction: column;
+    min-width: 52px;
+    max-width: 60px;
+    justify-content: flex-start;
+}
+
+.eye-style-column-right {
+    align-items: center;
+}
+
+.eye-style-label {
+    color: rgb(248, 251, 255);
+    font-size: 10px;
+    margin-bottom: 3px;
+}
+
+.eye-style-label.subtle {
+    color: rgba(226, 235, 246, 0.68);
+    margin-bottom: 0;
+    margin-right: 4px;
+}
+
+.eye-outline-color {
+    border-left-color: rgba(255, 222, 120, 0.42);
+    border-right-color: rgba(255, 222, 120, 0.42);
+    border-top-color: rgba(255, 222, 120, 0.42);
+    border-bottom-color: rgba(255, 222, 120, 0.42);
+}
+
+.eye-size-panel {
+    flex-grow: 1;
+    min-width: 104px;
+    justify-content: center;
+}
+
+.eye-size-slider {
+    flex-grow: 1;
+    min-width: 104px;
+    margin-top: 2px;
+}
+
+.eye-size-slider .unity-base-slider__tracker {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    min-height: auto;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    flex-wrap: nowrap;
+}
+
+.eye-size-slider .unity-base-slider__dragger {
+    border-radius: 999px;
+    background-color: rgb(230, 189, 61);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(255, 244, 198, 0.65);
+    border-right-color: rgba(255, 244, 198, 0.65);
+    border-top-color: rgba(255, 244, 198, 0.65);
+    border-bottom-color: rgba(255, 244, 198, 0.65);
+    align-self: flex-start;
+    bottom: auto;
+    align-content: stretch;
+}
+
+.eye-size-value {
+    min-width: 24px;
+    color: rgba(244, 248, 255, 0.88);
+    font-size: 10px;
+    margin-top: 2px;
+    -unity-text-align: middle-right;
+}
+
+.eye-outline-label {
+    margin-top: 4px;
+}
+
+.reset-btn {
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(223, 244, 255);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.3);
+    border-right-color: rgba(91, 196, 255, 0.3);
+    border-top-color: rgba(91, 196, 255, 0.3);
+    border-bottom-color: rgba(91, 196, 255, 0.3);
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 999px;
+    border-bottom-right-radius: 999px;
+    border-bottom-left-radius: 0;
+    align-self: flex-start;
+    flex-shrink: 0;
+    -unity-text-align: middle-center;
+    margin-top: 0;
+    margin-right: 0;
+    margin-bottom: 0;
+    margin-left: 0;
+    padding-top: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+}
+
+.preview-clear-btn {
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(223, 244, 255);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.3);
+    border-right-color: rgba(91, 196, 255, 0.3);
+    border-top-color: rgba(91, 196, 255, 0.3);
+    border-bottom-color: rgba(91, 196, 255, 0.3);
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    border-top-left-radius: 999px;
+    border-top-right-radius: 999px;
+    border-bottom-right-radius: 999px;
+    border-bottom-left-radius: 999px;
+    align-self: center;
+    flex-shrink: 0;
+    -unity-text-align: middle-center;
+    margin-top: 0;
+    margin-right: 0;
+    margin-bottom: 0;
+    margin-left: 0;
+    padding-top: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+}
+
+.pattern-reset-btn {
+    position: relative;
+    right: auto;
+    top: auto;
+    width: 20px;
+    min-width: 20px;
+    height: 20px;
+    min-height: 20px;
+    align-self: flex-start;
+}
+
+.skin-mini {
+    width: 84px;
+    min-width: 84px;
+    padding: 8px;
+    border-radius: 10px;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.22);
+    border-right-color: rgba(255, 255, 255, 0.22);
+    border-bottom-color: rgba(255, 255, 255, 0.22);
+    border-left-color: rgba(255, 255, 255, 0.22);
+    background-color: rgba(24, 36, 58, 0.92);
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.skin-mini-swatch {
+    width: 100%;
+    min-width: 52px;
+    height: 52px;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.16);
+    border-right-color: rgba(255, 255, 255, 0.16);
+    border-bottom-color: rgba(255, 255, 255, 0.16);
+    border-left-color: rgba(255, 255, 255, 0.16);
+}
+
+.gear-mini-row {
+    margin-top: 8px;
+    padding: 8px;
+    border-radius: 10px;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.22);
+    border-right-color: rgba(255, 255, 255, 0.22);
+    border-bottom-color: rgba(255, 255, 255, 0.22);
+    border-left-color: rgba(255, 255, 255, 0.22);
+    background-color: rgba(24, 36, 58, 0.92);
+    flex-direction: column;
+    gap: 6px;
+}
+
+.eye-row {
+    flex-grow: 1;
+    margin-top: 0;
+}
+
+.gear-name {
+    flex-grow: 1;
+    -unity-text-align: middle-left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gear-mini-header-actions {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.gear-mini-body {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 6px;
+    min-height: 50px;
+}
+
+.gear-mini-color {
+    flex-grow: 1;
+    min-width: 0;
+    height: auto;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.14);
+    border-right-color: rgba(255, 255, 255, 0.14);
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+    border-left-color: rgba(255, 255, 255, 0.14);
+    border-top-left-radius: 5px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 5px;
+    min-height: 19px;
+    max-height: 38px;
+}
+
+.eye-name {
+    flex-grow: 1;
+    min-width: 0;
+    -unity-text-align: middle-left;
+    white-space: normal;
+}
+
+.pattern-name {
+    flex-grow: 1;
+    min-width: 0;
+    -unity-text-align: middle-left;
+    white-space: normal;
+}
+
+.loadout-icon.mini {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    border-radius: 8px;
+}
+
+.loadout_clear_btn {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    top: auto;
+}
+
+.option-row.is-selected {
+    background-color: rgba(230, 189, 61, 0.12);
+    border-left-color: rgba(230, 189, 61, 0.42);
+    border-right-color: rgba(230, 189, 61, 0.42);
+    border-top-color: rgba(230, 189, 61, 0.42);
+    border-bottom-color: rgba(230, 189, 61, 0.42);
+}
+
+.option-row.is-preview {
+    background-color: rgba(230, 189, 61, 0.08);
+    border-left-color: rgba(230, 189, 61, 0.3);
+    border-right-color: rgba(230, 189, 61, 0.3);
+    border-top-color: rgba(230, 189, 61, 0.3);
+    border-bottom-color: rgba(230, 189, 61, 0.3);
+}
+
+.option-row.is-equipped {
+    background-color: rgba(91, 196, 255, 0.08);
+    border-left-color: rgba(91, 196, 255, 0.28);
+    border-right-color: rgba(91, 196, 255, 0.28);
+    border-top-color: rgba(91, 196, 255, 0.28);
+    border-bottom-color: rgba(91, 196, 255, 0.28);
+}
+
+.gear-mini-row.is-pattern-target {
+    background-color: rgba(230, 189, 61, 0.1);
+    border-left-color: rgba(230, 189, 61, 0.38);
+    border-right-color: rgba(230, 189, 61, 0.38);
+    border-top-color: rgba(230, 189, 61, 0.38);
+    border-bottom-color: rgba(230, 189, 61, 0.38);
+}
+
+.gear-mini-pattern.is-pattern-target {
+    background-color: rgba(230, 189, 61, 0.1);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(230, 189, 61, 0.34);
+    border-right-color: rgba(230, 189, 61, 0.34);
+    border-top-color: rgba(230, 189, 61, 0.34);
+    border-bottom-color: rgba(230, 189, 61, 0.34);
+}
+
+.pattern-thumb-wrap.is-pattern-target {
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgba(255, 226, 120, 0.9);
+    border-right-color: rgba(255, 226, 120, 0.9);
+    border-top-color: rgba(255, 226, 120, 0.9);
+    border-bottom-color: rgba(255, 226, 120, 0.9);
+    background-color: rgba(230, 189, 61, 0.16);
+}
+
+.gear-mini-row {
+    margin-top: 7px;
+    padding: 7px;
+    gap: 4px;
+}
+
+.gear-mini-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 20px;
+}
+
+.eye-body {
+    min-height: 48px;
+}
+
+.eye-color {
+    width: 48px;
+    min-width: 48px;
+    max-width: 48px;
+    height: 48px;
+}
+
+.eye-icon-slot {
+    flex-grow: 1;
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 6px;
+    gap: 6px;
+    border-radius: 10px;
+    background-color: rgba(24, 36, 58, 0.92);
+    min-width: 0;
+}
+
+.gear-mini-pattern {
+    flex-grow: 1;
+    min-width: 0;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 6px;
+    padding: 4px 6px;
+    border-radius: 10px;
+    background-color: rgba(24, 36, 58, 0);
+    align-self: stretch;
+    align-content: stretch;
+}
+
+.pattern-thumb-wrap {
+    width: 50px;
+    min-width: 50px;
+    height: 30px;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.06);
+    -unity-background-scale-mode: scale-and-crop;
+    position: relative;
+    flex-shrink: 0;
+    border-left-color: rgba(255, 255, 255, 0.14);
+    border-right-color: rgba(255, 255, 255, 0.14);
+    border-top-color: rgba(255, 255, 255, 0.14);
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+    border-top-left-radius: 5px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+}
+
+.loadout-icon.mini {
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+}
+
+.loadout-purchase-row {
+    flex-direction: row;
+    gap: 6px;
+    margin-top: 2px;
+    align-items: stretch;
+    flex-grow: 1;
+    flex-shrink: 0;
+}
+
+.loadout-buy-btn {
+    flex-grow: 1;
+    min-height: auto;
+    padding-left: 6px;
+    padding-right: 6px;
+    font-size: 10px;
+    background-color: rgba(91, 196, 255, 0.14);
+    color: rgb(223, 244, 255);
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(91, 196, 255, 0.3);
+    border-right-color: rgba(91, 196, 255, 0.3);
+    border-top-color: rgba(91, 196, 255, 0.3);
+    border-bottom-color: rgba(91, 196, 255, 0.3);
+    -unity-text-align: middle-center;
+    flex-shrink: 0;
+    height: 8px;
+}
+
+.loadout-buy-btn.primary {
+    background-color: rgba(230, 189, 61, 0.92);
+    color: rgb(18, 24, 34);
+    border-left-color: rgba(255, 239, 179, 0.55);
+    border-right-color: rgba(255, 239, 179, 0.55);
+    border-top-color: rgba(255, 239, 179, 0.55);
+    border-bottom-color: rgba(255, 239, 179, 0.55);
+}
+
+.loadout-buy-btn:disabled {
+    opacity: 0.45;
+}
+
+.gear-mini-color-slot {
+    width: 92px;
+    min-width: 92px;
+    max-width: 92px;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 10px;
+    background-color: rgba(24, 36, 58, 0.92);
+}
+
+.gear-mini-color-main {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    position: relative;
+}
+
+.gear-mini-extra-colors {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-height: auto;
+    align-items: flex-start;
+    height: 19px;
+    flex-grow: 1;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.14);
+    border-right-color: rgba(255, 255, 255, 0.14);
+    border-top-color: rgba(255, 255, 255, 0.14);
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+}
+
+.gear-mini-extra-color {
+    height: 16px;
+    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.18);
+    border-right-color: rgba(255, 255, 255, 0.18);
+    border-bottom-color: rgba(255, 255, 255, 0.18);
+    border-left-color: rgba(255, 255, 255, 0.18);
+    flex-grow: 1;
+}
+
+.gear-mini-extra-color:hover {
+    opacity: 0.9;
+}
+
+.gear-mini-extra-colors.is-unavailable {
+    opacity: 0.32;
+}
+
+.gear-mini-extra-colors.is-unavailable > .gear-mini-extra-color {
+    opacity: 0.45;
+}
+
+Button.is-unavailable {
+    opacity: 0.35;
 }

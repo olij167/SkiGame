@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 759a8c2521a13cf49a5b5d7b257aced5
+ComputeShaderImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 177244
+  packageName: MIGHTY PORTAL
+  packageVersion: 2.2.
+  assetPath: Assets/MightyDevOps/Resources/HeatmapComputeShader.compute
+  uploadId: 767126

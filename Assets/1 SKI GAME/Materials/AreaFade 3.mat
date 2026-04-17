@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-1137863657489741033
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Editor::UnityEditor.Rendering.Universal.AssetVersion
+  version: 10
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: AreaFade 3
+  m_Shader: {fileID: 4800000, guid: fa45e7a9132b5a04188221a5f8ee3d6d, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses:
+  - MOTIONVECTORS
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _BottomAlpha: 1
+    - _EdgeFade: 0
+    - _FadeEnd: 0.3
+    - _FadeSoftness: 2
+    - _FadeStart: 0
+    - _FlickerSpeed: 5
+    - _FlickerStrength: 1
+    - _FlowFadeEnd: 1
+    - _FlowFadeSoftness: 6
+    - _FlowFadeStart: 0
+    - _FlowScale: 3
+    - _FlowSoftness: 1.5
+    - _FlowSpeed: 3
+    - _FlowStrength: 2
+    - _FlowStretch: 1.5
+    - _GroundGlowEnd: 0
+    - _GroundGlowHeight: 0
+    - _GroundGlowSoftness: 0.2
+    - _GroundGlowStart: 0
+    - _GroundGlowStrength: 0
+    - _Grounding: 0
+    - _HeightFade: 0
+    - _HeightMax: 1
+    - _HeightMin: 0.758
+    - _Intensity: 0.44
+    - _NoiseBreakup: 0.5
+    - _NoiseContrast: 2.3
+    - _NoiseScale: 12
+    - _NoiseStretch: 0.25
+    - _Pulse: 1
+    - _PulseSpeed: 1.5
+    - _PulseStrength: 0.15
+    - _RiseBandSize: 0.5
+    - _RiseSoftness: 1
+    - _RiseSpeed: 0.5
+    - _RiseStrength: 1
+    - _Softness: 0.57
+    - _TopAlpha: 0.032
+    - _TopFadeEnd: 0.4
+    - _TopFadeSoftness: 1
+    - _TopFadeStart: 0
+    m_Colors:
+    - _BaseColor: {r: 0.23529401, g: 0.7019608, b: 0.4431372, a: 1}
+    - _EmissionColor: {r: 0.23529413, g: 0.7019608, b: 0.4431373, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

@@ -1,0 +1,19 @@
+// Gamma correction compute shader for Unity (gamma 2.2)
+// Compatible with Unity 2022+, all render pipelines
+// Kernel: CSMain
+
+#pragma kernel CSMain
+
+// Input and output textures
+Texture2D<float4> _Source;
+RWTexture2D<float4> _Result;
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    float4 color = _Source[id.xy];
+    // Ensure colors are non-negative to avoid invalid pow results
+    color.rgb = max(color.rgb, 0.0);
+    color.rgb = pow(color.rgb, 1.0/2.2);
+    _Result[id.xy] = color;
+}

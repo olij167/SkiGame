@@ -107,6 +107,22 @@ PrefabInstance:
       insertIndex: 6
       addedObject: {fileID: -238582240224898367}
   m_SourcePrefab: {fileID: 100100000, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+--- !u!114 &221489259120019093 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3368651367975192256, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+  m_PrefabInstance: {fileID: 3291350521933348949}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3425957368392555355}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 481a09b15aef8de47b059aba016c22f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WalkingController
+--- !u!54 &288632424989369219 stripped
+Rigidbody:
+  m_CorrespondingSourceObject: {fileID: 3002867916409725910, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+  m_PrefabInstance: {fileID: 3291350521933348949}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &3425957368392555355 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 154894592666884878, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
@@ -125,6 +141,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RaceCourseNpcRacer
   skiController: {fileID: 8572825039590221281}
+  walkingController: {fileID: 221489259120019093}
+  body: {fileID: 288632424989369219}
   baseCruiseSpeed: 12
   minLookaheadMeters: 8
   maxLookaheadMeters: 24
@@ -135,6 +153,14 @@ MonoBehaviour:
   brakeLeanStrength: 0.95
   finishDistanceRemainingMeters: 8
   finishCenterlineToleranceMeters: 14
+  tacticalStateMinSeconds: 1.4
+  tacticalStateMaxSeconds: 3.4
+  overtakeTriggerGapMeters: 10
+  defendTriggerGapMeters: 7
+  crowdHopHeight: 0.28
+  crowdHopFrequency: 1.75
+  crowdSwayDegrees: 10
+  crowdDisperseSpeed: 1.65
 --- !u!114 &-238582240224898367
 MonoBehaviour:
   m_ObjectHideFlags: 0

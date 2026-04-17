@@ -1,7 +1,7 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/UI/CustomizationShopView.uss?fileID=7433441132597879392&amp;guid=6936539e6b892ca4c97124473bad740b&amp;type=3#CustomizationShopView" />
-    <ui:VisualElement name="Root" class="shop-root">
-        <ui:VisualElement class="shop-header">
+    <ui:VisualElement name="Root" class="shop-root" style="background-color: rgba(6, 10, 18, 0);">
+        <ui:VisualElement class="shop-header" style="background-color: rgba(10, 16, 28, 0.95); border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 16px; border-top-right-radius: 16px; border-bottom-right-radius: 16px; border-bottom-left-radius: 16px; padding-top: 10px; padding-right: 10px; padding-bottom: 10px; padding-left: 10px; border-left-color: rgba(255, 255, 255, 0.08); border-right-color: rgba(255, 255, 255, 0.08); border-top-color: rgba(255, 255, 255, 0.08); border-bottom-color: rgba(255, 255, 255, 0.08);">
             <ui:Label name="Lbl_Title" text="Customization" class="shop-title" style="-unity-font-definition: url(&quot;project://database/Assets/Lots%20of%20fonts/Slackey.ttf?fileID=12800000&amp;guid=281591823e5a02d439cd5679a23ed27e&amp;type=3#Slackey&quot;);" />
             <ui:VisualElement class="shop-header-right">
                 <ui:Label name="Lbl_Currency" text="0" class="shop-currency" />
@@ -10,20 +10,20 @@
         </ui:VisualElement>
         <ui:VisualElement class="shop-body">
             <ui:VisualElement name="Panel_Shop" class="shop-panel" style="flex-direction: row; width: 30%;">
-                <ui:VisualElement style="flex-grow: 1;">
-                    <ui:VisualElement style="flex-grow: 1; flex-direction: row; max-height: 70%;">
+                <ui:VisualElement style="flex-grow: 1; justify-content: space-between;">
+                    <ui:VisualElement style="flex-grow: 1; flex-direction: row; max-height: 70%; margin-bottom: 10px;">
                         <ui:VisualElement name="ShopContent" class="shop-content-column" style="flex-grow: 1;">
+                            <ui:Label name="Lbl_ShopListTitle" text="Shop Offers" class="panel-title" />
                             <ui:VisualElement style="flex-grow: 1; flex-direction: row;">
-                                <ui:VisualElement name="ListsColumn" class="shop-lists-column">
-                                    <ui:Label name="Lbl_ShopListTitle" text="Shop Offers" class="panel-title" />
-                                    <ui:ListView name="List_ShopOptions" class="options-list top-list" />
+                                <ui:VisualElement name="ListsColumn" class="shop-lists-column" style="flex-grow: 1;">
+                                    <ui:ListView name="List_ShopOptions" class="options-list top-list" style="flex-grow: 1; min-height: 30%;" />
                                     <ui:Label name="Lbl_InventoryListTitle" text="Inventory" class="panel-title" />
-                                    <ui:ListView name="List_InventoryOptions" class="options-list bottom-list" />
+                                    <ui:ListView name="List_InventoryOptions" class="options-list bottom-list" style="flex-grow: 1; min-height: 30%;" />
                                 </ui:VisualElement>
                             </ui:VisualElement>
                         </ui:VisualElement>
                     </ui:VisualElement>
-                    <ui:VisualElement name="VisualElement" class="detail-panel" style="min-height: 25%; height: 25%;">
+                    <ui:VisualElement name="VisualElement" class="detail-panel" style="min-height: 25%; height: 25%; margin-top: 0; flex-grow: 0; margin-bottom: 10px; justify-content: flex-end;">
                         <ui:Label text="Details" class="panel-title" />
                         <ui:VisualElement class="detail-header">
                             <ui:VisualElement name="Icon_Selected" class="detail-icon" />
@@ -45,132 +45,203 @@
                             <ui:Label name="Lbl_GearStatLine5" class="detail-meta-line" />
                             <ui:Label name="Lbl_GearStatLine6" class="detail-meta-line" />
                         </ui:VisualElement>
-                        <ui:VisualElement class="detail-actions">
-                            <ui:Button name="Btn_Buy" text="Buy" class="action-btn primary is-hidden" />
-                            <ui:Button name="Btn_Equip" text="Equip" class="action-btn is-hidden" />
+                        <ui:VisualElement class="detail-actions" style="margin-bottom: 10px; align-self: auto; align-items: center;">
+                            <ui:Button name="Btn_Buy" text="Buy" class="action-btn primary is-hidden" style="display: none;" />
+                            <ui:Button name="Btn_Equip" text="Equip" class="action-btn is-hidden" style="display: none;" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
             </ui:VisualElement>
-            <ui:VisualElement name="Row_SubTabs" class="tabs-row sub" style="flex-wrap: nowrap; flex-direction: column; padding-top: 0; margin-top: 0; align-items: stretch; width: auto; align-self: auto; align-content: auto; justify-content: flex-start; flex-grow: 0; min-width: auto;">
-                <ui:Button name="Tab_Eyes" text="Eyes" class="tab-btn" style="background-color: rgba(0, 0, 0, 0.4);" />
-                <ui:Button name="Tab_Patterns" text="Patterns" class="tab-btn is-active" />
+            <ui:VisualElement name="Row_SubTabs" class="tabs-row sub" style="flex-wrap: nowrap; flex-direction: column; padding-top: 10px; margin-top: 0; align-items: stretch; width: auto; align-self: flex-start; align-content: auto; justify-content: flex-start; flex-grow: 0; min-width: auto; background-color: rgba(10, 16, 28, 0.95); border-left-color: rgba(255, 255, 255, 0.08); border-right-color: rgba(255, 255, 255, 0.08); border-top-color: rgba(255, 255, 255, 0.08); border-bottom-color: rgba(255, 255, 255, 0.08); border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; border-top-left-radius: 16px; border-top-right-radius: 16px; border-bottom-right-radius: 16px; border-bottom-left-radius: 16px; margin-right: 0; margin-bottom: 0; margin-left: 0; padding-right: 5px; padding-bottom: 10px; padding-left: 5px; top: auto;">
+                <ui:Button name="Tab_Eyes" text="Eyes" class="tab-btn" />
+                <ui:Button name="Tab_Patterns" text="Patterns" class="tab-btn" />
                 <ui:Button name="Tab_Skis" text="Skis" class="tab-btn" />
                 <ui:Button name="Tab_Poles" text="Poles" class="tab-btn" />
                 <ui:Button name="Tab_Hats" text="Hats" class="tab-btn" />
                 <ui:Button name="Tab_Jackets" text="Jackets" class="tab-btn" />
             </ui:VisualElement>
-            <ui:VisualElement name="Panel_Preview" class="preview-panel" style="justify-content: space-between; align-self: auto;">
-                <ui:Label name="Lbl_PreviewHint" text="Drag to rotate" class="preview-hint" style="align-self: auto; justify-content: flex-start;" />
+            <ui:VisualElement name="Panel_Preview" class="preview-panel" style="justify-content: space-between; align-self: auto; background-color: rgba(14, 22, 36, 0); border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0;">
+                <ui:Label name="Lbl_PreviewHint" text="Drag to rotate" class="preview-hint" style="align-self: auto; justify-content: flex-start; color: rgba(10, 16, 28, 0.95);" />
             </ui:VisualElement>
-            <ui:VisualElement name="Panel_Loadout" class="loadout-panel" style="width: 30%;">
+            <ui:VisualElement name="Panel_Loadout" class="loadout-panel">
                 <ui:Label text="Loadout" class="panel-title" />
-                <ui:VisualElement name="Row_Head" class="loadout-top-row">
-                    <ui:VisualElement class="skin-mini" style="border-left-color: rgb(149, 149, 149); border-right-color: rgb(149, 149, 149); border-top-color: rgb(149, 149, 149); border-bottom-color: rgb(149, 149, 149); border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; flex-shrink: 1; justify-content: center; align-self: auto; align-items: center; align-content: center; width: auto;">
-                        <ui:Label text="Skin" class="loadout-title" style="flex-shrink: 1; align-items: center; align-self: center; justify-content: center;" />
-                        <ui:VisualElement name="Swatch_SkinColor" class="skin-mini-swatch mini" style="background-color: rgba(255, 255, 255, 0.05); flex-shrink: 0; width: 28px;" />
+                <ui:VisualElement name="Row_Head" class="loadout-top-row" style="flex-direction: row; margin-bottom: 0;">
+                    <ui:VisualElement class="skin-mini" style="min-width: auto; width: auto;">
+                        <ui:Label text="Skin" class="loadout-title" />
+                        <ui:VisualElement name="Swatch_SkinColor" class="skin-mini-swatch" style="flex-grow: 1; min-width: 50px; width: auto;" />
                     </ui:VisualElement>
-                    <ui:VisualElement name="Row_Eyes" class="gear-mini-row" style="flex-direction: column; align-items: stretch; padding-left: 4px; flex-grow: 1; margin-top: 0; margin-bottom: 0; margin-right: 0; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-left-color: rgb(149, 149, 149); border-right-color: rgb(149, 149, 149); border-top-color: rgb(149, 149, 149); border-bottom-color: rgb(149, 149, 149); margin-left: 8px; align-self: stretch;">
-                        <ui:VisualElement style="flex-grow: 1; flex-direction: row; justify-content: space-between; align-content: flex-start; -unity-text-align: upper-left;">
+                    <ui:VisualElement name="Row_Eyes" class="gear-mini-row eye-row" style="margin-top: 0; margin-left: 7px;">
+                        <ui:VisualElement class="gear-mini-header">
                             <ui:Label text="Eyes" class="loadout-title" />
-                            <ui:Label name="Lbl_EyeState" text="EQUIPPED" class="loadout-badge is-equipped" style="position: relative; align-self: center; flex-grow: 0; flex-shrink: 0;" />
-                            <ui:Button name="Btn_ClearEyePreview" text="✕" class="preview-clear-btn" />
+                            <ui:VisualElement name="Row_EyesPurchaseActions" class="loadout-purchase-row is-hidden" style="flex-grow: 0; flex-shrink: 1; align-items: auto; align-self: center; justify-content: flex-end; display: flex;">
+                                <ui:Button name="Btn_BuyEyePreview" text="Buy" class="loadout-buy-btn primary" style="flex-grow: 0; padding-left: 12px; padding-right: 12px;" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="gear-mini-header-actions">
+                                <ui:Label name="Lbl_EyeState" text="EQUIPPED" class="loadout-badge is-equipped" />
+                                <ui:Button name="Btn_ClearEyePreview" text="✕" class="preview-clear-btn" style="position: relative; top: auto; right: auto;" />
+                            </ui:VisualElement>
                         </ui:VisualElement>
-                        <ui:VisualElement style="flex-grow: 1; flex-direction: row; justify-content: space-between; align-items: auto; align-self: auto; background-color: rgba(0, 0, 0, 0); flex-shrink: 0; width: auto; align-content: flex-start;">
-                            <ui:VisualElement name="Swatch_EyeColor" class="color-swatch mini" style="justify-content: flex-start; align-content: flex-start; align-self: flex-start; margin-left: 0; flex-grow: 1; width: auto; flex-shrink: 0; align-items: flex-start; min-width: 30%; max-width: none; margin-right: 8px; background-color: rgba(255, 255, 255, 0.05);" />
-                            <ui:VisualElement style="flex-grow: 1; flex-direction: row; flex-shrink: 0; background-color: rgba(255, 255, 255, 0.05);">
-                                <ui:Image name="Icon_EyeIcon" class="loadout-icon mini" style="align-self: flex-end; margin-left: 0; flex-shrink: 0;" />
-                                <ui:Label name="Lbl_EyeName" text="Default" class="loadout-sub" style="flex-wrap: wrap; flex-grow: 1; -unity-text-align: lower-left;" />
+                        <ui:VisualElement class="gear-mini-body eye-body">
+                            <ui:VisualElement class="eye-style-column eye-style-column-right">
+                                <ui:Label text="Icon" class="eye-style-label" />
+                                <ui:VisualElement name="Swatch_EyeColor" class="gear-mini-color eye-color" style="height: 19px; min-width: auto; max-width: none; width: 48px; border-top-right-radius: 5px; border-bottom-right-radius: 5px;" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="eye-icon-slot" style="align-items: flex-end;">
+                                <ui:Image name="Icon_EyeIcon" class="loadout-icon mini" />
+                                <ui:Label name="Lbl_EyeName" text="Default" class="loadout-sub eye-name" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement style="flex-grow: 1; flex-direction: row;">
+                            <ui:VisualElement style="flex-grow: 0; margin-right: 0;">
+                                <ui:Label text="Outline" class="eye-style-label subtle eye-outline-label" />
+                                <ui:VisualElement name="Swatch_EyeOutlineColor" class="gear-mini-color eye-color eye-outline-color" style="height: 19px; flex-grow: 1; max-width: none; border-top-right-radius: 5px; border-bottom-right-radius: 5px;" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="eye-controls-column" style="flex-direction: column; flex-shrink: 0; flex-grow: 1;">
+                                <ui:VisualElement class="eye-size-panel">
+                                    <ui:Label text="Size" class="eye-style-label subtle" />
+                                    <ui:VisualElement style="flex-grow: 1; flex-direction: row;">
+                                        <ui:SliderInt name="Sld_EyeSize" low-value="1" high-value="10" value="3" class="eye-size-slider" style="flex-direction: column; min-width: auto; min-height: auto;" />
+                                        <ui:Label name="Lbl_EyeSizeValue" text="3" class="eye-size-value" style="min-width: auto;" />
+                                    </ui:VisualElement>
+                                </ui:VisualElement>
                             </ui:VisualElement>
                         </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
-                <ui:VisualElement name="Row_Skis" class="gear-mini-row" style="border-left-color: rgb(149, 149, 149); border-right-color: rgb(149, 149, 149); border-top-color: rgb(149, 149, 149); border-bottom-color: rgb(149, 149, 149); border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; padding-top: 0;">
-                    <ui:VisualElement style="flex-grow: 1;">
-                        <ui:VisualElement name="Slot_SkisGear" style="flex-grow: 1; flex-direction: row; justify-content: space-between;">
-                            <ui:Label text="Skis" class="loadout-title" />
-                            <ui:Label name="Lbl_SkisGearName" text="Default" class="loadout-sub" />
-                            <ui:Label name="Lbl_SkisState" text="EQUIPPED" class="loadout-badge is-equipped" style="position: relative; flex-grow: 0; align-self: center; justify-content: flex-start; display: flex; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0;" />
-                            <ui:Button name="Btn_ClearSkisPreview" text="✕" class="preview-clear-btn" />
+                <ui:VisualElement name="Row_Skis" class="gear-mini-row">
+                    <ui:VisualElement name="Slot_SkisGear" class="gear-mini-header">
+                        <ui:Label text="Skis" class="loadout-title" />
+                        <ui:Label name="Lbl_SkisGearName" text="Default" class="loadout-sub gear-name" />
+                        <ui:VisualElement class="gear-mini-header-actions">
+                            <ui:Label name="Lbl_SkisState" text="EQUIPPED" class="loadout-badge is-equipped" />
+                            <ui:Button name="Btn_ClearSkisPreview" text="✕" class="preview-clear-btn loadout_clear_btn" />
                         </ui:VisualElement>
-                        <ui:VisualElement style="flex-grow: 0; flex-direction: row; margin-top: 2px;">
-                            <ui:VisualElement name="Swatch_SkisColor" class="gear-mini-color" style="background-color: rgba(255, 255, 255, 0.05); height: 28px; justify-content: flex-start; align-items: flex-end; align-self: flex-end; align-content: flex-end; width: 64px; flex-direction: column;">
-                                <ui:VisualElement class="color-swatch mini" style="align-self: stretch; justify-content: space-around; align-items: center; flex-direction: row; flex-grow: 1; flex-shrink: 0; height: auto; padding-left: 4px; padding-right: 4px; padding-top: 4px; padding-bottom: 4px; margin-top: 4px; margin-right: 4px; margin-bottom: 4px; margin-left: 4px; display: none;" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="gear-mini-body">
+                        <ui:VisualElement class="gear-mini-color-slot">
+                            <ui:VisualElement class="gear-mini-color-main">
+                                <ui:VisualElement name="Swatch_SkisColor" class="gear-mini-color" style="min-height: 19px; max-height: 38px; height: auto;" />
                                 <ui:Button name="Btn_ResetSkisColor" text="↺" class="reset-btn" />
                             </ui:VisualElement>
-                            <ui:Button name="Slot_SkisPattern" class="gear-mini-pattern" style="border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; background-color: rgba(255, 255, 255, 0.05); flex-grow: 1; flex-shrink: 1; width: auto; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0; align-self: flex-start; justify-content: flex-start;">
-                                <ui:Button name="Icon_SkisPattern" class="pattern-thumb" style="width: 56px; flex-grow: 0; flex-shrink: 0; flex-direction: column; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0;">
-                                    <ui:Button name="Btn_ResetSkisPattern" text="↺" class="reset-btn" style="align-content: flex-start; align-self: flex-end;" />
-                                </ui:Button>
-                                <ui:Label name="Lbl_SkisPatternName" text="Default" class="loadout-sub" style="flex-grow: 1;" />
-                            </ui:Button>
+                            <ui:VisualElement style="flex-grow: 0; flex-direction: row;">
+                                <ui:VisualElement name="Row_SkisExtraColors" class="gear-mini-extra-colors is-hidden" style="display: flex; background-color: rgba(255, 255, 255, 0.08); height: 19px; flex-grow: 1; min-height: auto;" />
+                                <ui:Button name="Btn_ResetSkisSecondaryColor" text="↺" class="reset-btn" style="flex-grow: 0;" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="Slot_SkisPattern" class="gear-mini-pattern">
+                            <ui:VisualElement name="Icon_SkisPattern" class="pattern-thumb-wrap" style="height: 38px;" />
+                            <ui:VisualElement style="flex-grow: 1;">
+                                <ui:Button name="Btn_ResetSkisPattern" text="↺" class="reset-btn pattern-reset-btn" style="align-self: flex-start;" />
+                                <ui:Label name="Lbl_SkisPatternName" text="Default" class="loadout-sub pattern-name" />
+                            </ui:VisualElement>
                         </ui:VisualElement>
                     </ui:VisualElement>
+                    <ui:VisualElement name="Row_SkisPurchaseActions" class="loadout-purchase-row is-hidden">
+                        <ui:Button name="Btn_BuySkisPreviewItem" text="Buy Skis" class="loadout-buy-btn is-hidden" />
+                        <ui:Button name="Btn_BuySkisPreviewPattern" text="Buy Pattern" class="loadout-buy-btn is-hidden" />
+                        <ui:Button name="Btn_BuySkisPreviewBoth" text="Buy Both" class="loadout-buy-btn primary is-hidden" />
+                    </ui:VisualElement>
                 </ui:VisualElement>
-                <ui:VisualElement name="Row_Poles" class="gear-mini-row" style="border-left-color: rgb(149, 149, 149); border-right-color: rgb(149, 149, 149); border-top-color: rgb(149, 149, 149); border-bottom-color: rgb(149, 149, 149); border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; padding-top: 0;">
-                    <ui:VisualElement style="flex-grow: 1;">
-                        <ui:VisualElement name="Slot_PolesGear" style="flex-grow: 1; flex-direction: row; justify-content: space-between;">
-                            <ui:Label text="Poles" class="loadout-title" />
-                            <ui:Label name="Lbl_PolesGearName" text="Default" class="loadout-sub" />
-                            <ui:Label name="Lbl_PolesState" text="EQUIPPED" class="loadout-badge is-equipped" style="position: relative; align-self: flex-end; justify-content: center; flex-grow: 0; align-items: flex-start; align-content: flex-start;" />
-                            <ui:Button name="Btn_ClearPolesPreview" text="✕" class="preview-clear-btn" />
+                <ui:VisualElement name="Row_Poles" class="gear-mini-row">
+                    <ui:VisualElement name="Slot_PolesGear" class="gear-mini-header">
+                        <ui:Label text="Poles" class="loadout-title" />
+                        <ui:Label name="Lbl_PolesGearName" text="Default" class="loadout-sub gear-name" />
+                        <ui:VisualElement class="gear-mini-header-actions">
+                            <ui:Label name="Lbl_PolesState" text="EQUIPPED" class="loadout-badge is-equipped" />
+                            <ui:Button name="Btn_ClearPolesPreview" text="✕" class="preview-clear-btn loadout_clear_btn" />
                         </ui:VisualElement>
-                        <ui:VisualElement style="flex-grow: 0; flex-direction: row; margin-top: 2px;">
-                            <ui:VisualElement name="Swatch_PolesColor" class="gear-mini-color">
-                                <ui:VisualElement class="color-swatch mini" style="height: auto; flex-grow: 1; padding-top: 4px; padding-right: 4px; padding-bottom: 4px; padding-left: 4px; margin-top: 4px; margin-right: 4px; margin-bottom: 4px; margin-left: 4px; display: none;" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="gear-mini-body">
+                        <ui:VisualElement class="gear-mini-color-slot">
+                            <ui:VisualElement class="gear-mini-color-main">
+                                <ui:VisualElement name="Swatch_PolesColor" class="gear-mini-color" />
                                 <ui:Button name="Btn_ResetPolesColor" text="↺" class="reset-btn" />
                             </ui:VisualElement>
-                            <ui:Button name="Slot_PolesPattern" class="gear-mini-pattern" style="border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; flex-shrink: 1; flex-grow: 1; width: auto; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 6px; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0; justify-content: flex-start;">
-                                <ui:Button name="Icon_PolesPattern" class="pattern-thumb" style="width: 56px; flex-grow: 0;">
-                                    <ui:Button name="Btn_ResetPolesPattern" text="↺" class="reset-btn" style="align-content: flex-start; align-self: flex-end;" />
-                                </ui:Button>
-                                <ui:Label name="Lbl_PolesPatternName" text="Default" class="loadout-sub" style="-unity-text-align: middle-left; flex-grow: 1;" />
-                            </ui:Button>
+                            <ui:VisualElement style="flex-grow: 0; flex-direction: row;">
+                                <ui:VisualElement name="Row_PolesExtraColors" class="gear-mini-extra-colors is-hidden" style="display: flex; background-color: rgba(255, 255, 255, 0.08); height: 19px; flex-grow: 1; min-height: auto;" />
+                                <ui:Button name="Btn_ResetPolesSecondaryColor" text="↺" class="reset-btn" style="flex-grow: 0;" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="Slot_PolesPattern" class="gear-mini-pattern">
+                            <ui:VisualElement name="Icon_PolesPattern" class="pattern-thumb-wrap" style="height: 38px;" />
+                            <ui:VisualElement style="flex-grow: 1;">
+                                <ui:Button name="Btn_ResetPolesPattern" text="↺" class="reset-btn pattern-reset-btn" />
+                                <ui:Label name="Lbl_PolesPatternName" text="Default" class="loadout-sub pattern-name" />
+                            </ui:VisualElement>
                         </ui:VisualElement>
                     </ui:VisualElement>
+                    <ui:VisualElement name="Row_PolesPurchaseActions" class="loadout-purchase-row is-hidden" style="flex-direction: row;">
+                        <ui:Button name="Btn_BuyPolesPreviewItem" text="Buy Poles" class="loadout-buy-btn is-hidden" />
+                        <ui:Button name="Btn_BuyPolesPreviewPattern" text="Buy Pattern" class="loadout-buy-btn is-hidden" />
+                        <ui:Button name="Btn_BuyPolesPreviewBoth" text="Buy Both" class="loadout-buy-btn primary is-hidden" />
+                    </ui:VisualElement>
                 </ui:VisualElement>
-                <ui:VisualElement name="Row_Hat" class="gear-mini-row" style="border-left-color: rgb(149, 149, 149); border-right-color: rgb(149, 149, 149); border-top-color: rgb(149, 149, 149); border-bottom-color: rgb(149, 149, 149); border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; padding-top: 0;">
-                    <ui:VisualElement style="flex-grow: 1;">
-                        <ui:VisualElement name="Slot_HatGear" style="flex-grow: 1; flex-direction: row; justify-content: space-between;">
-                            <ui:Label text="Hat" class="loadout-title" />
-                            <ui:Label name="Lbl_HatGearName" text="Default" class="loadout-sub" />
-                            <ui:Label name="Lbl_HatState" text="EQUIPPED" class="loadout-badge is-equipped" style="position: relative; flex-grow: 0; justify-content: flex-end; align-self: center;" />
-                            <ui:Button name="Btn_ClearHatPreview" text="✕" class="preview-clear-btn" />
+                <ui:VisualElement name="Row_Hat" class="gear-mini-row">
+                    <ui:VisualElement name="Slot_HatGear" class="gear-mini-header">
+                        <ui:Label text="Hat" class="loadout-title" />
+                        <ui:Label name="Lbl_HatGearName" text="Default" class="loadout-sub gear-name" />
+                        <ui:VisualElement class="gear-mini-header-actions">
+                            <ui:Label name="Lbl_HatState" text="EQUIPPED" class="loadout-badge is-equipped" />
+                            <ui:Button name="Btn_ClearHatPreview" text="✕" class="preview-clear-btn loadout_clear_btn" />
                         </ui:VisualElement>
-                        <ui:VisualElement style="flex-grow: 0; flex-direction: row; margin-top: 2px;">
-                            <ui:VisualElement name="Swatch_HatColor" class="gear-mini-color">
-                                <ui:VisualElement class="color-swatch mini" style="height: auto; flex-grow: 1; padding-top: 4px; padding-right: 4px; padding-bottom: 4px; padding-left: 4px; margin-top: 4px; margin-right: 4px; margin-bottom: 4px; margin-left: 4px; display: none;" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="gear-mini-body">
+                        <ui:VisualElement class="gear-mini-color-slot">
+                            <ui:VisualElement class="gear-mini-color-main">
+                                <ui:VisualElement name="Swatch_HatColor" class="gear-mini-color" />
                                 <ui:Button name="Btn_ResetHatColor" text="↺" class="reset-btn" />
                             </ui:VisualElement>
-                            <ui:Button name="Slot_HatPattern" class="gear-mini-pattern" style="border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; width: auto; flex-grow: 1; flex-shrink: 1; flex-direction: row; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 6px; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0; justify-content: flex-start;">
-                                <ui:Button name="Icon_HatPattern" class="pattern-thumb">
-                                    <ui:Button name="Btn_ResetHatPattern" text="↺" class="reset-btn" style="align-content: flex-start; align-self: flex-end;" />
-                                </ui:Button>
-                                <ui:Label name="Lbl_HatPatternName" text="Default" class="loadout-sub" style="-unity-text-align: middle-left;" />
-                            </ui:Button>
+                            <ui:VisualElement style="flex-grow: 0; flex-direction: row;">
+                                <ui:VisualElement name="Row_HatExtraColors" class="gear-mini-extra-colors is-hidden" style="display: flex; background-color: rgba(255, 255, 255, 0.08); height: 19px; flex-grow: 1; min-height: auto;" />
+                                <ui:Button name="Btn_ResetHatSecondaryColor" text="↺" class="reset-btn" style="flex-grow: 0;" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="Slot_HatPattern" class="gear-mini-pattern">
+                            <ui:VisualElement name="Icon_HatPattern" class="pattern-thumb-wrap" style="height: 38px;" />
+                            <ui:VisualElement style="flex-grow: 1;">
+                                <ui:Button name="Btn_ResetHatPattern" text="↺" class="reset-btn pattern-reset-btn" style="border-top-left-radius: 0; border-bottom-left-radius: 0;" />
+                                <ui:Label name="Lbl_HatPatternName" text="Default" class="loadout-sub pattern-name" />
+                            </ui:VisualElement>
                         </ui:VisualElement>
                     </ui:VisualElement>
+                    <ui:VisualElement name="Row_HatPurchaseActions" class="loadout-purchase-row is-hidden" style="display: none;">
+                        <ui:Button name="Btn_BuyHatPreviewItem" text="Buy Hat" class="loadout-buy-btn is-hidden" style="display: none;" />
+                        <ui:Button name="Btn_BuyHatPreviewPattern" text="Buy Pattern" class="loadout-buy-btn is-hidden" />
+                        <ui:Button name="Btn_BuyHatPreviewBoth" text="Buy Both" class="loadout-buy-btn primary is-hidden" />
+                    </ui:VisualElement>
                 </ui:VisualElement>
-                <ui:VisualElement name="Row_Jacket" class="gear-mini-row" style="border-left-color: rgb(149, 149, 149); border-right-color: rgb(149, 149, 149); border-top-color: rgb(149, 149, 149); border-bottom-color: rgb(149, 149, 149); border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; padding-top: 0;">
-                    <ui:VisualElement style="flex-grow: 1;">
-                        <ui:VisualElement name="Slot_JacketGear" style="flex-grow: 1; flex-direction: row; justify-content: space-between;">
-                            <ui:Label text="Jacket" class="loadout-title" />
-                            <ui:Label name="Lbl_JacketGearName" text="Default" class="loadout-sub" />
-                            <ui:Label name="Lbl_JacketState" text="EQUIPPED" class="loadout-badge is-equipped" style="position: relative; flex-grow: 0; align-self: center;" />
-                            <ui:Button name="Btn_ClearJacketPreview" text="✕" class="preview-clear-btn" />
+                <ui:VisualElement name="Row_Jacket" class="gear-mini-row">
+                    <ui:VisualElement name="Slot_JacketGear" class="gear-mini-header">
+                        <ui:Label text="Jacket" class="loadout-title" />
+                        <ui:Label name="Lbl_JacketGearName" text="Default" class="loadout-sub gear-name" />
+                        <ui:VisualElement class="gear-mini-header-actions">
+                            <ui:Label name="Lbl_JacketState" text="EQUIPPED" class="loadout-badge is-equipped" />
+                            <ui:Button name="Btn_ClearJacketPreview" text="✕" class="preview-clear-btn loadout_clear_btn" />
                         </ui:VisualElement>
-                        <ui:VisualElement style="flex-grow: 0; flex-direction: row; margin-top: 2px;">
-                            <ui:VisualElement name="Swatch_JacketColor" class="gear-mini-color">
-                                <ui:VisualElement class="color-swatch mini" style="height: auto; flex-grow: 1; padding-top: 4px; padding-right: 4px; padding-bottom: 4px; padding-left: 4px; margin-top: 4px; margin-right: 4px; margin-bottom: 4px; margin-left: 4px; display: none;" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="gear-mini-body">
+                        <ui:VisualElement class="gear-mini-color-slot">
+                            <ui:VisualElement class="gear-mini-color-main">
+                                <ui:VisualElement name="Swatch_JacketColor" class="gear-mini-color" />
                                 <ui:Button name="Btn_ResetJacketColor" text="↺" class="reset-btn" />
                             </ui:VisualElement>
-                            <ui:Button name="Slot_JacketPattern" class="gear-mini-pattern" style="border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; flex-grow: 1; flex-shrink: 1; width: auto; flex-direction: row; justify-content: space-around; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0;">
-                                <ui:Button name="Icon_JacketPattern" class="pattern-thumb">
-                                    <ui:Button name="Btn_ResetJacketPattern" text="↺" class="reset-btn" style="align-content: flex-start; align-self: flex-end;" />
-                                </ui:Button>
-                                <ui:Label name="Lbl_JacketPatternName" text="Default" class="loadout-sub" />
-                            </ui:Button>
+                            <ui:VisualElement style="flex-grow: 0; flex-direction: row;">
+                                <ui:VisualElement name="Row_JacketExtraColors" class="gear-mini-extra-colors is-hidden" style="display: flex; background-color: rgba(255, 255, 255, 0.08); height: 19px; flex-grow: 1; min-height: auto;" />
+                                <ui:Button name="Btn_ResetJacketSecondaryColor" text="↺" class="reset-btn" style="flex-grow: 0;" />
+                            </ui:VisualElement>
                         </ui:VisualElement>
+                        <ui:VisualElement name="Slot_JacketPattern" class="gear-mini-pattern" style="align-items: stretch;">
+                            <ui:VisualElement name="Icon_JacketPattern" class="pattern-thumb-wrap" style="height: 40px;" />
+                            <ui:VisualElement style="flex-grow: 1; flex-shrink: 0;">
+                                <ui:Button name="Btn_ResetJacketPattern" text="↺" class="reset-btn pattern-reset-btn" style="border-top-left-radius: 0; border-bottom-left-radius: 0; align-self: flex-start; justify-content: flex-start; align-items: auto; min-height: auto; height: 20px;" />
+                                <ui:Label name="Lbl_JacketPatternName" text="Default" class="loadout-sub pattern-name" style="flex-grow: 0;" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="Row_JacketPurchaseActions" class="loadout-purchase-row is-hidden">
+                        <ui:Button name="Btn_BuyJacketPreviewItem" text="Buy Jacket" class="loadout-buy-btn is-hidden" />
+                        <ui:Button name="Btn_BuyJacketPreviewPattern" text="Buy Pattern" class="loadout-buy-btn is-hidden" />
+                        <ui:Button name="Btn_BuyJacketPreviewBoth" text="Buy Both" class="loadout-buy-btn primary is-hidden" />
                     </ui:VisualElement>
                 </ui:VisualElement>
             </ui:VisualElement>

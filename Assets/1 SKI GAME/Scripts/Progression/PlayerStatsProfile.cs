@@ -10,17 +10,21 @@ namespace SkiGame.Progression
     /// Uses Lists (JsonUtility-friendly) instead of Dictionary/HashSet.
     /// </summary>
     [Serializable]
-    public sealed class PlayerStatsProfile : ISerializationCallbackReceiver
+    public sealed partial class PlayerStatsProfile : ISerializationCallbackReceiver
     {
         public int profileVersion = CurrentVersion;
-        public const int CurrentVersion = 8;
+        public const int CurrentVersion = 11;
         public LifetimeStats lifetime = new LifetimeStats();
         public SessionStats session = new SessionStats();
+        public ExtendedProgressionStats progression = new ExtendedProgressionStats();
         public PlaythroughState playthrough = new PlaythroughState();
         public TutorialState tutorial = new TutorialState();
+        public QuestLogState quests = new QuestLogState();
 
         // Stored as lists for JsonUtility compatibility.
         public List<string> unlockedAchievementIds = new List<string>();
+
+        public List<string> claimedAchievementIds = new List<string>();
 
         // New: achievement unlock timestamps (for UI badges).
         // Kept alongside unlockedAchievementIds for backwards compatible saves.
@@ -35,9 +39,43 @@ namespace SkiGame.Progression
         // Simple reward currency for Tasks/Achievements (arbitrary for now)
         public int currency = 0;
 
+        // Race / rescue progression
+        public List<string> completedRaceChampionshipIds = new List<string>();
+
+        // Legacy sequential unlocks kept for save compatibility / gradual migration.
+        public List<int> permanentlyUnlockedPassLevels = new List<int>();
+
+        // New non-sequential permanent pass unlocks.
+        public List<string> permanentlyUnlockedPassIds = new List<string>();
+
+        // Resort progression
+        public List<string> permanentlyUnlockedResortIds = new List<string>();
+        public List<ActiveResortRentalState> activeResortRentals = new List<ActiveResortRentalState>();
+        public List<RegionReputationState> regionReputations = new List<RegionReputationState>();
+        public List<string> discoveryRewardedPoiIds = new List<string>();
+
+        public int rescueCareerRank = 1;
+        public int rescueMissionsCompleted = 0;
+        public int rescueMissionsFailed = 0;
+        public float rescueBestCompletionSeconds = -1f;
+        public int rescueMedicalSupplyUsesRemaining = 0;
+        public int rescueRespawnBeaconUsesRemaining = 0;
+        public int rescueSnowmobileDispatchUsesRemaining = 0;
+        public DateTimeUtc rescueDispatchRefreshUtc = new DateTimeUtc();
+        public bool rescueBeaconActive = false;
+        public Vector3 rescueBeaconWorldPosition = Vector3.zero;
+        public DateTimeUtc rescueBeaconExpiryUtc = new DateTimeUtc();
+
         // ---------------- Customization (New) ----------------
 
         public CustomizationState customization = new CustomizationState();
+
+        [Serializable]
+        public sealed class CustomizationColorOverride
+        {
+            public string channelId;
+            public Color color = Color.white;
+        }
 
         [Serializable]
         public sealed class CustomizationState
@@ -70,6 +108,8 @@ namespace SkiGame.Progression
             // ---- Continuous selections ----
             public Color skinColor = Color.white;
             public Color eyeColor = Color.white;
+            public Color eyeOutlineColor = new Color(0f, 0f, 0f, 0f);
+            public float eyeSize = 3f;
             public Color skisColor = Color.white;
             public Color polesColor = Color.white;
 
@@ -77,11 +117,19 @@ namespace SkiGame.Progression
             public Color hatColor = Color.white;
             public Color jacketColor = Color.white;
 
+            // Optional extra per-slot colour channels (e.g. trim / strap / lining)
+            public List<CustomizationColorOverride> skisExtraColors = new List<CustomizationColorOverride>();
+            public List<CustomizationColorOverride> polesExtraColors = new List<CustomizationColorOverride>();
+            public List<CustomizationColorOverride> hatExtraColors = new List<CustomizationColorOverride>();
+            public List<CustomizationColorOverride> jacketExtraColors = new List<CustomizationColorOverride>();
+
             public bool customizationInitialized;
 
             // ---- Has user overridden defaults? ----
             public bool hasSetSkinColor;
             public bool hasSetEyeColor;
+            public bool hasSetEyeOutlineColor;
+            public bool hasSetEyeSize;
             public bool hasSetSkisColor;
             public bool hasSetPolesColor;
             public bool hasSetHatColor;
@@ -130,6 +178,91 @@ namespace SkiGame.Progression
                     if (string.IsNullOrEmpty(equippedJacketPatternId)) equippedJacketPatternId = equippedSkinPatternId;
                 }
             }
+
+            public List<CustomizationColorOverride> GetExtraColorList(string slotKey)
+            {
+                switch (slotKey)
+                {
+                    case "Skis": return skisExtraColors ??= new List<CustomizationColorOverride>();
+                    case "Poles": return polesExtraColors ??= new List<CustomizationColorOverride>();
+                    case "Hat": return hatExtraColors ??= new List<CustomizationColorOverride>();
+                    case "Jacket": return jacketExtraColors ??= new List<CustomizationColorOverride>();
+                    default: return null;
+                }
+            }
+
+            public bool TryGetExtraColor(string slotKey, string channelId, out Color color)
+            {
+                color = Color.white;
+                if (string.IsNullOrEmpty(slotKey) || string.IsNullOrEmpty(channelId))
+                    return false;
+
+                var list = GetExtraColorList(slotKey);
+                if (list == null) return false;
+
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var entry = list[i];
+                    if (entry == null || string.IsNullOrEmpty(entry.channelId))
+                        continue;
+
+                    if (string.Equals(entry.channelId, channelId, StringComparison.Ordinal))
+                    {
+                        color = entry.color;
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            public void SetExtraColor(string slotKey, string channelId, Color color)
+            {
+                if (string.IsNullOrEmpty(slotKey) || string.IsNullOrEmpty(channelId))
+                    return;
+
+                var list = GetExtraColorList(slotKey);
+                if (list == null) return;
+
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var entry = list[i];
+                    if (entry == null || string.IsNullOrEmpty(entry.channelId))
+                        continue;
+
+                    if (string.Equals(entry.channelId, channelId, StringComparison.Ordinal))
+                    {
+                        entry.color = color;
+                        return;
+                    }
+                }
+
+                list.Add(new CustomizationColorOverride
+                {
+                    channelId = channelId,
+                    color = color
+                });
+            }
+
+            public void ClearExtraColor(string slotKey, string channelId)
+            {
+                if (string.IsNullOrEmpty(slotKey) || string.IsNullOrEmpty(channelId))
+                    return;
+
+                var list = GetExtraColorList(slotKey);
+                if (list == null) return;
+
+                for (int i = list.Count - 1; i >= 0; i--)
+                {
+                    var entry = list[i];
+                    if (entry == null || string.IsNullOrEmpty(entry.channelId))
+                        continue;
+
+                    if (string.Equals(entry.channelId, channelId, StringComparison.Ordinal))
+                        list.RemoveAt(i);
+                }
+            }
+
         }
 
         [Serializable]
@@ -234,6 +367,27 @@ namespace SkiGame.Progression
                 profileVersion = 8;
             }
 
+            if (profileVersion < 9)
+            {
+                quests ??= new QuestLogState();
+                profileVersion = 9;
+            }
+
+            if (profileVersion < 10)
+            {
+                progression ??= new ExtendedProgressionStats();
+                profileVersion = 10;
+            }
+
+            if (profileVersion < 11)
+            {
+                permanentlyUnlockedResortIds ??= new List<string>();
+                activeResortRentals ??= new List<ActiveResortRentalState>();
+                regionReputations ??= new List<RegionReputationState>();
+                discoveryRewardedPoiIds ??= new List<string>();
+                profileVersion = 11;
+            }
+
         }
 
         [Serializable]
@@ -290,6 +444,41 @@ namespace SkiGame.Progression
         }
 
         [Serializable]
+        public sealed class ExtendedProgressionStats
+        {
+            public int lifetimeRaceStarts;
+            public int lifetimeRaceCompletions;
+            public int lifetimeRaceWins;
+            public int lifetimeRacePodiums;
+            public int lifetimeRacePersonalBestImprovements;
+            public List<string> completedRaceIds = new List<string>();
+
+            public int lifetimeRescueStarts;
+            public int lifetimeRescueUtilityUses;
+
+            public int lifetimeQuestsAccepted;
+            public int lifetimeQuestStagesCompleted;
+            public int lifetimeTutorialQuestsCompleted;
+
+            public int sessionTricksLanded;
+            public int lifetimeTricksLanded;
+            public int lifetimeNamedTricksLanded;
+            public int lifetimeTrickFails;
+            public int bestTrickTier;
+            public List<string> landedTrickNames = new List<string>();
+
+            public int lifetimePassPurchases;
+            public int lifetimePassExtensions;
+            public List<string> ownedPassIds = new List<string>();
+
+            public int lifetimeCustomizationPurchases;
+
+            public int lifetimeCurrencyEarned;
+            public int lifetimeCurrencySpent;
+            public int largestSingleCurrencyReward;
+        }
+
+        [Serializable]
         public sealed class DailyTaskRowState
         {
             public string ladderId;
@@ -340,6 +529,25 @@ namespace SkiGame.Progression
 
             // Back-compat list (old).
             return unlockedAchievementIds != null && unlockedAchievementIds.Contains(id);
+        }
+
+        public bool HasClaimedAchievement(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return false;
+            return claimedAchievementIds != null && claimedAchievementIds.Contains(id);
+        }
+
+        public bool TryClaimAchievementReward(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return false;
+            if (!HasAchievement(id)) return false;
+
+            claimedAchievementIds ??= new List<string>();
+            if (claimedAchievementIds.Contains(id))
+                return false;
+
+            claimedAchievementIds.Add(id);
+            return true;
         }
 
         public bool TryAddAchievement(string id)
@@ -439,6 +647,21 @@ namespace SkiGame.Progression
             if (string.IsNullOrEmpty(id)) return false;
             if (sessionVisitedLandmarkIds.Contains(id)) return false;
             sessionVisitedLandmarkIds.Add(id);
+            return true;
+        }
+
+        public bool HasPoiDiscoveryReward(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return false;
+            return discoveryRewardedPoiIds != null && discoveryRewardedPoiIds.Contains(id);
+        }
+
+        public bool TryMarkPoiDiscoveryRewarded(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return false;
+            discoveryRewardedPoiIds ??= new List<string>();
+            if (discoveryRewardedPoiIds.Contains(id)) return false;
+            discoveryRewardedPoiIds.Add(id);
             return true;
         }
 
@@ -554,6 +777,8 @@ namespace SkiGame.Progression
         public void ResetSession()
         {
             session = new SessionStats();
+            progression ??= new ExtendedProgressionStats();
+            progression.sessionTricksLanded = 0;
             sessionVisitedLandmarkIds?.Clear();
             activeSessionTasks?.Clear(); // causes ProgressionDirector to refill next update
             sessionVisitedRunIds?.Clear();
@@ -618,6 +843,7 @@ namespace SkiGame.Progression
         {
             lifetime = new LifetimeStats();
             session = new SessionStats();
+            progression = new ExtendedProgressionStats();
 
             unlockedAchievementIds.Clear();
             visitedLandmarkIds.Clear();
@@ -638,9 +864,29 @@ namespace SkiGame.Progression
             runVisitCounts?.Clear();
             liftRideCounts?.Clear();
 
+            completedRaceChampionshipIds.Clear();
+            permanentlyUnlockedPassLevels.Clear();
+            permanentlyUnlockedPassIds.Clear();
+            permanentlyUnlockedResortIds.Clear();
+            activeResortRentals.Clear();
+            regionReputations.Clear();
+            discoveryRewardedPoiIds.Clear();
+            rescueCareerRank = 1;
+            rescueMissionsCompleted = 0;
+            rescueMissionsFailed = 0;
+            rescueBestCompletionSeconds = -1f;
+            rescueMedicalSupplyUsesRemaining = 0;
+            rescueRespawnBeaconUsesRemaining = 0;
+            rescueSnowmobileDispatchUsesRemaining = 0;
+            rescueDispatchRefreshUtc = new DateTimeUtc();
+            rescueBeaconActive = false;
+            rescueBeaconWorldPosition = Vector3.zero;
+            rescueBeaconExpiryUtc = new DateTimeUtc();
+
             dailyTasks = new DailyTaskMatrixState();
 
             tutorial = new TutorialState();
+            quests = new QuestLogState();
         }
 
         public void Sanitize()
@@ -691,10 +937,57 @@ namespace SkiGame.Progression
             liftRideCounts ??= new List<IdCountEntry>();
             sessionLiftRideCounts ??= new List<IdCountEntry>();
 
+            completedRaceChampionshipIds ??= new List<string>();
+            permanentlyUnlockedPassLevels ??= new List<int>();
+            permanentlyUnlockedPassIds ??= new List<string>();
+            permanentlyUnlockedResortIds ??= new List<string>();
+            activeResortRentals ??= new List<ActiveResortRentalState>();
+            regionReputations ??= new List<RegionReputationState>();
+            discoveryRewardedPoiIds ??= new List<string>();
+            rescueCareerRank = Mathf.Max(1, rescueCareerRank);
+            rescueMissionsCompleted = Mathf.Max(0, rescueMissionsCompleted);
+            rescueMissionsFailed = Mathf.Max(0, rescueMissionsFailed);
+            rescueMedicalSupplyUsesRemaining = Mathf.Max(0, rescueMedicalSupplyUsesRemaining);
+            rescueRespawnBeaconUsesRemaining = Mathf.Max(0, rescueRespawnBeaconUsesRemaining);
+            rescueSnowmobileDispatchUsesRemaining = Mathf.Max(0, rescueSnowmobileDispatchUsesRemaining);
+            if (float.IsNaN(rescueBestCompletionSeconds) || float.IsInfinity(rescueBestCompletionSeconds))
+                rescueBestCompletionSeconds = -1f;
+            if (rescueBeaconExpiryUtc.unixSeconds <= 0)
+                rescueBeaconActive = false;
+
             if (lifetime == null) lifetime = new LifetimeStats();
             if (session == null) session = new SessionStats();
+            progression ??= new ExtendedProgressionStats();
+            progression.completedRaceIds ??= new List<string>();
+            progression.landedTrickNames ??= new List<string>();
+            progression.ownedPassIds ??= new List<string>();
+            progression.lifetimeRaceStarts = Mathf.Max(0, progression.lifetimeRaceStarts);
+            progression.lifetimeRaceCompletions = Mathf.Max(0, progression.lifetimeRaceCompletions);
+            progression.lifetimeRaceWins = Mathf.Max(0, progression.lifetimeRaceWins);
+            progression.lifetimeRacePodiums = Mathf.Max(0, progression.lifetimeRacePodiums);
+            progression.lifetimeRacePersonalBestImprovements = Mathf.Max(0, progression.lifetimeRacePersonalBestImprovements);
+            progression.lifetimeRescueStarts = Mathf.Max(0, progression.lifetimeRescueStarts);
+            progression.lifetimeRescueUtilityUses = Mathf.Max(0, progression.lifetimeRescueUtilityUses);
+            progression.lifetimeQuestsAccepted = Mathf.Max(0, progression.lifetimeQuestsAccepted);
+            progression.lifetimeQuestStagesCompleted = Mathf.Max(0, progression.lifetimeQuestStagesCompleted);
+            progression.lifetimeTutorialQuestsCompleted = Mathf.Max(0, progression.lifetimeTutorialQuestsCompleted);
+            progression.sessionTricksLanded = Mathf.Max(0, progression.sessionTricksLanded);
+            progression.lifetimeTricksLanded = Mathf.Max(0, progression.lifetimeTricksLanded);
+            progression.lifetimeNamedTricksLanded = Mathf.Max(0, progression.lifetimeNamedTricksLanded);
+            progression.lifetimeTrickFails = Mathf.Max(0, progression.lifetimeTrickFails);
+            progression.bestTrickTier = Mathf.Max(0, progression.bestTrickTier);
+            progression.lifetimePassPurchases = Mathf.Max(0, progression.lifetimePassPurchases);
+            progression.lifetimePassExtensions = Mathf.Max(0, progression.lifetimePassExtensions);
+            progression.lifetimeCustomizationPurchases = Mathf.Max(0, progression.lifetimeCustomizationPurchases);
+            progression.lifetimeCurrencyEarned = Mathf.Max(0, progression.lifetimeCurrencyEarned);
+            progression.lifetimeCurrencySpent = Mathf.Max(0, progression.lifetimeCurrencySpent);
+            progression.largestSingleCurrencyReward = Mathf.Max(0, progression.largestSingleCurrencyReward);
 
             tutorial ??= new TutorialState();
+            quests ??= new QuestLogState();
+            quests.questStates ??= new List<QuestRuntimeState>();
+            quests.completedQuestIds ??= new List<string>();
+            quests.trackedQuestIds ??= new List<string>();
         }
 
         /// <summary>
@@ -1002,7 +1295,7 @@ namespace SkiGame.Progression
             if (clearSessionRefs)
                 sessionCompletedRunIds?.Clear();
 
-            // Also zero session run aggregates, so the UI doesn't still show ìthis sessionî bests.
+            // Also zero session run aggregates, so the UI doesn't still show ‚Äúthis session‚Äù bests.
             if (clearSessionRefs && session != null)
             {
                 session.runsCompleted = 0;
@@ -1324,3 +1617,4 @@ namespace SkiGame.Progression
 
 
 }
+

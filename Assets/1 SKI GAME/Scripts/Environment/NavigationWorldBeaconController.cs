@@ -18,6 +18,11 @@ namespace SkiGame.Navigation
         [SerializeField] private bool alsoWriteMaterialColor = true;
         [SerializeField] private bool updateSharedMaterialsInEditor = false;
 
+        [Header("Transparency")]
+        [Range(0f, 1f)]
+        [SerializeField] private float beaconAlpha = 0.55f;
+        [SerializeField] private bool forceTransparentMaterials = true;
+
         [Header("Terrain Snap")]
         [SerializeField] private bool snapAnchorToTerrain = true;
         [SerializeField] private LayerMask terrainLayers = ~0;
@@ -36,18 +41,22 @@ namespace SkiGame.Navigation
         {
             _initialRotation = transform.rotation;
             CacheTargetRenderers();
+            EnsureSemiTransparentMaterials();
         }
 
         private void OnValidate()
         {
             if (!Application.isPlaying)
+            {
                 CacheTargetRenderers();
+            }
         }
 
         public void Configure(Vector3 anchorPosition, string displayName, Color accentColor)
         {
             _anchorPosition = ResolveAnchorPosition(anchorPosition);
             _accentColor = accentColor.a > 0f ? accentColor : Color.cyan;
+            _accentColor.a = beaconAlpha;
 
             transform.rotation = _initialRotation;
             transform.position = _anchorPosition;
@@ -55,6 +64,7 @@ namespace SkiGame.Navigation
             if (_targetRenderers == null || _targetRenderers.Length == 0)
                 CacheTargetRenderers();
 
+            EnsureSemiTransparentMaterials();
             ApplyAccentColor();
         }
 
@@ -135,6 +145,68 @@ namespace SkiGame.Navigation
             return Terrain.activeTerrain;
         }
 
+        private void EnsureSemiTransparentMaterials()
+        {
+            if (!forceTransparentMaterials || _targetRenderers == null || _targetRenderers.Length == 0)
+                return;
+
+            for (int i = 0; i < _targetRenderers.Length; i++)
+            {
+                Renderer renderer = _targetRenderers[i];
+                if (renderer == null)
+                    continue;
+
+                Material[] materials = Application.isPlaying
+                    ? renderer.materials
+                    : (updateSharedMaterialsInEditor ? renderer.sharedMaterials : renderer.materials);
+
+                if (materials == null)
+                    continue;
+
+                for (int m = 0; m < materials.Length; m++)
+                {
+                    Material mat = materials[m];
+                    if (mat == null)
+                        continue;
+
+                    SetMaterialTransparent(mat);
+                }
+            }
+        }
+
+        private static void SetMaterialTransparent(Material mat)
+        {
+            if (mat == null)
+                return;
+
+            // URP Lit / similar shaders using _Surface and blend factors
+            if (mat.HasProperty("_Surface"))
+            {
+                mat.SetFloat("_Surface", 1f); // Transparent
+            }
+
+            if (mat.HasProperty("_Blend"))
+            {
+                mat.SetFloat("_Blend", 0f); // Alpha
+            }
+
+            if (mat.HasProperty("_SrcBlend"))
+                mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+
+            if (mat.HasProperty("_DstBlend"))
+                mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+
+            if (mat.HasProperty("_ZWrite"))
+                mat.SetFloat("_ZWrite", 0f);
+
+            mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+
+            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            mat.EnableKeyword("_ALPHABLEND_ON");
+            mat.DisableKeyword("_ALPHATEST_ON");
+            mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        }
+
         private void ApplyAccentColor()
         {
             if (_targetRenderers == null || _targetRenderers.Length == 0)
@@ -169,6 +241,9 @@ namespace SkiGame.Navigation
                     if (mat == null)
                         continue;
 
+                    if (forceTransparentMaterials)
+                        SetMaterialTransparent(mat);
+
                     if (colourPropertyNames != null)
                     {
                         for (int p = 0; p < colourPropertyNames.Length; p++)
@@ -187,20 +262,17 @@ namespace SkiGame.Navigation
 
                     if (alsoWriteMaterialColor && mat.HasProperty("_EmissionColor"))
                     {
-                        // Optional convenience: keep emission in sync if present.
                         mat.SetColor("_EmissionColor", colour);
                     }
 
                     if (alsoWriteMaterialColor)
                     {
-                        // Generic fallback for shaders exposing main color through Material.color.
                         try
                         {
                             mat.color = colour;
                         }
                         catch
                         {
-                            // Some shaders/material types do not support Material.color; ignore safely.
                         }
                     }
                 }

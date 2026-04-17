@@ -69,6 +69,14 @@ public class PoleContact : MonoBehaviour
     [Tooltip("Side tilt (deg) at the end of follow-through.")]
     [SerializeField] private float followTilt = 4f;
 
+    [Header("Air Style Pose")]
+    [SerializeField] private float styleYaw = 18f;
+    [SerializeField] private float styleOutwardOffset = 0.09f;
+    [SerializeField] private float styleUpOffset = 0.05f;
+    [SerializeField] private float styleBackOffset = 0.06f;
+    [SerializeField] private float tweakedPitchOpen = -8f;
+    [SerializeField] private float stretchedPitchOpen = -14f;
+
     [Header("Carve Adjustments")]
     [Tooltip("Minimum planar speed at which carve-based pole adjustments start being visible.")]
     [SerializeField] private float carveMinSpeed = 3f;
@@ -95,6 +103,7 @@ public class PoleContact : MonoBehaviour
     [Tooltip("How quickly the pole blends toward its target pose. Timing of the stroke comes from SkiController; this only smooths jitter.")]
     [SerializeField] private float poseLerpSpeed = 12f;
 
+
     // Public read-only contact data
     public bool IsInContact { get; private set; }
     public Vector3 ContactPoint { get; private set; }
@@ -120,6 +129,27 @@ public class PoleContact : MonoBehaviour
     [Tooltip("Local movement when going Drag -> FollowThrough (backward + up).")]
     [SerializeField] private float followBackOffset = 0.1f;
     [SerializeField] private float followUpOffset = 0.05f;
+
+    [Header("Tuck Pose")]
+    [SerializeField] private float tuckPitchDelta = 24f;
+    [SerializeField] private float tuckTiltReduction = 10f;
+    [SerializeField] private float tuckInwardOffset = 0.08f;
+    [SerializeField] private float tuckUpOffset = 0.04f;
+    [SerializeField] private float tuckBackOffset = 0.10f;
+
+    [Header("Passive Air Drift")]
+    [SerializeField] private bool enablePassiveAirDrift = true;
+    [SerializeField] private float passiveDriftMaxPosition = 0.04f;
+    [SerializeField] private float passiveDriftMaxRotation = 8f;
+    [SerializeField] private float passiveDriftVelocityInfluence = 0.06f;
+
+    private bool _authoredPoseEnabled;
+    private Vector3 _authoredLocalPosition;
+    private Quaternion _authoredLocalRotation = Quaternion.identity;
+    private float _authoredBlendWeight;
+    private bool _passiveAirDriftActive;
+    private Vector3 _passiveAirLocalVelocity;
+    private float _passiveAirPoseSuppression;
 
     private void Reset()
     {
@@ -154,6 +184,11 @@ public class PoleContact : MonoBehaviour
 
     private void Awake()
     {
+        RecaptureBasePoseFromCurrent();
+    }
+
+    public void RecaptureBasePoseFromCurrent()
+    {
         if (poleRoot != null)
         {
             _baseLocalRot = poleRoot.localRotation;
@@ -172,6 +207,33 @@ public class PoleContact : MonoBehaviour
             return;
 
         PosePole();
+    }
+
+    public void SetAuthoredPoseOverride(PosePartTransformData pose, float weight)
+    {
+        if (pose == null || !pose.enabled)
+        {
+            ClearAuthoredPoseOverride();
+            return;
+        }
+
+        _authoredPoseEnabled = true;
+        _authoredBlendWeight = Mathf.Clamp01(weight * Mathf.Clamp01(pose.weight));
+        _authoredLocalPosition = _baseLocalPos + pose.localPosition;
+        _authoredLocalRotation = _baseLocalRot * pose.LocalRotation;
+    }
+
+    public void ClearAuthoredPoseOverride()
+    {
+        _authoredPoseEnabled = false;
+        _authoredBlendWeight = 0f;
+    }
+
+    public void SetPassiveAirDriftContext(bool isAirborne, Vector3 localVelocity, float authoredPoseWeight)
+    {
+        _passiveAirDriftActive = enablePassiveAirDrift && isAirborne;
+        _passiveAirLocalVelocity = localVelocity;
+        _passiveAirPoseSuppression = Mathf.Clamp01(authoredPoseWeight);
     }
 
     // ----------------------------------------------------------------------
@@ -218,6 +280,14 @@ public class PoleContact : MonoBehaviour
         SkiController.PoleStrokePhase phase = skiController.CurrentPolePhase;
         float phaseT = Mathf.Clamp01(skiController.PoleStrokeT);
         bool grounded = skiController.IsRiderGrounded;
+
+        float tuck01 = skiController.Tuck01;
+
+        float airStyle01 = skiController.AirStyle01;
+        SkiController.AerialStyleMode airStyleMode = skiController.CurrentAerialStyleMode;
+        float spinSign = Mathf.Sign(skiController.RightLegInput - skiController.LeftLegInput);
+        if (Mathf.Approximately(spinSign, 0f))
+            spinSign = isLeftPole ? -1f : 1f;
 
         // --- Slope and movement context -----------------------------------
         Vector3 groundNormal = skiController.GroundNormal.sqrMagnitude > 0.0001f
@@ -331,10 +401,46 @@ public class PoleContact : MonoBehaviour
         float sideSign = isLeftPole ? 1f : -1f;
         float tilt = tiltBase * sideSign;
 
+        pitch += tuckPitchDelta * tuck01;
+
+        // Reduce outward tilt while tucked so poles are held closer in.
+        float tiltTowardCenter = tuckTiltReduction * tuck01;
+        if (tiltBase > 0f)
+            tiltBase = Mathf.Max(0f, tiltBase - tiltTowardCenter);
+        else
+            tiltBase = Mathf.Min(0f, tiltBase + tiltTowardCenter);
+
         // --- 6. Compose target rotation -----------------------------------
+        float styleYawAngle = 0f;
+
+        if (!grounded && airStyle01 > 0.001f)
+        {
+            switch (airStyleMode)
+            {
+                case SkiController.AerialStyleMode.Tweaked:
+                    {
+                        bool leadPole = (isLeftPole && spinSign < 0f) || (!isLeftPole && spinSign > 0f);
+                        styleYawAngle += (leadPole ? styleYaw : -styleYaw * 0.55f) * airStyle01;
+                        pitch += tweakedPitchOpen * airStyle01;
+                        break;
+                    }
+
+                case SkiController.AerialStyleMode.Stretched:
+                    styleYawAngle += (isLeftPole ? -styleYaw : styleYaw) * 0.35f * airStyle01;
+                    pitch += stretchedPitchOpen * airStyle01;
+                    break;
+
+                case SkiController.AerialStyleMode.Stylish:
+                    styleYawAngle += (isLeftPole ? -styleYaw : styleYaw) * 0.22f * airStyle01;
+                    pitch += (stretchedPitchOpen * 0.5f) * airStyle01;
+                    break;
+            }
+        }
+
         Quaternion targetRot =
             _baseLocalRot *
             Quaternion.AngleAxis(pitch, Vector3.right) *
+            Quaternion.AngleAxis(styleYawAngle, Vector3.up) *
             Quaternion.AngleAxis(tilt, Vector3.forward);
 
         // --- 7. Position offsets by stroke phase --------------------------
@@ -411,8 +517,76 @@ public class PoleContact : MonoBehaviour
             }
         }
 
+        float inwardSign = isLeftPole ? 1f : -1f;
+
+        offset += Vector3.right * (-inwardSign * tuckInwardOffset * tuck01);
+        offset += localUp * (tuckUpOffset * tuck01);
+        offset += localForward * (-tuckBackOffset * tuck01);
+
+        if (!grounded && airStyle01 > 0.001f)
+        {
+            switch (airStyleMode)
+            {
+                case SkiController.AerialStyleMode.Tweaked:
+                    {
+                        bool leadPole = (isLeftPole && spinSign < 0f) || (!isLeftPole && spinSign > 0f);
+                        float side = isLeftPole ? -1f : 1f;
+
+                        offset += Vector3.right * side * styleOutwardOffset * (leadPole ? 1f : 0.5f) * airStyle01;
+                        offset += localUp * styleUpOffset * 0.6f * airStyle01;
+                        offset += localForward * (-styleBackOffset) * airStyle01;
+                        break;
+                    }
+
+                case SkiController.AerialStyleMode.Stretched:
+                    {
+                        float side = isLeftPole ? -1f : 1f;
+                        offset += Vector3.right * side * styleOutwardOffset * 0.85f * airStyle01;
+                        offset += localUp * styleUpOffset * airStyle01;
+                        break;
+                    }
+
+                case SkiController.AerialStyleMode.Stylish:
+                    {
+                        float side = isLeftPole ? -1f : 1f;
+                        offset += Vector3.right * side * styleOutwardOffset * 0.45f * airStyle01;
+                        offset += localUp * styleUpOffset * 0.4f * airStyle01;
+                        offset += localForward * (-styleBackOffset * 0.5f) * airStyle01;
+                        break;
+                    }
+            }
+        }
+
         // Final target position is base + offset.
         Vector3 targetLocalPos = _baseLocalPos + offset;
+
+        if (_authoredPoseEnabled && _authoredBlendWeight > 0.001f)
+        {
+            targetRot = Quaternion.Slerp(targetRot, _authoredLocalRotation, _authoredBlendWeight);
+            targetLocalPos = Vector3.Lerp(targetLocalPos, _authoredLocalPosition, _authoredBlendWeight);
+        }
+
+        if (_passiveAirDriftActive)
+        {
+            float suppression = Mathf.Lerp(1f, 0.1f, _passiveAirPoseSuppression);
+            float driftStrength = Mathf.Clamp01(_passiveAirLocalVelocity.magnitude * passiveDriftVelocityInfluence) * suppression;
+            if (driftStrength > 0.0001f)
+            {
+                float side = isLeftPole ? -1f : 1f;
+                Vector3 driftPos =
+                    Vector3.right * side * Mathf.Clamp(Mathf.Abs(_passiveAirLocalVelocity.x) * 0.008f, 0f, passiveDriftMaxPosition) * driftStrength +
+                    Vector3.up * Mathf.Clamp(_passiveAirLocalVelocity.y * 0.006f, -passiveDriftMaxPosition, passiveDriftMaxPosition) * driftStrength +
+                    Vector3.forward * Mathf.Clamp(-_passiveAirLocalVelocity.z * 0.015f, -passiveDriftMaxPosition, passiveDriftMaxPosition) * driftStrength;
+
+                Quaternion driftRot = Quaternion.Euler(
+                    Mathf.Clamp(-_passiveAirLocalVelocity.z * 0.65f, -passiveDriftMaxRotation, passiveDriftMaxRotation) * driftStrength,
+                    side * Mathf.Clamp(_passiveAirLocalVelocity.x * 0.45f, -passiveDriftMaxRotation, passiveDriftMaxRotation) * driftStrength,
+                    side * Mathf.Clamp(-_passiveAirLocalVelocity.x * 0.8f, -passiveDriftMaxRotation, passiveDriftMaxRotation) * driftStrength);
+
+                targetLocalPos += driftPos;
+                targetRot = targetRot * driftRot;
+            }
+        }
 
         // --- 8. Smooth rotation & position together -----------------------
         float lerpFactor = 1f - Mathf.Exp(-poseLerpSpeed * dt);

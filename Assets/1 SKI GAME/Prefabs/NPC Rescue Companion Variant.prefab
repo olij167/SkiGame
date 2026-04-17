@@ -1,0 +1,114 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &4686450949910568740
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 3425957368392555355, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+      propertyPath: m_Name
+      value: NPC Rescue Companion Variant
+      objectReference: {fileID: 0}
+    - target: {fileID: 3990652877742656169, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3990652877742656169, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3990652877742656169, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3990652877742656169, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3990652877742656169, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3990652877742656169, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3990652877742656169, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3990652877742656169, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3990652877742656169, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3990652877742656169, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 8672689641554458937, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3425957368392555355, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+      insertIndex: 3
+      addedObject: {fileID: 369635280658870543}
+  m_SourcePrefab: {fileID: 100100000, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+--- !u!114 &4031096312080333509 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8572825039590221281, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+  m_PrefabInstance: {fileID: 4686450949910568740}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7963186971698627711}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ab7e4192ebf2294c9903dc1abf385cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkiController
+--- !u!114 &4763538477845305777 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 221489259120019093, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+  m_PrefabInstance: {fileID: 4686450949910568740}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7963186971698627711}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 481a09b15aef8de47b059aba016c22f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WalkingController
+--- !u!54 &4974493959017512103 stripped
+Rigidbody:
+  m_CorrespondingSourceObject: {fileID: 288632424989369219, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+  m_PrefabInstance: {fileID: 4686450949910568740}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &7963186971698627711 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3425957368392555355, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+  m_PrefabInstance: {fileID: 4686450949910568740}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &369635280658870543
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7963186971698627711}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ebd408f57bbe1e24bb6a153e30f756ef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RescueCompanionSignal
+  rb: {fileID: 4974493959017512103}
+  skiController: {fileID: 4031096312080333509}
+  walkingController: {fileID: 4763538477845305777}
+  navAgent: {fileID: 0}
+  attractRange: 18
+  stopDistance: 3.25
+  repathInterval: 0.4

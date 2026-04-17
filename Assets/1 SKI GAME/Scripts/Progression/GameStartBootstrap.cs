@@ -41,6 +41,8 @@ namespace SkiGame.Progression
         [Header("New Game - Default Appearance")]
         [SerializeField] private Color defaultSkinColor = Color.yellowNice;
         [SerializeField] private Color defaultEyeColor = Color.black;
+        [SerializeField] private Color defaultEyeOutlineColor = new Color(0f, 0f, 0f, 0f);
+        [SerializeField] private float defaultEyeSize = 3f;
 
         [SerializeField] private string tutorialSpawnTag = "TutorialSpawn";
 
@@ -117,13 +119,19 @@ namespace SkiGame.Progression
 
         private void DoNewGame(PlayerStatsManager statsMgr, Scene gameplayScene)
         {
-            GameSaveSystem.DeleteSlot(GameSaveSystem.ActiveSlotId);
+            int slotId = GameSaveSystem.ActiveSlotId;
+
+            GameSaveSystem.DeleteSlot(slotId);
+
+            // Race league completion/best-times are stored in slot-prefixed PlayerPrefs,
+            // not in the slot folder JSON. Clear them explicitly for the slot being reset.
+            RaceCourseLine.ClearPersistentProgressForSlot(slotId);
 
             statsMgr.Load();
             statsMgr.ResetAll();
 
             PlayerPrefs.DeleteKey("skigame.runs.calendarBaseDay");
-            RunProgressTracker.ClearAllPersistentDataForSlot(GameSaveSystem.ActiveSlotId);
+            RunProgressTracker.ClearAllPersistentDataForSlot(slotId);
 
             var tc = TimeController.instance != null ? TimeController.instance : FindObjectOfType<TimeController>();
             if (tc != null)
@@ -154,9 +162,14 @@ namespace SkiGame.Progression
             statsMgr.Profile.tutorial?.ResetForNewGame();
 
             var skiPassManager = SkiPassManager.Instance != null ? SkiPassManager.Instance : FindObjectOfType<SkiPassManager>();
+            var resortAccessManager = SkiResortAccessManager.Instance != null ? SkiResortAccessManager.Instance : SkiResortAccessManager.EnsureInstance();
+            var regionReputationManager = RegionReputationManager.Instance != null ? RegionReputationManager.Instance : RegionReputationManager.EnsureInstance();
 
             if (skiPassManager != null)
                 skiPassManager.ResetForNewGame();
+
+            resortAccessManager?.ResetForNewGame();
+            regionReputationManager?.RefreshPermanentUnlocksFromProfile();
 
             statsMgr.Save();
             GameSaveSystem.MarkSlotPlayed(GameSaveSystem.ActiveSlotId);
@@ -167,6 +180,11 @@ namespace SkiGame.Progression
         private void DoLoadGame(PlayerStatsManager statsMgr, Scene gameplayScene)
         {
             statsMgr.Load();
+
+            var resortAccessManager = SkiResortAccessManager.Instance != null ? SkiResortAccessManager.Instance : SkiResortAccessManager.EnsureInstance();
+            var regionReputationManager = RegionReputationManager.Instance != null ? RegionReputationManager.Instance : RegionReputationManager.EnsureInstance();
+            resortAccessManager?.ApplyPermanentUnlocksFromProfile();
+            regionReputationManager?.RefreshPermanentUnlocksFromProfile();
 
             var tc = TimeController.instance != null ? TimeController.instance : FindObjectOfType<TimeController>();
             if (tc != null)
@@ -196,13 +214,23 @@ namespace SkiGame.Progression
             if (preferTutorialSpawn && !string.IsNullOrWhiteSpace(tutorialSpawnTag))
                 spawn = FindTaggedTransformInScene(gameplayScene, tutorialSpawnTag);
 
+            SkiController player = FindComponentInScene<SkiController>(gameplayScene);
+            SkiResortAccessManager resortAccessManager = SkiResortAccessManager.Instance != null
+                ? SkiResortAccessManager.Instance
+                : FindObjectOfType<SkiResortAccessManager>();
+
+            if (spawn == null && resortAccessManager != null)
+            {
+                Vector3 fromPosition = player != null ? player.transform.position : Vector3.zero;
+                resortAccessManager.TryGetStartupSpawnTransform(fromPosition, out spawn);
+            }
+
             if (spawn == null)
                 spawn = FindTaggedTransformInScene(gameplayScene, resortSpawnTag);
 
             if (spawn == null)
                 return;
 
-            SkiController player = FindComponentInScene<SkiController>(gameplayScene);
             if (player == null)
                 return;
 
@@ -249,10 +277,14 @@ namespace SkiGame.Progression
 
             profile.customization.skinColor = defaultSkinColor;
             profile.customization.eyeColor = defaultEyeColor;
+            profile.customization.eyeOutlineColor = defaultEyeOutlineColor;
+            profile.customization.eyeSize = Mathf.Clamp(Mathf.Round(defaultEyeSize), 1f, 5f);
 
             // Treat as defaults (not user overrides)
             profile.customization.hasSetSkinColor = false;
             profile.customization.hasSetEyeColor = false;
+            profile.customization.hasSetEyeOutlineColor = false;
+            profile.customization.hasSetEyeSize = false;
 
             if (customizationCatalog == null) return;
 

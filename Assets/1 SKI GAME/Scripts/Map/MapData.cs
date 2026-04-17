@@ -13,7 +13,8 @@ namespace SkiGame.Map
     {
         Unknown = 0,
         SkiRun = 10,
-        SkiLift = 20
+        SkiLift = 20,
+        RaceCourse = 30
     }
 
     [Serializable]

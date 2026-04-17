@@ -183,7 +183,7 @@ MonoBehaviour:
   - id: 612b649bd33e4372b9c1fa4fa78e7a01
     uv: {x: 0.82505184, y: 0.5023292}
   faces:
-  - id: root_face
+  - id: Awzruca
     displayName: Mt Awzruca
     fillColor: {r: 0.95356363, g: 0.05853249, b: 0.9152188, a: 0.12}
     borderColor: {r: 0.95356363, g: 0.05853249, b: 0.9152188, a: 1}
@@ -218,7 +218,7 @@ MonoBehaviour:
     - 9c7e4dd6b8184039bda061ee6a11ebd3
     - 310e4105fb124ae9ac9a451b700d2098
     holeLoops: []
-  - id: 82a4ae6ad84c47f58a502f334c3334eb
+  - id: Sublime
     displayName: Mt. Sublime
     fillColor: {r: 0.47069415, g: 0.950954, b: 0.06814183, a: 0.18}
     borderColor: {r: 0.47069415, g: 0.950954, b: 0.06814183, a: 1}
@@ -236,7 +236,7 @@ MonoBehaviour:
     - 5e5bf5a976c64858a336c07f8eefd763
     - bbb2d1c0a47546ac9acedf3e640716d4
     holeLoops: []
-  - id: 9d240c53437441bfb0ac485628c66ff2
+  - id: Valley
     displayName: The Valley
     fillColor: {r: 0.19851308, g: 0.4188401, b: 0.8775617, a: 0.18}
     borderColor: {r: 0.19851308, g: 0.4188401, b: 0.8775617, a: 1}
@@ -271,7 +271,7 @@ MonoBehaviour:
     - ceaf26b5bb4d4e09beac2b648a64dad7
     - 0e1e9cd0e78f4719927e4ab3866211c9
     holeLoops: []
-  - id: e77001009cdc493a88fd2e49d4d4e1c3
+  - id: Bluff
     displayName: The Bluff
     fillColor: {r: 0.54627043, g: 0.6752993, b: 0.12586448, a: 0.18}
     borderColor: {r: 0.54627043, g: 0.6752993, b: 0.12586448, a: 1}
@@ -300,7 +300,7 @@ MonoBehaviour:
     - 346732ce85354cd69a22bc4737c8a855
     - 20c9f80abfec402f8e53519fd493e32d
     holeLoops: []
-  - id: ab649893eb934ee2bb3b9cd2c429c88a
+  - id: Shoulder
     displayName: The Shoulder
     fillColor: {r: 0.8887417, g: 0.28431517, b: 0.17550252, a: 0.18}
     borderColor: {r: 0.8887417, g: 0.28431517, b: 0.17550252, a: 1}
@@ -324,7 +324,7 @@ MonoBehaviour:
     - 8a45a06bb6dd4d518fe1f0031b0c18f0
     - 9c981394d36d4820869ecb280a19aff7
     holeLoops: []
-  - id: 089b60396e124b23a920b3f5a0593190
+  - id: Nest
     displayName: Hawk's Nest
     fillColor: {r: 0.24993353, g: 0.69440174, b: 0.325279, a: 0.18}
     borderColor: {r: 0.24993353, g: 0.69440174, b: 0.325279, a: 1}
@@ -346,7 +346,7 @@ MonoBehaviour:
     - c40938a534b74041a448120c79ed5278
     - c7430ed6ad8e406b9ac277b1555fe5bd
     holeLoops: []
-  - id: 686a7b954dfc46149c28af75060c0863
+  - id: Madcap
     displayName: Madcap
     fillColor: {r: 0.8813905, g: 0.40656477, b: 0.3242194, a: 0.18}
     borderColor: {r: 0.8813905, g: 0.40656477, b: 0.3242194, a: 1}
@@ -373,7 +373,7 @@ MonoBehaviour:
     - c7430ed6ad8e406b9ac277b1555fe5bd
     - c40938a534b74041a448120c79ed5278
     holeLoops: []
-  - id: 1805772c3b994fa7870efddb70368699
+  - id: Wonderland
     displayName: Wonderland
     fillColor: {r: 0.2455965, g: 0.95225567, b: 0.93274695, a: 0.18}
     borderColor: {r: 0.2455965, g: 0.95225567, b: 0.93274695, a: 1}

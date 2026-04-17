@@ -1,0 +1,164 @@
+.movement-panel {
+    position: absolute;
+    right: 18px;
+    top: 18px;
+    width: 286px;
+    max-width: 286px;
+    padding: 10px 12px 10px 12px;
+    gap: 7px;
+    background-color: rgba(8, 13, 20, 0.66);
+    border-top-left-radius: 13px;
+    border-top-right-radius: 13px;
+    border-bottom-left-radius: 13px;
+    border-bottom-right-radius: 13px;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    border-left-color: rgba(255, 255, 255, 0.08);
+    -unity-font-definition: url("project://database/Assets/Lots%20of%20fonts/alte_haas_grotesk/AlteHaasGroteskBold.ttf?fileID=12800000&guid=359a30fefe6c5ca4384ee1df598c6e22&type=3#AlteHaasGroteskBold");
+}
+
+.movement-title {
+    display: flex;
+    font-size: 11px;
+    line-height: 13px;
+    margin-bottom: 2px;
+    color: rgba(223, 232, 242, 0.74);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    -unity-font-style: bold;
+}
+
+.movement-list {
+    gap: 5px;
+}
+
+.input-row {
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    min-height: 30px;
+    padding: 2px 0 2px 0;
+    gap: 10px;
+}
+
+.input-row-primary {
+    min-height: 32px;
+}
+
+.input-row-name {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    font-size: 13px;
+    line-height: 15px;
+    color: rgba(244, 248, 255, 0.94);
+    -unity-font-style: bold;
+    -unity-text-outline-color: rgba(5, 8, 14, 0.7);
+    -unity-text-outline-width: 1px;
+}
+
+.input-row-name-primary {
+    font-size: 14px;
+    line-height: 16px;
+    color: rgb(250, 252, 255);
+}
+
+.input-row-binding {
+    flex-shrink: 0;
+    min-width: 104px;
+    max-width: 46%;
+    padding: 5px 9px 5px 9px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(24, 36, 58, 0.92);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-top-color: rgba(91, 196, 255, 0.22);
+    border-right-color: rgba(91, 196, 255, 0.22);
+    border-bottom-color: rgba(91, 196, 255, 0.22);
+    border-left-color: rgba(91, 196, 255, 0.22);
+    unity-text-align: middle-center;
+}
+
+.input-row-binding-primary {
+    min-width: 108px;
+    max-width: 46%;
+    background-color: rgba(28, 42, 66, 0.96);
+    border-top-color: rgba(91, 196, 255, 0.32);
+    border-right-color: rgba(91, 196, 255, 0.32);
+    border-bottom-color: rgba(91, 196, 255, 0.32);
+    border-left-color: rgba(91, 196, 255, 0.32);
+}
+
+.input-row-binding.input-prompt {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+}
+
+.input-row-binding .input-prompt-text,
+.input-row-binding .input-prompt-separator {
+    color: rgb(242, 248, 255);
+    font-size: 11px;
+    line-height: 13px;
+    -unity-font-style: bold;
+    -unity-text-outline-color: rgba(5, 8, 14, 0.75);
+    -unity-text-outline-width: 1px;
+}
+
+.input-row-binding-primary .input-prompt-text,
+.input-row-binding-primary .input-prompt-separator {
+    font-size: 12px;
+    line-height: 14px;
+    color: rgb(248, 251, 255);
+}
+
+.input-row-binding .input-prompt-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.input-row-binding-primary .input-prompt-icon {
+    width: 21px;
+    height: 21px;
+}
+
+.input-row-active {
+    padding-left: 4px;
+    padding-right: 4px;
+    background-color: rgba(255, 255, 255, 0.035);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.input-row-name-active {
+    color: rgb(247, 212, 103);
+}
+
+.input-row-binding-active {
+    background-color: rgba(76, 62, 24, 0.96);
+    border-top-color: rgba(230, 189, 61, 0.42);
+    border-right-color: rgba(230, 189, 61, 0.42);
+    border-bottom-color: rgba(230, 189, 61, 0.42);
+    border-left-color: rgba(230, 189, 61, 0.42);
+}
+
+.input-row-binding-active .input-prompt-text,
+.input-row-binding-active .input-prompt-separator {
+    color: rgb(247, 212, 103);
+}

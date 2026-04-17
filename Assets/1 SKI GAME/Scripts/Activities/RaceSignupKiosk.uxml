@@ -1,0 +1,83 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/1%20SKI%20GAME/Scripts/Activities/RaceSignupKiosk.uss?fileID=7433441132597879392&amp;guid=aa3c58610853f234a8c081634653b9c6&amp;type=3#RaceSignupKiosk" />
+    <ui:VisualElement name="RaceSignupKioskPanel" class="race-signup-root" style="top: 1px; bottom: 1px; right: 0; left: 0; padding-top: 22px; padding-right: 22px; padding-bottom: 22px; padding-left: 22px;">
+        <ui:VisualElement class="race-signup-shell" style="justify-content: flex-start;">
+            <ui:VisualElement class="race-signup-header" style="border-top-left-radius: 18px; border-top-right-radius: 18px; border-bottom-right-radius: 18px; border-bottom-left-radius: 18px; margin-top: 8px; margin-right: 8px; margin-bottom: 0; margin-left: 8px;">
+                <ui:VisualElement class="race-signup-header-copy" style="margin-right: 0; margin-top: 0; margin-bottom: 0; margin-left: 0;">
+                    <ui:Label text="Race Signup" class="race-signup-title" />
+                    <ui:Label text="Browse races on the map, track championship progress, and start from the kiosk." class="race-signup-subtitle" />
+                </ui:VisualElement>
+                <ui:Button name="Btn_CloseRaceSignupKiosk" text="Close" class="race-signup-close-button" />
+            </ui:VisualElement>
+            <ui:VisualElement class="race-signup-body" style="min-height: auto;">
+                <ui:VisualElement style="flex-grow: 1;">
+                    <ui:VisualElement name="RaceMapHost" class="race-signup-map-host" style="margin-top: 8px; margin-right: 8px; margin-bottom: 8px; margin-left: 8px; border-top-left-radius: 18px; border-top-right-radius: 18px; border-bottom-right-radius: 18px; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; border-bottom-left-radius: 18px;" />
+                    <ui:VisualElement name="ChampionshipBanner" class="race-signup-race-selection-panel" style="margin-left: 8px; margin-right: 8px; position: absolute; margin-top: 0; margin-bottom: 0; min-height: auto; max-height: none; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; right: auto; top: 0;">
+                        <ui:VisualElement name="ChampionshipGoalPanel" class="race-signup-championship-goal-panel" style="max-width: none; flex-grow: 1; width: auto; align-content: center; align-self: auto; padding-bottom: 12px; padding-top: 0; flex-shrink: 1; flex-direction: column; margin-right: 1px; max-height: none; min-width: auto;">
+                            <ui:Label name="Lbl_ChampionshipTitle" text="Regional Championship" class="race-signup-championship-title" style="display: flex; -unity-text-align: upper-center; margin-top: 8px; margin-right: 0; margin-bottom: 0; margin-left: 0; flex-grow: 1;" />
+                            <ui:Label name="Lbl_ChampionshipReward" class="race-signup-championship-reward" style="display: none;" />
+                            <ui:VisualElement class="race-signup-championship-status-row" style="padding-top: 5px; padding-right: 5px; padding-bottom: 5px; padding-left: 5px; align-items: auto; margin-top: 5px; margin-right: 5px; margin-bottom: 5px; margin-left: 5px; align-self: auto; align-content: auto;">
+                                <ui:Label name="Lbl_ChampionshipStatus" text="blah" class="race-signup-championship-status" />
+                                <ui:Label name="Lbl_ChampionshipSummary" text="blah" class="race-signup-championship-summary" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="race-signup-goal-lane-shell" style="margin-top: 0; margin-bottom: 0; margin-right: 0; margin-left: 0;">
+                                <ui:VisualElement name="ChampionshipGoalLane" class="race-signup-goal-lane" style="border-top-left-radius: 12px; border-top-right-radius: 12px; border-bottom-right-radius: 12px; border-bottom-left-radius: 12px;" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:Button name="Btn_ChampionshipAction" text="Enter" class="race-signup-championship-button" style="padding-top: 5px; padding-bottom: 5px; padding-left: 6px; padding-right: 6px; height: auto; justify-content: flex-start; margin-bottom: 8px; margin-top: 8px; margin-right: 8px; margin-left: 8px; min-width: auto; width: auto; font-size: 24px; -unity-font-style: bold; white-space: normal; max-width: 200px; max-height: none; flex-grow: 1; align-content: center;" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="SelectionPanel" class="race-signup-race-selection-panel" style="margin-left: 8px; margin-right: 8px; position: absolute; margin-top: 8px; margin-bottom: 8px; bottom: 0; align-content: auto; justify-content: flex-start; align-self: auto; align-items: stretch; right: 0; left: auto;">
+                        <ui:VisualElement name="RaceSelectionBoard" class="race-signup-race-selection-main" style="min-width: auto; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0;">
+                            <ui:VisualElement class="race-signup-race-selection-toolbar" style="display: none;">
+                                <ui:Label text="Race Board" class="race-signup-section-title no-top-margin" />
+                                <ui:Label name="Lbl_RaceBoardSummary" class="race-signup-board-summary" />
+                            </ui:VisualElement>
+                            <ui:ScrollView name="ChampionshipProgressMatrix" mode="Horizontal" horizontal-scroller-visibility="Auto" vertical-scroller-visibility="Hidden" class="race-signup-race-board-scroll" style="min-height: auto; justify-content: flex-end; align-content: center; align-self: center;" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement style="flex-grow: 1; position: absolute; justify-content: space-between; align-self: stretch; align-content: auto; flex-shrink: 0; bottom: 0; top: 0;" />
+                <ui:VisualElement class="race-signup-side-panel" style="border-bottom-right-radius: 18px; margin-top: 8px; margin-right: 8px; margin-bottom: 8px; margin-left: 8px; border-top-left-radius: 18px; border-top-right-radius: 18px; border-bottom-left-radius: 18px;">
+                    <ui:VisualElement name="BrowseState" class="race-signup-state race-signup-state-browse">
+                        <ui:Label text="Races" class="race-signup-section-title no-top-margin" />
+                        <ui:Label name="Lbl_BrowseHint" text="Select a race from the banner, the map, or the list." class="race-signup-meta-text" />
+                        <ui:ScrollView name="RaceList" class="race-signup-race-list" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="SelectedState" class="race-signup-state race-signup-state-selected">
+                        <ui:VisualElement class="race-signup-selected-topbar">
+                            <ui:Button name="Btn_BackToRaceList" text="Back" class="race-signup-back-button" />
+                            <ui:Label text="Selected Race" class="race-signup-card-kicker race-signup-selected-kicker" />
+                        </ui:VisualElement>
+                        <ui:Label name="Lbl_SelectedRaceName" text="Select a race" class="race-signup-selected-title" />
+                        <ui:Label name="Lbl_SelectedRaceStatus" text="Choose a race from the map or list." class="race-signup-selected-status" />
+                        <ui:Label name="Lbl_SelectedRaceRequirement" class="race-signup-meta-text" />
+                        <ui:Label name="Lbl_SelectedRaceDescription" class="race-signup-description" />
+                        <ui:Label text="Tiers" class="race-signup-section-title race-signup-inline-section" />
+                        <ui:VisualElement name="RaceLeagueList" class="race-signup-button-list" />
+                        <ui:Label text="Personal Best" class="race-signup-section-title race-signup-inline-section" />
+                        <ui:VisualElement class="race-signup-stats-row">
+                            <ui:VisualElement class="race-signup-stat-box">
+                                <ui:Label text="Best Place" class="race-signup-stat-label" />
+                                <ui:Label name="Lbl_SelectedRaceBestPlacement" text="--" class="race-signup-stat-value" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="race-signup-stat-box">
+                                <ui:Label text="Best Time" class="race-signup-stat-label" />
+                                <ui:Label name="Lbl_SelectedRaceBestTime" text="--" class="race-signup-stat-value" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="race-signup-stat-box">
+                                <ui:Label text="Base Reward" class="race-signup-stat-label" />
+                                <ui:Label name="Lbl_SelectedRaceBaseReward" text="--" class="race-signup-stat-value" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:Label name="Lbl_SelectedRaceReward" class="race-signup-selected-reward" />
+                        <ui:VisualElement name="SelectedRaceRewardList" class="race-signup-reward-list" />
+                        <ui:VisualElement class="race-signup-footer">
+                            <ui:Button name="Btn_SignUpRace" text="Start Race" class="race-signup-primary-button" />
+                            <ui:Label name="Lbl_RaceSignupResult" class="race-signup-result-label" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

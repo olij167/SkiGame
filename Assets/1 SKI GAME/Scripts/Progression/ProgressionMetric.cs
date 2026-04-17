@@ -55,5 +55,45 @@ namespace SkiGame.Progression
         LifetimeRunCompletedCount,
         LifetimeRunCompletedCleanCount,
 
+        SessionTricksLanded,
+
+        LifetimeRaceStarts,
+        LifetimeRaceCompletions,
+        LifetimeRaceWins,
+        LifetimeRacePodiums,
+        LifetimeUniqueRacesCompleted,
+        LifetimeRaceChampionshipsCompleted,
+        LifetimeRacePersonalBestImprovements,
+
+        LifetimeRescueStarts,
+        LifetimeRescueCompletions,
+        LifetimeRescueFailures,
+        LifetimeBestRescueCompletionSeconds,
+        LifetimeRescueRank,
+        LifetimeRescueUtilityUses,
+
+        LifetimeQuestsAccepted,
+        LifetimeQuestsCompleted,
+        LifetimeQuestStagesCompleted,
+        LifetimeTutorialQuestsCompleted,
+
+        LifetimeTricksLanded,
+        LifetimeNamedTricksLanded,
+        LifetimeUniqueTrickNamesLanded,
+        LifetimeTrickFails,
+        LifetimeBestTrickTier,
+
+        LifetimePassesPurchased,
+        LifetimePassExtensions,
+        LifetimePermanentPassesUnlocked,
+        LifetimeUniquePassesOwned,
+
+        LifetimeCustomizationPurchases,
+        LifetimeCustomizationUnlocks,
+
+        LifetimeCurrencyEarned,
+        LifetimeCurrencySpent,
+        LargestSingleCurrencyReward,
+
     }
 }
