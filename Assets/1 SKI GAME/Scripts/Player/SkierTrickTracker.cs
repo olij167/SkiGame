@@ -572,7 +572,7 @@ public sealed class SkierTrickTracker : MonoBehaviour
                 _primaryPoseLabelDuringRun = trimmedLabel;
         }
 
-        SkiController.AerialPoseFamily family = skiController.CurrentPoseFamily;
+        SkiController.AerialPoseFamily family = skiController.CurrentCommittedPoseFamily;
         if (family != SkiController.AerialPoseFamily.None)
         {
             _poseFamiliesDuringRun.Add(family);
@@ -580,7 +580,7 @@ public sealed class SkierTrickTracker : MonoBehaviour
                 _primaryPoseFamilyDuringRun = family;
         }
 
-        SkiController.AerialPoseShape shape = skiController.CurrentPoseShape;
+        SkiController.AerialPoseShape shape = skiController.CurrentCommittedPoseShape;
         if (shape != SkiController.AerialPoseShape.None)
         {
             _poseShapesDuringRun.Add(shape);
@@ -1767,11 +1767,7 @@ public sealed class SkierTrickTracker : MonoBehaviour
             return string.Empty;
 
         string poseName = skiController.CurrentTrackedPoseName;
-        if (string.IsNullOrWhiteSpace(poseName))
-            return string.Empty;
-
-        string orientation = BuildOrientationModifier();
-        return string.IsNullOrWhiteSpace(orientation) ? poseName : $"{orientation}|{poseName}";
+        return string.IsNullOrWhiteSpace(poseName) ? string.Empty : poseName;
     }
 
     private string BuildOrientationModifier()
@@ -1779,15 +1775,7 @@ public sealed class SkierTrickTracker : MonoBehaviour
         if (skiController == null || !skiController.IsAirPoseActive)
             return string.Empty;
 
-        return skiController.CurrentPoseOrientationModifier switch
-        {
-            SkiController.AerialOrientationModifier.Switch => "Switch",
-            SkiController.AerialOrientationModifier.Inverted => "Inverted",
-            SkiController.AerialOrientationModifier.Sideways => "Sideways",
-            SkiController.AerialOrientationModifier.Rising => "Rising",
-            SkiController.AerialOrientationModifier.Diving => "Diving",
-            _ => string.Empty
-        };
+        return SkiController.GetAerialOrientationModifierLabel(skiController.CurrentPoseOrientationModifier);
     }
 
     private string BuildPoseDescriptor()
@@ -1795,14 +1783,7 @@ public sealed class SkierTrickTracker : MonoBehaviour
         if (skiController == null || !skiController.IsAirPoseActive)
             return string.Empty;
 
-        string poseName = skiController.CurrentTrackedPoseName;
-        if (string.IsNullOrWhiteSpace(poseName))
-            return string.Empty;
-
-        string orientation = BuildOrientationModifier();
-        return string.IsNullOrWhiteSpace(orientation)
-            ? poseName
-            : $"{orientation} {poseName}";
+        return skiController.CurrentPresentedPoseName;
     }
 
     private void EvaluateLandingStyleTags(ref TrickResult result)

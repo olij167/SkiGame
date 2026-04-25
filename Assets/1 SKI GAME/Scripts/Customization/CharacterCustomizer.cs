@@ -1,8 +1,12 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.Rendering.Universal; // for DecalProjector
 
 public class CharacterCustomizer : MonoBehaviour
 {
+    private static readonly string[] SkinColorPropCandidates = { "_BaseColor", "_Color", "Base_Colour", "BaseColor" };
+    private static readonly string[] SkinMapPropCandidates = { "_BaseMap", "_MainTex", "Base_Map", "BaseMap" };
+
     [Header("Base Renderers (3D URP)")]
     [SerializeField] private Renderer[] skinRenderers;
 
@@ -43,12 +47,26 @@ public class CharacterCustomizer : MonoBehaviour
     [Header("Anchors for Wearables")]
     [SerializeField] private Transform headAnchor; // hats
     [SerializeField] private Transform bodyAnchor; // jackets
+    [SerializeField] private Transform accessoryAnchor; // accessories
+    [SerializeField] private Transform leftGloveAnchor;
+    [SerializeField] private Transform rightGloveAnchor;
+    [SerializeField] private Transform leftBootAnchor;
+    [SerializeField] private Transform rightBootAnchor;
 
     [Header("Hat Options")]
     [SerializeField] private GameObject[] hatPrefabs;
 
     [Header("Jacket Options")]
     [SerializeField] private GameObject[] jacketPrefabs;
+
+    [Header("Accessory Options")]
+    [SerializeField] private GameObject[] accessoryPrefabs;
+
+    [Header("Glove Options")]
+    [SerializeField] private GameObject[] glovePrefabs;
+
+    [Header("Boot Options")]
+    [SerializeField] private GameObject[] bootPrefabs;
 
     // Runtime state
     private Material _eyeMaterialInstance;
@@ -58,15 +76,38 @@ public class CharacterCustomizer : MonoBehaviour
     private int _skinColorPropertyId;
     private int _eyeOutlineBaseMapId;
     private int _eyeOutlineBaseColorId;
+    private int _skinTexturePropertyId;
     private DecalProjector _leftEyeOutlineProjector;
     private DecalProjector _rightEyeOutlineProjector;
     private Vector3 _leftEyeBaseSize;
     private Vector3 _rightEyeBaseSize;
+    private Texture _currentSkinTexture;
 
     private GameObject _currentHatInstance;
     private GameObject _currentJacketInstance;
+    private GameObject _currentAccessoryInstance;
+    private GameObject _currentLeftGloveInstance;
+    private GameObject _currentRightGloveInstance;
+    private GameObject _currentLeftBootInstance;
+    private GameObject _currentRightBootInstance;
     private WearableAttachment _currentHatAttachment;
     private WearableAttachment _currentJacketAttachment;
+    private WearableAttachment _currentAccessoryAttachment;
+    private WearableAttachment _currentLeftGloveAttachment;
+    private WearableAttachment _currentRightGloveAttachment;
+    private WearableAttachment _currentLeftBootAttachment;
+    private WearableAttachment _currentRightBootAttachment;
+
+    private CustomizationOptionSO _currentJacketOption;
+    private CustomizationOptionSO _currentAccessoryOption;
+    private Color _currentGlovePrimaryColor = Color.white;
+    private Color _currentBootPrimaryColor = Color.white;
+    private Color _currentJacketPrimaryColor = Color.white;
+    private Color _currentAccessoryPrimaryColor = Color.white;
+    private readonly Dictionary<string, Color> _currentGloveChannelColors = new Dictionary<string, Color>();
+    private readonly Dictionary<string, Color> _currentBootChannelColors = new Dictionary<string, Color>();
+    private readonly Dictionary<string, Color> _currentJacketChannelColors = new Dictionary<string, Color>();
+    private readonly Dictionary<string, Color> _currentAccessoryChannelColors = new Dictionary<string, Color>();
 
     private void Awake()
     {
@@ -80,6 +121,11 @@ public class CharacterCustomizer : MonoBehaviour
 
         if (!string.IsNullOrEmpty(skinColorPropertyName))
             _skinColorPropertyId = Shader.PropertyToID(skinColorPropertyName);
+
+        if (!string.IsNullOrEmpty(skinTexturePropertyName))
+            _skinTexturePropertyId = Shader.PropertyToID(skinTexturePropertyName);
+
+        _currentSkinTexture = GetSelectedSkinTexture();
     }
 
     [ContextMenu("Randomise All")]
@@ -256,6 +302,43 @@ public class CharacterCustomizer : MonoBehaviour
             _eyeOutlineMaterialInstance.SetTexture(_eyeOutlineBaseMapId, texture);
     }
 
+    private void RefreshEyePresentation(Sprite spriteOverride = null)
+    {
+        EnsureEyeMaterialInstance();
+        if (_eyeMaterialInstance == null)
+            return;
+
+        if (_eyeBaseMapId == 0 || _eyeBaseColorId == 0)
+            ResolveEyePropertyIds();
+
+        EnsureEyeOutlineResources();
+
+        Texture eyeTexture = null;
+
+        if (spriteOverride != null)
+        {
+            eyeTexture = spriteOverride.texture;
+        }
+        else if (eyeOptions != null && eyeOptions.Length > 0)
+        {
+            int clampedIndex = Mathf.Clamp(selectedEyeOption, 0, eyeOptions.Length - 1);
+            var option = eyeOptions[clampedIndex];
+            if (option != null)
+                eyeTexture = option.texture;
+        }
+
+        if (eyeTexture != null)
+            ApplyEyeTextureToMaterials(eyeTexture);
+
+        if (_eyeBaseColorId != 0)
+            _eyeMaterialInstance.SetColor(_eyeBaseColorId, eyeColour);
+
+        ApplyEyeMaterialToProjectors();
+        ApplyEyeOutlineMaterialToProjectors();
+        ApplyEyeOutlineColorInternal();
+        ApplyEyeSizeInternal();
+    }
+
     private void ApplyEyeSizeInternal()
     {
         float sizeStep = Mathf.Clamp(Mathf.Round(eyeSizeScale), 1f, 10f);
@@ -306,68 +389,26 @@ public class CharacterCustomizer : MonoBehaviour
         if (eyeOptions == null || eyeOptions.Length == 0)
             return;
 
-        index = Mathf.Clamp(index, 0, eyeOptions.Length - 1);
-        var option = eyeOptions[index];
-
-        EnsureEyeMaterialInstance();
-        if (_eyeMaterialInstance == null) return;
-
-        // Safety: if base material changed at runtime, re-resolve once
-        if (_eyeBaseColorId == 0 || _eyeBaseMapId == 0)
-            ResolveEyePropertyIds();
-
-        EnsureEyeOutlineResources();
-
-        selectedEyeOption = index;
-
-        // Texture
-        if (option != null && _eyeBaseMapId != 0)
-        {
-            ApplyEyeTextureToMaterials(option.texture);
-        }
-
-        // Color (uses current field)
-        if (_eyeBaseColorId != 0)
-        {
-            _eyeMaterialInstance.SetColor(_eyeBaseColorId, eyeColour);
-        }
-
-        ApplyEyeMaterialToProjectors();
-        ApplyEyeOutlineMaterialToProjectors();
-        ApplyEyeOutlineColorInternal();
-        ApplyEyeSizeInternal();
+        selectedEyeOption = Mathf.Clamp(index, 0, eyeOptions.Length - 1);
+        RefreshEyePresentation();
     }
 
     public void SetEyeColor(Color color)
     {
-        EnsureEyeMaterialInstance();
-        if (_eyeMaterialInstance == null) return;
-
-        if (_eyeBaseColorId == 0)
-            ResolveEyePropertyIds();
-
         eyeColour = color;
-
-        if (_eyeBaseColorId != 0)
-            _eyeMaterialInstance.SetColor(_eyeBaseColorId, color);
-
-        // Projectors already share the same instance, but keeping this is harmless.
-        ApplyEyeMaterialToProjectors();
+        RefreshEyePresentation();
     }
 
     public void SetEyeOutlineColor(Color color)
     {
-        EnsureEyeMaterialInstance();
-        EnsureEyeOutlineResources();
-
         eyeOutlineColour = color;
-        ApplyEyeOutlineColorInternal();
+        RefreshEyePresentation();
     }
 
     public void SetEyeSize(float scale)
     {
         eyeSizeScale = Mathf.Clamp(Mathf.Round(scale), 1f, 10f);
-        ApplyEyeSizeInternal();
+        RefreshEyePresentation();
     }
 
     #endregion
@@ -401,30 +442,19 @@ public class CharacterCustomizer : MonoBehaviour
         index = Mathf.Clamp(index, 0, skinPatterns.Length - 1);
         var tex = skinPatterns[index];
         if (tex == null) return;
+
         selectedTextureIndex = index;
-        // Assign a shared material or an instance depending on your needs.
-        // Here we use .material to get a unique instance per character.
-        foreach ( var renderer in skinRenderers ) 
-            renderer.material.SetTexture(skinTexturePropertyName, tex);
+        _currentSkinTexture = tex;
+        ApplyCurrentSkinStateToAllRenderers();
     }
 
     [ContextMenu("Set Skin Colour (during play only")]
     public void SetSkinColor(Color color)
     {
         if (!Application.isPlaying) return;
-        if (skinRenderers == null) return;
-        if (_skinColorPropertyId == 0) return;
 
         skinColor = color;
-
-        foreach (var renderer in skinRenderers)
-        {
-            var mat = renderer.material;
-            if (mat != null && mat.HasProperty(_skinColorPropertyId))
-            {
-                mat.SetColor(_skinColorPropertyId, color);
-            }
-        }
+        ApplyCurrentSkinStateToAllRenderers();
     }
 
     public Texture2D GetSkinPatternTexture2D(int index)
@@ -502,10 +532,15 @@ public class CharacterCustomizer : MonoBehaviour
 
         _currentJacketInstance = null;
         _currentJacketAttachment = null;
+        _currentJacketOption = null;
+        _currentJacketPrimaryColor = Color.white;
+        _currentJacketChannelColors.Clear();
     }
 
     public void SetJacketColor(Color color)
     {
+        _currentJacketPrimaryColor = color;
+
         if (_currentJacketAttachment == null) return;
         _currentJacketAttachment.SetColor(color);
     }
@@ -517,6 +552,9 @@ public class CharacterCustomizer : MonoBehaviour
     }
     public void SetJacketChannelColor(string channelId, Color color)
     {
+        if (!string.IsNullOrEmpty(channelId))
+            _currentJacketChannelColors[channelId] = color;
+
         if (_currentJacketAttachment == null) return;
         _currentJacketAttachment.SetChannelColor(channelId, color);
     }
@@ -532,6 +570,261 @@ public class CharacterCustomizer : MonoBehaviour
         if (_currentJacketAttachment == null) return;
         _currentJacketAttachment.SetTexture(tex);
     }
+
+    #endregion
+
+    #region Gloves
+
+    public void SetGloves(int index)
+    {
+        _currentGlovePrimaryColor = Color.white;
+        _currentGloveChannelColors.Clear();
+        AttachMirroredWearable(
+            glovePrefabs,
+            index,
+            leftGloveAnchor,
+            rightGloveAnchor,
+            ref _currentLeftGloveInstance,
+            ref _currentRightGloveInstance,
+            ref _currentLeftGloveAttachment,
+            ref _currentRightGloveAttachment);
+    }
+
+    public void ClearGloves()
+    {
+        ClearMirroredWearable(
+            ref _currentLeftGloveInstance,
+            ref _currentRightGloveInstance,
+            ref _currentLeftGloveAttachment,
+            ref _currentRightGloveAttachment);
+        _currentGlovePrimaryColor = Color.white;
+        _currentGloveChannelColors.Clear();
+    }
+
+    public void SetGlovesColor(Color color)
+    {
+        _currentGlovePrimaryColor = color;
+        _currentLeftGloveAttachment?.SetColor(color);
+        _currentRightGloveAttachment?.SetColor(color);
+    }
+
+    public void SetGlovesPrefab(GameObject prefab)
+    {
+        _currentGlovePrimaryColor = Color.white;
+        _currentGloveChannelColors.Clear();
+        AttachMirroredWearablePrefab(
+            prefab,
+            leftGloveAnchor,
+            rightGloveAnchor,
+            ref _currentLeftGloveInstance,
+            ref _currentRightGloveInstance,
+            ref _currentLeftGloveAttachment,
+            ref _currentRightGloveAttachment);
+    }
+
+    public void RefreshGloves()
+    {
+        _currentLeftGloveAttachment?.SetColor(_currentGlovePrimaryColor);
+        _currentRightGloveAttachment?.SetColor(_currentGlovePrimaryColor);
+
+        foreach (var pair in _currentGloveChannelColors)
+        {
+            _currentLeftGloveAttachment?.SetChannelColor(pair.Key, pair.Value);
+            _currentRightGloveAttachment?.SetChannelColor(pair.Key, pair.Value);
+        }
+    }
+
+    public void SetGlovesChannelColor(string channelId, Color color)
+    {
+        if (!string.IsNullOrEmpty(channelId))
+            _currentGloveChannelColors[channelId] = color;
+
+        _currentLeftGloveAttachment?.SetChannelColor(channelId, color);
+        _currentRightGloveAttachment?.SetChannelColor(channelId, color);
+    }
+
+    public void SetGlovesPatternTexture(Texture tex)
+    {
+        _currentLeftGloveAttachment?.SetTexture(tex);
+        _currentRightGloveAttachment?.SetTexture(tex);
+    }
+
+    public GameObject GetGlovePrefabAtIndex(int index)
+    {
+        if (glovePrefabs == null || glovePrefabs.Length == 0)
+            return null;
+
+        if (index < 0 || index >= glovePrefabs.Length)
+            return null;
+
+        return glovePrefabs[index];
+    }
+
+    #endregion
+
+    #region Boots
+
+    public void SetBoots(int index)
+    {
+        _currentBootPrimaryColor = Color.white;
+        _currentBootChannelColors.Clear();
+        AttachMirroredWearable(
+            bootPrefabs,
+            index,
+            leftBootAnchor,
+            rightBootAnchor,
+            ref _currentLeftBootInstance,
+            ref _currentRightBootInstance,
+            ref _currentLeftBootAttachment,
+            ref _currentRightBootAttachment);
+    }
+
+    public void ClearBoots()
+    {
+        ClearMirroredWearable(
+            ref _currentLeftBootInstance,
+            ref _currentRightBootInstance,
+            ref _currentLeftBootAttachment,
+            ref _currentRightBootAttachment);
+        _currentBootPrimaryColor = Color.white;
+        _currentBootChannelColors.Clear();
+    }
+
+    public void SetBootsColor(Color color)
+    {
+        _currentBootPrimaryColor = color;
+        _currentLeftBootAttachment?.SetColor(color);
+        _currentRightBootAttachment?.SetColor(color);
+    }
+
+    public void SetBootsPrefab(GameObject prefab)
+    {
+        _currentBootPrimaryColor = Color.white;
+        _currentBootChannelColors.Clear();
+        AttachMirroredWearablePrefab(
+            prefab,
+            leftBootAnchor,
+            rightBootAnchor,
+            ref _currentLeftBootInstance,
+            ref _currentRightBootInstance,
+            ref _currentLeftBootAttachment,
+            ref _currentRightBootAttachment);
+    }
+
+    public void RefreshBoots()
+    {
+        _currentLeftBootAttachment?.SetColor(_currentBootPrimaryColor);
+        _currentRightBootAttachment?.SetColor(_currentBootPrimaryColor);
+
+        foreach (var pair in _currentBootChannelColors)
+        {
+            _currentLeftBootAttachment?.SetChannelColor(pair.Key, pair.Value);
+            _currentRightBootAttachment?.SetChannelColor(pair.Key, pair.Value);
+        }
+    }
+
+    public void SetBootsChannelColor(string channelId, Color color)
+    {
+        if (!string.IsNullOrEmpty(channelId))
+            _currentBootChannelColors[channelId] = color;
+
+        _currentLeftBootAttachment?.SetChannelColor(channelId, color);
+        _currentRightBootAttachment?.SetChannelColor(channelId, color);
+    }
+
+    public void SetBootsPatternTexture(Texture tex)
+    {
+        _currentLeftBootAttachment?.SetTexture(tex);
+        _currentRightBootAttachment?.SetTexture(tex);
+    }
+
+    public GameObject GetBootPrefabAtIndex(int index)
+    {
+        if (bootPrefabs == null || bootPrefabs.Length == 0)
+            return null;
+
+        if (index < 0 || index >= bootPrefabs.Length)
+            return null;
+
+        return bootPrefabs[index];
+    }
+
+    #endregion
+
+    #region Accessories
+
+    public void SetAccessory(int index)
+    {
+        AttachWearable(
+            accessoryPrefabs,
+            index,
+            accessoryAnchor,
+            ref _currentAccessoryInstance,
+            ref _currentAccessoryAttachment);
+    }
+
+    public void ClearAccessory()
+    {
+        if (_currentAccessoryInstance != null)
+            Destroy(_currentAccessoryInstance);
+
+        _currentAccessoryInstance = null;
+        _currentAccessoryAttachment = null;
+        _currentAccessoryOption = null;
+        _currentAccessoryPrimaryColor = Color.white;
+        _currentAccessoryChannelColors.Clear();
+    }
+
+    public void SetAccessoryColor(Color color)
+    {
+        _currentAccessoryPrimaryColor = color;
+
+        if (_currentAccessoryAttachment == null) return;
+        _currentAccessoryAttachment.SetColor(color);
+    }
+
+    public void SetAccessoryChannelColor(string channelId, Color color)
+    {
+        if (!string.IsNullOrEmpty(channelId))
+            _currentAccessoryChannelColors[channelId] = color;
+
+        if (_currentAccessoryAttachment == null) return;
+        _currentAccessoryAttachment.SetChannelColor(channelId, color);
+    }
+
+    public void SetAccessoryPrefab(GameObject prefab)
+    {
+        _currentAccessoryPrimaryColor = Color.white;
+        _currentAccessoryChannelColors.Clear();
+        _currentAccessoryOption = null;
+
+        AttachWearablePrefab(prefab, accessoryAnchor, ref _currentAccessoryInstance, ref _currentAccessoryAttachment);
+    }
+
+    public GameObject GetAccessoryPrefabAtIndex(int index)
+    {
+        if (accessoryPrefabs == null || accessoryPrefabs.Length == 0)
+            return null;
+
+        if (index < 0 || index >= accessoryPrefabs.Length)
+            return null;
+
+        return accessoryPrefabs[index];
+    }
+
+    public void SetCurrentAccessoryOption(CustomizationOptionSO option)
+    {
+        _currentAccessoryOption = option;
+    }
+
+    public void SetAccessoryPatternTexture(Texture tex)
+    {
+        if (_currentAccessoryAttachment == null) return;
+        _currentAccessoryAttachment.SetTexture(tex);
+    }
+
+    public WearableAttachment GetCurrentAccessoryAttachment() => _currentAccessoryAttachment;
+    public CustomizationOptionSO GetCurrentAccessoryOption() => _currentAccessoryOption;
 
     #endregion
 
@@ -580,6 +873,61 @@ public class CharacterCustomizer : MonoBehaviour
         rootT.localPosition = rootLocalPos;
     }
 
+    private void AttachMirroredWearable(
+        GameObject[] prefabArray,
+        int index,
+        Transform leftAnchor,
+        Transform rightAnchor,
+        ref GameObject leftInstance,
+        ref GameObject rightInstance,
+        ref WearableAttachment leftAttachment,
+        ref WearableAttachment rightAttachment)
+    {
+        if (prefabArray == null || prefabArray.Length == 0)
+            return;
+
+        index = Mathf.Clamp(index, 0, prefabArray.Length - 1);
+        var prefab = prefabArray[index];
+        AttachMirroredWearablePrefab(
+            prefab,
+            leftAnchor,
+            rightAnchor,
+            ref leftInstance,
+            ref rightInstance,
+            ref leftAttachment,
+            ref rightAttachment);
+    }
+
+    private void AttachMirroredWearablePrefab(
+        GameObject prefab,
+        Transform leftAnchor,
+        Transform rightAnchor,
+        ref GameObject leftInstance,
+        ref GameObject rightInstance,
+        ref WearableAttachment leftAttachment,
+        ref WearableAttachment rightAttachment)
+    {
+        AttachWearablePrefab(prefab, leftAnchor, ref leftInstance, ref leftAttachment);
+        AttachWearablePrefab(prefab, rightAnchor, ref rightInstance, ref rightAttachment);
+    }
+
+    private static void ClearMirroredWearable(
+        ref GameObject leftInstance,
+        ref GameObject rightInstance,
+        ref WearableAttachment leftAttachment,
+        ref WearableAttachment rightAttachment)
+    {
+        if (leftInstance != null)
+            UnityEngine.Object.Destroy(leftInstance);
+        if (rightInstance != null)
+            UnityEngine.Object.Destroy(rightInstance);
+
+        leftInstance = null;
+        rightInstance = null;
+        leftAttachment = null;
+        rightAttachment = null;
+    }
+
 
     #endregion
 
@@ -588,32 +936,78 @@ public class CharacterCustomizer : MonoBehaviour
     public int GetSkinPatternIndex() => selectedTextureIndex;
     public int GetEyeOptionIndex() => selectedEyeOption;
 
+    public bool HasJacketEquipped() => _currentJacketAttachment != null;
+    public CustomizationOptionSO GetCurrentJacketOption() => _currentJacketOption;
+
+    public void SetCurrentJacketOption(CustomizationOptionSO option)
+    {
+        _currentJacketOption = option;
+    }
+
+    public Color GetCurrentJacketPrimaryColor(Color fallback)
+    {
+        return _currentJacketAttachment != null ? _currentJacketPrimaryColor : fallback;
+    }
+
+    public bool TryGetCurrentJacketChannelColor(string channelId, out Color color)
+    {
+        if (string.IsNullOrEmpty(channelId))
+        {
+            color = default;
+            return false;
+        }
+
+        return _currentJacketChannelColors.TryGetValue(channelId, out color);
+    }
+    public bool TryGetCurrentGloveChannelColor(string channelId, out Color color)
+    {
+        if (string.IsNullOrEmpty(channelId))
+        {
+            color = default;
+            return false;
+        }
+
+        return _currentGloveChannelColors.TryGetValue(channelId, out color);
+    }
+    public bool TryGetCurrentBootChannelColor(string channelId, out Color color)
+    {
+        if (string.IsNullOrEmpty(channelId))
+        {
+            color = default;
+            return false;
+        }
+
+        return _currentBootChannelColors.TryGetValue(channelId, out color);
+    }
+    public bool TryGetCurrentAccessoryChannelColor(string channelId, out Color color)
+    {
+        if (string.IsNullOrEmpty(channelId))
+        {
+            color = default;
+            return false;
+        }
+
+        return _currentAccessoryChannelColors.TryGetValue(channelId, out color);
+    }
+    public WearableAttachment GetCurrentJacketAttachment() => _currentJacketAttachment;
+    public WearableAttachment GetCurrentLeftGloveAttachment() => _currentLeftGloveAttachment;
+    public WearableAttachment GetCurrentRightGloveAttachment() => _currentRightGloveAttachment;
+    public WearableAttachment GetCurrentLeftBootAttachment() => _currentLeftBootAttachment;
+    public WearableAttachment GetCurrentRightBootAttachment() => _currentRightBootAttachment;
+
     public void SetEyeSprite(Sprite sprite)
     {
-        if (sprite == null) return;
-        EnsureEyeMaterialInstance();
-        if (_eyeMaterialInstance == null) return;
+        if (sprite == null)
+            return;
 
-        if (_eyeBaseMapId == 0) ResolveEyePropertyIds();
-        EnsureEyeOutlineResources();
-        ApplyEyeTextureToMaterials(sprite.texture);
-
-        ApplyEyeMaterialToProjectors();
-        ApplyEyeOutlineMaterialToProjectors();
+        RefreshEyePresentation(sprite);
     }
 
     public void SetSkinPatternTexture(Texture tex)
     {
-        if (skinRenderers == null || tex == null) return;
-
-        foreach (var r in skinRenderers)
-        {
-            if (r == null) continue;
-            var m = r.material;
-            if (m == null) continue;
-            if (!string.IsNullOrEmpty(skinTexturePropertyName))
-                m.SetTexture(skinTexturePropertyName, tex);
-        }
+        if (tex == null) return;
+        _currentSkinTexture = tex;
+        ApplyCurrentSkinStateToAllRenderers();
     }
 
     public void SetHatPrefab(GameObject prefab)
@@ -621,8 +1015,12 @@ public class CharacterCustomizer : MonoBehaviour
         AttachWearablePrefab(prefab, headAnchor, ref _currentHatInstance, ref _currentHatAttachment);
     }
 
-    public void SetJacketPrefab(GameObject prefab)
+        public void SetJacketPrefab(GameObject prefab)
     {
+        _currentJacketPrimaryColor = Color.white;
+        _currentJacketChannelColors.Clear();
+        _currentJacketOption = null;
+
         AttachWearablePrefab(prefab, bodyAnchor, ref _currentJacketInstance, ref _currentJacketAttachment);
     }
 
@@ -685,6 +1083,225 @@ public class CharacterCustomizer : MonoBehaviour
             return null;
 
         return jacketPrefabs[index];
+    }
+
+    public void AddSkinRenderer(Renderer renderer)
+    {
+        if (renderer == null)
+            return;
+
+        if (skinRenderers == null || skinRenderers.Length == 0)
+        {
+            skinRenderers = new[] { renderer };
+        }
+        else
+        {
+            for (int i = 0; i < skinRenderers.Length; i++)
+            {
+                if (skinRenderers[i] == renderer)
+                    return;
+            }
+
+            Renderer[] newArray = new Renderer[skinRenderers.Length + 1];
+            for (int i = 0; i < skinRenderers.Length; i++)
+                newArray[i] = skinRenderers[i];
+
+            newArray[skinRenderers.Length] = renderer;
+            skinRenderers = newArray;
+        }
+
+        ApplyCurrentSkinStateToRenderer(renderer);
+    }
+
+    public void RemoveSkinRenderer(Renderer renderer)
+    {
+        if (renderer == null || skinRenderers == null || skinRenderers.Length == 0)
+            return;
+
+        int removeIndex = -1;
+        for (int i = 0; i < skinRenderers.Length; i++)
+        {
+            if (skinRenderers[i] == renderer)
+            {
+                removeIndex = i;
+                break;
+            }
+        }
+
+        if (removeIndex < 0)
+            return;
+
+        if (skinRenderers.Length == 1)
+        {
+            skinRenderers = System.Array.Empty<Renderer>();
+            return;
+        }
+
+        Renderer[] newArray = new Renderer[skinRenderers.Length - 1];
+        int dst = 0;
+        for (int i = 0; i < skinRenderers.Length; i++)
+        {
+            if (i == removeIndex)
+                continue;
+
+            newArray[dst++] = skinRenderers[i];
+        }
+
+        skinRenderers = newArray;
+    }
+
+    private void ApplyCurrentSkinStateToAllRenderers()
+    {
+        if (skinRenderers == null)
+            return;
+
+        foreach (var renderer in skinRenderers)
+            ApplyCurrentSkinStateToRenderer(renderer);
+    }
+
+    private void ApplyCurrentSkinStateToRenderer(Renderer renderer)
+    {
+        ApplyToSkinRendererMaterials(renderer, ApplyCurrentSkinStateToMaterial);
+    }
+
+    private void ApplyCurrentSkinStateToMaterial(Material mat)
+    {
+        if (mat == null)
+            return;
+
+        Texture texture = _currentSkinTexture != null ? _currentSkinTexture : GetSelectedSkinTexture();
+        if (texture != null)
+            ApplySkinTextureToMaterial(mat, texture);
+
+        if (Application.isPlaying)
+            ApplySkinColorToMaterial(mat, skinColor);
+    }
+
+    private void ApplySkinTextureToMaterial(Material mat, Texture texture)
+    {
+        ApplyTextureToCandidateProperties(mat, texture, skinTexturePropertyName, _skinTexturePropertyId, SkinMapPropCandidates);
+    }
+
+    private void ApplySkinColorToMaterial(Material mat, Color color)
+    {
+        ApplyColorToCandidateProperties(mat, color, skinColorPropertyName, _skinColorPropertyId, SkinColorPropCandidates);
+    }
+
+    private static void ApplyTextureToCandidateProperties(Material mat, Texture texture, string configuredPropertyName, int configuredPropertyId, string[] fallbackPropertyNames)
+    {
+        if (texture == null || mat == null)
+            return;
+
+        if (!string.IsNullOrEmpty(configuredPropertyName) && mat.HasProperty(configuredPropertyName))
+            mat.SetTexture(configuredPropertyId != 0 ? configuredPropertyId : Shader.PropertyToID(configuredPropertyName), texture);
+
+        for (int i = 0; i < fallbackPropertyNames.Length; i++)
+        {
+            string propertyName = fallbackPropertyNames[i];
+            if (string.IsNullOrEmpty(propertyName) || propertyName == configuredPropertyName || !mat.HasProperty(propertyName))
+                continue;
+
+            mat.SetTexture(propertyName, texture);
+        }
+    }
+
+    private static void ApplyColorToCandidateProperties(Material mat, Color color, string configuredPropertyName, int configuredPropertyId, string[] fallbackPropertyNames)
+    {
+        if (mat == null)
+            return;
+
+        if (!string.IsNullOrEmpty(configuredPropertyName) && mat.HasProperty(configuredPropertyName))
+            mat.SetColor(configuredPropertyId != 0 ? configuredPropertyId : Shader.PropertyToID(configuredPropertyName), color);
+
+        for (int i = 0; i < fallbackPropertyNames.Length; i++)
+        {
+            string propertyName = fallbackPropertyNames[i];
+            if (string.IsNullOrEmpty(propertyName) || propertyName == configuredPropertyName || !mat.HasProperty(propertyName))
+                continue;
+
+            mat.SetColor(propertyName, color);
+        }
+    }
+
+    private Texture GetSelectedSkinTexture()
+    {
+        if (skinPatterns == null || skinPatterns.Length == 0)
+            return null;
+
+        int index = Mathf.Clamp(selectedTextureIndex, 0, skinPatterns.Length - 1);
+        return skinPatterns[index];
+    }
+
+    private void ApplyToSkinRendererMaterials(Renderer renderer, System.Action<Material> apply)
+    {
+        if (renderer == null || apply == null)
+            return;
+
+        if (!Application.isPlaying)
+        {
+            ApplySkinStateToRendererPropertyBlocks(renderer);
+            return;
+        }
+
+        var materials = renderer.materials;
+        if (materials == null || materials.Length == 0)
+            return;
+
+        for (int i = 0; i < materials.Length; i++)
+        {
+            var mat = materials[i];
+            if (mat == null)
+                continue;
+
+            apply(mat);
+        }
+    }
+
+    private void ApplySkinStateToRendererPropertyBlocks(Renderer renderer)
+    {
+        if (renderer == null)
+            return;
+
+        var materials = renderer.sharedMaterials;
+        if (materials == null || materials.Length == 0)
+            return;
+
+        Texture texture = _currentSkinTexture != null ? _currentSkinTexture : GetSelectedSkinTexture();
+        if (texture == null)
+            return;
+
+        var propertyBlock = new MaterialPropertyBlock();
+        for (int i = 0; i < materials.Length; i++)
+        {
+            renderer.GetPropertyBlock(propertyBlock, i);
+            ApplyTextureToPropertyBlock(propertyBlock, materials[i], texture, skinTexturePropertyName, _skinTexturePropertyId, SkinMapPropCandidates);
+            renderer.SetPropertyBlock(propertyBlock, i);
+            propertyBlock.Clear();
+        }
+    }
+
+    private static void ApplyTextureToPropertyBlock(
+        MaterialPropertyBlock propertyBlock,
+        Material referenceMaterial,
+        Texture texture,
+        string configuredPropertyName,
+        int configuredPropertyId,
+        string[] fallbackPropertyNames)
+    {
+        if (propertyBlock == null || referenceMaterial == null || texture == null)
+            return;
+
+        if (!string.IsNullOrEmpty(configuredPropertyName) && referenceMaterial.HasProperty(configuredPropertyName))
+            propertyBlock.SetTexture(configuredPropertyId != 0 ? configuredPropertyId : Shader.PropertyToID(configuredPropertyName), texture);
+
+        for (int i = 0; i < fallbackPropertyNames.Length; i++)
+        {
+            string propertyName = fallbackPropertyNames[i];
+            if (string.IsNullOrEmpty(propertyName) || propertyName == configuredPropertyName || !referenceMaterial.HasProperty(propertyName))
+                continue;
+
+            propertyBlock.SetTexture(propertyName, texture);
+        }
     }
 
 }

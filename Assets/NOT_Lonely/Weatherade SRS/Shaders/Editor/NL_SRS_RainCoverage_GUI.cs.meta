@@ -9,3 +9,10 @@ MonoImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 275622
+  packageName: 'Weatherade: Snow and Rain System'
+  packageVersion: 
+  assetPath: Assets/NOT_Lonely/Weatherade SRS/Shaders/Editor/NL_SRS_RainCoverage_GUI.cs
+  uploadId: 0

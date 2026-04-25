@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.QuestDefinitionSO
   id: tutorial.speed_control
   title: Speed Control
-  description: 'Speed control is a toolkit: W, skating, and tuck build speed; S,
-    wedge, and quick stop bleed it away.'
+  description: 'Speed control is a toolkit: forward lean, skating, and tuck build
+    speed; backward lean, wedge, and quick stop bleed it away.'
   autoAccept: 0
   tutorialQuest: 1
   stages:
@@ -26,8 +26,7 @@ MonoBehaviour:
     objectives:
     - id: tutorial.speed_control.tuck
       title: Tuck to carry speed
-      description: Press Left Shift while moving to reduce drag and hold your speed
-        longer.
+      description: Tuck while moving to reduce drag and hold your speed longer.
       optional: 0
       hiddenUntilAvailable: 0
       autoPinWhenAvailable: 1
@@ -45,6 +44,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 0
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -57,4 +74,22 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []

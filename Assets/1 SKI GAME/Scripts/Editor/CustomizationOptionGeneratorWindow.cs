@@ -13,6 +13,10 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
     private int defaultCost = 0;
     private bool overwriteIfExists = false;
 
+    private List<GameObject> gloveSourcePrefabs = new List<GameObject>();
+    private List<GameObject> bootSourcePrefabs = new List<GameObject>();
+    private Vector2 generatorScroll;
+
     // Migration toggles
     private bool migOnlyFillMissing = true;
     private bool migDryRun = true;
@@ -29,6 +33,8 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
 
     private void OnGUI()
     {
+        generatorScroll = EditorGUILayout.BeginScrollView(generatorScroll);
+
         EditorGUILayout.LabelField("Source", EditorStyles.boldLabel);
         sourceCustomizer = (CharacterCustomizer)EditorGUILayout.ObjectField(
             "CharacterCustomizer", sourceCustomizer, typeof(CharacterCustomizer), true);
@@ -43,25 +49,88 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
         overwriteIfExists = EditorGUILayout.Toggle("Overwrite If Exists", overwriteIfExists);
 
         EditorGUILayout.Space(12);
+        DrawGeneratorSection();
 
-        using (new EditorGUI.DisabledScope(sourceCustomizer == null || targetCatalog == null))
+        EditorGUILayout.Space(14);
+        DrawMigrationSection();
+
+        EditorGUILayout.Space(14);
+        DrawCatalogMaintenanceSection();
+
+        EditorGUILayout.Space(12);
+        EditorGUILayout.HelpBox(
+            "Supported generation sources:\n" +
+            " - CharacterCustomizer.skinPatterns -> Skin Pattern options\n" +
+            " - CharacterCustomizer.eyeOptions -> Eye Icon options\n" +
+            " - CharacterCustomizer.hatPrefabs -> Hat options\n" +
+            " - CharacterCustomizer.jacketPrefabs -> Jacket options\n" +
+            " - CharacterCustomizer.accessoryPrefabs -> Accessory options\n" +
+            " - CharacterCustomizer.glovePrefabs -> Glove options\n" +
+            " - CharacterCustomizer.bootPrefabs -> Boot options\n" +
+            " - Current selection / manual lists -> optional prefab authoring shortcuts\n\n" +
+            "Migration can backfill payload refs from serialized CharacterCustomizer arrays for skin patterns, eye icons, hats, jackets, accessories, gloves, and boots.\n" +
+            "Gloves and boots now follow the same wearable customizerIndex flow as the other wearable prefab categories.",
+            MessageType.Info);
+
+        EditorGUILayout.EndScrollView();
+    }
+
+    private void DrawGeneratorSection()
+    {
+        using (new EditorGUI.DisabledScope(targetCatalog == null))
         {
             EditorGUILayout.LabelField("Generators", EditorStyles.boldLabel);
 
-            if (GUILayout.Button("Generate Skin Pattern Options"))
-                GenerateSkinPatternOptions();
+            using (new EditorGUI.DisabledScope(sourceCustomizer == null))
+            {
+                if (GUILayout.Button("Generate Skin Pattern Options"))
+                    GenerateSkinPatternOptions();
 
-            if (GUILayout.Button("Generate Eye Icon Options"))
-                GenerateEyeOptions();
+                if (GUILayout.Button("Generate Eye Icon Options"))
+                    GenerateEyeOptions();
 
-            if (GUILayout.Button("Generate Hat Options"))
-                GenerateWearableOptions("hatPrefabs", CustomizationOptionType.Hat);
+                if (GUILayout.Button("Generate Hat Options"))
+                    GenerateWearableOptions("hatPrefabs", CustomizationOptionType.Hat);
 
-            if (GUILayout.Button("Generate Jacket Options"))
-                GenerateWearableOptions("jacketPrefabs", CustomizationOptionType.Jacket);
+                if (GUILayout.Button("Generate Jacket Options"))
+                    GenerateWearableOptions("jacketPrefabs", CustomizationOptionType.Jacket);
+
+                if (GUILayout.Button("Generate Accessory Options"))
+                    GenerateWearableOptions("accessoryPrefabs", CustomizationOptionType.Accessory);
+
+                if (GUILayout.Button("Generate Glove Options"))
+                    GenerateWearableOptions("glovePrefabs", CustomizationOptionType.Gloves);
+
+                if (GUILayout.Button("Generate Boot Options"))
+                    GenerateWearableOptions("bootPrefabs", CustomizationOptionType.Boots);
+            }
+
+            if (GUILayout.Button("Generate Accessory Options From Selected Prefabs"))
+                GenerateOptionsFromSelection(CustomizationOptionType.Accessory);
+
+            EditorGUILayout.Space(8);
+            EditorGUILayout.LabelField("Optional Manual Prefab Sources", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "Gloves and boots now auto-generate from CharacterCustomizer when those arrays are populated. These manual lists and selection-based actions are still useful for quick authoring before wiring prefabs into the source customizer.",
+                MessageType.None);
+
+            DrawManualPrefabList("Glove Prefabs", gloveSourcePrefabs);
+            if (GUILayout.Button("Generate Glove Options From Manual List"))
+                GenerateOptionsFromManualList(gloveSourcePrefabs, CustomizationOptionType.Gloves);
+            if (GUILayout.Button("Generate Glove Options From Selected Prefabs"))
+                GenerateOptionsFromSelection(CustomizationOptionType.Gloves);
+
+            EditorGUILayout.Space(6);
+            DrawManualPrefabList("Boot Prefabs", bootSourcePrefabs);
+            if (GUILayout.Button("Generate Boot Options From Manual List"))
+                GenerateOptionsFromManualList(bootSourcePrefabs, CustomizationOptionType.Boots);
+            if (GUILayout.Button("Generate Boot Options From Selected Prefabs"))
+                GenerateOptionsFromSelection(CustomizationOptionType.Boots);
         }
+    }
 
-        EditorGUILayout.Space(14);
+    private void DrawMigrationSection()
+    {
         EditorGUILayout.LabelField("Migration", EditorStyles.boldLabel);
 
         migOnlyFillMissing = EditorGUILayout.ToggleLeft("Only Fill Missing", migOnlyFillMissing);
@@ -73,8 +142,10 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
             if (GUILayout.Button("Migrate Existing Catalog Options (populate payload refs)"))
                 MigrateCatalogPayloads();
         }
+    }
 
-        EditorGUILayout.Space(14);
+    private void DrawCatalogMaintenanceSection()
+    {
         EditorGUILayout.LabelField("Catalog Maintenance", EditorStyles.boldLabel);
 
         catalogScanIncludePackages = EditorGUILayout.ToggleLeft(
@@ -89,17 +160,26 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
             if (GUILayout.Button("Validate / Repair customizerIndex Values For Target Catalog"))
                 ValidateAndRepairCustomizerIndices();
         }
+    }
 
-        EditorGUILayout.Space(12);
-        EditorGUILayout.HelpBox(
-            "This tool reads CharacterCustomizer's private arrays via SerializedObject:\n" +
-            " - skinPatterns (Texture[])\n" +
-            " - eyeOptions (Sprite[])\n" +
-            " - hatPrefabs (GameObject[])\n" +
-            " - jacketPrefabs (GameObject[])\n\n" +
-            "Migration populates CustomizationOptionSO payload fields based on customizerIndex.\n" +
-            "Prerequisite: CustomizationOptionSO must include skinPatternTexture/eyeSprite/hatPrefab/jacketPrefab fields.",
-            MessageType.Info);
+    private void DrawManualPrefabList(string label, List<GameObject> prefabs)
+    {
+        EditorGUILayout.LabelField(label, EditorStyles.miniBoldLabel);
+
+        int desiredCount = Mathf.Max(0, EditorGUILayout.IntField("Count", prefabs.Count));
+        while (prefabs.Count < desiredCount)
+            prefabs.Add(null);
+        while (prefabs.Count > desiredCount)
+            prefabs.RemoveAt(prefabs.Count - 1);
+
+        for (int i = 0; i < prefabs.Count; i++)
+        {
+            prefabs[i] = (GameObject)EditorGUILayout.ObjectField(
+                $"Prefab {i + 1}",
+                prefabs[i],
+                typeof(GameObject),
+                false);
+        }
     }
 
     // ---------------------------
@@ -138,12 +218,8 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
             opt.displayName = Nicify(baseName);
             opt.description = "";
             opt.cost = defaultCost;
-
-            // legacy mapping
             opt.customizerIndex = i;
             opt.gearProfile = null;
-
-            // new preferred payload
             opt.skinPatternTexture = tex;
 
             EditorUtility.SetDirty(opt);
@@ -185,15 +261,9 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
             opt.displayName = Nicify(baseName);
             opt.description = "";
             opt.cost = defaultCost;
-
-            // UI
             opt.icon = sprite;
-
-            // legacy mapping
             opt.customizerIndex = i;
             opt.gearProfile = null;
-
-            // new preferred payload
             opt.eyeSprite = sprite;
 
             EditorUtility.SetDirty(opt);
@@ -221,34 +291,213 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
             var prefab = p.objectReferenceValue as GameObject;
             if (prefab == null) continue;
 
-            string baseName = prefab.name;
-            string id = MakeId(type == CustomizationOptionType.Hat ? "hat" : "jacket", baseName);
-            string assetPath = $"{outputFolder}/{id}.asset";
-
-            var opt = LoadOrCreate(assetPath);
-            if (opt == null) continue;
-
-            Undo.RecordObject(opt, "Generate Customization Option");
-
-            opt.id = id;
-            opt.type = type;
-            opt.displayName = Nicify(baseName);
-            opt.description = "";
-            opt.cost = defaultCost;
-
-            // legacy mapping
-            opt.customizerIndex = i;
-            opt.gearProfile = null;
-
-            // new preferred payload
-            if (type == CustomizationOptionType.Hat) opt.hatPrefab = prefab;
-            else opt.jacketPrefab = prefab;
-
-            EditorUtility.SetDirty(opt);
-            AddToCatalog(targetCatalog, opt);
+            GenerateOptionFromPrefab(prefab, type, i);
         }
 
         FinalizeCatalog();
+    }
+
+    private void GenerateOptionsFromManualList(List<GameObject> prefabs, CustomizationOptionType type)
+    {
+        EnsureFolder(outputFolder);
+
+        int generated = 0;
+        for (int i = 0; i < prefabs.Count; i++)
+        {
+            if (prefabs[i] == null)
+                continue;
+
+            GenerateOptionFromPrefab(prefabs[i], type, -1);
+            generated++;
+        }
+
+        if (generated == 0)
+        {
+            Debug.LogWarning($"[CustomizationOptionGenerator] No prefabs supplied for {type} generation.");
+            return;
+        }
+
+        FinalizeCatalog();
+    }
+
+    private void GenerateOptionsFromSelection(CustomizationOptionType type)
+    {
+        EnsureFolder(outputFolder);
+
+        Object[] selected = Selection.GetFiltered(typeof(GameObject), SelectionMode.Assets);
+        int generated = 0;
+
+        for (int i = 0; i < selected.Length; i++)
+        {
+            var prefab = selected[i] as GameObject;
+            if (prefab == null)
+                continue;
+
+            GenerateOptionFromPrefab(prefab, type, -1);
+            generated++;
+        }
+
+        if (generated == 0)
+        {
+            Debug.LogWarning($"[CustomizationOptionGenerator] No GameObject prefabs selected for {type} generation.");
+            return;
+        }
+
+        FinalizeCatalog();
+    }
+
+    private void GenerateOptionFromPrefab(GameObject prefab, CustomizationOptionType type, int customizerIndex)
+    {
+        if (prefab == null)
+            return;
+
+        var opt = FindExistingOptionForPrefab(targetCatalog, type, prefab);
+
+        string id = MakeId(GetIdPrefix(type), prefab.name);
+        string assetPath = $"{outputFolder}/{id}.asset";
+
+        if (opt == null)
+            opt = LoadOrCreate(assetPath);
+        if (opt == null)
+            return;
+
+        Undo.RecordObject(opt, "Generate Customization Option");
+
+        int resolvedCustomizerIndex = ShouldUseCustomizerIndex(type)
+            ? ResolveCustomizerIndexForPrefab(type, prefab, customizerIndex)
+            : -1;
+
+        opt.id = id;
+        opt.type = type;
+        opt.displayName = Nicify(prefab.name);
+        opt.description = "";
+        opt.cost = defaultCost;
+        opt.customizerIndex = resolvedCustomizerIndex;
+        opt.gearProfile = null;
+
+        AssignPrefabPayload(opt, type, prefab);
+
+        EditorUtility.SetDirty(opt);
+        AddToCatalog(targetCatalog, opt);
+    }
+
+    private CustomizationOptionSO FindExistingOptionForPrefab(CustomizationCatalogSO catalog, CustomizationOptionType type, GameObject prefab)
+    {
+        if (catalog == null || catalog.options == null || prefab == null)
+            return null;
+
+        for (int i = 0; i < catalog.options.Count; i++)
+        {
+            var option = catalog.options[i];
+            if (option == null || option.type != type)
+                continue;
+
+            if (GetPrefabPayload(option, type) == prefab)
+                return option;
+        }
+
+        return null;
+    }
+
+    private GameObject GetPrefabPayload(CustomizationOptionSO option, CustomizationOptionType type)
+    {
+        if (option == null)
+            return null;
+
+        switch (type)
+        {
+            case CustomizationOptionType.Hat:
+                return option.hatPrefab;
+
+            case CustomizationOptionType.Jacket:
+                return option.jacketPrefab;
+
+            case CustomizationOptionType.Accessory:
+                return option.accessoryPrefab;
+
+            case CustomizationOptionType.Gloves:
+                return option.glovePrefab;
+
+            case CustomizationOptionType.Boots:
+                return option.bootPrefab;
+
+            default:
+                return null;
+        }
+    }
+
+    private static void AssignPrefabPayload(CustomizationOptionSO opt, CustomizationOptionType type, GameObject prefab)
+    {
+        switch (type)
+        {
+            case CustomizationOptionType.Hat:
+                opt.hatPrefab = prefab;
+                break;
+
+            case CustomizationOptionType.Jacket:
+                opt.jacketPrefab = prefab;
+                break;
+
+            case CustomizationOptionType.Accessory:
+                opt.accessoryPrefab = prefab;
+                break;
+
+            case CustomizationOptionType.Gloves:
+                opt.glovePrefab = prefab;
+                break;
+
+            case CustomizationOptionType.Boots:
+                opt.bootPrefab = prefab;
+                break;
+        }
+    }
+
+    private static bool ShouldUseCustomizerIndex(CustomizationOptionType type)
+    {
+        switch (type)
+        {
+            case CustomizationOptionType.SkinPattern:
+            case CustomizationOptionType.EyeIcon:
+            case CustomizationOptionType.Hat:
+            case CustomizationOptionType.Jacket:
+            case CustomizationOptionType.Accessory:
+            case CustomizationOptionType.Gloves:
+            case CustomizationOptionType.Boots:
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    private static string GetIdPrefix(CustomizationOptionType type)
+    {
+        switch (type)
+        {
+            case CustomizationOptionType.Hat:
+                return "hat";
+
+            case CustomizationOptionType.Jacket:
+                return "jacket";
+
+            case CustomizationOptionType.Accessory:
+                return "accessory";
+
+            case CustomizationOptionType.Gloves:
+                return "glove";
+
+            case CustomizationOptionType.Boots:
+                return "boot";
+
+            case CustomizationOptionType.SkinPattern:
+                return "skinpattern";
+
+            case CustomizationOptionType.EyeIcon:
+                return "eyeicon";
+
+            default:
+                return "customization";
+        }
     }
 
     // ---------------------------
@@ -259,13 +508,15 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
     {
         if (targetCatalog == null || sourceCustomizer == null) return;
 
-        // Pull arrays from CharacterCustomizer (private serialized)
         var so = new SerializedObject(sourceCustomizer);
 
         var skinPatternsProp = so.FindProperty("skinPatterns");
         var eyeOptionsProp = so.FindProperty("eyeOptions");
         var hatPrefabsProp = so.FindProperty("hatPrefabs");
         var jacketPrefabsProp = so.FindProperty("jacketPrefabs");
+        var accessoryPrefabsProp = so.FindProperty("accessoryPrefabs");
+        var glovePrefabsProp = so.FindProperty("glovePrefabs");
+        var bootPrefabsProp = so.FindProperty("bootPrefabs");
 
         if (skinPatternsProp == null || !skinPatternsProp.isArray)
             Debug.LogWarning("Migration: 'skinPatterns' not found or not array.");
@@ -275,6 +526,12 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
             Debug.LogWarning("Migration: 'hatPrefabs' not found or not array.");
         if (jacketPrefabsProp == null || !jacketPrefabsProp.isArray)
             Debug.LogWarning("Migration: 'jacketPrefabs' not found or not array.");
+        if (accessoryPrefabsProp == null || !accessoryPrefabsProp.isArray)
+            Debug.LogWarning("Migration: 'accessoryPrefabs' not found or not array.");
+        if (glovePrefabsProp == null || !glovePrefabsProp.isArray)
+            Debug.LogWarning("Migration: 'glovePrefabs' not found or not array.");
+        if (bootPrefabsProp == null || !bootPrefabsProp.isArray)
+            Debug.LogWarning("Migration: 'bootPrefabs' not found or not array.");
 
         int visited = 0;
         int updated = 0;
@@ -293,7 +550,6 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
 
             visited++;
 
-            // Skip "None" pseudo-options or any option with no index mapping
             int idx = opt.customizerIndex;
             if (idx < 0) continue;
 
@@ -353,6 +609,39 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
                         }
                         break;
                     }
+
+                case CustomizationOptionType.Accessory:
+                    {
+                        var prefab = GetArrayObject<GameObject>(accessoryPrefabsProp, idx);
+                        if (prefab != null && (!migOnlyFillMissing || opt.accessoryPrefab == null))
+                        {
+                            changed |= Assign(opt, "accessoryPrefab", prefab);
+                            if (!migDryRun) opt.accessoryPrefab = prefab;
+                        }
+                        break;
+                    }
+
+                case CustomizationOptionType.Gloves:
+                    {
+                        var prefab = GetArrayObject<GameObject>(glovePrefabsProp, idx);
+                        if (prefab != null && (!migOnlyFillMissing || opt.glovePrefab == null))
+                        {
+                            changed |= Assign(opt, "glovePrefab", prefab);
+                            if (!migDryRun) opt.glovePrefab = prefab;
+                        }
+                        break;
+                    }
+
+                case CustomizationOptionType.Boots:
+                    {
+                        var prefab = GetArrayObject<GameObject>(bootPrefabsProp, idx);
+                        if (prefab != null && (!migOnlyFillMissing || opt.bootPrefab == null))
+                        {
+                            changed |= Assign(opt, "bootPrefab", prefab);
+                            if (!migDryRun) opt.bootPrefab = prefab;
+                        }
+                        break;
+                    }
             }
 
             if (changed)
@@ -376,7 +665,6 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
         Debug.Log($"[CustomizationOptionGenerator] Migration complete. Visited={visited}, Updated={updated}, DryRun={migDryRun}, OnlyFillMissing={migOnlyFillMissing}");
     }
 
-    // returns true when we *would* assign (for logging parity)
     private bool Assign(Object opt, string field, Object value)
     {
         if (migDryRun)
@@ -440,7 +728,6 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
             }
         }
 
-        // Keep ordering deterministic so index validation is stable.
         targetCatalog.options.Sort(CompareOptionsForCatalogOrder);
 
         EditorUtility.SetDirty(targetCatalog);
@@ -470,7 +757,6 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
 
         Undo.RecordObject(targetCatalog, "Validate Customizer Indices");
 
-        // Sort first so the assigned indices are deterministic.
         targetCatalog.options.Sort(CompareOptionsForCatalogOrder);
 
         int repaired = RebuildCustomizerIndicesForCatalog(targetCatalog, logResults: true);
@@ -493,9 +779,6 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
         int repairedCount = 0;
 
         int skinIndex = 0;
-        int eyeIndex = 0;
-        int hatIndex = 0;
-        int jacketIndex = 0;
 
         for (int i = 0; i < catalog.options.Count; i++)
         {
@@ -503,7 +786,9 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
             if (opt == null)
                 continue;
 
-            int desiredIndex = GetDesiredCustomizerIndex(opt, ref skinIndex, ref eyeIndex, ref hatIndex, ref jacketIndex);
+            int desiredIndex = GetDesiredCustomizerIndex(
+                opt,
+                ref skinIndex);
 
             if (opt.customizerIndex != desiredIndex)
             {
@@ -527,10 +812,7 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
 
     private int GetDesiredCustomizerIndex(
         CustomizationOptionSO opt,
-        ref int skinIndex,
-        ref int eyeIndex,
-        ref int hatIndex,
-        ref int jacketIndex)
+        ref int skinIndex)
     {
         switch (opt.type)
         {
@@ -538,16 +820,157 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
                 return skinIndex++;
 
             case CustomizationOptionType.EyeIcon:
-                return eyeIndex++;
+                return ResolveCustomizerIndexForEyeOption(opt);
 
             case CustomizationOptionType.Hat:
-                return hatIndex++;
-
             case CustomizationOptionType.Jacket:
-                return jacketIndex++;
+            case CustomizationOptionType.Accessory:
+            case CustomizationOptionType.Gloves:
+            case CustomizationOptionType.Boots:
+                return ResolveCustomizerIndexForOption(opt);
 
             default:
                 return -1;
+        }
+    }
+
+    private int ResolveCustomizerIndexForOption(CustomizationOptionSO option)
+    {
+        if (option == null)
+            return -1;
+
+        switch (option.type)
+        {
+            case CustomizationOptionType.EyeIcon:
+                return ResolveCustomizerIndexForEyeOption(option);
+
+            case CustomizationOptionType.Hat:
+                return ResolveCustomizerIndexForPrefab(option.type, option.hatPrefab, option.customizerIndex);
+
+            case CustomizationOptionType.Jacket:
+                return ResolveCustomizerIndexForPrefab(option.type, option.jacketPrefab, option.customizerIndex);
+
+            case CustomizationOptionType.Accessory:
+                return ResolveCustomizerIndexForPrefab(option.type, option.accessoryPrefab, option.customizerIndex);
+
+            case CustomizationOptionType.Gloves:
+                return ResolveCustomizerIndexForPrefab(option.type, option.glovePrefab, option.customizerIndex);
+
+            case CustomizationOptionType.Boots:
+                return ResolveCustomizerIndexForPrefab(option.type, option.bootPrefab, option.customizerIndex);
+
+            default:
+                return -1;
+        }
+    }
+
+    private int ResolveCustomizerIndexForEyeOption(CustomizationOptionSO option)
+    {
+        if (option == null)
+            return -1;
+
+        Sprite sourceSprite = option.eyeSprite != null ? option.eyeSprite : option.icon;
+        return ResolveCustomizerIndexForEyeSprite(sourceSprite, option.customizerIndex);
+    }
+
+    private int ResolveCustomizerIndexForEyeSprite(Sprite sprite, int fallbackIndex = -1)
+    {
+        if (sprite == null)
+            return -1;
+
+        var eyeOptions = GetCustomizerEyeOptions();
+        if (eyeOptions == null)
+            return sourceCustomizer == null ? fallbackIndex : -1;
+
+        for (int i = 0; i < eyeOptions.Length; i++)
+        {
+            if (eyeOptions[i] == sprite)
+                return i;
+        }
+
+        return -1;
+    }
+
+    private int ResolveCustomizerIndexForPrefab(CustomizationOptionType type, GameObject prefab, int fallbackIndex = -1)
+    {
+        if (!ShouldUseCustomizerIndex(type))
+            return -1;
+
+        if (prefab == null)
+            return -1;
+
+        var prefabs = GetCustomizerPrefabArray(type);
+        if (prefabs == null)
+            return sourceCustomizer == null ? fallbackIndex : -1;
+
+        for (int i = 0; i < prefabs.Length; i++)
+        {
+            if (prefabs[i] == prefab)
+                return i;
+        }
+
+        return -1;
+    }
+
+    private Sprite[] GetCustomizerEyeOptions()
+    {
+        if (sourceCustomizer == null)
+            return null;
+
+        var so = new SerializedObject(sourceCustomizer);
+        var arrayProperty = so.FindProperty("eyeOptions");
+        if (arrayProperty == null || !arrayProperty.isArray)
+            return null;
+
+        var eyeOptions = new Sprite[arrayProperty.arraySize];
+        for (int i = 0; i < arrayProperty.arraySize; i++)
+            eyeOptions[i] = arrayProperty.GetArrayElementAtIndex(i).objectReferenceValue as Sprite;
+
+        return eyeOptions;
+    }
+
+    private GameObject[] GetCustomizerPrefabArray(CustomizationOptionType type)
+    {
+        if (sourceCustomizer == null)
+            return null;
+
+        var so = new SerializedObject(sourceCustomizer);
+        string propertyName = GetPrefabArrayPropertyName(type);
+        if (string.IsNullOrEmpty(propertyName))
+            return null;
+
+        var arrayProperty = so.FindProperty(propertyName);
+        if (arrayProperty == null || !arrayProperty.isArray)
+            return null;
+
+        var prefabs = new GameObject[arrayProperty.arraySize];
+        for (int i = 0; i < arrayProperty.arraySize; i++)
+            prefabs[i] = arrayProperty.GetArrayElementAtIndex(i).objectReferenceValue as GameObject;
+
+        return prefabs;
+    }
+
+    private static string GetPrefabArrayPropertyName(CustomizationOptionType type)
+    {
+        switch (type)
+        {
+            case CustomizationOptionType.Hat:
+                return "hatPrefabs";
+
+            case CustomizationOptionType.Jacket:
+                return "jacketPrefabs";
+
+            case CustomizationOptionType.Accessory:
+                return "accessoryPrefabs";
+
+            case CustomizationOptionType.Gloves:
+                return "glovePrefabs";
+
+            case CustomizationOptionType.Boots:
+                return "bootPrefabs";
+
+            default:
+                return null;
         }
     }
 
@@ -590,12 +1013,7 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
     {
         var existing = AssetDatabase.LoadAssetAtPath<CustomizationOptionSO>(assetPath);
         if (existing != null)
-        {
-            if (!overwriteIfExists)
-                return existing;
-
             return existing;
-        }
 
         var opt = CreateInstance<CustomizationOptionSO>();
         AssetDatabase.CreateAsset(opt, assetPath);
@@ -629,6 +1047,9 @@ public class CustomizationOptionGeneratorWindow : EditorWindow
 
     private void FinalizeCatalog()
     {
+        targetCatalog.options.Sort(CompareOptionsForCatalogOrder);
+        RebuildCustomizerIndicesForCatalog(targetCatalog, logResults: false);
+
         EditorUtility.SetDirty(targetCatalog);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();

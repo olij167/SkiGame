@@ -81,9 +81,9 @@ MonoBehaviour:
     CollectedData: []
     totalPolyCount: 0
     meshFilterCount: 0
-  svPos: {x: 1285.9004, y: 750.73486, z: -1432.8965}
-  _svPos: {x: 1285.9004, y: 750.73486, z: -1432.8965}
-  svRot: {x: -0.10080912, y: -0.61245584, z: 0.078951806, w: -0.78006536}
-  _svRot: {x: -0.10080912, y: -0.61245584, z: 0.078951806, w: -0.78006536}
+  svPos: {x: 0, y: 0, z: 0}
+  _svPos: {x: 0, y: 0, z: 0}
+  svRot: {x: 0, y: 0, z: 0, w: 1}
+  _svRot: {x: 0, y: 0, z: 0, w: 1}
   landmarkMaxId: 0
   selectedID: 0

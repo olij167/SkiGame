@@ -10,7 +10,7 @@ public struct AudioClipEntry
 
 [CreateAssetMenu(
     fileName = "AudioClipSet",
-    menuName = "Ski Game/Audio/Clip Set")]
+    menuName = "SkiGame/Audio/Clip Set")]
 public sealed class AudioClipSetSO : ScriptableObject
 {
     [SerializeField] private AudioClipEntry[] clips = Array.Empty<AudioClipEntry>();

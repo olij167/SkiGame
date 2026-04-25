@@ -1097,24 +1097,40 @@ namespace SkiGame.Map.UI
 
             _layerBar.pickingMode = PickingMode.Position;
 
-            _layerBar.style.position = Position.Absolute;
-            _layerBar.style.right = 14f;
-            _layerBar.style.top = 14f;
-            _layerBar.style.left = StyleKeyword.Auto;
-            _layerBar.style.bottom = StyleKeyword.Auto;
-
-            _layerBar.style.width = StyleKeyword.Auto;
-            _layerBar.style.height = StyleKeyword.Auto;
-            _layerBar.style.maxHeight = Length.Percent(72);
-            _layerBar.style.flexGrow = 0f;
-            _layerBar.style.flexShrink = 0f;
-            _layerBar.style.overflow = Overflow.Hidden;
-            _layerBar.style.unityOverflowClipBox = OverflowClipBox.PaddingBox;
+            ApplyLegendFloatingLayout();
 
             _layerBar.BringToFront();
 
             EnsureLegendDefaults();
             RebuildLegendUI();
+        }
+
+        private void ApplyLegendFloatingLayout()
+        {
+            if (_layerBar == null)
+                return;
+
+            _layerBar.style.position = Position.Absolute;
+
+            // Keep the original compact legend presentation, but anchor it bottom-right
+            // instead of top-right.
+            _layerBar.style.right = 14f;
+            _layerBar.style.bottom = 14f;
+            _layerBar.style.left = StyleKeyword.Auto;
+            _layerBar.style.top = StyleKeyword.Auto;
+
+            // Let the original .map-legend-panel USS control width/padding/chip layout.
+            // Setting width here was making the legend fight USS and appear wider/shorter
+            // than the old top-right version.
+            _layerBar.style.width = StyleKeyword.Null;
+            _layerBar.style.maxWidth = StyleKeyword.Null;
+            _layerBar.style.height = StyleKeyword.Auto;
+            _layerBar.style.maxHeight = StyleKeyword.Null;
+
+            _layerBar.style.flexGrow = 0f;
+            _layerBar.style.flexShrink = 0f;
+            _layerBar.style.overflow = Overflow.Hidden;
+            _layerBar.style.unityOverflowClipBox = OverflowClipBox.PaddingBox;
         }
 
         private bool IsEventInsideLegend(EventBase evtBase)
@@ -1347,6 +1363,8 @@ namespace SkiGame.Map.UI
             _layerBar.RemoveFromClassList("map-layer-bar");
             _layerBar.AddToClassList("map-legend-panel");
 
+            ApplyLegendFloatingLayout();
+
             _layerBar.style.display = _legendVisible ? DisplayStyle.Flex : DisplayStyle.None;
             _layerBar.style.flexDirection = FlexDirection.Column;
             _layerBar.style.alignSelf = Align.FlexStart;
@@ -1471,6 +1489,8 @@ namespace SkiGame.Map.UI
             chip.pickingMode = PickingMode.Position;
             chip.focusable = false;
 
+            chip.style.alignItems = Align.Center;
+
             var iconRoot = new VisualElement();
             iconRoot.AddToClassList("map-legend-chip-dot");
             iconRoot.pickingMode = PickingMode.Ignore;
@@ -1510,6 +1530,14 @@ namespace SkiGame.Map.UI
             var label = new Label(text);
             label.AddToClassList("map-legend-chip-text");
             label.pickingMode = PickingMode.Ignore;
+
+            // UI Toolkit labels can sit slightly low inside compact rows depending on font
+            // metrics. Keep the legend text vertically centred against the icon.
+            label.style.marginTop = 0f;
+            label.style.marginBottom = 0f;
+            label.style.paddingTop = 0f;
+            label.style.paddingBottom = 0f;
+            label.style.unityTextAlign = TextAnchor.MiddleLeft;
             chip.Add(label);
 
             HookLayerBtn(chip, onClick);

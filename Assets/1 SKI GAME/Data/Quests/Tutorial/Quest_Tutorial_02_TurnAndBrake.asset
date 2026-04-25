@@ -14,20 +14,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.QuestDefinitionSO
   id: tutorial.turn_and_brake
   title: Turn and Brake
-  description: A and D steer your skis. Those same inputs also become your main braking
-    tools.
+  description: Single-ski pressure steers your skis. Both ski inputs together become
+    one of your main braking tools.
   autoAccept: 0
   tutorialQuest: 1
   stages:
   - id: tutorial.turn_and_brake.stage1
     title: One Pair of Inputs, Three Uses
     description: Use single-ski pressure to carve, both skis together to wedge, and
-      S plus a hard turn to stop quickly.
+      backward lean plus a hard turn to stop quickly.
     objectives:
     - id: tutorial.turn_and_brake.turn
-      title: Carve with A or D
-      description: Press A or D while moving to arc across the slope and feel the
-        edge bite.
+      title: Carve across the slope
+      description: Apply single-ski pressure while moving to arc across the slope
+        and feel the edge bite.
       optional: 0
       hiddenUntilAvailable: 0
       autoPinWhenAvailable: 1
@@ -45,6 +45,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 0
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -57,10 +75,29 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []
     - id: tutorial.turn_and_brake.wedge
       title: Wedge to brake
-      description: Press A + D together to point the skis inward and brake harder.
+      description: Use both ski inputs together to point the skis inward and brake
+        harder.
       optional: 0
       hiddenUntilAvailable: 0
       autoPinWhenAvailable: 1
@@ -78,6 +115,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 0
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -90,11 +145,29 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []
     - id: tutorial.turn_and_brake.quickstop
       title: Quick stop
-      description: Build a little speed, then press S with a sharp A or D turn to
-        scrub speed fast.
+      description: Build a little speed, then combine backward lean with a sharp
+        turn to scrub speed fast.
       optional: 0
       hiddenUntilAvailable: 0
       autoPinWhenAvailable: 1
@@ -112,6 +185,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 0
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -124,4 +215,22 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []

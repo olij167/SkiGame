@@ -22,6 +22,30 @@ public enum TrickPoseFlipDirectionRequirement
     Backflip = -1
 }
 
+public enum TrickPoseVerticalOrientationRequirement
+{
+    Any = 0,
+    Upright = 1,
+    ChestDown = 2,
+    Inverted = 3,
+    ChestUp = 4
+}
+
+public enum TrickPoseHorizontalOrientationRequirement
+{
+    Any = 0,
+    Upright = 1,
+    LeftSide = 2,
+    RightSide = 3
+}
+
+public enum TrickPoseMotionStateRequirement
+{
+    Any = 0,
+    Rising = 1,
+    Diving = 2
+}
+
 [Serializable]
 public struct TrickPoseAngularVelocityRange
 {
@@ -46,6 +70,45 @@ public struct TrickPoseAngularVelocityRange
 }
 
 [Serializable]
+public struct TrickPoseEulerAngleRange
+{
+    public bool enabled;
+    public Vector2 range;
+
+    public Vector2 GetSortedRange()
+    {
+        return range.x <= range.y
+            ? range
+            : new Vector2(range.y, range.x);
+    }
+
+    public bool Contains(float value)
+    {
+        if (!enabled)
+            return true;
+
+        float angle = NormalizeSignedAngle(value);
+        Vector2 sorted = GetSortedRange();
+        return angle >= sorted.x && angle <= sorted.y;
+    }
+
+    public float GetRepresentativeValue(float fallback)
+    {
+        if (!enabled)
+            return fallback;
+
+        Vector2 sorted = GetSortedRange();
+        return (sorted.x + sorted.y) * 0.5f;
+    }
+
+    public static float NormalizeSignedAngle(float angle)
+    {
+        angle = Mathf.Repeat(angle + 180f, 360f) - 180f;
+        return Mathf.Approximately(angle, -180f) ? 180f : angle;
+    }
+}
+
+[Serializable]
 public class TrickPoseEntry
 {
     [Header("General")]
@@ -54,20 +117,32 @@ public class TrickPoseEntry
     public int priority;
     [Range(0f, 1f)] public float overallWeight = 1f;
     public string overridePoseLabel;
+    public bool isCoveragePlaceholder;
+    public string coverageSlotId;
 
     [Header("Match Conditions")]
     public SkiController.AerialPoseFamily requiredPoseFamily = SkiController.AerialPoseFamily.None;
     public SkiController.AerialPoseShape requiredPoseShape = SkiController.AerialPoseShape.None;
+    public TrickPoseVerticalOrientationRequirement requiredVerticalOrientation = TrickPoseVerticalOrientationRequirement.Any;
+    public TrickPoseHorizontalOrientationRequirement requiredHorizontalOrientation = TrickPoseHorizontalOrientationRequirement.Any;
+    public TrickPoseMotionStateRequirement requiredMotionState = TrickPoseMotionStateRequirement.Any;
+    [Header("Legacy / Advanced Match Conditions")]
     public SkiController.AerialOrientationModifier requiredOrientationModifier = SkiController.AerialOrientationModifier.None;
     public string requiredPoseName;
     public TrickPoseBoolRequirement requireAirborne = TrickPoseBoolRequirement.Ignore;
     public TrickPoseBoolRequirement requirePoseButtonHeld = TrickPoseBoolRequirement.Ignore;
+    public bool useAdvancedModifierConditions;
     public TrickPoseSpinDirectionRequirement requiredSpinDirection = TrickPoseSpinDirectionRequirement.Any;
     public TrickPoseFlipDirectionRequirement requiredFlipDirection = TrickPoseFlipDirectionRequirement.Any;
     public TrickPoseAngularVelocityRange yawAngularVelocityRange;
     public TrickPoseAngularVelocityRange pitchAngularVelocityRange;
     public TrickPoseAngularVelocityRange rollAngularVelocityRange;
     public TrickPoseAngularVelocityRange totalAngularSpeedRange;
+
+    [Header("Entry Orientation Conditions")]
+    public TrickPoseEulerAngleRange entryPitchAngleRange;
+    public TrickPoseEulerAngleRange entryYawAngleRange;
+    public TrickPoseEulerAngleRange entryRollAngleRange;
 
     [Header("Per-Part Pose")]
     public PosePartTransformData bodyPose = new PosePartTransformData();
@@ -76,6 +151,10 @@ public class TrickPoseEntry
     public PosePartTransformData rightSkiPose = new PosePartTransformData();
     public PosePartTransformData leftPolePose = new PosePartTransformData();
     public PosePartTransformData rightPolePose = new PosePartTransformData();
+    public PosePartTransformData leftElbowPose = new PosePartTransformData();
+    public PosePartTransformData rightElbowPose = new PosePartTransformData();
+    public PosePartTransformData leftKneePose = new PosePartTransformData();
+    public PosePartTransformData rightKneePose = new PosePartTransformData();
 
     [Header("Transition")]
     public float blendInSpeed = 8f;
@@ -88,20 +167,54 @@ public class TrickPoseEntry
         if (!enabled || controller == null)
             return false;
 
+        SkiController.AerialPoseFamily matchFamily = controller.EntryPoseFamily != SkiController.AerialPoseFamily.None
+            ? controller.EntryPoseFamily
+            : controller.CurrentPoseFamily;
+        SkiController.AerialPoseShape matchShape = controller.EntryPoseShape != SkiController.AerialPoseShape.None
+            ? controller.EntryPoseShape
+            : controller.CurrentPoseShape;
+        TrickPoseVerticalOrientationRequirement matchVerticalOrientation = controller.EntryPoseVerticalOrientation != TrickPoseVerticalOrientationRequirement.Any
+            ? controller.EntryPoseVerticalOrientation
+            : controller.CurrentPoseVerticalOrientation;
+        TrickPoseHorizontalOrientationRequirement matchHorizontalOrientation = controller.EntryPoseHorizontalOrientation != TrickPoseHorizontalOrientationRequirement.Any
+            ? controller.EntryPoseHorizontalOrientation
+            : controller.CurrentPoseHorizontalOrientation;
+        TrickPoseMotionStateRequirement matchMotionState = controller.EntryPoseMotionState != TrickPoseMotionStateRequirement.Any
+            ? controller.EntryPoseMotionState
+            : controller.CurrentPoseMotionState;
+        SkiController.AerialOrientationModifier matchOrientation = controller.EntryPoseOrientationModifier != SkiController.AerialOrientationModifier.None
+            ? controller.EntryPoseOrientationModifier
+            : controller.CurrentPoseOrientationModifier;
+        string matchPoseName = !string.IsNullOrWhiteSpace(controller.EntryPoseName)
+            ? controller.EntryPoseName
+            : controller.CurrentPoseName;
+
         if (requiredPoseFamily != SkiController.AerialPoseFamily.None &&
-            controller.CurrentPoseFamily != requiredPoseFamily)
+            matchFamily != requiredPoseFamily)
             return false;
 
         if (requiredPoseShape != SkiController.AerialPoseShape.None &&
-            controller.CurrentPoseShape != requiredPoseShape)
+            matchShape != requiredPoseShape)
             return false;
 
-        if (requiredOrientationModifier != SkiController.AerialOrientationModifier.None &&
-            controller.CurrentPoseOrientationModifier != requiredOrientationModifier)
+        if (requiredVerticalOrientation != TrickPoseVerticalOrientationRequirement.Any &&
+            matchVerticalOrientation != requiredVerticalOrientation)
+            return false;
+
+        if (requiredHorizontalOrientation != TrickPoseHorizontalOrientationRequirement.Any &&
+            matchHorizontalOrientation != requiredHorizontalOrientation)
+            return false;
+
+        if (requiredMotionState != TrickPoseMotionStateRequirement.Any &&
+            matchMotionState != requiredMotionState)
+            return false;
+
+        if (UsesLegacyOrientationModifier() &&
+            matchOrientation != requiredOrientationModifier)
             return false;
 
         if (!string.IsNullOrWhiteSpace(requiredPoseName) &&
-            !string.Equals(controller.CurrentPoseName, requiredPoseName, StringComparison.OrdinalIgnoreCase))
+            !string.Equals(matchPoseName, requiredPoseName, StringComparison.OrdinalIgnoreCase))
             return false;
 
         if (!MatchesOptionalBool(requireAirborne, controller.IsAuthoredPoseAirborne))
@@ -110,24 +223,37 @@ public class TrickPoseEntry
         if (!MatchesOptionalBool(requirePoseButtonHeld, controller.IsPoseButtonHeld))
             return false;
 
-        if (requiredSpinDirection != TrickPoseSpinDirectionRequirement.Any &&
-            controller.CurrentSpinDirectionSign != (int)requiredSpinDirection)
+        if (useAdvancedModifierConditions)
+        {
+            if (requiredSpinDirection != TrickPoseSpinDirectionRequirement.Any &&
+                controller.CurrentSpinDirectionSign != (int)requiredSpinDirection)
+                return false;
+
+            if (requiredFlipDirection != TrickPoseFlipDirectionRequirement.Any &&
+                controller.CurrentFlipDirectionSign != (int)requiredFlipDirection)
+                return false;
+
+            if (!yawAngularVelocityRange.Contains(controller.CurrentYawAngularVelocity))
+                return false;
+
+            if (!pitchAngularVelocityRange.Contains(controller.CurrentPitchAngularVelocity))
+                return false;
+
+            if (!rollAngularVelocityRange.Contains(controller.CurrentRollAngularVelocity))
+                return false;
+
+            if (!totalAngularSpeedRange.Contains(controller.CurrentTotalAngularSpeed))
+                return false;
+        }
+
+        Vector3 entryEulerAngles = controller.EntryEulerAngles;
+        if (!entryPitchAngleRange.Contains(entryEulerAngles.x))
             return false;
 
-        if (requiredFlipDirection != TrickPoseFlipDirectionRequirement.Any &&
-            controller.CurrentFlipDirectionSign != (int)requiredFlipDirection)
+        if (!entryYawAngleRange.Contains(entryEulerAngles.y))
             return false;
 
-        if (!yawAngularVelocityRange.Contains(controller.CurrentYawAngularVelocity))
-            return false;
-
-        if (!pitchAngularVelocityRange.Contains(controller.CurrentPitchAngularVelocity))
-            return false;
-
-        if (!rollAngularVelocityRange.Contains(controller.CurrentRollAngularVelocity))
-            return false;
-
-        if (!totalAngularSpeedRange.Contains(controller.CurrentTotalAngularSpeed))
+        if (!entryRollAngleRange.Contains(entryEulerAngles.z))
             return false;
 
         return true;
@@ -139,16 +265,25 @@ public class TrickPoseEntry
 
         if (requiredPoseFamily != SkiController.AerialPoseFamily.None) score++;
         if (requiredPoseShape != SkiController.AerialPoseShape.None) score++;
-        if (requiredOrientationModifier != SkiController.AerialOrientationModifier.None) score++;
+        if (requiredVerticalOrientation != TrickPoseVerticalOrientationRequirement.Any) score++;
+        if (requiredHorizontalOrientation != TrickPoseHorizontalOrientationRequirement.Any) score++;
+        if (requiredMotionState != TrickPoseMotionStateRequirement.Any) score++;
+        if (UsesLegacyOrientationModifier()) score++;
         if (!string.IsNullOrWhiteSpace(requiredPoseName)) score++;
         if (requireAirborne != TrickPoseBoolRequirement.Ignore) score++;
         if (requirePoseButtonHeld != TrickPoseBoolRequirement.Ignore) score++;
-        if (requiredSpinDirection != TrickPoseSpinDirectionRequirement.Any) score++;
-        if (requiredFlipDirection != TrickPoseFlipDirectionRequirement.Any) score++;
-        if (yawAngularVelocityRange.enabled) score++;
-        if (pitchAngularVelocityRange.enabled) score++;
-        if (rollAngularVelocityRange.enabled) score++;
-        if (totalAngularSpeedRange.enabled) score++;
+        if (useAdvancedModifierConditions)
+        {
+            if (requiredSpinDirection != TrickPoseSpinDirectionRequirement.Any) score++;
+            if (requiredFlipDirection != TrickPoseFlipDirectionRequirement.Any) score++;
+            if (yawAngularVelocityRange.enabled) score++;
+            if (pitchAngularVelocityRange.enabled) score++;
+            if (rollAngularVelocityRange.enabled) score++;
+            if (totalAngularSpeedRange.enabled) score++;
+        }
+        if (entryPitchAngleRange.enabled) score += 2;
+        if (entryYawAngleRange.enabled) score += 2;
+        if (entryRollAngleRange.enabled) score += 2;
 
         return score;
     }
@@ -172,5 +307,13 @@ public class TrickPoseEntry
             TrickPoseBoolRequirement.False => !value,
             _ => true
         };
+    }
+
+    private bool UsesLegacyOrientationModifier()
+    {
+        return requiredOrientationModifier != SkiController.AerialOrientationModifier.None &&
+               requiredVerticalOrientation == TrickPoseVerticalOrientationRequirement.Any &&
+               requiredHorizontalOrientation == TrickPoseHorizontalOrientationRequirement.Any &&
+               requiredMotionState == TrickPoseMotionStateRequirement.Any;
     }
 }

@@ -45,7 +45,10 @@ public static class CustomizationOptionIconGenerator
             if (opt.type != CustomizationOptionType.Skis &&
                 opt.type != CustomizationOptionType.Poles &&
                 opt.type != CustomizationOptionType.Hat &&
-                opt.type != CustomizationOptionType.Jacket)
+                opt.type != CustomizationOptionType.Jacket &&
+                opt.type != CustomizationOptionType.Gloves &&
+                opt.type != CustomizationOptionType.Boots &&
+                opt.type != CustomizationOptionType.Accessory)
                 continue;
 
             var prefab = ResolvePrefab(opt);
@@ -130,6 +133,15 @@ public static class CustomizationOptionIconGenerator
 
             case CustomizationOptionType.Poles:
                 return ResolvePrefabFromGearProfile(opt.gearProfile, preferName: "pole");
+
+            case CustomizationOptionType.Gloves:
+                return opt.glovePrefab;
+
+            case CustomizationOptionType.Boots:
+                return opt.bootPrefab;
+
+            case CustomizationOptionType.Accessory:
+                return opt.accessoryPrefab;
         }
 
         return null;

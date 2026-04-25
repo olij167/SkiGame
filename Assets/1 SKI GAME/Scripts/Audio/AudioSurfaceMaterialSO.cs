@@ -16,7 +16,7 @@ public enum AudioMaterialCategory
 
 [CreateAssetMenu(
     fileName = "AudioSurfaceMaterial",
-    menuName = "Ski Game/Audio/Surface Material")]
+    menuName = "SkiGame/Audio/Surface Material")]
 public sealed class AudioSurfaceMaterialSO : ScriptableObject
 {
     [Header("Identity")]

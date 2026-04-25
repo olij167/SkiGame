@@ -196,6 +196,30 @@ public class PoleContact : MonoBehaviour
         }
     }
 
+    public void RestoreBasePoseFromSnapshot(TrickPoseRigSnapshot.PartState state)
+    {
+        if (poleRoot == null || !state.hasValue)
+            return;
+
+        _baseLocalPos = state.localPosition;
+        _baseLocalRot = state.localRotation;
+        poleRoot.localPosition = _baseLocalPos;
+        poleRoot.localRotation = _baseLocalRot;
+        ClearAuthoredPoseOverride();
+        _passiveAirDriftActive = false;
+        _passiveAirPoseSuppression = 0f;
+    }
+
+    public TrickPoseRigSnapshot.PartState CaptureBasePoseSnapshot()
+    {
+        return new TrickPoseRigSnapshot.PartState
+        {
+            hasValue = poleRoot != null,
+            localPosition = poleRoot != null ? _baseLocalPos : Vector3.zero,
+            localRotation = poleRoot != null ? _baseLocalRot : Quaternion.identity
+        };
+    }
+
     private void FixedUpdate()
     {
         UpdateContact();

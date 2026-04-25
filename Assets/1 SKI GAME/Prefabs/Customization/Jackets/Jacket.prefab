@@ -129,11 +129,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WearableAttachment
   mount: {fileID: 76176622205164245}
+  primaryBindings: []
+  primaryComponentBindings: []
   renderers:
   - {fileID: 8885122017972336961}
   - {fileID: 4388328651447952858}
   colorPropertyName: _BaseColor
   texturePropertyName: _BaseMap
+  extraChannels: []
 --- !u!1 &4145757643266090736
 GameObject:
   m_ObjectHideFlags: 0

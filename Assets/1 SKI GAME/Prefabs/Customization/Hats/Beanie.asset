@@ -22,8 +22,16 @@ MonoBehaviour:
   eyeSprite: {fileID: 0}
   hatPrefab: {fileID: 3737022140319327465, guid: a5807574b199b9c4280a49de27399741, type: 3}
   jacketPrefab: {fileID: 0}
-  customizerIndex: 0
+  glovePrefab: {fileID: 0}
+  bootPrefab: {fileID: 0}
+  accessoryPrefab: {fileID: 0}
+  customizerIndex: -1
   gearProfile: {fileID: 0}
+  leftArmLimbColourSource: 0
+  rightArmLimbColourSource: 0
+  leftLegLimbColourSource: 0
+  rightLegLimbColourSource: 0
+  limbSecondaryChannelId: secondary
   defaultPatternOption: {fileID: 0}
   defaultPatternId: 
   unlockPatternOptionsOnPurchase: []

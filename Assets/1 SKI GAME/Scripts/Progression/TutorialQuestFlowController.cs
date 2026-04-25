@@ -23,6 +23,9 @@ namespace SkiGame.Progression
         [SerializeField] private QuestContextProvider questContext;
         [SerializeField] private QuestSignalBus signalBus;
         [SerializeField] private bool requireLegacyLessonActive = false;
+        [SerializeField, Range(0.1f, 2f)] private float evaluateIntervalSeconds = 0.25f;
+
+        private float _nextEvaluateTime;
 
         private void Awake()
         {
@@ -37,8 +40,19 @@ namespace SkiGame.Progression
 
         private void Update()
         {
-            ResolveReferences();
+            if (Time.unscaledTime < _nextEvaluateTime)
+                return;
+
+            _nextEvaluateTime = Time.unscaledTime + evaluateIntervalSeconds;
+
+            ResolveReferencesIfMissing();
             EvaluateTutorialQuestAvailability();
+        }
+
+        private void ResolveReferencesIfMissing()
+        {
+            if (questDirector == null || questContext == null || signalBus == null)
+                ResolveReferences();
         }
 
         private void EvaluateTutorialQuestAvailability()

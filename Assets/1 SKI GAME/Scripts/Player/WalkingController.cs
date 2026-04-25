@@ -150,6 +150,7 @@ public class WalkingController : MonoBehaviour
     // Grounded / jump state (walk mode only)
     private bool _isGrounded;
     private bool _jumpQueued;
+    private float _lastGroundedTime;
 
     // --- Raw user input capture (ignores external auto-walk overrides) ---
     private Vector2 _lastUserMoveRaw;
@@ -304,6 +305,12 @@ public class WalkingController : MonoBehaviour
             _player = _input.Player;
         }
 
+        if (_input == null)
+        {
+            _input = new InputSystem_Actions();
+            _player = _input.Player;
+
+        }
         if (_runtimeSetupComplete)
             return;
 
@@ -454,13 +461,17 @@ public class WalkingController : MonoBehaviour
 
         if (_rb.useGravity == true) _rb.useGravity = false;
 
+        // Restore skis/poles to their real ski rig parents first so any
+        // ground-clearance solve samples the actual ski positions, not the
+        // "on back" presentation transforms.
+        RefreshEquipmentPresentation();
+
         NudgeUpForSkis();
+
+        EnableSkiSystems(true);
 
         if (skiController != null)
             skiController.SnapToGroundClearance(resetDownwardVelocity: true);
-
-        EnableSkiSystems(true);
-        RefreshEquipmentPresentation();
     }
 
     private void EnableSkiSystems(bool enabled)
@@ -782,6 +793,9 @@ public class WalkingController : MonoBehaviour
             groundLayers,
             QueryTriggerInteraction.Ignore
         );
+
+        if (_isGrounded)
+            _lastGroundedTime = Time.time;
     }
 
     private void TryProcessJump()

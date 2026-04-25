@@ -1,28 +1,15 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.InputSystem;
-using SkiGame.Progression;
-using UnityEngine.EventSystems;
 using UnityEngine.UIElements;
+using SkiGame.Progression;
 using SkiGame.UI;
 
 public class CustomizationSceneBootstrap : MonoBehaviour
 {
     [Header("Showcase")]
     [SerializeField] private Transform showcasePoint;
-
-    [Header("Camera Orbit (Main Camera)")]
-    [SerializeField] private float orbitDistance = 3.0f;
-    [SerializeField] private float orbitHeight = 1.35f;
-    [SerializeField] private float orbitYawDegrees = 180f;
-    [SerializeField] private float orbitPitchDegrees = 10f;
-    [SerializeField] private float rotateSpeed = 140f;
-
-    [Header("Input System")]
-    [SerializeField] private InputActionReference rotatePressAction; // (currently unused)
-    [SerializeField] private InputActionReference rotateDeltaAction; // <Pointer>/delta
-    [Tooltip("Optional: right stick for controller orbit (Vector2).")]
-    [SerializeField] private InputActionReference rotateStickAction; // <Gamepad>/rightStick
+    [SerializeField] private Transform shopOrbitTargetOverride;
 
     [Header("UI")]
     [SerializeField] private CustomizationUIController uiController;
@@ -55,46 +42,13 @@ public class CustomizationSceneBootstrap : MonoBehaviour
 
     private Vector3 _savedPos;
     private Quaternion _savedRot;
-    private bool _rotateHeld;
-
-    private Camera _mainCam;
     private CameraController _cameraController;
 
     private bool _isExiting;
     private bool _exitArmed; // becomes true only after we observe a full release
 
-    private UIDocument _uiDoc;
-
     // Snapshot of shop-entry customization state so cancel cleanly restores everything.
     private string _entryCustomizationStateJson;
-
-    private void OnEnable()
-    {
-        if (rotatePressAction != null)
-        {
-            rotatePressAction.action.Enable();
-            rotatePressAction.action.performed += OnRotatePressed;
-            rotatePressAction.action.canceled += OnRotateReleased;
-        }
-
-        if (rotateDeltaAction != null) rotateDeltaAction.action.Enable();
-        if (rotateStickAction != null) rotateStickAction.action.Enable();
-    }
-
-    private void OnDisable()
-    {
-        if (rotatePressAction != null)
-        {
-            rotatePressAction.action.performed -= OnRotatePressed;
-            rotatePressAction.action.canceled -= OnRotateReleased;
-        }
-    }
-
-    private void OnRotatePressed(UnityEngine.InputSystem.InputAction.CallbackContext _)
-        => _rotateHeld = true;
-
-    private void OnRotateReleased(UnityEngine.InputSystem.InputAction.CallbackContext _)
-        => _rotateHeld = false;
 
     private void Start()
     {
@@ -128,27 +82,14 @@ public class CustomizationSceneBootstrap : MonoBehaviour
             _player.transform.rotation = showcasePoint.rotation;
         }
 
-        // Put main camera into shop orbit mode
-        _mainCam = FindCameraInThisScene();
-        if (_mainCam == null) _mainCam = Camera.main;
-        if (_mainCam == null) _mainCam = FindFirstObjectByType<Camera>();
-
-        if (_mainCam != null)
-        {
-            _cameraController = _mainCam.GetComponent<CameraController>();
-            if (_cameraController != null)
-                _cameraController.EnterShopOrbit(_player.transform);
-        }
-
-        SnapCamera();
+        // Put the live gameplay camera into shop orbit mode.
+        _cameraController = FindActiveCameraController();
+        if (_cameraController != null)
+            _cameraController.EnterShopOrbit(GetShopOrbitTarget(), FindUiDocumentInThisScene());
 
         // UI (optional)
         var mgr = PlayerStatsManager.Instance;
         var profile = mgr != null ? mgr.Profile : null;
-
-        // Cache a UI document for UITK pointer hit-testing
-        if (_uiDoc == null)
-            _uiDoc = FindFirstObjectByType<UIDocument>();
 
         // Snapshot the full customization state so cancel fully restores entry state.
         if (profile != null && profile.customization != null)
@@ -188,77 +129,9 @@ public class CustomizationSceneBootstrap : MonoBehaviour
     private void Update()
     {
         if (_isExiting) return;
-        if (_mainCam == null || _player == null) return;
+        if (_player == null) return;
 
         HandleExitHold();
-
-        if (IsPointerOverAnyUI())
-            return;
-
-        float deltaYaw = 0f;
-
-        if (_rotateHeld && rotateDeltaAction != null)
-        {
-            Vector2 d = rotateDeltaAction.action.ReadValue<Vector2>();
-            deltaYaw += -d.x * rotateSpeed * Time.unscaledDeltaTime;
-        }
-
-        if (rotateStickAction != null)
-        {
-            Vector2 stick = rotateStickAction.action.ReadValue<Vector2>();
-            if (stick.sqrMagnitude > 0.001f)
-                deltaYaw += stick.x * rotateSpeed * Time.unscaledDeltaTime;
-        }
-
-        if (Mathf.Abs(deltaYaw) > 0.0001f)
-        {
-            orbitYawDegrees += deltaYaw;
-            SnapCamera();
-        }
-    }
-
-    private bool IsPointerOverAnyUI()
-    {
-        // UI Toolkit hit test
-        if (_uiDoc != null && _uiDoc.rootVisualElement != null)
-        {
-            var panel = _uiDoc.rootVisualElement.panel;
-            if (panel != null && Mouse.current != null)
-            {
-                Vector2 screen = Mouse.current.position.ReadValue();
-                Vector2 panelPos = RuntimePanelUtils.ScreenToPanel(panel, screen);
-
-                var picked = panel.Pick(panelPos);
-                if (picked != null)
-                    return true;
-            }
-        }
-
-        // Fallback for any uGUI
-        return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
-    }
-
-    private void SnapCamera()
-    {
-        if (_mainCam == null || _player == null) return;
-
-        Vector3 target = GetLookAtTarget();
-        float yaw = orbitYawDegrees * Mathf.Deg2Rad;
-        float pitch = orbitPitchDegrees * Mathf.Deg2Rad;
-
-        Vector3 dir = new Vector3(Mathf.Sin(yaw), 0f, Mathf.Cos(yaw));
-        Vector3 offset = dir * orbitDistance;
-        offset.y = orbitHeight + Mathf.Sin(pitch) * 0.25f;
-
-        _mainCam.transform.position = target + offset;
-        _mainCam.transform.LookAt(target);
-    }
-
-    private Vector3 GetLookAtTarget()
-    {
-        var t = _player.transform.Find("PreviewLookAt");
-        if (t != null) return t.position;
-        return _player.transform.position + Vector3.up * 1.35f;
     }
 
     private void FreezePlayer()
@@ -362,6 +235,77 @@ public class CustomizationSceneBootstrap : MonoBehaviour
                 var cam = cams[c];
                 if (cam != null && cam.gameObject.scene == scene)
                     return cam;
+            }
+        }
+
+        return null;
+    }
+
+    private CameraController FindActiveCameraController()
+    {
+        if (Camera.main != null)
+        {
+            CameraController mainController = Camera.main.GetComponent<CameraController>();
+            if (mainController != null)
+                return mainController;
+        }
+
+        CameraController anyController = FindFirstObjectByType<CameraController>();
+        if (anyController != null)
+            return anyController;
+
+        Camera sceneCam = FindCameraInThisScene();
+        if (sceneCam != null)
+            return sceneCam.GetComponent<CameraController>();
+
+        return null;
+    }
+
+    private Transform GetShopOrbitTarget()
+    {
+        if (shopOrbitTargetOverride != null)
+            return shopOrbitTargetOverride;
+
+        if (_player == null)
+            return null;
+
+        Transform previewLookAt = FindChildTransformByName(_player.transform, "PreviewLookAt");
+        return previewLookAt != null ? previewLookAt : _player.transform;
+    }
+
+    private static Transform FindChildTransformByName(Transform root, string targetName)
+    {
+        if (root == null || string.IsNullOrEmpty(targetName))
+            return null;
+
+        if (root.name == targetName)
+            return root;
+
+        var children = root.GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < children.Length; i++)
+        {
+            Transform current = children[i];
+            if (current != null && current.name == targetName)
+                return current;
+        }
+
+        return null;
+    }
+
+    private UIDocument FindUiDocumentInThisScene()
+    {
+        Scene scene = gameObject.scene;
+        if (!scene.IsValid() || !scene.isLoaded)
+            return null;
+
+        var roots = scene.GetRootGameObjects();
+        for (int i = 0; i < roots.Length; i++)
+        {
+            var docs = roots[i].GetComponentsInChildren<UIDocument>(true);
+            for (int d = 0; d < docs.Length; d++)
+            {
+                if (docs[d] != null && docs[d].gameObject.scene == scene)
+                    return docs[d];
             }
         }
 

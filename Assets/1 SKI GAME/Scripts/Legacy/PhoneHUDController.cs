@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 
@@ -1734,7 +1734,44 @@ namespace SkiGame.Progression
 
         private static string FormatMetricValue(ProgressionMetric metric, float value)
         {
-            return ProgressionMetricUtility.FormatMetricValue(metric, value);
+            switch (metric)
+            {
+                case ProgressionMetric.SessionDistanceMeters:
+                case ProgressionMetric.LifetimeDistanceMeters:
+                case ProgressionMetric.SessionAirDistanceMeters:
+                case ProgressionMetric.LifetimeAirDistanceMeters:
+                case ProgressionMetric.SessionVerticalDescentMeters:
+                case ProgressionMetric.LifetimeVerticalDescentMeters:
+                    return FormatMeters(value);
+
+                case ProgressionMetric.SessionTopSpeedMps:
+                case ProgressionMetric.LifetimeTopSpeedMps:
+                case ProgressionMetric.SessionTopRunSpeedMps:
+                case ProgressionMetric.LifetimeTopRunSpeedMps:
+                    return $"{value:0.0}m/s";
+
+                case ProgressionMetric.SessionAirTimeSeconds:
+                case ProgressionMetric.LifetimeAirTimeSeconds:
+                    return $"{value:0.0}s";
+
+                case ProgressionMetric.SessionStacks:
+                case ProgressionMetric.LifetimeStacks:
+                case ProgressionMetric.SessionRunsCompleted:
+                case ProgressionMetric.LifetimeRunsCompleted:
+                case ProgressionMetric.SessionLiftsUsed:
+                case ProgressionMetric.LifetimeLiftsUsed:
+                case ProgressionMetric.SessionRunsVisited:
+                case ProgressionMetric.LifetimeRunsVisited:
+                case ProgressionMetric.SessionRunsCompletedClean:
+                case ProgressionMetric.LifetimeRunsCompletedClean:
+                case ProgressionMetric.LifetimeRunVisited:
+                case ProgressionMetric.LifetimeRunCompletedCount:
+                case ProgressionMetric.LifetimeRunCompletedCleanCount:
+                    return $"{Mathf.FloorToInt(value)}";
+
+                default:
+                    return $"{value:0.##}";
+            }
         }
 
         private void ShowPhonePage(string pageName)
@@ -3916,7 +3953,44 @@ namespace SkiGame.Progression
 
         private string GetFriendlyMetricName(ProgressionMetric metric)
         {
-            return ProgressionMetricUtility.GetMetricDisplayName(metric);
+            // Keep this minimal and readable; expand as needed.
+            switch (metric)
+            {
+                case ProgressionMetric.SessionDistanceMeters: return "Travel Distance";
+                case ProgressionMetric.SessionTopSpeedMps: return "Top Speed";
+                case ProgressionMetric.SessionAirTimeSeconds: return "Air Time";
+                case ProgressionMetric.SessionAirDistanceMeters: return "Air Distance";
+                case ProgressionMetric.SessionGrindTimeSeconds: return "Grind Time";
+                case ProgressionMetric.SessionGrindDistanceMeters: return "Grind Distance";
+                case ProgressionMetric.SessionRunsCompleted: return "Runs Completed";
+                case ProgressionMetric.SessionLiftsUsed: return "Lifts Used";
+                case ProgressionMetric.SessionPlacesVisited: return "Places Visited";
+
+                case ProgressionMetric.LifetimeDistanceMeters: return "Distance";
+                case ProgressionMetric.LifetimeTopSpeedMps: return "Top Speed";
+                case ProgressionMetric.LifetimeAirTimeSeconds: return "Air Time";
+                case ProgressionMetric.LifetimeAirDistanceMeters: return "Air Distance";
+                case ProgressionMetric.LifetimeGrindTimeSeconds: return "Grind Time";
+                case ProgressionMetric.LifetimeGrindDistanceMeters: return "Grind Distance";
+                case ProgressionMetric.LifetimeRunsCompleted: return "Runs Completed";
+                case ProgressionMetric.LifetimeLiftsUsed: return "Lifts Ridden";
+                case ProgressionMetric.LifetimePlacesVisited: return "Places Visited";
+
+                case ProgressionMetric.SessionRunsVisited: return "Runs Visited";
+                case ProgressionMetric.SessionRunsCompletedClean: return "Clean Runs Completed";
+                case ProgressionMetric.SessionTopRunSpeedMps: return "Top Run Speed";
+
+                case ProgressionMetric.LifetimeRunsVisited: return "Runs Visited";
+                case ProgressionMetric.LifetimeRunsCompletedClean: return "Clean Runs";
+                case ProgressionMetric.LifetimeTopRunSpeedMps: return "Top Run Speed";
+
+                case ProgressionMetric.LifetimeRunVisited: return "Visited Runs";
+                case ProgressionMetric.LifetimeRunCompletedCount: return "Completed Runs";
+                case ProgressionMetric.LifetimeRunCompletedCleanCount: return "Clean Completed Runs";
+
+
+                default: return metric.ToString();
+            }
         }
 
         private void BuildMapInfoPanel()
@@ -5011,7 +5085,9 @@ namespace SkiGame.Progression
             bool TrySpend(int cost)
             {
                 if (cost <= 0) return true;
-                return ProgressionEventRecorder.TrySpendCurrency(_profile, cost);
+                if (_profile.currency < cost) return false;
+                _profile.currency -= cost;
+                return true;
             }
 
             bool ok = _skiPassMgr.TryPurchase(_skiPassSelectedLevel, _skiPassSelectedDurationIndex, TrySpend, out var q, out var reason);

@@ -20,7 +20,7 @@ public struct InteractionBlendSettings
 
 [CreateAssetMenu(
     fileName = "AudioInteractionProfile",
-    menuName = "Ski Game/Audio/Interaction Profile")]
+    menuName = "SkiGame/Audio/Interaction Profile")]
 public sealed class AudioInteractionProfileSO : ScriptableObject
 {
     [Header("Pair")]

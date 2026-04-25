@@ -43,17 +43,21 @@ PrefabInstance:
       propertyPath: m_Name
       value: MagicianHat
       objectReference: {fileID: 0}
+    - target: {fileID: 100000, guid: 06c4131835f65024586454416f6b1f66, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 06c4131835f65024586454416f6b1f66, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 06c4131835f65024586454416f6b1f66, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 06c4131835f65024586454416f6b1f66, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 06c4131835f65024586454416f6b1f66, type: 3}
       propertyPath: m_LocalPosition.x
@@ -141,6 +145,7 @@ MonoBehaviour:
   primaryBindings:
   - renderer: {fileID: 4281808683795282893}
     materialIndices: 00000000
+  primaryComponentBindings: []
   renderers:
   - {fileID: 4281808683795282893}
   colorPropertyName: _BaseColor
@@ -152,6 +157,7 @@ MonoBehaviour:
     bindings:
     - renderer: {fileID: 4281808683795282893}
       materialIndices: 01000000
+    componentBindings: []
     renderers: []
     colorPropertyName: _BaseColor
     defaultColor: {r: 1, g: 0.03137255, b: 0.03137255, a: 1}

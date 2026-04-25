@@ -15,7 +15,7 @@ using UnityEditor;
 #endif
 
 [DisallowMultipleComponent]
-[ExecuteAlways]
+//[ExecuteAlways]
 public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSource
 {
     [Serializable]
@@ -166,6 +166,7 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
     [SerializeField] private RaceCourseNpcRacer npcRacerPrefab;
     [SerializeField] private float npcLaneSpacingMeters = 3f;
     [SerializeField] private float npcRowSpacingMeters = 5f;
+    [SerializeField][Min(0f)] private float npcStartLeadFromPlayerMeters = 8f;
     [SerializeField] private Vector3 npcStartAreaOffset = Vector3.zero;
 
     [Header("Leagues")]
@@ -321,6 +322,9 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
     public string LastFailureReason => _lastFailureReason;
     public string LastLeagueObjectiveSummary => _lastLeagueObjectiveSummary;
 
+    public static event Action<RaceCourseLine, int> OnRaceCountdownTick;
+    public static event Action<RaceCourseLine> OnRaceCountdownGo;
+
     public string RegionId => string.IsNullOrWhiteSpace(regionId) ? string.Empty : regionId.Trim();
     public bool IsRegionalChampionship => isRegionalChampionship;
     public int ChampionshipRequiredLeagueNumber => Mathf.Max(1, championshipRequiredLeagueNumber);
@@ -399,6 +403,7 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
             {
                 _lastCountdownWholeSeconds = countdownWholeSeconds;
                 GameAudio.PlayWorld(GameAudioCueId.RaceCountdownTick, StartWorldPosition);
+                OnRaceCountdownTick?.Invoke(this, countdownWholeSeconds);
             }
 
             _countdownRemaining -= Time.deltaTime;
@@ -407,7 +412,12 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
                 _countdownRemaining = 0f;
                 _attemptTime = 0f;
                 _runtimeState = RaceRuntimeState.Racing;
+
+                EnsurePlayerRaceControlEnabled(_activePlayerRoot);
+
                 GameAudio.PlayWorld(GameAudioCueId.RaceCountdownGo, StartWorldPosition);
+                OnRaceCountdownGo?.Invoke(this);
+
                 RefreshCheckpointVisualStates();
                 TryConsumeCurrentCheckpointIfAlreadyOverlapping();
             }
@@ -734,7 +744,7 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         if (mgr == null || !mgr.CanStart(MountainActivityKind.Race, this))
             return false;
 
-        _lastCountdownWholeSeconds = Mathf.CeilToInt(startCountdownSeconds);
+        _lastCountdownWholeSeconds = -1;
         return mgr.TryStart(MountainActivityKind.Race, this, RaceName, leagueNumber);
     }
 
@@ -1257,13 +1267,18 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         _startStackRecoveryRemaining = Mathf.Max(0f, startStackRecoveryGraceSeconds);
         _activePlayerRoot = playerRoot;
         _lastAttemptPlayerRoot = playerRoot;
-        _activePlayerSkiController = playerRoot.GetComponentInParent<SkiController>();
-        _activePlayerWalkingController = playerRoot.GetComponentInParent<WalkingController>();
+
+        _activePlayerSkiController = FindPlayerComponent<SkiController>(playerRoot);
+        _activePlayerWalkingController = FindPlayerComponent<WalkingController>(playerRoot);
+
         _attemptAccumulatedTrickScore = 0;
         _attemptBestTrickScore = 0;
         _attemptMatchedRequiredTrick = false;
         _lastLeagueObjectiveSummary = BuildLeagueObjectiveSummary(_activeLeagueNumber);
         _lastFailureReason = string.Empty;
+
+        _lastCountdownWholeSeconds = -1;
+
         BindActivePlayerTrickTracker();
 
         ApplyRaceTimePause(true);
@@ -1279,6 +1294,8 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         if (snapPlayerToStartOnBegin)
             SnapPlayerToStart(playerRoot);
 
+        EnsurePlayerRaceControlEnabled(playerRoot);
+
         _countdownStartPlayerPosition = playerRoot.transform.position;
         _countdownStartPlayerRotation = playerRoot.transform.rotation;
         _hasCountdownStartPose = true;
@@ -1287,6 +1304,12 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         _runtimeState = _countdownRemaining > 0f
             ? RaceRuntimeState.Countdown
             : RaceRuntimeState.Racing;
+
+        if (_runtimeState == RaceRuntimeState.Racing)
+        {
+            EnsurePlayerRaceControlEnabled(playerRoot);
+            OnRaceCountdownGo?.Invoke(this);
+        }
 
         if (Application.isPlaying)
         {
@@ -1611,6 +1634,7 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
 
         _selectedLeagueNumber = leagueNumber;
         _pendingStartPlayerRoot = playerRoot;
+        _lastCountdownWholeSeconds = -1;
 
         return mgr.TryStart(MountainActivityKind.Race, this, RaceName, leagueNumber);
     }
@@ -2507,6 +2531,8 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
                 if (renderer != null && checkpointMaterial != null)
                     renderer.sharedMaterial = checkpointMaterial;
 
+                var heightNormalizer = go.AddComponent<InteractionAreaHeightNormalizer>();
+
                 go.hideFlags = HideFlags.None;
             }
         }
@@ -2845,21 +2871,38 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
 
     public Vector3 GetNpcStartSlotWorldPosition(int slotIndex)
     {
-        Vector3 origin = StartWorldPosition + npcStartAreaOffset;
-        Vector3 forward = StartForward.sqrMagnitude > 0.0001f ? StartForward.normalized : transform.forward;
+        Vector3 forward = StartForward.sqrMagnitude > 0.0001f
+            ? StartForward.normalized
+            : transform.forward;
+
         Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
+        if (right.sqrMagnitude <= 0.0001f)
+            right = transform.right;
 
-        // Keep the whole front row clear so the player has buffer space during
-        // countdown and cannot spawn intersecting an NPC.
-        int rawGridIndex = slotIndex + 3;
+        Vector3 playerStart = GetPlayerStartWorldPosition();
 
-        int row = rawGridIndex / 3;
-        int col = rawGridIndex % 3;
+        // NPCs should stage down-course from the player's snapped start position,
+        // not around StartWorldPosition, otherwise the first NPC row can overlap
+        // the player when playerStartBackOffsetMeters is greater than 0.
+        Vector3 npcGridOrigin =
+            playerStart
+            + forward * Mathf.Max(0f, npcStartLeadFromPlayerMeters)
+            + npcStartAreaOffset;
+
+        int row = Mathf.Max(0, slotIndex / 3);
+        int col = Mathf.Max(0, slotIndex % 3);
 
         float lateral = (col - 1) * npcLaneSpacingMeters;
-        float back = row * npcRowSpacingMeters;
 
-        return origin - forward * back + right * lateral;
+        // Slightly stagger alternate rows so racers do not form a perfectly
+        // rigid 3-wide wall directly in front of the player.
+        if ((row & 1) == 1)
+            lateral += npcLaneSpacingMeters * 0.5f;
+
+        float forwardOffset = row * Mathf.Max(0.01f, npcRowSpacingMeters);
+
+        Vector3 desiredPos = npcGridOrigin + forward * forwardOffset + right * lateral;
+        return ResolveSafeStartPosition(desiredPos, forward);
     }
 
     public Quaternion GetNpcStartSlotRotation()
@@ -2940,9 +2983,10 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         Vector3 forward = StartForward.sqrMagnitude > 0.0001f ? StartForward : transform.forward;
         Vector3 safeStartPos = ResolveSafeStartPosition(startPos, forward);
 
-        Rigidbody playerRb = playerRoot.GetComponentInParent<Rigidbody>();
+        Rigidbody playerRb = FindPlayerComponent<Rigidbody>(playerRoot);
         if (playerRb != null)
         {
+            playerRb.isKinematic = false;
             playerRb.linearVelocity = Vector3.zero;
             playerRb.angularVelocity = Vector3.zero;
         }
@@ -2952,14 +2996,19 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         if (alignPlayerToStartOnBegin)
         {
             Vector3 flatForward = Vector3.ProjectOnPlane(forward, Vector3.up);
+            if (flatForward.sqrMagnitude <= 0.0001f)
+                flatForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+
             if (flatForward.sqrMagnitude > 0.0001f)
                 playerRoot.transform.rotation = Quaternion.LookRotation(flatForward.normalized, Vector3.up);
         }
 
+        Physics.SyncTransforms();
+
         if (_activePlayerSkiController != null)
         {
             _activePlayerSkiController.ResetStackStateSilently(snapUpright: true, forwardHint: forward);
-            _activePlayerSkiController.SnapToGroundClearance(resetDownwardVelocity: true, iterations: 3);
+            _activePlayerSkiController.SnapToGroundClearance(resetDownwardVelocity: true, iterations: 4);
         }
     }
 
@@ -2969,13 +3018,20 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
             return;
 
         if (_activePlayerWalkingController == null)
-            _activePlayerWalkingController = playerRoot.GetComponentInParent<WalkingController>();
-
-        if (_activePlayerWalkingController != null)
-            _activePlayerWalkingController.ForceEnterSkiMode();
+            _activePlayerWalkingController = FindPlayerComponent<WalkingController>(playerRoot);
 
         if (_activePlayerSkiController == null)
-            _activePlayerSkiController = playerRoot.GetComponentInParent<SkiController>();
+            _activePlayerSkiController = FindPlayerComponent<SkiController>(playerRoot);
+
+        if (_activePlayerWalkingController != null)
+        {
+            _activePlayerWalkingController.ControlsEnabled = true;
+            _activePlayerWalkingController.ClearExternalMove();
+            _activePlayerWalkingController.ForceEnterSkiMode();
+        }
+
+        if (_activePlayerSkiController != null)
+            _activePlayerSkiController.enabled = true;
 
         Vector3 forward = StartForward.sqrMagnitude > 0.0001f ? StartForward : transform.forward;
         if (_activePlayerSkiController != null)
@@ -3001,16 +3057,21 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
 
         if (_activePlayerWalkingController != null)
         {
+            _activePlayerWalkingController.ControlsEnabled = true;
             _activePlayerWalkingController.ClearExternalMove();
             _activePlayerWalkingController.ForceEnterSkiMode();
         }
 
         if (_activePlayerSkiController != null)
+        {
+            _activePlayerSkiController.enabled = true;
             _activePlayerSkiController.ResetStackStateSilently(snapUpright: true, forwardHint: _countdownStartPlayerRotation * Vector3.forward);
+        }
 
-        Rigidbody playerRb = _activePlayerRoot.GetComponentInParent<Rigidbody>();
+        Rigidbody playerRb = FindPlayerComponent<Rigidbody>(_activePlayerRoot);
         if (playerRb != null)
         {
+            playerRb.isKinematic = false;
             playerRb.linearVelocity = Vector3.zero;
             playerRb.angularVelocity = Vector3.zero;
         }
@@ -3018,15 +3079,145 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
 
     private Vector3 ResolveSafeStartPosition(Vector3 desiredStartPos, Vector3 forward)
     {
-        Vector3 probeOrigin = desiredStartPos + Vector3.up * Mathf.Max(0.05f, safeStartGroundProbeUp);
-        if (Physics.Raycast(probeOrigin, Vector3.down, out RaycastHit hit, safeStartGroundProbeUp + safeStartGroundProbeDown, safeStartGroundMask, QueryTriggerInteraction.Ignore))
+        Vector3 flatForward = Vector3.ProjectOnPlane(forward, Vector3.up);
+        if (flatForward.sqrMagnitude <= 0.0001f)
+            flatForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+
+        if (flatForward.sqrMagnitude <= 0.0001f)
+            flatForward = Vector3.forward;
+
+        flatForward.Normalize();
+
+        float probeUp = Mathf.Max(safeStartGroundProbeUp, 30f);
+        float probeDown = Mathf.Max(safeStartGroundProbeDown, 60f);
+        float hover = Mathf.Max(0f, safeStartHoverHeight);
+        float sphereRadius = Mathf.Clamp(Mathf.Max(0.15f, hover), 0.15f, 0.75f);
+
+        Vector3 probeOrigin = new Vector3(desiredStartPos.x, desiredStartPos.y + probeUp, desiredStartPos.z);
+        float probeDistance = probeUp + probeDown;
+
+        if (Physics.SphereCast(
+                probeOrigin,
+                sphereRadius,
+                Vector3.down,
+                out RaycastHit sphereHit,
+                probeDistance,
+                safeStartGroundMask,
+                QueryTriggerInteraction.Ignore))
         {
-            Vector3 grounded = hit.point + hit.normal * Mathf.Max(0f, safeStartHoverHeight);
-            grounded += Vector3.ProjectOnPlane(forward, Vector3.up).normalized * 0.05f;
+            Vector3 grounded = sphereHit.point + sphereHit.normal * hover;
+            grounded += flatForward * 0.05f;
             return grounded;
         }
 
-        return desiredStartPos + Vector3.up * Mathf.Max(0f, safeStartHoverHeight);
+        if (Physics.Raycast(
+                probeOrigin,
+                Vector3.down,
+                out RaycastHit rayHit,
+                probeDistance,
+                safeStartGroundMask,
+                QueryTriggerInteraction.Ignore))
+        {
+            Vector3 grounded = rayHit.point + rayHit.normal * hover;
+            grounded += flatForward * 0.05f;
+            return grounded;
+        }
+
+        if (TrySampleTerrainHeight(desiredStartPos, out float terrainY))
+            return new Vector3(desiredStartPos.x, terrainY + hover, desiredStartPos.z) + flatForward * 0.05f;
+
+        return desiredStartPos + Vector3.up * hover;
+    }
+
+    private void EnsurePlayerRaceControlEnabled(GameObject playerRoot)
+    {
+        if (playerRoot == null)
+            return;
+
+        if (_activePlayerWalkingController == null)
+            _activePlayerWalkingController = FindPlayerComponent<WalkingController>(playerRoot);
+
+        if (_activePlayerSkiController == null)
+            _activePlayerSkiController = FindPlayerComponent<SkiController>(playerRoot);
+
+        if (_activePlayerWalkingController != null)
+        {
+            _activePlayerWalkingController.ControlsEnabled = true;
+            _activePlayerWalkingController.ClearExternalMove();
+            _activePlayerWalkingController.ForceEnterSkiMode();
+        }
+
+        if (_activePlayerSkiController != null)
+        {
+            _activePlayerSkiController.enabled = true;
+
+            Vector3 forward = StartForward.sqrMagnitude > 0.0001f ? StartForward : playerRoot.transform.forward;
+            _activePlayerSkiController.ResetStackStateSilently(snapUpright: true, forwardHint: forward);
+        }
+
+        Rigidbody rb = FindPlayerComponent<Rigidbody>(playerRoot);
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.WakeUp();
+        }
+
+        Physics.SyncTransforms();
+
+        if (_activePlayerSkiController != null)
+            _activePlayerSkiController.SnapToGroundClearance(resetDownwardVelocity: true, iterations: 3);
+    }
+
+    private static T FindPlayerComponent<T>(GameObject playerRoot) where T : Component
+    {
+        if (playerRoot == null)
+            return null;
+
+        T component = playerRoot.GetComponent<T>();
+        if (component != null)
+            return component;
+
+        component = playerRoot.GetComponentInParent<T>();
+        if (component != null)
+            return component;
+
+        return playerRoot.GetComponentInChildren<T>(true);
+    }
+
+    private static bool TrySampleTerrainHeight(Vector3 worldPosition, out float height)
+    {
+        Terrain[] terrains = Terrain.activeTerrains;
+
+        for (int i = 0; i < terrains.Length; i++)
+        {
+            Terrain terrain = terrains[i];
+            if (terrain == null || terrain.terrainData == null)
+                continue;
+
+            Vector3 terrainPos = terrain.transform.position;
+            Vector3 terrainSize = terrain.terrainData.size;
+
+            bool insideX = worldPosition.x >= terrainPos.x && worldPosition.x <= terrainPos.x + terrainSize.x;
+            bool insideZ = worldPosition.z >= terrainPos.z && worldPosition.z <= terrainPos.z + terrainSize.z;
+
+            if (!insideX || !insideZ)
+                continue;
+
+            height = terrain.SampleHeight(worldPosition) + terrainPos.y;
+            return true;
+        }
+
+        Terrain active = Terrain.activeTerrain;
+        if (active != null && active.terrainData != null)
+        {
+            height = active.SampleHeight(worldPosition) + active.transform.position.y;
+            return true;
+        }
+
+        height = worldPosition.y;
+        return false;
     }
 
     private static string GetBindingDisplay(InputActionReference actionReference, string fallback)

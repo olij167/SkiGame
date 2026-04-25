@@ -535,7 +535,7 @@ namespace SkiGame.Progression
                         case QuestInteractionTargetType.DismountLift: return "PRESS E";
                         case QuestInteractionTargetType.EquipSkis: return "HOLD Q";
                         case QuestInteractionTargetType.UnequipSkis: return "HOLD Q";
-                        case QuestInteractionTargetType.ClaimDefaultPass: return "PRESS E, THEN CLAIM";
+                        case QuestInteractionTargetType.ClaimDefaultPass: return "CLAIM PASS";
                         case QuestInteractionTargetType.Stacked: return "TAKE A SPILL";
                         default: return "INTERACT";
                     }
@@ -600,7 +600,63 @@ namespace SkiGame.Progression
             if (string.IsNullOrWhiteSpace(second))
                 return first;
 
+            return JoinPromptLabels(first, second);
+        }
+
+        private static string JoinPromptLabels(string first, string second)
+        {
+            first = first?.Trim() ?? string.Empty;
+            second = second?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(first))
+                return second;
+
+            if (string.IsNullOrWhiteSpace(second))
+                return first;
+
+            var secondFragments = SplitPromptFragments(second);
+            if (secondFragments.Count > 0)
+            {
+                string trailingFirst = GetTrailingPromptFragment(first);
+                if (!string.IsNullOrWhiteSpace(trailingFirst) &&
+                    string.Equals(trailingFirst, secondFragments[0], StringComparison.OrdinalIgnoreCase))
+                {
+                    secondFragments.RemoveAt(0);
+                    if (secondFragments.Count == 0)
+                        return first;
+
+                    second = string.Join(", THEN ", secondFragments);
+                }
+            }
+
             return $"{first}, THEN {second}";
+        }
+
+        private static string GetTrailingPromptFragment(string prompt)
+        {
+            var fragments = SplitPromptFragments(prompt);
+            return fragments.Count > 0 ? fragments[fragments.Count - 1] : string.Empty;
+        }
+
+        private static List<string> SplitPromptFragments(string prompt)
+        {
+            var fragments = new List<string>();
+            if (string.IsNullOrWhiteSpace(prompt))
+                return fragments;
+
+            string normalized = prompt.Replace(", THEN ", ",");
+            string[] parts = normalized.Split(',');
+            for (int i = 0; i < parts.Length; i++)
+            {
+                string part = parts[i]?.Trim() ?? string.Empty;
+                if (part.StartsWith("THEN ", StringComparison.OrdinalIgnoreCase))
+                    part = part.Substring(5).Trim();
+
+                if (!string.IsNullOrWhiteSpace(part))
+                    fragments.Add(part);
+            }
+
+            return fragments;
         }
 
         private static QuestObjectiveCondition BuildInteractionCondition(QuestInteractionTargetType interaction, int count)

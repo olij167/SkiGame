@@ -433,6 +433,41 @@ namespace SkiGame.EditorTools
             };
         }
 
+        private static SkiController.AerialOrientationModifier DrawOrientationRequirementField(string label, SkiController.AerialOrientationModifier value)
+        {
+            SkiController.AerialOrientationModifier[] values =
+            {
+                SkiController.AerialOrientationModifier.None,
+                SkiController.AerialOrientationModifier.Switch,
+                SkiController.AerialOrientationModifier.Inverted,
+                SkiController.AerialOrientationModifier.OnSide,
+                SkiController.AerialOrientationModifier.ChestDown,
+                SkiController.AerialOrientationModifier.ChestUp,
+                SkiController.AerialOrientationModifier.Sideways,
+                SkiController.AerialOrientationModifier.Rising,
+                SkiController.AerialOrientationModifier.Diving
+            };
+            string[] labels =
+            {
+                "None",
+                "Switch",
+                "Inverted",
+                "On Side",
+                "Chest Down",
+                "Chest Up",
+                "Travel Sideways (Legacy)",
+                "Motion Rising",
+                "Motion Diving"
+            };
+
+            int index = System.Array.IndexOf(values, value);
+            if (index < 0)
+                index = 0;
+
+            index = EditorGUILayout.Popup(label, index, labels);
+            return values[Mathf.Clamp(index, 0, values.Length - 1)];
+        }
+
         private static void DrawTrickRequirementEditor(TrickRequirementDefinition requirement)
         {
             if (requirement == null)
@@ -450,7 +485,7 @@ namespace SkiGame.EditorTools
             requirement.requiresPoseRotationCombo = EditorGUILayout.Toggle("Requires Pose + Rotation", requirement.requiresPoseRotationCombo);
             requirement.requiredPoseFamily = (SkiController.AerialPoseFamily)EditorGUILayout.EnumPopup("Pose Family", requirement.requiredPoseFamily);
             requirement.requiredPoseShape = (SkiController.AerialPoseShape)EditorGUILayout.EnumPopup("Pose Shape", requirement.requiredPoseShape);
-            requirement.requiredOrientationModifier = (SkiController.AerialOrientationModifier)EditorGUILayout.EnumPopup("Orientation Modifier", requirement.requiredOrientationModifier);
+            requirement.requiredOrientationModifier = DrawOrientationRequirementField("Required Orientation", requirement.requiredOrientationModifier);
             requirement.explicitPoseLabel = EditorGUILayout.TextField("Explicit Pose Label", requirement.explicitPoseLabel);
             requirement.requiresSwitchLanding = EditorGUILayout.Toggle("Requires Switch Landing", requirement.requiresSwitchLanding);
             requirement.requiresNoseLanding = EditorGUILayout.Toggle("Requires Nose Landing", requirement.requiresNoseLanding);

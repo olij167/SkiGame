@@ -21,7 +21,7 @@ public struct AudioCategoryFallbackRule
 
 [CreateAssetMenu(
     fileName = "AudioInteractionMatrix",
-    menuName = "Ski Game/Audio/Interaction Matrix")]
+    menuName = "SkiGame/Audio/Interaction Matrix")]
 public sealed class AudioInteractionMatrixSO : ScriptableObject
 {
     [SerializeField] private List<AudioInteractionProfileSO> exactProfiles = new List<AudioInteractionProfileSO>();

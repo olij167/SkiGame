@@ -59,9 +59,12 @@
                 <ui:Button name="Tab_Poles" text="Poles" class="tab-btn" />
                 <ui:Button name="Tab_Hats" text="Hats" class="tab-btn" />
                 <ui:Button name="Tab_Jackets" text="Jackets" class="tab-btn" />
+                <ui:Button name="Tab_Gloves" text="Gloves" class="tab-btn" />
+                <ui:Button name="Tab_Boots" text="Boots" class="tab-btn" />
+                <ui:Button name="Tab_Accessories" text="Accessories" class="tab-btn" />
             </ui:VisualElement>
             <ui:VisualElement name="Panel_Preview" class="preview-panel" style="justify-content: space-between; align-self: auto; background-color: rgba(14, 22, 36, 0); border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0;">
-                <ui:Label name="Lbl_PreviewHint" text="Drag to rotate" class="preview-hint" style="align-self: auto; justify-content: flex-start; color: rgba(10, 16, 28, 0.95);" />
+                <ui:Label name="Lbl_PreviewHint" text="Drag to rotate - Scroll to zoom" class="preview-hint" style="align-self: auto; justify-content: flex-start; -unity-text-outline-width: 0.2px; -unity-text-outline-color: rgb(0, 0, 0); color: rgba(226, 235, 246, 0.85); font-size: 14px; -unity-font-style: normal;" />
             </ui:VisualElement>
             <ui:VisualElement name="Panel_Loadout" class="loadout-panel">
                 <ui:Label text="Loadout" class="panel-title" />
@@ -242,6 +245,96 @@
                         <ui:Button name="Btn_BuyJacketPreviewItem" text="Buy Jacket" class="loadout-buy-btn is-hidden" />
                         <ui:Button name="Btn_BuyJacketPreviewPattern" text="Buy Pattern" class="loadout-buy-btn is-hidden" />
                         <ui:Button name="Btn_BuyJacketPreviewBoth" text="Buy Both" class="loadout-buy-btn primary is-hidden" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="Row_Gloves" class="gear-mini-row">
+                    <ui:VisualElement name="Slot_GlovesGear" class="gear-mini-header">
+                        <ui:Label text="Gloves" class="loadout-title" />
+                        <ui:Label name="Lbl_GlovesGearName" text="None" class="loadout-sub gear-name" />
+                        <ui:VisualElement class="gear-mini-header-actions">
+                            <ui:Label name="Lbl_GlovesState" text="EQUIPPED" class="loadout-badge is-equipped" />
+                            <ui:Button name="Btn_ClearGlovesPreview" text="X" class="preview-clear-btn loadout_clear_btn" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="gear-mini-body">
+                        <ui:VisualElement class="gear-mini-color-slot">
+                            <ui:VisualElement class="gear-mini-color-main">
+                                <ui:VisualElement name="Swatch_GlovesColor" class="gear-mini-color" />
+                                <ui:Button name="Btn_ResetGlovesColor" text="↺" class="reset-btn" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="Slot_GlovesPattern" class="gear-mini-pattern">
+                            <ui:VisualElement name="Icon_GlovesPattern" class="pattern-thumb-wrap" style="height: 38px;" />
+                            <ui:VisualElement style="flex-grow: 1;">
+                                <ui:Button name="Btn_ResetGlovesPattern" text="↺" class="reset-btn pattern-reset-btn" />
+                                <ui:Label name="Lbl_GlovesPatternName" text="Default" class="loadout-sub pattern-name" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="Row_GlovesPurchaseActions" class="loadout-purchase-row is-hidden">
+                        <ui:Button name="Btn_BuyGlovesPreviewItem" text="Buy Gloves" class="loadout-buy-btn is-hidden" />
+                        <ui:Button name="Btn_BuyGlovesPreviewPattern" text="Buy Pattern" class="loadout-buy-btn is-hidden" />
+                        <ui:Button name="Btn_BuyGlovesPreviewBoth" text="Buy Both" class="loadout-buy-btn primary is-hidden" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="Row_Boots" class="gear-mini-row">
+                    <ui:VisualElement name="Slot_BootsGear" class="gear-mini-header">
+                        <ui:Label text="Boots" class="loadout-title" />
+                        <ui:Label name="Lbl_BootsGearName" text="None" class="loadout-sub gear-name" />
+                        <ui:VisualElement class="gear-mini-header-actions">
+                            <ui:Label name="Lbl_BootsState" text="EQUIPPED" class="loadout-badge is-equipped" />
+                            <ui:Button name="Btn_ClearBootsPreview" text="X" class="preview-clear-btn loadout_clear_btn" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="gear-mini-body">
+                        <ui:VisualElement class="gear-mini-color-slot">
+                            <ui:VisualElement class="gear-mini-color-main">
+                                <ui:VisualElement name="Swatch_BootsColor" class="gear-mini-color" />
+                                <ui:Button name="Btn_ResetBootsColor" text="↺" class="reset-btn" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="Slot_BootsPattern" class="gear-mini-pattern">
+                            <ui:VisualElement name="Icon_BootsPattern" class="pattern-thumb-wrap" style="height: 38px;" />
+                            <ui:VisualElement style="flex-grow: 1;">
+                                <ui:Button name="Btn_ResetBootsPattern" text="↺" class="reset-btn pattern-reset-btn" />
+                                <ui:Label name="Lbl_BootsPatternName" text="Default" class="loadout-sub pattern-name" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="Row_BootsPurchaseActions" class="loadout-purchase-row is-hidden">
+                        <ui:Button name="Btn_BuyBootsPreviewItem" text="Buy Boots" class="loadout-buy-btn is-hidden" />
+                        <ui:Button name="Btn_BuyBootsPreviewPattern" text="Buy Pattern" class="loadout-buy-btn is-hidden" />
+                        <ui:Button name="Btn_BuyBootsPreviewBoth" text="Buy Both" class="loadout-buy-btn primary is-hidden" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="Row_Accessory" class="gear-mini-row">
+                    <ui:VisualElement name="Slot_AccessoryGear" class="gear-mini-header">
+                        <ui:Label text="Accessory" class="loadout-title" />
+                        <ui:Label name="Lbl_AccessoryGearName" text="None" class="loadout-sub gear-name" />
+                        <ui:VisualElement class="gear-mini-header-actions">
+                            <ui:Label name="Lbl_AccessoryState" text="EQUIPPED" class="loadout-badge is-equipped" />
+                            <ui:Button name="Btn_ClearAccessoryPreview" text="X" class="preview-clear-btn loadout_clear_btn" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="gear-mini-body">
+                        <ui:VisualElement class="gear-mini-color-slot">
+                            <ui:VisualElement class="gear-mini-color-main">
+                                <ui:VisualElement name="Swatch_AccessoryColor" class="gear-mini-color" />
+                                <ui:Button name="Btn_ResetAccessoryColor" text="↺" class="reset-btn" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="Slot_AccessoryPattern" class="gear-mini-pattern">
+                            <ui:VisualElement name="Icon_AccessoryPattern" class="pattern-thumb-wrap" style="height: 38px;" />
+                            <ui:VisualElement style="flex-grow: 1;">
+                                <ui:Button name="Btn_ResetAccessoryPattern" text="↺" class="reset-btn pattern-reset-btn" />
+                                <ui:Label name="Lbl_AccessoryPatternName" text="Default" class="loadout-sub pattern-name" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="Row_AccessoryPurchaseActions" class="loadout-purchase-row is-hidden">
+                        <ui:Button name="Btn_BuyAccessoryPreviewItem" text="Buy Accessory" class="loadout-buy-btn is-hidden" />
+                        <ui:Button name="Btn_BuyAccessoryPreviewPattern" text="Buy Pattern" class="loadout-buy-btn is-hidden" />
+                        <ui:Button name="Btn_BuyAccessoryPreviewBoth" text="Buy Both" class="loadout-buy-btn primary is-hidden" />
                     </ui:VisualElement>
                 </ui:VisualElement>
             </ui:VisualElement>

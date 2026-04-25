@@ -28,6 +28,9 @@ public class CustomizationShopViewBinder : MonoBehaviour
     private Button _tabPoles;
     private Button _tabHats;
     private Button _tabJackets;
+    private Button _tabGloves;
+    private Button _tabBoots;
+    private Button _tabAccessories;
 
     // Header
     private Label _lblCurrency;
@@ -68,33 +71,55 @@ public class CustomizationShopViewBinder : MonoBehaviour
     private VisualElement _slotJacketGear;
     private VisualElement _slotJacketPattern;
     private VisualElement _swatchJacketColor;
+    private VisualElement _rowGloves;
+    private VisualElement _rowBoots;
+    private VisualElement _rowAccessory;
+    private VisualElement _slotGlovesGear;
+    private VisualElement _slotBootsGear;
+    private VisualElement _slotAccessoryGear;
+    private VisualElement _slotGlovesPattern;
+    private VisualElement _slotBootsPattern;
+    private VisualElement _slotAccessoryPattern;
+    private VisualElement _swatchGlovesColor;
+    private VisualElement _swatchBootsColor;
+    private VisualElement _swatchAccessoryColor;
     //private Button _slotJacketPattern;
 
     // Optional: make entire row clickable (covers empty space/color blocks)
     private VisualElement _rowSkis, _rowPoles, _rowHat, _rowJacket, _rowEyes;
     // Optional labels in loadout
     private Label _lblSkisGearName, _lblPolesGearName, _lblHatGearName, _lblJacketGearName;
+    private Label _lblGlovesGearName, _lblBootsGearName, _lblAccessoryGearName;
     private Label _lblSkisPatternName, _lblPolesPatternName, _lblHatPatternName, _lblJacketPatternName;
+    private Label _lblGlovesPatternName, _lblBootsPatternName, _lblAccessoryPatternName;
 
     private Label _lblEyeName;
     private Image _imgEyeIcon;
 
     private VisualElement _iconSkisPattern, _iconPolesPattern, _iconHatPattern, _iconJacketPattern;
+    private VisualElement _iconGlovesPattern, _iconBootsPattern, _iconAccessoryPattern;
 
     // Loadout state badges
     private Label _lblEyeState, _lblSkisState, _lblPolesState, _lblHatState, _lblJacketState;
+    private Label _lblGlovesState, _lblBootsState, _lblAccessoryState;
 
     private Button _btnResetSkisColor, _btnResetPolesColor, _btnResetHatColor, _btnResetJacketColor;
+    private Button _btnResetGlovesColor, _btnResetBootsColor, _btnResetAccessoryColor;
     private Button _btnResetSkisSecondaryColor, _btnResetPolesSecondaryColor, _btnResetHatSecondaryColor, _btnResetJacketSecondaryColor;
     private Button _btnResetSkisPattern, _btnResetPolesPattern, _btnResetHatPattern, _btnResetJacketPattern;
+    private Button _btnResetGlovesPattern, _btnResetBootsPattern, _btnResetAccessoryPattern;
 
     private Button _btnClearEyePreview;
     private Button _btnClearSkisPreview;
     private Button _btnClearPolesPreview;
     private Button _btnClearHatPreview;
     private Button _btnClearJacketPreview;
+    private Button _btnClearGlovesPreview;
+    private Button _btnClearBootsPreview;
+    private Button _btnClearAccessoryPreview;
 
     private VisualElement _rowEyesPurchaseActions, _rowSkisPurchaseActions, _rowPolesPurchaseActions, _rowHatPurchaseActions, _rowJacketPurchaseActions;
+    private VisualElement _rowGlovesPurchaseActions, _rowBootsPurchaseActions, _rowAccessoryPurchaseActions;
 
     private Button _btnBuyEyePreview;
 
@@ -102,9 +127,15 @@ public class CustomizationShopViewBinder : MonoBehaviour
     private Button _btnBuyPolesPreviewItem, _btnBuyPolesPreviewPattern, _btnBuyPolesPreviewBoth;
     private Button _btnBuyHatPreviewItem, _btnBuyHatPreviewPattern, _btnBuyHatPreviewBoth;
     private Button _btnBuyJacketPreviewItem, _btnBuyJacketPreviewPattern, _btnBuyJacketPreviewBoth;
+    private Button _btnBuyGlovesPreviewItem, _btnBuyGlovesPreviewPattern, _btnBuyGlovesPreviewBoth;
+    private Button _btnBuyBootsPreviewItem, _btnBuyBootsPreviewPattern, _btnBuyBootsPreviewBoth;
+    private Button _btnBuyAccessoryPreviewItem, _btnBuyAccessoryPreviewPattern, _btnBuyAccessoryPreviewBoth;
 
     private SliderInt _sldEyeSize;
     private Label _lblEyeSizeValue;
+    private CameraController _shopCameraController;
+    private bool _eyeSizeSliderInteractionHooksRegistered;
+    private bool _eyeSizeSliderInteractionActive;
 
     private VisualElement _rowSkisExtraColors;
     private VisualElement _rowPolesExtraColors;
@@ -185,7 +216,7 @@ public class CustomizationShopViewBinder : MonoBehaviour
     private IReadOnlyList<CustomizationOptionSO> _shopSource;
     private IReadOnlyList<CustomizationOptionSO> _inventorySource;
 
-    private enum ColorTarget { None, Skin, Eye, EyeOutline, Skis, Poles, Hat, Jacket, ExtraChannel }
+    private enum ColorTarget { None, Skin, Eye, EyeOutline, Skis, Poles, Hat, Jacket, Gloves, Boots, Accessory, ExtraChannel }
     private ColorTarget _colorTarget = ColorTarget.None;
     private PatternTarget _extraColorPatternTarget;
     private string _extraColorChannelId;
@@ -209,10 +240,16 @@ public class CustomizationShopViewBinder : MonoBehaviour
         RefreshAll();
     }
 
-    private void OnEnable() => RefreshAll();
+    private void OnEnable()
+    {
+        ResolveShopCameraController();
+        RefreshAll();
+    }
 
     private void OnDestroy()
     {
+        SetEyeSizeSliderOrbitLock(false);
+
         if (controller != null)
             controller.OnChanged -= HandleControllerChanged;
     }
@@ -255,6 +292,9 @@ public class CustomizationShopViewBinder : MonoBehaviour
         _tabPoles = _root.Q<Button>("Tab_Poles");
         _tabHats = _root.Q<Button>("Tab_Hats");
         _tabJackets = _root.Q<Button>("Tab_Jackets");
+        _tabGloves = _root.Q<Button>("Tab_Gloves");
+        _tabBoots = _root.Q<Button>("Tab_Boots");
+        _tabAccessories = _root.Q<Button>("Tab_Accessories");
 
 
         // Details
@@ -281,6 +321,9 @@ public class CustomizationShopViewBinder : MonoBehaviour
         _rowPoles = _root.Q<VisualElement>("Row_Poles");
         _rowHat = _root.Q<VisualElement>("Row_Hat");
         _rowJacket = _root.Q<VisualElement>("Row_Jacket");
+        _rowGloves = _root.Q<VisualElement>("Row_Gloves");
+        _rowBoots = _root.Q<VisualElement>("Row_Boots");
+        _rowAccessory = _root.Q<VisualElement>("Row_Accessory");
 
         _slotSkisGear = _root.Q<VisualElement>("Slot_SkisGear");
         _slotSkisPattern = _root.Q<VisualElement>("Slot_SkisPattern");
@@ -300,17 +343,32 @@ public class CustomizationShopViewBinder : MonoBehaviour
         _slotJacketGear = _root.Q<VisualElement>("Slot_JacketGear");
         _slotJacketPattern = _root.Q<VisualElement>("Slot_JacketPattern");
         _swatchJacketColor = _root.Q<VisualElement>("Swatch_JacketColor");
+        _slotGlovesGear = _root.Q<VisualElement>("Slot_GlovesGear");
+        _slotBootsGear = _root.Q<VisualElement>("Slot_BootsGear");
+        _slotAccessoryGear = _root.Q<VisualElement>("Slot_AccessoryGear");
+        _slotGlovesPattern = _root.Q<VisualElement>("Slot_GlovesPattern");
+        _slotBootsPattern = _root.Q<VisualElement>("Slot_BootsPattern");
+        _slotAccessoryPattern = _root.Q<VisualElement>("Slot_AccessoryPattern");
+        _swatchGlovesColor = _root.Q<VisualElement>("Swatch_GlovesColor");
+        _swatchBootsColor = _root.Q<VisualElement>("Swatch_BootsColor");
+        _swatchAccessoryColor = _root.Q<VisualElement>("Swatch_AccessoryColor");
         //_slotJacketPattern = _root.Q<Button>("Slot_JacketPattern");
 
         _lblSkisGearName = _root.Q<Label>("Lbl_SkisGearName");
         _lblPolesGearName = _root.Q<Label>("Lbl_PolesGearName");
         _lblHatGearName = _root.Q<Label>("Lbl_HatGearName");
         _lblJacketGearName = _root.Q<Label>("Lbl_JacketGearName");
+        _lblGlovesGearName = _root.Q<Label>("Lbl_GlovesGearName");
+        _lblBootsGearName = _root.Q<Label>("Lbl_BootsGearName");
+        _lblAccessoryGearName = _root.Q<Label>("Lbl_AccessoryGearName");
 
         _lblSkisPatternName = _root.Q<Label>("Lbl_SkisPatternName");
         _lblPolesPatternName = _root.Q<Label>("Lbl_PolesPatternName");
         _lblHatPatternName = _root.Q<Label>("Lbl_HatPatternName");
         _lblJacketPatternName = _root.Q<Label>("Lbl_JacketPatternName");
+        _lblGlovesPatternName = _root.Q<Label>("Lbl_GlovesPatternName");
+        _lblBootsPatternName = _root.Q<Label>("Lbl_BootsPatternName");
+        _lblAccessoryPatternName = _root.Q<Label>("Lbl_AccessoryPatternName");
 
         _lblEyeName = _root.Q<Label>("Lbl_EyeName");
         _imgEyeIcon = _root.Q<Image>("Icon_EyeIcon");
@@ -319,17 +377,26 @@ public class CustomizationShopViewBinder : MonoBehaviour
         _iconPolesPattern = _root.Q<VisualElement>("Icon_PolesPattern");
         _iconHatPattern = _root.Q<VisualElement>("Icon_HatPattern");
         _iconJacketPattern = _root.Q<VisualElement>("Icon_JacketPattern");
+        _iconGlovesPattern = _root.Q<VisualElement>("Icon_GlovesPattern");
+        _iconBootsPattern = _root.Q<VisualElement>("Icon_BootsPattern");
+        _iconAccessoryPattern = _root.Q<VisualElement>("Icon_AccessoryPattern");
 
         _lblEyeState = _root.Q<Label>("Lbl_EyeState");
         _lblSkisState = _root.Q<Label>("Lbl_SkisState");
         _lblPolesState = _root.Q<Label>("Lbl_PolesState");
         _lblHatState = _root.Q<Label>("Lbl_HatState");
         _lblJacketState = _root.Q<Label>("Lbl_JacketState");
+        _lblGlovesState = _root.Q<Label>("Lbl_GlovesState");
+        _lblBootsState = _root.Q<Label>("Lbl_BootsState");
+        _lblAccessoryState = _root.Q<Label>("Lbl_AccessoryState");
 
         _btnResetSkisColor = _root.Q<Button>("Btn_ResetSkisColor");
         _btnResetPolesColor = _root.Q<Button>("Btn_ResetPolesColor");
         _btnResetHatColor = _root.Q<Button>("Btn_ResetHatColor");
         _btnResetJacketColor = _root.Q<Button>("Btn_ResetJacketColor");
+        _btnResetGlovesColor = _root.Q<Button>("Btn_ResetGlovesColor");
+        _btnResetBootsColor = _root.Q<Button>("Btn_ResetBootsColor");
+        _btnResetAccessoryColor = _root.Q<Button>("Btn_ResetAccessoryColor");
 
         _btnResetSkisSecondaryColor = _root.Q<Button>("Btn_ResetSkisSecondaryColor");
         _btnResetPolesSecondaryColor = _root.Q<Button>("Btn_ResetPolesSecondaryColor");
@@ -340,18 +407,27 @@ public class CustomizationShopViewBinder : MonoBehaviour
         _btnResetPolesPattern = _root.Q<Button>("Btn_ResetPolesPattern");
         _btnResetHatPattern = _root.Q<Button>("Btn_ResetHatPattern");
         _btnResetJacketPattern = _root.Q<Button>("Btn_ResetJacketPattern");
+        _btnResetGlovesPattern = _root.Q<Button>("Btn_ResetGlovesPattern");
+        _btnResetBootsPattern = _root.Q<Button>("Btn_ResetBootsPattern");
+        _btnResetAccessoryPattern = _root.Q<Button>("Btn_ResetAccessoryPattern");
 
         _btnClearEyePreview = _root.Q<Button>("Btn_ClearEyePreview");
         _btnClearSkisPreview = _root.Q<Button>("Btn_ClearSkisPreview");
         _btnClearPolesPreview = _root.Q<Button>("Btn_ClearPolesPreview");
         _btnClearHatPreview = _root.Q<Button>("Btn_ClearHatPreview");
         _btnClearJacketPreview = _root.Q<Button>("Btn_ClearJacketPreview");
+        _btnClearGlovesPreview = _root.Q<Button>("Btn_ClearGlovesPreview");
+        _btnClearBootsPreview = _root.Q<Button>("Btn_ClearBootsPreview");
+        _btnClearAccessoryPreview = _root.Q<Button>("Btn_ClearAccessoryPreview");
 
         _rowEyesPurchaseActions = _root.Q<VisualElement>("Row_EyesPurchaseActions");
         _rowSkisPurchaseActions = _root.Q<VisualElement>("Row_SkisPurchaseActions");
         _rowPolesPurchaseActions = _root.Q<VisualElement>("Row_PolesPurchaseActions");
         _rowHatPurchaseActions = _root.Q<VisualElement>("Row_HatPurchaseActions");
         _rowJacketPurchaseActions = _root.Q<VisualElement>("Row_JacketPurchaseActions");
+        _rowGlovesPurchaseActions = _root.Q<VisualElement>("Row_GlovesPurchaseActions");
+        _rowBootsPurchaseActions = _root.Q<VisualElement>("Row_BootsPurchaseActions");
+        _rowAccessoryPurchaseActions = _root.Q<VisualElement>("Row_AccessoryPurchaseActions");
 
         _btnBuyEyePreview = _root.Q<Button>("Btn_BuyEyePreview");
 
@@ -370,6 +446,15 @@ public class CustomizationShopViewBinder : MonoBehaviour
         _btnBuyJacketPreviewItem = _root.Q<Button>("Btn_BuyJacketPreviewItem");
         _btnBuyJacketPreviewPattern = _root.Q<Button>("Btn_BuyJacketPreviewPattern");
         _btnBuyJacketPreviewBoth = _root.Q<Button>("Btn_BuyJacketPreviewBoth");
+        _btnBuyGlovesPreviewItem = _root.Q<Button>("Btn_BuyGlovesPreviewItem");
+        _btnBuyGlovesPreviewPattern = _root.Q<Button>("Btn_BuyGlovesPreviewPattern");
+        _btnBuyGlovesPreviewBoth = _root.Q<Button>("Btn_BuyGlovesPreviewBoth");
+        _btnBuyBootsPreviewItem = _root.Q<Button>("Btn_BuyBootsPreviewItem");
+        _btnBuyBootsPreviewPattern = _root.Q<Button>("Btn_BuyBootsPreviewPattern");
+        _btnBuyBootsPreviewBoth = _root.Q<Button>("Btn_BuyBootsPreviewBoth");
+        _btnBuyAccessoryPreviewItem = _root.Q<Button>("Btn_BuyAccessoryPreviewItem");
+        _btnBuyAccessoryPreviewPattern = _root.Q<Button>("Btn_BuyAccessoryPreviewPattern");
+        _btnBuyAccessoryPreviewBoth = _root.Q<Button>("Btn_BuyAccessoryPreviewBoth");
 
         _sldEyeSize = _root.Q<SliderInt>("Sld_EyeSize");
         _lblEyeSizeValue = _root.Q<Label>("Lbl_EyeSizeValue");
@@ -541,6 +626,9 @@ public class CustomizationShopViewBinder : MonoBehaviour
         if (_tabPoles != null) _tabPoles.clicked += () => { controller.SetCategory(CustomizationOptionType.Poles); RefreshAll(); };
         if (_tabHats != null) _tabHats.clicked += () => { controller.SetCategory(CustomizationOptionType.Hat); RefreshAll(); };
         if (_tabJackets != null) _tabJackets.clicked += () => { controller.SetCategory(CustomizationOptionType.Jacket); RefreshAll(); };
+        if (_tabGloves != null) _tabGloves.clicked += () => { controller.SetCategory(CustomizationOptionType.Gloves); RefreshAll(); };
+        if (_tabBoots != null) _tabBoots.clicked += () => { controller.SetCategory(CustomizationOptionType.Boots); RefreshAll(); };
+        if (_tabAccessories != null) _tabAccessories.clicked += () => { controller.SetCategory(CustomizationOptionType.Accessory); RefreshAll(); };
 
         // Details actions
         if (_btnBuy != null) _btnBuy.clicked += () => { controller.TryBuySelected(); RefreshAll(); };
@@ -550,6 +638,9 @@ public class CustomizationShopViewBinder : MonoBehaviour
         if (_btnResetPolesColor != null) _btnResetPolesColor.clicked += () => { controller.ResetPolesColorToDefault(); RefreshAll(); };
         if (_btnResetHatColor != null) _btnResetHatColor.clicked += () => { controller.ResetHatColorToDefault(); RefreshAll(); };
         if (_btnResetJacketColor != null) _btnResetJacketColor.clicked += () => { controller.ResetJacketColorToDefault(); RefreshAll(); };
+        if (_btnResetGlovesColor != null) _btnResetGlovesColor.clicked += () => { controller.ResetGlovesColorToDefault(); RefreshAll(); };
+        if (_btnResetBootsColor != null) _btnResetBootsColor.clicked += () => { controller.ResetBootsColorToDefault(); RefreshAll(); };
+        if (_btnResetAccessoryColor != null) _btnResetAccessoryColor.clicked += () => { controller.ResetAccessoryColorToDefault(); RefreshAll(); };
 
         if (_btnResetSkisSecondaryColor != null) _btnResetSkisSecondaryColor.clicked += () => { controller.ResetGearExtraColorsToDefault(PatternTarget.Skis); RefreshAll(); };
         if (_btnResetPolesSecondaryColor != null) _btnResetPolesSecondaryColor.clicked += () => { controller.ResetGearExtraColorsToDefault(PatternTarget.Poles); RefreshAll(); };
@@ -560,12 +651,18 @@ public class CustomizationShopViewBinder : MonoBehaviour
         if (_btnResetPolesPattern != null) _btnResetPolesPattern.clicked += () => { controller.ResetPatternToDefault(CustomizationUIController.PatternTarget.Poles); RefreshAll(); };
         if (_btnResetHatPattern != null) _btnResetHatPattern.clicked += () => { controller.ResetPatternToDefault(CustomizationUIController.PatternTarget.Hat); RefreshAll(); };
         if (_btnResetJacketPattern != null) _btnResetJacketPattern.clicked += () => { controller.ResetPatternToDefault(CustomizationUIController.PatternTarget.Jacket); RefreshAll(); };
+        if (_btnResetGlovesPattern != null) _btnResetGlovesPattern.clicked += () => { controller.ResetPatternToDefault(CustomizationUIController.PatternTarget.Gloves); RefreshAll(); };
+        if (_btnResetBootsPattern != null) _btnResetBootsPattern.clicked += () => { controller.ResetPatternToDefault(CustomizationUIController.PatternTarget.Boots); RefreshAll(); };
+        if (_btnResetAccessoryPattern != null) _btnResetAccessoryPattern.clicked += () => { controller.ResetPatternToDefault(CustomizationUIController.PatternTarget.Accessory); RefreshAll(); };
 
         if (_btnClearEyePreview != null) _btnClearEyePreview.clicked += () => { controller.ClearPreviewEye(); RefreshAll(); };
         if (_btnClearSkisPreview != null) _btnClearSkisPreview.clicked += () => { controller.ClearPreviewSkis(); RefreshAll(); };
         if (_btnClearPolesPreview != null) _btnClearPolesPreview.clicked += () => { controller.ClearPreviewPoles(); RefreshAll(); };
         if (_btnClearHatPreview != null) _btnClearHatPreview.clicked += () => { controller.ClearPreviewHat(); RefreshAll(); };
         if (_btnClearJacketPreview != null) _btnClearJacketPreview.clicked += () => { controller.ClearPreviewJacket(); RefreshAll(); };
+        if (_btnClearGlovesPreview != null) _btnClearGlovesPreview.clicked += () => { controller.ClearPreviewGloves(); RefreshAll(); };
+        if (_btnClearBootsPreview != null) _btnClearBootsPreview.clicked += () => { controller.ClearPreviewBoots(); RefreshAll(); };
+        if (_btnClearAccessoryPreview != null) _btnClearAccessoryPreview.clicked += () => { controller.ClearPreviewAccessory(); RefreshAll(); };
 
         // Loadout: gear selection
         // Eyes: click anywhere on the row opens Eyes category
@@ -574,12 +671,18 @@ public class CustomizationShopViewBinder : MonoBehaviour
         MakeClickable(_rowPoles, () => { controller.SetCategory(CustomizationOptionType.Poles); RefreshAll(); });
         MakeClickable(_rowHat, () => { controller.SetCategory(CustomizationOptionType.Hat); RefreshAll(); });
         MakeClickable(_rowJacket, () => { controller.SetCategory(CustomizationOptionType.Jacket); RefreshAll(); });
+        MakeClickable(_rowGloves, () => { controller.SetCategory(CustomizationOptionType.Gloves); RefreshAll(); });
+        MakeClickable(_rowBoots, () => { controller.SetCategory(CustomizationOptionType.Boots); RefreshAll(); });
+        MakeClickable(_rowAccessory, () => { controller.SetCategory(CustomizationOptionType.Accessory); RefreshAll(); });
 
         // Also make just the “top line” elements clickable (if you prefer narrower hit area)
         MakeClickable(_slotSkisGear, () => { controller.SetCategory(CustomizationOptionType.Skis); RefreshAll(); });
         MakeClickable(_slotPolesGear, () => { controller.SetCategory(CustomizationOptionType.Poles); RefreshAll(); });
         MakeClickable(_slotHatGear, () => { controller.SetCategory(CustomizationOptionType.Hat); RefreshAll(); });
         MakeClickable(_slotJacketGear, () => { controller.SetCategory(CustomizationOptionType.Jacket); RefreshAll(); });
+        MakeClickable(_slotGlovesGear, () => { controller.SetCategory(CustomizationOptionType.Gloves); RefreshAll(); });
+        MakeClickable(_slotBootsGear, () => { controller.SetCategory(CustomizationOptionType.Boots); RefreshAll(); });
+        MakeClickable(_slotAccessoryGear, () => { controller.SetCategory(CustomizationOptionType.Accessory); RefreshAll(); });
 
 
         // Loadout: patterns (also selects pattern target)
@@ -638,6 +741,42 @@ public class CustomizationShopViewBinder : MonoBehaviour
             controller.SetCategory(CustomizationOptionType.SkinPattern);
             RefreshAll();
         });
+        MakeClickable(_iconGlovesPattern, () =>
+        {
+            controller.SetPatternTarget(CustomizationUIController.PatternTarget.Gloves);
+            controller.SetCategory(CustomizationOptionType.SkinPattern);
+            RefreshAll();
+        });
+        MakeClickable(_iconBootsPattern, () =>
+        {
+            controller.SetPatternTarget(CustomizationUIController.PatternTarget.Boots);
+            controller.SetCategory(CustomizationOptionType.SkinPattern);
+            RefreshAll();
+        });
+        MakeClickable(_iconAccessoryPattern, () =>
+        {
+            controller.SetPatternTarget(CustomizationUIController.PatternTarget.Accessory);
+            controller.SetCategory(CustomizationOptionType.SkinPattern);
+            RefreshAll();
+        });
+        MakeClickable(_slotGlovesPattern, () =>
+        {
+            controller.SetPatternTarget(CustomizationUIController.PatternTarget.Gloves);
+            controller.SetCategory(CustomizationOptionType.SkinPattern);
+            RefreshAll();
+        });
+        MakeClickable(_slotBootsPattern, () =>
+        {
+            controller.SetPatternTarget(CustomizationUIController.PatternTarget.Boots);
+            controller.SetCategory(CustomizationOptionType.SkinPattern);
+            RefreshAll();
+        });
+        MakeClickable(_slotAccessoryPattern, () =>
+        {
+            controller.SetPatternTarget(CustomizationUIController.PatternTarget.Accessory);
+            controller.SetCategory(CustomizationOptionType.SkinPattern);
+            RefreshAll();
+        });
 
         if (_btnBuyEyePreview != null)
             _btnBuyEyePreview.clicked += () => { controller.TryBuyPreviewedEye(); RefreshAll(); };
@@ -670,6 +809,25 @@ public class CustomizationShopViewBinder : MonoBehaviour
         if (_btnBuyJacketPreviewBoth != null)
             _btnBuyJacketPreviewBoth.clicked += () => { controller.TryBuyPreviewedGearAndPattern(PatternTarget.Jacket); RefreshAll(); };
 
+        if (_btnBuyGlovesPreviewItem != null)
+            _btnBuyGlovesPreviewItem.clicked += () => { controller.TryBuyPreviewedGear(PatternTarget.Gloves); RefreshAll(); };
+        if (_btnBuyGlovesPreviewPattern != null)
+            _btnBuyGlovesPreviewPattern.clicked += () => { controller.TryBuyPreviewedPattern(PatternTarget.Gloves); RefreshAll(); };
+        if (_btnBuyGlovesPreviewBoth != null)
+            _btnBuyGlovesPreviewBoth.clicked += () => { controller.TryBuyPreviewedGearAndPattern(PatternTarget.Gloves); RefreshAll(); };
+        if (_btnBuyBootsPreviewItem != null)
+            _btnBuyBootsPreviewItem.clicked += () => { controller.TryBuyPreviewedGear(PatternTarget.Boots); RefreshAll(); };
+        if (_btnBuyBootsPreviewPattern != null)
+            _btnBuyBootsPreviewPattern.clicked += () => { controller.TryBuyPreviewedPattern(PatternTarget.Boots); RefreshAll(); };
+        if (_btnBuyBootsPreviewBoth != null)
+            _btnBuyBootsPreviewBoth.clicked += () => { controller.TryBuyPreviewedGearAndPattern(PatternTarget.Boots); RefreshAll(); };
+        if (_btnBuyAccessoryPreviewItem != null)
+            _btnBuyAccessoryPreviewItem.clicked += () => { controller.TryBuyPreviewedGear(PatternTarget.Accessory); RefreshAll(); };
+        if (_btnBuyAccessoryPreviewPattern != null)
+            _btnBuyAccessoryPreviewPattern.clicked += () => { controller.TryBuyPreviewedPattern(PatternTarget.Accessory); RefreshAll(); };
+        if (_btnBuyAccessoryPreviewBoth != null)
+            _btnBuyAccessoryPreviewBoth.clicked += () => { controller.TryBuyPreviewedGearAndPattern(PatternTarget.Accessory); RefreshAll(); };
+
         // Color swatches open popover
         MakeClickable(_swatchSkin, () => OpenColor(ColorTarget.Skin, controller.GetSkinColor()));
         MakeClickable(_swatchEye, () => OpenColor(ColorTarget.Eye, controller.GetEyeColor()));
@@ -678,11 +836,15 @@ public class CustomizationShopViewBinder : MonoBehaviour
         MakeClickable(_swatchPolesColor, () => OpenColor(ColorTarget.Poles, controller.GetPolesColor()));
         MakeClickable(_swatchHatColor, () => OpenColor(ColorTarget.Hat, controller.GetHatColor()));
         MakeClickable(_swatchJacketColor, () => OpenColor(ColorTarget.Jacket, controller.GetJacketColor()));
+        MakeClickable(_swatchGlovesColor, () => OpenColor(ColorTarget.Gloves, controller.GetGlovesColor()));
+        MakeClickable(_swatchBootsColor, () => OpenColor(ColorTarget.Boots, controller.GetBootsColor()));
+        MakeClickable(_swatchAccessoryColor, () => OpenColor(ColorTarget.Accessory, controller.GetAccessoryColor()));
 
         if (_sldEyeSize != null)
         {
             _sldEyeSize.lowValue = 1;
             _sldEyeSize.highValue = 5;
+            HookEyeSizeSliderInteractionEvents();
             _sldEyeSize.RegisterValueChangedCallback(evt =>
             {
                 if (controller == null) return;
@@ -725,6 +887,61 @@ public class CustomizationShopViewBinder : MonoBehaviour
             if (controller == null) return;
             onClick.Invoke();
         }));
+    }
+
+    private void ResolveShopCameraController()
+    {
+        if (_shopCameraController != null)
+            return;
+
+        if (Camera.main != null)
+            _shopCameraController = Camera.main.GetComponent<CameraController>();
+
+        if (_shopCameraController == null)
+            _shopCameraController = FindFirstObjectByType<CameraController>();
+    }
+
+    private void HookEyeSizeSliderInteractionEvents()
+    {
+        if (_sldEyeSize == null || _eyeSizeSliderInteractionHooksRegistered)
+            return;
+
+        _eyeSizeSliderInteractionHooksRegistered = true;
+
+        _sldEyeSize.RegisterCallback<PointerDownEvent>(OnEyeSizeSliderPointerDown, TrickleDown.TrickleDown);
+        _sldEyeSize.RegisterCallback<PointerUpEvent>(OnEyeSizeSliderPointerUp, TrickleDown.TrickleDown);
+        _sldEyeSize.RegisterCallback<PointerCaptureEvent>(OnEyeSizeSliderPointerCapture, TrickleDown.TrickleDown);
+        _sldEyeSize.RegisterCallback<PointerCaptureOutEvent>(OnEyeSizeSliderPointerCaptureOut, TrickleDown.TrickleDown);
+    }
+
+    private void OnEyeSizeSliderPointerDown(PointerDownEvent evt)
+    {
+        SetEyeSizeSliderOrbitLock(true);
+    }
+
+    private void OnEyeSizeSliderPointerUp(PointerUpEvent evt)
+    {
+        SetEyeSizeSliderOrbitLock(false);
+    }
+
+    private void OnEyeSizeSliderPointerCapture(PointerCaptureEvent evt)
+    {
+        SetEyeSizeSliderOrbitLock(true);
+    }
+
+    private void OnEyeSizeSliderPointerCaptureOut(PointerCaptureOutEvent evt)
+    {
+        SetEyeSizeSliderOrbitLock(false);
+    }
+
+    private void SetEyeSizeSliderOrbitLock(bool locked)
+    {
+        if (_eyeSizeSliderInteractionActive == locked)
+            return;
+
+        _eyeSizeSliderInteractionActive = locked;
+        ResolveShopCameraController();
+        _shopCameraController?.SetShopOrbitExplicitUiInteractionLock(locked);
     }
 
     private void RefreshAll()
@@ -794,7 +1011,11 @@ public class CustomizationShopViewBinder : MonoBehaviour
             if (_swatchPolesColor != null) _swatchPolesColor.style.backgroundColor = controller.GetPolesColor();
             if (_swatchHatColor != null) _swatchHatColor.style.backgroundColor = controller.GetHatColor();
             if (_swatchJacketColor != null) _swatchJacketColor.style.backgroundColor = controller.GetJacketColor();
+            if (_swatchGlovesColor != null) _swatchGlovesColor.style.backgroundColor = controller.GetGlovesColor();
+            if (_swatchBootsColor != null) _swatchBootsColor.style.backgroundColor = controller.GetBootsColor();
+            if (_swatchAccessoryColor != null) _swatchAccessoryColor.style.backgroundColor = controller.GetAccessoryColor();
 
+            UpdateLoadoutCategoryHighlight();
             UpdatePatternTargetHighlight();
 
         }
@@ -900,6 +1121,9 @@ public class CustomizationShopViewBinder : MonoBehaviour
             case CustomizationOptionType.Poles: return "Poles";
             case CustomizationOptionType.Hat: return "Hat";
             case CustomizationOptionType.Jacket: return "Jacket";
+            case CustomizationOptionType.Gloves: return "Gloves";
+            case CustomizationOptionType.Boots: return "Boots";
+            case CustomizationOptionType.Accessory: return "Accessory";
             default: return opt.type.ToString();
         }
     }
@@ -944,6 +1168,9 @@ public class CustomizationShopViewBinder : MonoBehaviour
             CustomizationUIController.PatternTarget.Poles => "Poles",
             CustomizationUIController.PatternTarget.Hat => "Hat",
             CustomizationUIController.PatternTarget.Jacket => "Jacket",
+            CustomizationUIController.PatternTarget.Gloves => "Gloves",
+            CustomizationUIController.PatternTarget.Boots => "Boots",
+            CustomizationUIController.PatternTarget.Accessory => "Accessory",
             _ => "Pattern"
         };
     }
@@ -952,32 +1179,20 @@ public class CustomizationShopViewBinder : MonoBehaviour
     {
         if (controller == null || opt == null) return false;
 
-        return opt.type switch
-        {
-            CustomizationOptionType.EyeIcon => SameOption(opt, controller.GetPreviewEyeOption()),
-            CustomizationOptionType.Skis => SameOption(opt, controller.GetPreviewSkisOption()),
-            CustomizationOptionType.Poles => SameOption(opt, controller.GetPreviewPolesOption()),
-            CustomizationOptionType.Hat => SameOption(opt, controller.GetPreviewHatOption()),
-            CustomizationOptionType.Jacket => SameOption(opt, controller.GetPreviewJacketOption()),
-            CustomizationOptionType.SkinPattern => SameOption(opt, controller.GetPreviewPatternOption(controller.GetPatternTarget())),
-            _ => false
-        };
+        if (opt.type == CustomizationOptionType.SkinPattern)
+            return SameOption(opt, controller.GetPreviewPatternOption(controller.GetPatternTarget()));
+
+        return SameOption(opt, controller.GetPreviewOption(opt.type));
     }
 
     private bool IsOptionEquipped(CustomizationOptionSO opt)
     {
         if (controller == null || opt == null) return false;
 
-        return opt.type switch
-        {
-            CustomizationOptionType.EyeIcon => SameOption(opt, controller.GetEquippedEyeOption()),
-            CustomizationOptionType.Skis => SameOption(opt, controller.GetEquippedSkisOption()),
-            CustomizationOptionType.Poles => SameOption(opt, controller.GetEquippedPolesOption()),
-            CustomizationOptionType.Hat => SameOption(opt, controller.GetEquippedHatOption()),
-            CustomizationOptionType.Jacket => SameOption(opt, controller.GetEquippedJacketOption()),
-            CustomizationOptionType.SkinPattern => SameOption(opt, controller.GetEquippedPatternOption(controller.GetPatternTarget())),
-            _ => false
-        };
+        if (opt.type == CustomizationOptionType.SkinPattern)
+            return SameOption(opt, controller.GetEquippedPatternOption(controller.GetPatternTarget()));
+
+        return SameOption(opt, controller.GetEquippedOption(opt.type));
     }
 
     private bool IsOptionSelected(CustomizationOptionSO opt)
@@ -992,18 +1207,19 @@ public class CustomizationShopViewBinder : MonoBehaviour
         ClearTarget(_iconPolesPattern);
         ClearTarget(_iconHatPattern);
         ClearTarget(_iconJacketPattern);
+        ClearTarget(_iconGlovesPattern);
+        ClearTarget(_iconBootsPattern);
+        ClearTarget(_iconAccessoryPattern);
 
         ClearTarget(_slotSkisPattern);
         ClearTarget(_slotPolesPattern);
         ClearTarget(_slotHatPattern);
         ClearTarget(_slotJacketPattern);
+        ClearTarget(_slotGlovesPattern);
+        ClearTarget(_slotBootsPattern);
+        ClearTarget(_slotAccessoryPattern);
 
-        ClearTarget(_rowSkis);
-        ClearTarget(_rowPoles);
-        ClearTarget(_rowHat);
-        ClearTarget(_rowJacket);
-
-        if (controller.GetActiveCategory() != CustomizationOptionType.SkinPattern)
+        if (controller == null || controller.GetActiveCategory() != CustomizationOptionType.SkinPattern)
             return;
 
         switch (controller.GetPatternTarget())
@@ -1011,25 +1227,90 @@ public class CustomizationShopViewBinder : MonoBehaviour
             case CustomizationUIController.PatternTarget.Skis:
                 SetTarget(_iconSkisPattern);
                 SetTarget(_slotSkisPattern);
-                SetTarget(_rowSkis);
                 break;
 
             case CustomizationUIController.PatternTarget.Poles:
                 SetTarget(_iconPolesPattern);
                 SetTarget(_slotPolesPattern);
-                SetTarget(_rowPoles);
                 break;
 
             case CustomizationUIController.PatternTarget.Hat:
                 SetTarget(_iconHatPattern);
                 SetTarget(_slotHatPattern);
-                SetTarget(_rowHat);
                 break;
 
             case CustomizationUIController.PatternTarget.Jacket:
                 SetTarget(_iconJacketPattern);
                 SetTarget(_slotJacketPattern);
+                break;
+
+            case CustomizationUIController.PatternTarget.Gloves:
+                SetTarget(_iconGlovesPattern);
+                SetTarget(_slotGlovesPattern);
+                break;
+
+            case CustomizationUIController.PatternTarget.Boots:
+                SetTarget(_iconBootsPattern);
+                SetTarget(_slotBootsPattern);
+                break;
+
+            case CustomizationUIController.PatternTarget.Accessory:
+                SetTarget(_iconAccessoryPattern);
+                SetTarget(_slotAccessoryPattern);
+                break;
+        }
+    }
+
+    private void UpdateLoadoutCategoryHighlight()
+    {
+        ClearTarget(_rowEyes);
+        ClearTarget(_rowSkis);
+        ClearTarget(_rowPoles);
+        ClearTarget(_rowHat);
+        ClearTarget(_rowJacket);
+        ClearTarget(_rowGloves);
+        ClearTarget(_rowBoots);
+        ClearTarget(_rowAccessory);
+
+        if (controller == null)
+            return;
+
+        switch (controller.GetActiveCategory())
+        {
+            case CustomizationOptionType.EyeIcon:
+                SetTarget(_rowEyes);
+                break;
+
+            case CustomizationOptionType.Skis:
+                SetTarget(_rowSkis);
+                break;
+
+            case CustomizationOptionType.Poles:
+                SetTarget(_rowPoles);
+                break;
+
+            case CustomizationOptionType.Hat:
+                SetTarget(_rowHat);
+                break;
+
+            case CustomizationOptionType.Jacket:
                 SetTarget(_rowJacket);
+                break;
+
+            case CustomizationOptionType.Gloves:
+                SetTarget(_rowGloves);
+                break;
+
+            case CustomizationOptionType.Boots:
+                SetTarget(_rowBoots);
+                break;
+
+            case CustomizationOptionType.Accessory:
+                SetTarget(_rowAccessory);
+                break;
+
+            case CustomizationOptionType.SkinPattern:
+            default:
                 break;
         }
     }
@@ -1181,6 +1462,30 @@ public class CustomizationShopViewBinder : MonoBehaviour
             _btnBuyJacketPreviewPattern,
             _btnBuyJacketPreviewBoth,
             "Jacket");
+
+        RefreshGearPurchaseActions(
+            PatternTarget.Gloves,
+            _rowGlovesPurchaseActions,
+            _btnBuyGlovesPreviewItem,
+            _btnBuyGlovesPreviewPattern,
+            _btnBuyGlovesPreviewBoth,
+            "Gloves");
+
+        RefreshGearPurchaseActions(
+            PatternTarget.Boots,
+            _rowBootsPurchaseActions,
+            _btnBuyBootsPreviewItem,
+            _btnBuyBootsPreviewPattern,
+            _btnBuyBootsPreviewBoth,
+            "Boots");
+
+        RefreshGearPurchaseActions(
+            PatternTarget.Accessory,
+            _rowAccessoryPurchaseActions,
+            _btnBuyAccessoryPreviewItem,
+            _btnBuyAccessoryPreviewPattern,
+            _btnBuyAccessoryPreviewBoth,
+            "Accessory");
     }
 
     private void OpenExtraChannelColor(PatternTarget target, string channelId, Color current)
@@ -1204,6 +1509,9 @@ public class CustomizationShopViewBinder : MonoBehaviour
             case ColorTarget.Poles: controller.SetPolesColor(c); break;
             case ColorTarget.Hat: controller.SetHatColor(c); break;
             case ColorTarget.Jacket: controller.SetJacketColor(c); break;
+            case ColorTarget.Gloves: controller.SetGlovesColor(c); break;
+            case ColorTarget.Boots: controller.SetBootsColor(c); break;
+            case ColorTarget.Accessory: controller.SetAccessoryColor(c); break;
 
             case ColorTarget.ExtraChannel:
                 if (!string.IsNullOrEmpty(_extraColorChannelId))
@@ -1328,6 +1636,33 @@ public class CustomizationShopViewBinder : MonoBehaviour
         if (_btnClearJacketPreview != null)
             _btnClearJacketPreview.style.display = jacketPrev ? DisplayStyle.Flex : DisplayStyle.None;
 
+        bool glovesPrev = controller.IsPreviewingGloves();
+        var gloves = controller.GetEffectiveGlovesOption();
+        if (_lblGlovesGearName != null)
+            _lblGlovesGearName.text = gloves != null ? (string.IsNullOrEmpty(gloves.displayName) ? gloves.name : gloves.displayName) : "None";
+        if (_swatchGlovesColor != null) _swatchGlovesColor.style.backgroundColor = controller.GetGlovesColor();
+        SetLoadoutBadge(_lblGlovesState, glovesPrev);
+        if (_btnClearGlovesPreview != null)
+            _btnClearGlovesPreview.style.display = glovesPrev ? DisplayStyle.Flex : DisplayStyle.None;
+
+        bool bootsPrev = controller.IsPreviewingBoots();
+        var boots = controller.GetEffectiveBootsOption();
+        if (_lblBootsGearName != null)
+            _lblBootsGearName.text = boots != null ? (string.IsNullOrEmpty(boots.displayName) ? boots.name : boots.displayName) : "None";
+        if (_swatchBootsColor != null) _swatchBootsColor.style.backgroundColor = controller.GetBootsColor();
+        SetLoadoutBadge(_lblBootsState, bootsPrev);
+        if (_btnClearBootsPreview != null)
+            _btnClearBootsPreview.style.display = bootsPrev ? DisplayStyle.Flex : DisplayStyle.None;
+
+        bool accessoryPrev = controller.IsPreviewingAccessory();
+        var accessory = controller.GetEffectiveAccessoryOption();
+        if (_lblAccessoryGearName != null)
+            _lblAccessoryGearName.text = accessory != null ? (string.IsNullOrEmpty(accessory.displayName) ? accessory.name : accessory.displayName) : "None";
+        if (_swatchAccessoryColor != null) _swatchAccessoryColor.style.backgroundColor = controller.GetAccessoryColor();
+        SetLoadoutBadge(_lblAccessoryState, accessoryPrev);
+        if (_btnClearAccessoryPreview != null)
+            _btnClearAccessoryPreview.style.display = accessoryPrev ? DisplayStyle.Flex : DisplayStyle.None;
+
         // --- PATTERNS (texture + name + border state) ---
         void ApplyPattern(CustomizationUIController.PatternTarget t, VisualElement iconVe, Label nameLbl)
         {
@@ -1352,6 +1687,9 @@ public class CustomizationShopViewBinder : MonoBehaviour
         ApplyPattern(CustomizationUIController.PatternTarget.Poles, _iconPolesPattern, _lblPolesPatternName);
         ApplyPattern(CustomizationUIController.PatternTarget.Hat, _iconHatPattern, _lblHatPatternName);
         ApplyPattern(CustomizationUIController.PatternTarget.Jacket, _iconJacketPattern, _lblJacketPatternName);
+        ApplyPattern(CustomizationUIController.PatternTarget.Gloves, _iconGlovesPattern, _lblGlovesPatternName);
+        ApplyPattern(CustomizationUIController.PatternTarget.Boots, _iconBootsPattern, _lblBootsPatternName);
+        ApplyPattern(CustomizationUIController.PatternTarget.Accessory, _iconAccessoryPattern, _lblAccessoryPatternName);
 
         RebuildExtraColorSwatches(PatternTarget.Skis, _rowSkisExtraColors, _btnResetSkisSecondaryColor);
         RebuildExtraColorSwatches(PatternTarget.Poles, _rowPolesExtraColors, _btnResetPolesSecondaryColor);
@@ -1393,6 +1731,21 @@ public class CustomizationShopViewBinder : MonoBehaviour
 
             case CustomizationOptionType.Jacket:
                 desiredId = controller.GetEquippedJacketOption()?.id;
+                if (string.IsNullOrEmpty(desiredId)) desiredId = "";
+                break;
+
+            case CustomizationOptionType.Gloves:
+                desiredId = controller.GetEquippedGlovesOption()?.id;
+                if (string.IsNullOrEmpty(desiredId)) desiredId = "";
+                break;
+
+            case CustomizationOptionType.Boots:
+                desiredId = controller.GetEquippedBootsOption()?.id;
+                if (string.IsNullOrEmpty(desiredId)) desiredId = "";
+                break;
+
+            case CustomizationOptionType.Accessory:
+                desiredId = controller.GetEquippedAccessoryOption()?.id;
                 if (string.IsNullOrEmpty(desiredId)) desiredId = "";
                 break;
 

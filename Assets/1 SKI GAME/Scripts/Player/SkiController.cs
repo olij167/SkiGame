@@ -58,7 +58,10 @@ public class SkiController : MonoBehaviour
         Inverted = 2,
         Sideways = 3,
         Rising = 4,
-        Diving = 5
+        Diving = 5,
+        OnSide = 6,
+        ChestDown = 7,
+        ChestUp = 8
     }
 
     public enum GrindSurfaceKind
@@ -126,6 +129,32 @@ public class SkiController : MonoBehaviour
         Airborne,
         Landing,
         Stacked
+    }
+
+    private struct TrickPoseIntentSnapshot
+    {
+        public bool valid;
+        public float capturedTime;
+        public bool poseButtonHeld;
+        public AerialPoseFamily family;
+        public AerialPoseShape shape;
+        public AerialOrientationModifier orientation;
+        public TrickPoseVerticalOrientationRequirement verticalOrientation;
+        public TrickPoseHorizontalOrientationRequirement horizontalOrientation;
+        public TrickPoseMotionStateRequirement motionState;
+        public string poseName;
+        public int spinDirectionSign;
+        public int flipDirectionSign;
+        public Vector3 entryEulerAngles;
+    }
+
+    private struct TrickPoseCandidateScore
+    {
+        public TrickPoseEntry entry;
+        public int specificity;
+        public float rawScore;
+        public float totalScore;
+        public float intentBias;
     }
 
 
@@ -248,9 +277,11 @@ public class SkiController : MonoBehaviour
 
     // Body visual base pose cache
     private Vector3 _bodyBaseLocalPos;
+    private Quaternion _bodyBaseLocalRot = Quaternion.identity;
     private Vector3 _bodyBaseLocalScale = Vector3.one;
 
     private Vector3 _bodyMotionBaseLocalPos;
+    private Quaternion _bodyMotionBaseLocalRot = Quaternion.identity;
     private Vector3 _bodyScaleBaseLocalScale = Vector3.one;
 
     // True if either ski collider is currently reporting ground contact.
@@ -379,10 +410,24 @@ public class SkiController : MonoBehaviour
 
     // Air rotation state (degrees/second around local axes)
     private Vector3 _airAngularVelocity;
+    [SerializeField, HideInInspector] private TrickPoseRigSnapshot _authoredBaseRigSnapshot;
+    [SerializeField, HideInInspector] private bool _authoredBaseRigSnapshotCaptured;
+    private TrickPoseRigSnapshot _trueDefaultRigSnapshot;
     private TrickPoseRigSnapshot _defaultRigSnapshot;
     private TrickPoseEntry _activeTrickPoseEntry;
     private float _activeTrickPoseBlend;
+    private float _activeTrickPoseScore;
+    private float _activeTrickPoseCommittedAt = -999f;
+    private float _activeTrickPoseLastValidTime = -999f;
+    private TrickPoseEntry _bestCompetingTrickPoseEntry;
+    private float _bestCompetingTrickPoseScore;
+    private TrickPoseIntentSnapshot _trickPoseIntentSnapshot;
+    private string _lastTrickPoseDecisionReason = string.Empty;
+    private bool _trickPoseWasAirborneLastFrame;
+    private bool _trickPoseWasPoseButtonHeldLastFrame;
     private bool _poseRigDefaultsCaptured;
+    private bool _truePoseRigDefaultsCaptured;
+    private SkierLimbLineVisual _skierLimbLineVisual;
 
     // ----------------------------------------------------------------------
     // GRINDING runtime state
@@ -478,6 +523,7 @@ public class SkiController : MonoBehaviour
     [SerializeField] private float tuckHeadForward = 0.04f;
 
     private Vector3 _headAnchorBaseLocalPos;
+    private Quaternion _headAnchorBaseLocalRot = Quaternion.identity;
 
     [Header("Ground Detection")]
     [Tooltip("Physics layers treated as snow/ground for grounding, landing, and non-ski body contact checks.")]
@@ -844,6 +890,14 @@ public class SkiController : MonoBehaviour
     [SerializeField] private TrickPoseProfileSO trickPoseProfile;
     [SerializeField] private bool debugAuthoredTrickPose;
 
+    [Header("Authored Trick Recognition")]
+    [SerializeField] private float trickPoseCommitMinHoldTime = 0.22f;
+    [SerializeField] private float trickPoseSwitchScoreMargin = 2f;
+    [SerializeField] private float trickPoseRetentionGraceTime = 0.18f;
+    [SerializeField] private float trickPoseIntentSnapshotWindow = 0.2f;
+    [SerializeField, Range(0f, 3f)] private float trickPoseIntentBiasStrength = 1f;
+    [SerializeField] private bool debugTrickPoseRecognition;
+
     [Header("Passive Air Drift")]
     [SerializeField] private bool enablePassiveAirDrift = true;
     [SerializeField] private float passiveAirDriftMaxPosition = 0.05f;
@@ -1201,25 +1255,41 @@ public class SkiController : MonoBehaviour
     public AerialPoseShape CurrentPoseShape => ResolvePoseShape();
 
     public AerialOrientationModifier CurrentPoseOrientationModifier => ResolvePoseOrientationModifier();
+    public TrickPoseVerticalOrientationRequirement CurrentPoseVerticalOrientation => ResolvePoseVerticalOrientation();
+    public TrickPoseHorizontalOrientationRequirement CurrentPoseHorizontalOrientation => ResolvePoseHorizontalOrientation();
+    public TrickPoseMotionStateRequirement CurrentPoseMotionState => ResolvePoseMotionState();
 
     public string CurrentPoseName => ResolvePoseName();
-    public string CurrentTrackedPoseName =>
-        _activeTrickPoseEntry != null && !string.IsNullOrWhiteSpace(_activeTrickPoseEntry.overridePoseLabel)
-            ? _activeTrickPoseEntry.overridePoseLabel
-            : CurrentPoseName;
+    public string CurrentTrackedPoseName => ResolveCommittedTrackedPoseName();
+    public string CurrentPresentedPoseName => BuildPoseDescriptorLabel(CurrentTrackedPoseName, CurrentPoseOrientationModifier);
+    public AerialPoseFamily CurrentCommittedPoseFamily => ResolveCommittedPoseFamily();
+    public AerialPoseShape CurrentCommittedPoseShape => ResolveCommittedPoseShape();
     public float CurrentYawAngularVelocity => _airAngularVelocity.y;
     public float CurrentPitchAngularVelocity => _airAngularVelocity.x;
     public float CurrentRollAngularVelocity => _airAngularVelocity.z;
     public float CurrentTotalAngularSpeed => _airAngularVelocity.magnitude;
     public int CurrentSpinDirectionSign => CurrentYawAngularVelocity > 1f ? 1 : (CurrentYawAngularVelocity < -1f ? -1 : 0);
     public int CurrentFlipDirectionSign => CurrentPitchAngularVelocity > 1f ? 1 : (CurrentPitchAngularVelocity < -1f ? -1 : 0);
+    public bool HasTrickPoseEntrySnapshot => _trickPoseIntentSnapshot.valid;
+    public AerialPoseFamily EntryPoseFamily => _trickPoseIntentSnapshot.valid ? _trickPoseIntentSnapshot.family : AerialPoseFamily.None;
+    public AerialPoseShape EntryPoseShape => _trickPoseIntentSnapshot.valid ? _trickPoseIntentSnapshot.shape : AerialPoseShape.None;
+    public AerialOrientationModifier EntryPoseOrientationModifier => _trickPoseIntentSnapshot.valid ? _trickPoseIntentSnapshot.orientation : AerialOrientationModifier.None;
+    public TrickPoseVerticalOrientationRequirement EntryPoseVerticalOrientation => _trickPoseIntentSnapshot.valid ? _trickPoseIntentSnapshot.verticalOrientation : TrickPoseVerticalOrientationRequirement.Any;
+    public TrickPoseHorizontalOrientationRequirement EntryPoseHorizontalOrientation => _trickPoseIntentSnapshot.valid ? _trickPoseIntentSnapshot.horizontalOrientation : TrickPoseHorizontalOrientationRequirement.Any;
+    public TrickPoseMotionStateRequirement EntryPoseMotionState => _trickPoseIntentSnapshot.valid ? _trickPoseIntentSnapshot.motionState : TrickPoseMotionStateRequirement.Any;
+    public string EntryPoseName => _trickPoseIntentSnapshot.valid ? _trickPoseIntentSnapshot.poseName : string.Empty;
+    public Vector3 EntryEulerAngles => _trickPoseIntentSnapshot.valid ? _trickPoseIntentSnapshot.entryEulerAngles : CurrentSignedEulerAngles;
     public TrickPoseEntry ActiveTrickPoseEntry => _activeTrickPoseEntry;
     public float ActiveTrickPoseBlend => _activeTrickPoseBlend;
+    public TrickPoseEntry BestCompetingTrickPoseEntry => _bestCompetingTrickPoseEntry;
+    public string CurrentTrickPoseDecisionReason => _lastTrickPoseDecisionReason;
     public TrickPoseProfileSO TrickPoseProfile => trickPoseProfile;
     public Transform BodyPoseTransform => GetBodyPoseTransform();
     public Transform HeadPoseTransform => headAnchorTransform;
     public Transform LeftSkiTransform => leftSki;
     public Transform RightSkiTransform => rightSki;
+
+    private Vector3 CurrentSignedEulerAngles => NormalizeEulerAngles(transform.rotation.eulerAngles);
 
     public float RawLeftLegInput => _rawLeftLegInput;
 
@@ -1266,49 +1336,201 @@ public class SkiController : MonoBehaviour
 
     public void EnsurePoseRigDefaultsCaptured()
     {
+        EnsureTrueDefaultRigSnapshotCaptured();
         if (_poseRigDefaultsCaptured)
             return;
 
-        RefreshPoseRigBaseCaches();
-        _defaultRigSnapshot = CaptureCurrentRigSnapshot();
+        _defaultRigSnapshot = _trueDefaultRigSnapshot?.Clone();
         _poseRigDefaultsCaptured = _defaultRigSnapshot != null;
     }
 
+    public void EnsureTrueDefaultRigSnapshotCaptured()
+    {
+        if (_truePoseRigDefaultsCaptured)
+            return;
+
+        _trueDefaultRigSnapshot = CaptureAuthoredBaseRigSnapshot();
+        _truePoseRigDefaultsCaptured = _trueDefaultRigSnapshot != null;
+        if (_truePoseRigDefaultsCaptured)
+            RestoreBaseCachesFromTrueDefault(_trueDefaultRigSnapshot);
+    }
+
+    public void RebuildTrueDefaultPoseFromAuthoredSource(bool restorePose = true)
+    {
+        _authoredBaseRigSnapshot = null;
+        _authoredBaseRigSnapshotCaptured = false;
+        _trueDefaultRigSnapshot = CaptureAuthoredBaseRigSnapshot();
+        _truePoseRigDefaultsCaptured = _trueDefaultRigSnapshot != null;
+        _defaultRigSnapshot = _trueDefaultRigSnapshot?.Clone();
+        _poseRigDefaultsCaptured = _defaultRigSnapshot != null;
+
+        if (restorePose)
+            RestoreTrueDefaultPose(true);
+    }
+
+    [System.Obsolete("Mutable default recapture is disabled. Use RebuildTrueDefaultPoseFromAuthoredSource or RestoreTrueDefaultPose.")]
     public void RecapturePoseRigDefaultsFromCurrent()
     {
-        RefreshPoseRigBaseCaches();
-        _defaultRigSnapshot = CaptureCurrentRigSnapshot();
+        EnsureTrueDefaultRigSnapshotCaptured();
+        _defaultRigSnapshot = _trueDefaultRigSnapshot?.Clone();
         _poseRigDefaultsCaptured = _defaultRigSnapshot != null;
+    }
+
+    public TrickPoseRigSnapshot CaptureTrueDefaultRigSnapshot()
+    {
+        EnsureTrueDefaultRigSnapshotCaptured();
+        return _trueDefaultRigSnapshot?.Clone();
     }
 
     public TrickPoseRigSnapshot CaptureCurrentRigSnapshot()
     {
+        SkierLimbLineVisual limbVisual = GetSkierLimbLineVisual();
         return new TrickPoseRigSnapshot
         {
             body = TrickPoseRigSnapshot.PartState.FromTransform(GetBodyPoseTransform()),
             head = TrickPoseRigSnapshot.PartState.FromTransform(headAnchorTransform),
             leftSki = TrickPoseRigSnapshot.PartState.FromTransform(leftSki),
             rightSki = TrickPoseRigSnapshot.PartState.FromTransform(rightSki),
-            leftPole = TrickPoseRigSnapshot.PartState.FromTransform(leftPoleContact != null ? leftPoleContact.PoleRoot : null),
-            rightPole = TrickPoseRigSnapshot.PartState.FromTransform(rightPoleContact != null ? rightPoleContact.PoleRoot : null)
+            leftPole = leftPoleContact != null ? leftPoleContact.CaptureBasePoseSnapshot() : default,
+            rightPole = rightPoleContact != null ? rightPoleContact.CaptureBasePoseSnapshot() : default,
+            leftElbow = CaptureJointPartState(limbVisual, SkierLimbJoint.LeftElbow),
+            rightElbow = CaptureJointPartState(limbVisual, SkierLimbJoint.RightElbow),
+            leftKnee = CaptureJointPartState(limbVisual, SkierLimbJoint.LeftKnee),
+            rightKnee = CaptureJointPartState(limbVisual, SkierLimbJoint.RightKnee)
         };
     }
 
+    private TrickPoseRigSnapshot CaptureAuthoredBaseRigSnapshot()
+    {
+        if (_authoredBaseRigSnapshotCaptured && _authoredBaseRigSnapshot != null)
+            return _authoredBaseRigSnapshot.Clone();
+
+#if UNITY_EDITOR
+        if (TryCapturePrefabAuthoredBaseRigSnapshot(out TrickPoseRigSnapshot prefabSnapshot))
+        {
+            _authoredBaseRigSnapshot = prefabSnapshot.Clone();
+            _authoredBaseRigSnapshotCaptured = true;
+            return prefabSnapshot;
+        }
+
+        if (!Application.isPlaying)
+            return null;
+#endif
+
+        TrickPoseRigSnapshot baseSnapshot = CaptureRigSnapshotFromBaseCaches();
+        _authoredBaseRigSnapshot = baseSnapshot?.Clone();
+        _authoredBaseRigSnapshotCaptured = baseSnapshot != null;
+        return baseSnapshot;
+    }
+
+#if UNITY_EDITOR
+    private bool TryCapturePrefabAuthoredBaseRigSnapshot(out TrickPoseRigSnapshot snapshot)
+    {
+        snapshot = null;
+        SkiController prefabController = UnityEditor.PrefabUtility.GetCorrespondingObjectFromSource(this);
+        if (prefabController == null)
+            return false;
+
+        snapshot = CaptureRigSnapshotFromControllerReferences(prefabController);
+        return snapshot != null;
+    }
+#endif
+
+    private static TrickPoseRigSnapshot CaptureRigSnapshotFromControllerReferences(SkiController source)
+    {
+        if (source == null)
+            return null;
+
+        SkierLimbLineVisual limbVisual = source.GetSkierLimbLineVisual();
+        return new TrickPoseRigSnapshot
+        {
+            body = TrickPoseRigSnapshot.PartState.FromTransform(source.GetBodyPoseTransform()),
+            head = TrickPoseRigSnapshot.PartState.FromTransform(source.headAnchorTransform),
+            leftSki = TrickPoseRigSnapshot.PartState.FromTransform(source.leftSki),
+            rightSki = TrickPoseRigSnapshot.PartState.FromTransform(source.rightSki),
+            leftPole = TrickPoseRigSnapshot.PartState.FromTransform(source.leftPoleContact != null ? source.leftPoleContact.PoleRoot : null),
+            rightPole = TrickPoseRigSnapshot.PartState.FromTransform(source.rightPoleContact != null ? source.rightPoleContact.PoleRoot : null),
+            leftElbow = source.CaptureJointPartState(limbVisual, SkierLimbJoint.LeftElbow),
+            rightElbow = source.CaptureJointPartState(limbVisual, SkierLimbJoint.RightElbow),
+            leftKnee = source.CaptureJointPartState(limbVisual, SkierLimbJoint.LeftKnee),
+            rightKnee = source.CaptureJointPartState(limbVisual, SkierLimbJoint.RightKnee)
+        };
+    }
+
+    private TrickPoseRigSnapshot CaptureRigSnapshotFromBaseCaches()
+    {
+        return new TrickPoseRigSnapshot
+        {
+            body = GetBodyPoseTransform() == bodyMotionTransform
+                ? MakePartState(GetBodyPoseTransform(), _bodyMotionBaseLocalPos, _bodyMotionBaseLocalRot)
+                : MakePartState(GetBodyPoseTransform(), _bodyBaseLocalPos, _bodyBaseLocalRot),
+            head = MakePartState(headAnchorTransform, _headAnchorBaseLocalPos, _headAnchorBaseLocalRot),
+            leftSki = MakePartState(leftSki, _leftSkiLocalBasePos, _leftSkiLocalBaseRot),
+            rightSki = MakePartState(rightSki, _rightSkiLocalBasePos, _rightSkiLocalBaseRot),
+            leftPole = leftPoleContact != null ? leftPoleContact.CaptureBasePoseSnapshot() : default,
+            rightPole = rightPoleContact != null ? rightPoleContact.CaptureBasePoseSnapshot() : default,
+            leftElbow = default,
+            rightElbow = default,
+            leftKnee = default,
+            rightKnee = default
+        };
+    }
+
+    private static TrickPoseRigSnapshot.PartState MakePartState(Transform source, Vector3 localPosition)
+    {
+        return MakePartState(source, localPosition, source != null ? source.localRotation : Quaternion.identity);
+    }
+
+    private static TrickPoseRigSnapshot.PartState MakePartState(Transform source, Vector3 localPosition, Quaternion localRotation)
+    {
+        return new TrickPoseRigSnapshot.PartState
+        {
+            hasValue = source != null,
+            localPosition = source != null ? localPosition : Vector3.zero,
+            localRotation = source != null ? localRotation : Quaternion.identity
+        };
+    }
+
+    [System.Obsolete("Use CaptureTrueDefaultRigSnapshot. Default snapshots are immutable authored base pose snapshots.")]
     public TrickPoseRigSnapshot CaptureDefaultRigSnapshot()
     {
-        EnsurePoseRigDefaultsCaptured();
-        return _defaultRigSnapshot?.Clone();
+        return CaptureTrueDefaultRigSnapshot();
     }
 
     public TrickPoseRigSnapshot CreateRigSnapshotFromEntry(TrickPoseEntry entry)
     {
-        EnsurePoseRigDefaultsCaptured();
-        if (_defaultRigSnapshot == null)
-            return CaptureCurrentRigSnapshot();
+        EnsureTrueDefaultRigSnapshotCaptured();
+        if (_trueDefaultRigSnapshot == null)
+            return null;
 
-        TrickPoseRigSnapshot snapshot = _defaultRigSnapshot.Clone();
+        TrickPoseRigSnapshot snapshot = _trueDefaultRigSnapshot.Clone();
         ApplyEntryToSnapshot(snapshot, entry, 1f);
         return snapshot;
+    }
+
+    public TrickPoseRigSnapshot ResolveRigAssistSnapshot(TrickPoseRigSnapshot snapshot, bool previewSolve, bool includeLimbCorrection)
+    {
+        if (snapshot == null)
+            return null;
+
+        return snapshot;
+    }
+
+    public TrickPoseRigAssistReferenceData BuildRigAssistReferenceData()
+    {
+        EnsureTrueDefaultRigSnapshotCaptured();
+        return TrickPoseRigAssistUtility.BuildReferenceData(
+            _trueDefaultRigSnapshot,
+            trickPoseProfile != null ? trickPoseProfile.rigAssistSettings : null,
+            GetSkierLimbLineVisual());
+    }
+
+    public TrickPoseRigAssistReferenceData BuildRigAssistCaptureReferenceData()
+    {
+        EnsureTrueDefaultRigSnapshotCaptured();
+        return TrickPoseRigAssistUtility.BuildCaptureReferenceData(
+            _trueDefaultRigSnapshot,
+            GetSkierLimbLineVisual());
     }
 
     public void ApplyRigSnapshot(TrickPoseRigSnapshot snapshot, bool snap, float weight = 1f)
@@ -1323,12 +1545,72 @@ public class SkiController : MonoBehaviour
         ApplySnapshotPart(rightSki, snapshot.rightSki, t);
         ApplySnapshotPart(leftPoleContact != null ? leftPoleContact.PoleRoot : null, snapshot.leftPole, t);
         ApplySnapshotPart(rightPoleContact != null ? rightPoleContact.PoleRoot : null, snapshot.rightPole, t);
+        ApplyJointSnapshot(snapshot, t);
     }
 
+    [System.Obsolete("Use RestoreTrueDefaultPose. Default restores are immutable authored base pose restores.")]
     public void RestoreDefaultRigSnapshot(bool snap = true)
+    {
+        RestoreTrueDefaultPose(snap);
+    }
+
+    public void RestorePreviewBaselineRigSnapshot(bool snap = true)
     {
         EnsurePoseRigDefaultsCaptured();
         ApplyRigSnapshot(_defaultRigSnapshot, snap, 1f);
+    }
+
+    public void RestoreTrueDefaultPose(bool snap = true)
+    {
+        EnsureTrueDefaultRigSnapshotCaptured();
+        _activeTrickPoseEntry = null;
+        _activeTrickPoseBlend = 0f;
+        _activeTrickPoseScore = 0f;
+        _activeTrickPoseCommittedAt = -999f;
+        _activeTrickPoseLastValidTime = -999f;
+        RestoreBaseCachesFromTrueDefault(_trueDefaultRigSnapshot);
+        ApplyRigSnapshot(_trueDefaultRigSnapshot, snap, 1f);
+    }
+
+    private void RestoreBaseCachesFromTrueDefault(TrickPoseRigSnapshot snapshot)
+    {
+        if (snapshot == null)
+            return;
+
+        if (snapshot.leftSki.hasValue)
+        {
+            _leftSkiLocalBasePos = snapshot.leftSki.localPosition;
+            _leftSkiLocalBaseRot = snapshot.leftSki.localRotation;
+        }
+
+        if (snapshot.rightSki.hasValue)
+        {
+            _rightSkiLocalBasePos = snapshot.rightSki.localPosition;
+            _rightSkiLocalBaseRot = snapshot.rightSki.localRotation;
+        }
+
+        if (snapshot.body.hasValue)
+        {
+            _bodyBaseLocalPos = snapshot.body.localPosition;
+            _bodyBaseLocalRot = snapshot.body.localRotation;
+            if (GetBodyPoseTransform() == bodyMotionTransform)
+            {
+                _bodyMotionBaseLocalPos = snapshot.body.localPosition;
+                _bodyMotionBaseLocalRot = snapshot.body.localRotation;
+            }
+        }
+
+        if (snapshot.head.hasValue)
+        {
+            _headAnchorBaseLocalPos = snapshot.head.localPosition;
+            _headAnchorBaseLocalRot = snapshot.head.localRotation;
+        }
+
+        if (leftPoleContact != null)
+            leftPoleContact.RestoreBasePoseFromSnapshot(snapshot.leftPole);
+
+        if (rightPoleContact != null)
+            rightPoleContact.RestoreBasePoseFromSnapshot(snapshot.rightPole);
     }
 
     public void PreviewTrickPoseEntry(TrickPoseEntry entry, bool snap)
@@ -1338,7 +1620,7 @@ public class SkiController : MonoBehaviour
 
     public void ClearPreviewPose(bool snap)
     {
-        RestoreDefaultRigSnapshot(snap);
+        RestoreTrueDefaultPose(snap);
     }
 
     public void CaptureCurrentPoseIntoEntry(TrickPoseEntry entry)
@@ -1346,16 +1628,20 @@ public class SkiController : MonoBehaviour
         if (entry == null)
             return;
 
-        EnsurePoseRigDefaultsCaptured();
-        if (_defaultRigSnapshot == null)
+        EnsureTrueDefaultRigSnapshotCaptured();
+        if (_trueDefaultRigSnapshot == null)
             return;
 
-        CaptureCurrentPartInto(entry.bodyPose, GetBodyPoseTransform(), _defaultRigSnapshot.body);
-        CaptureCurrentPartInto(entry.headPose, headAnchorTransform, _defaultRigSnapshot.head);
-        CaptureCurrentPartInto(entry.leftSkiPose, leftSki, _defaultRigSnapshot.leftSki);
-        CaptureCurrentPartInto(entry.rightSkiPose, rightSki, _defaultRigSnapshot.rightSki);
-        CaptureCurrentPartInto(entry.leftPolePose, leftPoleContact != null ? leftPoleContact.PoleRoot : null, _defaultRigSnapshot.leftPole);
-        CaptureCurrentPartInto(entry.rightPolePose, rightPoleContact != null ? rightPoleContact.PoleRoot : null, _defaultRigSnapshot.rightPole);
+        CaptureCurrentPartInto(entry.bodyPose, GetBodyPoseTransform(), _trueDefaultRigSnapshot.body);
+        CaptureCurrentPartInto(entry.headPose, headAnchorTransform, _trueDefaultRigSnapshot.head);
+        CaptureCurrentPartInto(entry.leftSkiPose, leftSki, _trueDefaultRigSnapshot.leftSki);
+        CaptureCurrentPartInto(entry.rightSkiPose, rightSki, _trueDefaultRigSnapshot.rightSki);
+        CaptureCurrentPartInto(entry.leftPolePose, leftPoleContact != null ? leftPoleContact.PoleRoot : null, _trueDefaultRigSnapshot.leftPole);
+        CaptureCurrentPartInto(entry.rightPolePose, rightPoleContact != null ? rightPoleContact.PoleRoot : null, _trueDefaultRigSnapshot.rightPole);
+        CaptureCurrentJointInto(entry.leftElbowPose, SkierLimbJoint.LeftElbow, _trueDefaultRigSnapshot.leftElbow);
+        CaptureCurrentJointInto(entry.rightElbowPose, SkierLimbJoint.RightElbow, _trueDefaultRigSnapshot.rightElbow);
+        CaptureCurrentJointInto(entry.leftKneePose, SkierLimbJoint.LeftKnee, _trueDefaultRigSnapshot.leftKnee);
+        CaptureCurrentJointInto(entry.rightKneePose, SkierLimbJoint.RightKnee, _trueDefaultRigSnapshot.rightKnee);
     }
 
     private void RefreshPoseRigBaseCaches()
@@ -1375,17 +1661,24 @@ public class SkiController : MonoBehaviour
         if (bodyTransform != null && bodyTransform != transform)
         {
             _bodyBaseLocalPos = bodyTransform.localPosition;
+            _bodyBaseLocalRot = bodyTransform.localRotation;
             _bodyBaseLocalScale = bodyTransform.localScale;
         }
 
         if (bodyMotionTransform != null && bodyMotionTransform != transform)
+        {
             _bodyMotionBaseLocalPos = bodyMotionTransform.localPosition;
+            _bodyMotionBaseLocalRot = bodyMotionTransform.localRotation;
+        }
 
         if (bodyScaleTransform != null)
             _bodyScaleBaseLocalScale = bodyScaleTransform.localScale;
 
         if (headAnchorTransform != null)
+        {
             _headAnchorBaseLocalPos = headAnchorTransform.localPosition;
+            _headAnchorBaseLocalRot = headAnchorTransform.localRotation;
+        }
 
         if (leftPoleContact != null)
             leftPoleContact.RecaptureBasePoseFromCurrent();
@@ -1631,17 +1924,24 @@ public class SkiController : MonoBehaviour
         if (bodyTransform != null && bodyTransform != transform)
         {
             _bodyBaseLocalPos = bodyTransform.localPosition;
+            _bodyBaseLocalRot = bodyTransform.localRotation;
             _bodyBaseLocalScale = bodyTransform.localScale;
         }
 
         if (bodyMotionTransform != null && bodyMotionTransform != transform)
+        {
             _bodyMotionBaseLocalPos = bodyMotionTransform.localPosition;
+            _bodyMotionBaseLocalRot = bodyMotionTransform.localRotation;
+        }
 
         if (bodyScaleTransform != null)
             _bodyScaleBaseLocalScale = bodyScaleTransform.localScale;
 
         if (headAnchorTransform != null)
+        {
             _headAnchorBaseLocalPos = headAnchorTransform.localPosition;
+            _headAnchorBaseLocalRot = headAnchorTransform.localRotation;
+        }
 
         _skiForward = transform.forward;
         CacheSkiColliders();
@@ -1818,6 +2118,17 @@ public class SkiController : MonoBehaviour
 
             // Critical: don't tint snow/FX
             if (r is ParticleSystemRenderer) continue;
+
+            // Gloves are parented under pole roots in ski mode, but they are independent wearable slots.
+            // Skip any renderer owned by a nested wearable attachment so pole styling only affects
+            // the pole visual subtree itself.
+            var owningWearable = r.GetComponentInParent<WearableAttachment>();
+            if (owningWearable != null &&
+                owningWearable.transform != root &&
+                owningWearable.transform.IsChildOf(root))
+            {
+                continue;
+            }
 
             r.SetPropertyBlock(mpb);
         }
@@ -3943,6 +4254,14 @@ public class SkiController : MonoBehaviour
         return null;
     }
 
+    private SkierLimbLineVisual GetSkierLimbLineVisual()
+    {
+        if (_skierLimbLineVisual == null)
+            _skierLimbLineVisual = GetComponentInChildren<SkierLimbLineVisual>(true);
+
+        return _skierLimbLineVisual;
+    }
+
     private static void ApplySnapshotPart(Transform target, TrickPoseRigSnapshot.PartState state, float weight)
     {
         if (target == null || !state.hasValue)
@@ -3951,6 +4270,19 @@ public class SkiController : MonoBehaviour
         float t = Mathf.Clamp01(weight);
         target.localPosition = Vector3.Lerp(target.localPosition, state.localPosition, t);
         target.localRotation = Quaternion.Slerp(target.localRotation, state.localRotation, t);
+    }
+
+    private void ApplyJointSnapshot(TrickPoseRigSnapshot snapshot, float weight)
+    {
+        SkierLimbLineVisual limbVisual = GetSkierLimbLineVisual();
+        if (limbVisual == null)
+            return;
+
+        if (!Application.isPlaying)
+        {
+            limbVisual.SetPreviewJointSnapshot(snapshot, weight);
+            limbVisual.RefreshEditorPreview();
+        }
     }
 
     private static void CaptureCurrentPartInto(PosePartTransformData destination, Transform current, TrickPoseRigSnapshot.PartState defaults)
@@ -3967,13 +4299,63 @@ public class SkiController : MonoBehaviour
         destination.CaptureOffset(current, defaults.localPosition, defaults.localRotation);
     }
 
+    private void CaptureCurrentJointInto(PosePartTransformData destination, SkierLimbJoint joint, TrickPoseRigSnapshot.PartState defaults)
+    {
+        if (destination == null)
+            return;
+
+        if (!destination.enabled)
+            return;
+
+        SkierLimbLineVisual limbVisual = GetSkierLimbLineVisual();
+        if (limbVisual == null || !defaults.hasValue)
+        {
+            destination.Reset();
+            return;
+        }
+
+        if (!limbVisual.TryCaptureJointPose(joint, out Vector3 localPosition, out Quaternion localRotation))
+        {
+            destination.Reset();
+            return;
+        }
+
+        destination.enabled = true;
+        destination.localPosition = localPosition;
+        destination.localEulerAngles = Vector3.zero;
+        destination.weight = 1f;
+    }
+
+    private TrickPoseRigSnapshot.PartState CaptureJointPartState(SkierLimbLineVisual limbVisual, SkierLimbJoint joint)
+    {
+        if (limbVisual == null || !limbVisual.TryCaptureJointPose(joint, out Vector3 localPosition, out Quaternion localRotation))
+        {
+            return new TrickPoseRigSnapshot.PartState
+            {
+                hasValue = false,
+                localPosition = Vector3.zero,
+                localRotation = Quaternion.identity
+            };
+        }
+
+        return new TrickPoseRigSnapshot.PartState
+        {
+            hasValue = true,
+            localPosition = localPosition,
+            localRotation = localRotation
+        };
+    }
+
     private TrickPoseEntry EvaluateActiveTrickPoseEntry()
     {
-        if (trickPoseProfile == null || trickPoseProfile.entries == null || trickPoseProfile.entries.Count == 0)
-            return null;
+        UpdateTrickPoseRecognitionLifecycle();
 
-        TrickPoseEntry bestEntry = null;
-        int bestSpecificity = int.MinValue;
+        if (trickPoseProfile == null || trickPoseProfile.entries == null || trickPoseProfile.entries.Count == 0)
+            return ResolveCommittedCandidate(default, false);
+
+        TrickPoseCandidateScore best = default;
+        TrickPoseCandidateScore runnerUp = default;
+        bool hasBest = false;
 
         for (int i = 0; i < trickPoseProfile.entries.Count; i++)
         {
@@ -3981,17 +4363,23 @@ public class SkiController : MonoBehaviour
             if (candidate == null || !candidate.Matches(this))
                 continue;
 
-            int specificity = candidate.GetSpecificityScore();
-            if (bestEntry == null ||
-                candidate.priority > bestEntry.priority ||
-                (candidate.priority == bestEntry.priority && specificity > bestSpecificity))
+            TrickPoseCandidateScore score = ScoreTrickPoseCandidate(candidate);
+            if (!hasBest || IsBetterTrickPoseCandidate(score, best))
             {
-                bestEntry = candidate;
-                bestSpecificity = specificity;
+                runnerUp = best;
+                best = score;
+                hasBest = true;
+            }
+            else if (runnerUp.entry == null || IsBetterTrickPoseCandidate(score, runnerUp))
+            {
+                runnerUp = score;
             }
         }
 
-        return bestEntry;
+        _bestCompetingTrickPoseEntry = runnerUp.entry;
+        _bestCompetingTrickPoseScore = runnerUp.totalScore;
+
+        return ResolveCommittedCandidate(best, hasBest);
     }
 
     private void UpdateActiveTrickPoseBlend(float deltaTime, TrickPoseEntry selectedEntry)
@@ -4011,6 +4399,378 @@ public class SkiController : MonoBehaviour
             _activeTrickPoseEntry = null;
     }
 
+    private void UpdateTrickPoseRecognitionLifecycle()
+    {
+        bool airborneNow = IsAirborne;
+        bool posePressedNow = IsPoseButtonHeld && !_trickPoseWasPoseButtonHeldLastFrame;
+        if (airborneNow && !_trickPoseWasAirborneLastFrame)
+            CaptureTrickPoseIntentSnapshot();
+        else if (!airborneNow && _trickPoseWasAirborneLastFrame)
+            ResetTrickPoseRecognitionIntent();
+
+        bool inEntryWindow = GetAirborneTimeForTrickRecognition() <= trickPoseIntentSnapshotWindow;
+        if (airborneNow && posePressedNow)
+            CaptureTrickPoseIntentSnapshot();
+        else if (airborneNow && !_trickPoseIntentSnapshot.valid && inEntryWindow)
+            CaptureTrickPoseIntentSnapshot();
+
+        _trickPoseWasAirborneLastFrame = airborneNow;
+        _trickPoseWasPoseButtonHeldLastFrame = IsPoseButtonHeld;
+    }
+
+    private void CaptureTrickPoseIntentSnapshot()
+    {
+        _trickPoseIntentSnapshot.valid = true;
+        _trickPoseIntentSnapshot.capturedTime = Time.time;
+        _trickPoseIntentSnapshot.poseButtonHeld = IsPoseButtonHeld;
+        _trickPoseIntentSnapshot.family = IsPoseButtonHeld ? ResolvePoseFamilyFromInputs() : ResolvePoseFamily();
+        _trickPoseIntentSnapshot.shape = IsPoseButtonHeld ? ResolvePoseShapeFromInputs() : ResolvePoseShape();
+        _trickPoseIntentSnapshot.orientation = IsPoseButtonHeld ? ResolvePoseOrientationModifierFromState() : ResolvePoseOrientationModifier();
+        _trickPoseIntentSnapshot.verticalOrientation = ResolvePoseVerticalOrientation();
+        _trickPoseIntentSnapshot.horizontalOrientation = ResolvePoseHorizontalOrientation();
+        _trickPoseIntentSnapshot.motionState = ResolvePoseMotionState();
+        _trickPoseIntentSnapshot.poseName = ResolvePoseName(_trickPoseIntentSnapshot.family, _trickPoseIntentSnapshot.shape);
+        _trickPoseIntentSnapshot.spinDirectionSign = CurrentSpinDirectionSign;
+        _trickPoseIntentSnapshot.flipDirectionSign = CurrentFlipDirectionSign;
+        _trickPoseIntentSnapshot.entryEulerAngles = CurrentSignedEulerAngles;
+    }
+
+    private void ResetTrickPoseRecognitionIntent()
+    {
+        _trickPoseIntentSnapshot = default;
+        _bestCompetingTrickPoseEntry = null;
+        _bestCompetingTrickPoseScore = 0f;
+        _lastTrickPoseDecisionReason = string.Empty;
+        _trickPoseWasPoseButtonHeldLastFrame = false;
+    }
+
+    private float GetAirborneTimeForTrickRecognition()
+    {
+        return _airborneStartTime >= 0f
+            ? Mathf.Max(0f, Time.time - _airborneStartTime)
+            : 0f;
+    }
+
+    private TrickPoseCandidateScore ScoreTrickPoseCandidate(TrickPoseEntry entry)
+    {
+        int specificity = entry.GetSpecificityScore();
+        float rawScore =
+            (entry.priority * 16f) +
+            (specificity * 2f) +
+            Mathf.Clamp01(entry.overallWeight);
+        float intentBias = EvaluateIntentBias(entry) * trickPoseIntentBiasStrength;
+
+        return new TrickPoseCandidateScore
+        {
+            entry = entry,
+            specificity = specificity,
+            rawScore = rawScore,
+            totalScore = rawScore + intentBias,
+            intentBias = intentBias
+        };
+    }
+
+    private float EvaluateIntentBias(TrickPoseEntry entry)
+    {
+        if (!_trickPoseIntentSnapshot.valid || entry == null)
+            return 0f;
+
+        float bias = 0f;
+
+        if (!string.IsNullOrWhiteSpace(entry.requiredPoseName) &&
+            string.Equals(entry.requiredPoseName, _trickPoseIntentSnapshot.poseName, System.StringComparison.OrdinalIgnoreCase))
+            bias += 2f;
+
+        if (entry.requiredPoseFamily != AerialPoseFamily.None &&
+            entry.requiredPoseFamily == _trickPoseIntentSnapshot.family)
+            bias += 1.5f;
+
+        if (entry.requiredPoseShape != AerialPoseShape.None &&
+            entry.requiredPoseShape == _trickPoseIntentSnapshot.shape)
+            bias += 1.25f;
+
+        if (entry.requiredVerticalOrientation != TrickPoseVerticalOrientationRequirement.Any &&
+            entry.requiredVerticalOrientation == _trickPoseIntentSnapshot.verticalOrientation)
+            bias += 0.75f;
+
+        if (entry.requiredHorizontalOrientation != TrickPoseHorizontalOrientationRequirement.Any &&
+            entry.requiredHorizontalOrientation == _trickPoseIntentSnapshot.horizontalOrientation)
+            bias += 0.75f;
+
+        if (entry.requiredMotionState != TrickPoseMotionStateRequirement.Any &&
+            entry.requiredMotionState == _trickPoseIntentSnapshot.motionState)
+            bias += 0.5f;
+
+        if (entry.requirePoseButtonHeld != TrickPoseBoolRequirement.Ignore &&
+            ((entry.requirePoseButtonHeld == TrickPoseBoolRequirement.True) == _trickPoseIntentSnapshot.poseButtonHeld))
+            bias += 0.75f;
+
+        if (entry.useAdvancedModifierConditions)
+        {
+            if (entry.requiredSpinDirection != TrickPoseSpinDirectionRequirement.Any &&
+                (int)entry.requiredSpinDirection == _trickPoseIntentSnapshot.spinDirectionSign)
+                bias += 0.5f;
+
+            if (entry.requiredFlipDirection != TrickPoseFlipDirectionRequirement.Any &&
+                (int)entry.requiredFlipDirection == _trickPoseIntentSnapshot.flipDirectionSign)
+                bias += 0.5f;
+        }
+
+        if (entry.requiredOrientationModifier != AerialOrientationModifier.None &&
+            entry.requiredOrientationModifier == _trickPoseIntentSnapshot.orientation)
+            bias += 0.25f;
+
+        if (entry.entryPitchAngleRange.enabled && entry.entryPitchAngleRange.Contains(_trickPoseIntentSnapshot.entryEulerAngles.x))
+            bias += 1f;
+
+        if (entry.entryYawAngleRange.enabled && entry.entryYawAngleRange.Contains(_trickPoseIntentSnapshot.entryEulerAngles.y))
+            bias += 1f;
+
+        if (entry.entryRollAngleRange.enabled && entry.entryRollAngleRange.Contains(_trickPoseIntentSnapshot.entryEulerAngles.z))
+            bias += 1f;
+
+        return bias;
+    }
+
+    private static bool IsBetterTrickPoseCandidate(TrickPoseCandidateScore candidate, TrickPoseCandidateScore incumbent)
+    {
+        if (candidate.entry == null)
+            return false;
+
+        if (incumbent.entry == null)
+            return true;
+
+        if (!Mathf.Approximately(candidate.totalScore, incumbent.totalScore))
+            return candidate.totalScore > incumbent.totalScore;
+
+        if (candidate.entry.priority != incumbent.entry.priority)
+            return candidate.entry.priority > incumbent.entry.priority;
+
+        return candidate.specificity > incumbent.specificity;
+    }
+
+    private TrickPoseEntry ResolveCommittedCandidate(TrickPoseCandidateScore bestCandidate, bool hasBestCandidate)
+    {
+        if (_activeTrickPoseEntry == null)
+        {
+            if (hasBestCandidate)
+                CommitActiveTrickPose(bestCandidate, "Initial commit");
+            else
+                _lastTrickPoseDecisionReason = "No authored pose matched";
+
+            return hasBestCandidate ? bestCandidate.entry : null;
+        }
+
+        bool committedStillValid = TryScoreCurrentCommittedPose(out TrickPoseCandidateScore committedScore);
+        bool hasCompetingCandidate = hasBestCandidate && bestCandidate.entry != _activeTrickPoseEntry;
+
+        if (committedStillValid)
+        {
+            _activeTrickPoseScore = committedScore.totalScore;
+            _activeTrickPoseLastValidTime = Time.time;
+
+            if (!hasCompetingCandidate)
+            {
+                _lastTrickPoseDecisionReason = hasBestCandidate
+                    ? "Committed trick remains best match"
+                    : "Retaining committed trick";
+                return _activeTrickPoseEntry;
+            }
+
+            bool holdElapsed = (Time.time - _activeTrickPoseCommittedAt) >= trickPoseCommitMinHoldTime;
+            bool clearlySuperior = bestCandidate.totalScore >= committedScore.totalScore + trickPoseSwitchScoreMargin;
+            bool strongIntentChange = HasStrongIntentChange(_activeTrickPoseEntry, bestCandidate.entry);
+
+            if ((holdElapsed && clearlySuperior) || (strongIntentChange && bestCandidate.totalScore > committedScore.totalScore))
+            {
+                CommitActiveTrickPose(bestCandidate, strongIntentChange ? "Intent change switch" : "Superior candidate switch");
+                return bestCandidate.entry;
+            }
+
+            _lastTrickPoseDecisionReason = holdElapsed
+                ? "Retaining committed trick via hysteresis"
+                : "Retaining committed trick during minimum hold";
+            return _activeTrickPoseEntry;
+        }
+
+        float invalidDuration = Time.time - _activeTrickPoseLastValidTime;
+        bool withinGrace = invalidDuration <= trickPoseRetentionGraceTime;
+
+        if (hasBestCandidate)
+        {
+            if (!withinGrace)
+            {
+                CommitActiveTrickPose(bestCandidate, "Committed trick invalid; switched");
+                return bestCandidate.entry;
+            }
+
+            bool strongIntentChange = HasStrongIntentChange(_activeTrickPoseEntry, bestCandidate.entry);
+            bool clearlySuperior = bestCandidate.totalScore >= _activeTrickPoseScore + (trickPoseSwitchScoreMargin * 0.5f);
+            if (strongIntentChange || clearlySuperior)
+            {
+                CommitActiveTrickPose(bestCandidate, strongIntentChange ? "Intent change during grace" : "Grace override switch");
+                return bestCandidate.entry;
+            }
+
+            _lastTrickPoseDecisionReason = "Holding committed trick during grace";
+            return _activeTrickPoseEntry;
+        }
+
+        if (withinGrace)
+        {
+            _lastTrickPoseDecisionReason = "Holding committed trick during grace";
+            return _activeTrickPoseEntry;
+        }
+
+        _lastTrickPoseDecisionReason = "Committed trick lost validity";
+        return null;
+    }
+
+    private bool TryScoreCurrentCommittedPose(out TrickPoseCandidateScore score)
+    {
+        if (_activeTrickPoseEntry != null && _activeTrickPoseEntry.Matches(this))
+        {
+            score = ScoreTrickPoseCandidate(_activeTrickPoseEntry);
+            return true;
+        }
+
+        score = default;
+        return false;
+    }
+
+    private void CommitActiveTrickPose(TrickPoseCandidateScore candidate, string reason)
+    {
+        _activeTrickPoseEntry = candidate.entry;
+        _activeTrickPoseScore = candidate.totalScore;
+        _activeTrickPoseCommittedAt = Time.time;
+        _activeTrickPoseLastValidTime = Time.time;
+        _lastTrickPoseDecisionReason = reason;
+
+        if (debugTrickPoseRecognition && _activeTrickPoseEntry != null)
+        {
+            Debug.Log(
+                $"[{nameof(SkiController)}] Trick pose commit '{ResolveTrackedPoseLabel(_activeTrickPoseEntry, ResolvePoseName())}' " +
+                $"raw={candidate.rawScore:0.00} bias={candidate.intentBias:0.00} total={candidate.totalScore:0.00} reason={reason}",
+                this);
+        }
+    }
+
+    private bool HasStrongIntentChange(TrickPoseEntry committedEntry, TrickPoseEntry candidateEntry)
+    {
+        if (committedEntry == null || candidateEntry == null || committedEntry == candidateEntry)
+            return false;
+
+        bool currentFamilyLeftCommitted =
+            committedEntry.requiredPoseFamily != AerialPoseFamily.None &&
+            CurrentPoseFamily != committedEntry.requiredPoseFamily;
+        bool candidateMatchesFamilyShift =
+            candidateEntry.requiredPoseFamily != AerialPoseFamily.None &&
+            candidateEntry.requiredPoseFamily == CurrentPoseFamily &&
+            candidateEntry.requiredPoseFamily != committedEntry.requiredPoseFamily;
+
+        bool currentShapeLeftCommitted =
+            committedEntry.requiredPoseShape != AerialPoseShape.None &&
+            CurrentPoseShape != committedEntry.requiredPoseShape;
+        bool candidateMatchesShapeShift =
+            candidateEntry.requiredPoseShape != AerialPoseShape.None &&
+            candidateEntry.requiredPoseShape == CurrentPoseShape &&
+            candidateEntry.requiredPoseShape != committedEntry.requiredPoseShape;
+
+        bool currentNameLeftCommitted =
+            !string.IsNullOrWhiteSpace(committedEntry.requiredPoseName) &&
+            !string.Equals(CurrentPoseName, committedEntry.requiredPoseName, System.StringComparison.OrdinalIgnoreCase);
+        bool candidateMatchesNameShift =
+            !string.IsNullOrWhiteSpace(candidateEntry.requiredPoseName) &&
+            string.Equals(CurrentPoseName, candidateEntry.requiredPoseName, System.StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(candidateEntry.requiredPoseName, committedEntry.requiredPoseName, System.StringComparison.OrdinalIgnoreCase);
+
+        bool poseButtonChangedAway =
+            committedEntry.requirePoseButtonHeld == TrickPoseBoolRequirement.True && !IsPoseButtonHeld ||
+            committedEntry.requirePoseButtonHeld == TrickPoseBoolRequirement.False && IsPoseButtonHeld;
+        bool candidateMatchesPoseButtonShift =
+            candidateEntry.requirePoseButtonHeld == TrickPoseBoolRequirement.True && IsPoseButtonHeld ||
+            candidateEntry.requirePoseButtonHeld == TrickPoseBoolRequirement.False && !IsPoseButtonHeld;
+
+        return
+            (currentFamilyLeftCommitted && candidateMatchesFamilyShift) ||
+            (currentShapeLeftCommitted && candidateMatchesShapeShift) ||
+            (currentNameLeftCommitted && candidateMatchesNameShift) ||
+            (poseButtonChangedAway && candidateMatchesPoseButtonShift);
+    }
+
+    private string ResolveCommittedTrackedPoseName()
+    {
+        return ResolveTrackedPoseLabel(_activeTrickPoseEntry, ResolvePoseName());
+    }
+
+    private AerialPoseFamily ResolveCommittedPoseFamily()
+    {
+        if (_activeTrickPoseEntry != null && _activeTrickPoseEntry.requiredPoseFamily != AerialPoseFamily.None)
+            return _activeTrickPoseEntry.requiredPoseFamily;
+
+        if (_trickPoseIntentSnapshot.valid && _trickPoseIntentSnapshot.family != AerialPoseFamily.None)
+            return _trickPoseIntentSnapshot.family;
+
+        return ResolvePoseFamily();
+    }
+
+    private AerialPoseShape ResolveCommittedPoseShape()
+    {
+        if (_activeTrickPoseEntry != null && _activeTrickPoseEntry.requiredPoseShape != AerialPoseShape.None)
+            return _activeTrickPoseEntry.requiredPoseShape;
+
+        if (_trickPoseIntentSnapshot.valid && _trickPoseIntentSnapshot.shape != AerialPoseShape.None)
+            return _trickPoseIntentSnapshot.shape;
+
+        return ResolvePoseShape();
+    }
+
+    private static string ResolveTrackedPoseLabel(TrickPoseEntry entry, string fallbackPoseName)
+    {
+        if (entry != null)
+        {
+            if (!string.IsNullOrWhiteSpace(entry.overridePoseLabel))
+                return entry.overridePoseLabel.Trim();
+
+            if (!string.IsNullOrWhiteSpace(entry.requiredPoseName))
+                return entry.requiredPoseName.Trim();
+
+            if (!string.IsNullOrWhiteSpace(entry.displayName) &&
+                !string.Equals(entry.displayName, "New Trick Pose", System.StringComparison.OrdinalIgnoreCase))
+                return entry.displayName.Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(fallbackPoseName) ? string.Empty : fallbackPoseName.Trim();
+    }
+
+    private static string BuildPoseDescriptorLabel(string basePoseName, AerialOrientationModifier orientationModifier)
+    {
+        if (string.IsNullOrWhiteSpace(basePoseName))
+            return string.Empty;
+
+        string modifier = GetAerialOrientationModifierLabel(orientationModifier);
+
+        return string.IsNullOrWhiteSpace(modifier)
+            ? basePoseName
+            : $"{modifier} {basePoseName}";
+    }
+
+    public static string GetAerialOrientationModifierLabel(AerialOrientationModifier orientationModifier)
+    {
+        return orientationModifier switch
+        {
+            AerialOrientationModifier.Switch => "Switch",
+            AerialOrientationModifier.Inverted => "Inverted",
+            AerialOrientationModifier.Sideways => "Travel Sideways",
+            AerialOrientationModifier.Rising => "Motion Rising",
+            AerialOrientationModifier.Diving => "Motion Diving",
+            AerialOrientationModifier.OnSide => "On Side",
+            AerialOrientationModifier.ChestDown => "Chest Down",
+            AerialOrientationModifier.ChestUp => "Chest Up",
+            _ => string.Empty
+        };
+    }
+
     private void ApplyEntryToSnapshot(TrickPoseRigSnapshot snapshot, TrickPoseEntry entry, float masterWeight)
     {
         if (snapshot == null || entry == null)
@@ -4023,6 +4783,10 @@ public class SkiController : MonoBehaviour
         BlendSnapshotPart(ref snapshot.rightSki, entry.rightSkiPose, finalWeight);
         BlendSnapshotPart(ref snapshot.leftPole, entry.leftPolePose, finalWeight);
         BlendSnapshotPart(ref snapshot.rightPole, entry.rightPolePose, finalWeight);
+        BlendSnapshotJointPart(ref snapshot.leftElbow, entry.leftElbowPose, finalWeight);
+        BlendSnapshotJointPart(ref snapshot.rightElbow, entry.rightElbowPose, finalWeight);
+        BlendSnapshotJointPart(ref snapshot.leftKnee, entry.leftKneePose, finalWeight);
+        BlendSnapshotJointPart(ref snapshot.rightKnee, entry.rightKneePose, finalWeight);
     }
 
     private static void BlendSnapshotPart(ref TrickPoseRigSnapshot.PartState part, PosePartTransformData pose, float masterWeight)
@@ -4036,6 +4800,16 @@ public class SkiController : MonoBehaviour
 
         part.localPosition = Vector3.Lerp(part.localPosition, targetPos, t);
         part.localRotation = Quaternion.Slerp(part.localRotation, targetRot, t);
+    }
+
+    private static void BlendSnapshotJointPart(ref TrickPoseRigSnapshot.PartState part, PosePartTransformData pose, float masterWeight)
+    {
+        if (pose == null || !pose.enabled || !part.hasValue)
+            return;
+
+        float t = Mathf.Clamp01(masterWeight * Mathf.Clamp01(pose.weight));
+        part.localPosition = Vector3.Lerp(part.localPosition, pose.localPosition, t);
+        part.localRotation = Quaternion.identity;
     }
 
     private static void BlendPosePart(ref Vector3 targetPos, ref Quaternion targetRot, TrickPoseRigSnapshot.PartState defaults, PosePartTransformData pose, float masterWeight)
@@ -4364,6 +5138,14 @@ public class SkiController : MonoBehaviour
                 rightPoleContact.ClearAuthoredPoseOverride();
 
             rightPoleContact.SetPassiveAirDriftContext(IsAirborne, transform.InverseTransformDirection(_rb.linearVelocity), authoredPoseWeight);
+        }
+
+        SkierLimbLineVisual limbVisual = GetSkierLimbLineVisual();
+        if (limbVisual != null)
+        {
+            limbVisual.SetRuntimeJointPoseEntry(
+                _activeTrickPoseEntry != null && authoredPoseWeight > 0.001f ? _activeTrickPoseEntry : null,
+                authoredPoseWeight);
         }
 
         if (debugAuthoredTrickPose && _activeTrickPoseEntry != null)
@@ -5232,6 +6014,11 @@ public class SkiController : MonoBehaviour
         if (!IsAirPoseActive)
             return AerialPoseFamily.None;
 
+        return ResolvePoseFamilyFromInputs();
+    }
+
+    private AerialPoseFamily ResolvePoseFamilyFromInputs()
+    {
         const float activeThreshold = 0.2f;
         bool leftActive = _rawLeftLegInput > activeThreshold;
         bool rightActive = _rawRightLegInput > activeThreshold;
@@ -5253,6 +6040,11 @@ public class SkiController : MonoBehaviour
         if (!IsAirPoseActive)
             return AerialPoseShape.None;
 
+        return ResolvePoseShapeFromInputs();
+    }
+
+    private AerialPoseShape ResolvePoseShapeFromInputs()
+    {
         if (_tuck01 >= 0.55f)
             return AerialPoseShape.Compact;
 
@@ -5270,12 +6062,53 @@ public class SkiController : MonoBehaviour
         if (!IsAirPoseActive)
             return AerialOrientationModifier.None;
 
-        if (transform.up.y < -0.2f)
+        return ResolvePoseOrientationModifierFromState();
+    }
+
+    private TrickPoseVerticalOrientationRequirement ResolvePoseVerticalOrientation()
+    {
+        return TrickPoseOrientationUtility.DeriveVertical(transform.rotation, IsAirPoseActive);
+    }
+
+    private TrickPoseHorizontalOrientationRequirement ResolvePoseHorizontalOrientation()
+    {
+        return TrickPoseOrientationUtility.DeriveHorizontal(transform.rotation, IsAirPoseActive);
+    }
+
+    private TrickPoseMotionStateRequirement ResolvePoseMotionState()
+    {
+        if (!IsAirPoseActive)
+            return TrickPoseMotionStateRequirement.Any;
+
+        if (_rb.linearVelocity.y > 1.75f)
+            return TrickPoseMotionStateRequirement.Rising;
+        if (_rb.linearVelocity.y < -2.5f)
+            return TrickPoseMotionStateRequirement.Diving;
+
+        return TrickPoseMotionStateRequirement.Any;
+    }
+
+    private AerialOrientationModifier ResolvePoseOrientationModifierFromState()
+    {
+        Vector3 up = transform.up;
+        Vector3 forward = transform.forward;
+        Vector3 right = transform.right;
+
+        if (up.y < -0.2f)
             return AerialOrientationModifier.Inverted;
+
+        if (forward.y < -0.45f)
+            return AerialOrientationModifier.ChestDown;
+
+        if (forward.y > 0.45f)
+            return AerialOrientationModifier.ChestUp;
+
+        if (Mathf.Abs(right.y) > 0.55f)
+            return AerialOrientationModifier.OnSide;
 
         Vector3 groundNormal = _groundNormal.sqrMagnitude > 0.0001f ? _groundNormal.normalized : Vector3.up;
         Vector3 velOnPlane = Vector3.ProjectOnPlane(_rb.linearVelocity, groundNormal);
-        Vector3 fwdOnPlane = Vector3.ProjectOnPlane(transform.forward, groundNormal);
+        Vector3 fwdOnPlane = Vector3.ProjectOnPlane(forward, groundNormal);
 
         if (velOnPlane.sqrMagnitude > 0.01f && fwdOnPlane.sqrMagnitude > 0.01f)
         {
@@ -5306,6 +6139,11 @@ public class SkiController : MonoBehaviour
         AerialPoseFamily family = ResolvePoseFamily();
         AerialPoseShape shape = ResolvePoseShape();
 
+        return ResolvePoseName(family, shape);
+    }
+
+    private static string ResolvePoseName(AerialPoseFamily family, AerialPoseShape shape)
+    {
         return (family, shape) switch
         {
             (AerialPoseFamily.Left, AerialPoseShape.Compact) => "Mantis",
@@ -5330,6 +6168,14 @@ public class SkiController : MonoBehaviour
 
             _ => string.Empty
         };
+    }
+
+    private static Vector3 NormalizeEulerAngles(Vector3 eulerAngles)
+    {
+        return new Vector3(
+            TrickPoseEulerAngleRange.NormalizeSignedAngle(eulerAngles.x),
+            TrickPoseEulerAngleRange.NormalizeSignedAngle(eulerAngles.y),
+            TrickPoseEulerAngleRange.NormalizeSignedAngle(eulerAngles.z));
     }
 
     // ----------------------------------------------------------------------

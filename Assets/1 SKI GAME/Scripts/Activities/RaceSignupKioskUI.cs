@@ -236,7 +236,9 @@ public sealed class RaceSignupKioskUI : MonoBehaviour
             _panel.style.display = DisplayStyle.Flex;
 
         ApplyCursorAndCameraState(true);
-        GameplayModalMovementLock.SetLocked(this, true);
+
+        GameObject playerRoot = ResolvePlayerRootObject();
+        GameplayModalMovementLock.SetLocked(this, true, playerRoot);
 
         if (miniHudController != null)
             miniHudController.SetVisible(false);
@@ -1148,13 +1150,24 @@ public sealed class RaceSignupKioskUI : MonoBehaviour
         {
             if (_lblResult != null)
                 _lblResult.text = "Player not found.";
+
             return;
         }
+
+        // Important: release the kiosk/modal movement lock BEFORE starting the race.
+        // MountainActivityManager.TryStart invokes RaceCourseLine.BeginAttempt synchronously,
+        // so starting while the kiosk still owns movement can restore stale disabled state after BeginAttempt.
+        ApplyCursorAndCameraState(false);
+        GameplayModalMovementLock.SetLocked(this, false);
 
         bool ok = _selectedRace.TryStartLeagueExternal(playerRoot, _selectedLeagueNumber);
 
         if (!ok)
         {
+            // Race did not start, so restore kiosk interaction state.
+            ApplyCursorAndCameraState(true);
+            GameplayModalMovementLock.SetLocked(this, true, playerRoot);
+
             if (_lblResult != null)
             {
                 bool raceUnlocked = _selectedRace.IsRegionalChampionship
@@ -1164,7 +1177,9 @@ public sealed class RaceSignupKioskUI : MonoBehaviour
                 if (!raceUnlocked)
                 {
                     if (_selectedRace.IsRegionalChampionship)
+                    {
                         _lblResult.text = _selectedRace.BuildChampionshipLockReason();
+                    }
                     else
                     {
                         int prev = _selectedRace.GetPreviousLeagueNumber(_selectedLeagueNumber);
@@ -1178,14 +1193,18 @@ public sealed class RaceSignupKioskUI : MonoBehaviour
                     _lblResult.text = "Could not start race.";
                 }
             }
+
             return;
         }
 
         if (_lblResult != null)
+        {
             _lblResult.text = _selectedRace.IsRegionalChampionship
                 ? $"Signed up for {_selectedRace.RaceName} Championship"
                 : $"Signed up for {_selectedRace.RaceName} - {_selectedRace.GetLeagueDisplayName(_selectedLeagueNumber)}";
+        }
 
+        // Close after the successful start, but movement is already released above.
         Close();
     }
 

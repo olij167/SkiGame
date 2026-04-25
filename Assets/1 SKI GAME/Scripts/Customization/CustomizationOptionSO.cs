@@ -9,6 +9,24 @@ public enum CustomizationOptionType
     Jacket,
     Skis,
     Poles,
+    Gloves,
+    Boots,
+    Accessory,
+}
+
+public enum LimbWearableColourSource
+{
+    Primary,
+    Secondary
+
+}
+
+public enum JacketLimbRouteTarget
+{
+    LeftArm,
+    RightArm,
+    LeftLeg,
+    RightLeg
 }
 
 [CreateAssetMenu(menuName = "SkiGame/Customization/Option", fileName = "CustomizationOption")]
@@ -31,8 +49,27 @@ public class CustomizationOptionSO : ScriptableObject
     public Sprite eyeSprite;                // EyeIcon (also used for UI icon if you want)
     public GameObject hatPrefab;            // Hat
     public GameObject jacketPrefab;          // Jacket
+    public GameObject glovePrefab;          // Gloves
+    public GameObject bootPrefab;           // Boots
+    public GameObject accessoryPrefab;      // Accessory
     public int customizerIndex = -1;          // for SkinPattern / EyeIcon / Hat / Cloak (maps to CharacterCustomizer arrays)
     public SkiGearProfileSO gearProfile;      // for Skis / Poles
+
+    [Header("Limb Visual Colour Routing")]
+    [Tooltip("Jacket colour source used by the left arm limb line and hand visuals.")]
+    public LimbWearableColourSource leftArmLimbColourSource = LimbWearableColourSource.Primary;
+
+    [Tooltip("Jacket colour source used by the right arm limb line and hand visuals.")]
+    public LimbWearableColourSource rightArmLimbColourSource = LimbWearableColourSource.Primary;
+
+    [Tooltip("Jacket colour source used by the left leg limb line and foot visuals.")]
+    public LimbWearableColourSource leftLegLimbColourSource = LimbWearableColourSource.Primary;
+
+    [Tooltip("Jacket colour source used by the right leg limb line and foot visuals.")]
+    public LimbWearableColourSource rightLegLimbColourSource = LimbWearableColourSource.Primary;
+
+    [Tooltip("Wearable extra-channel id used whenever any limb is assigned to Secondary.")]
+    public string limbSecondaryChannelId = "secondary";
 
     [Header("Gear Default Pattern (optional)")]
     public CustomizationOptionSO defaultPatternOption;   // preferred authoring reference
@@ -79,6 +116,31 @@ public class CustomizationOptionSO : ScriptableObject
             foreach (var id in unlockPatternIdsOnPurchase)
                 if (!string.IsNullOrEmpty(id))
                     yield return id;
+    }
+
+    public LimbWearableColourSource GetLimbColourSource(JacketLimbRouteTarget target)
+    {
+        return target switch
+        {
+            JacketLimbRouteTarget.LeftArm => leftArmLimbColourSource,
+            JacketLimbRouteTarget.RightArm => rightArmLimbColourSource,
+            JacketLimbRouteTarget.LeftLeg => leftLegLimbColourSource,
+            JacketLimbRouteTarget.RightLeg => rightLegLimbColourSource,
+            _ => LimbWearableColourSource.Primary
+        };
+    }
+
+    public string GetResolvedLimbSecondaryChannelId(string fallbackChannelId)
+    {
+        return string.IsNullOrWhiteSpace(limbSecondaryChannelId) ? fallbackChannelId : limbSecondaryChannelId;
+    }
+
+    public bool UsesLimbSecondaryColour()
+    {
+        return leftArmLimbColourSource == LimbWearableColourSource.Secondary ||
+               rightArmLimbColourSource == LimbWearableColourSource.Secondary ||
+               leftLegLimbColourSource == LimbWearableColourSource.Secondary ||
+               rightLegLimbColourSource == LimbWearableColourSource.Secondary;
     }
 
 }

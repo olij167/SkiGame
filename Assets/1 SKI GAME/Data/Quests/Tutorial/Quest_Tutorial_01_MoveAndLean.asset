@@ -14,17 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.QuestDefinitionSO
   id: tutorial.move_and_lean
   title: Move and Lean
-  description: Start by feeling how W and S shape your momentum on the snow.
+  description: Start by feeling how forward and backward lean shape your momentum
+    on the snow.
   autoAccept: 0
   tutorialQuest: 1
   stages:
   - id: tutorial.move_and_lean.stage1
     title: Learn Your Weight Shift
-    description: Use W to build speed, then use S to feel how your stance calms the
-      skis back down.
+    description: Lean forward to build speed, then lean back to feel how your stance
+      calms the skis down.
     objectives:
     - id: tutorial.move_and_lean.travel
-      title: Use W to start moving
+      title: Start moving
       description: Lead with forward lean, then keep gliding until the skis start
         carrying you naturally.
       optional: 0
@@ -44,11 +45,29 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 0
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives:
       - id: tutorial.move_and_lean.forward
         title: Lean forward once
-        description: Press W to lean into the slope and start the slide.
+        description: Lean into the slope and start the slide.
         optional: 0
         hiddenUntilAvailable: 0
         autoPinWhenAvailable: 1
@@ -66,6 +85,24 @@ MonoBehaviour:
         interactionTarget: 0
         uiTarget: 0
         namedTrick: 
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         compoundMode: 40
         compoundObjectives: []
         advancedCondition:
@@ -78,6 +115,24 @@ MonoBehaviour:
           boolValue: 1
           stringValue: 
           filters: []
+          trickRequirement:
+            flavor: 0
+            minimumSpinDegrees: 0
+            requiredSpinDirection: 0
+            minimumFlipCount: 0
+            requiredFlipDirection: 0
+            requiresGrind: 0
+            requiresSlide: 0
+            requiresValidAuthoredPose: 0
+            requiresPoseRotationCombo: 0
+            requiredPoseFamily: 0
+            requiredPoseShape: 0
+            requiredOrientationModifier: 0
+            explicitPoseLabel: 
+            requiresSwitchLanding: 0
+            requiresNoseLanding: 0
+            requiresTailLanding: 0
+            requiredZoneId: 
           children: []
       - id: tutorial.move_and_lean.distance
         title: Glide 12m
@@ -99,6 +154,24 @@ MonoBehaviour:
         interactionTarget: 0
         uiTarget: 0
         namedTrick: 
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         compoundMode: 40
         compoundObjectives: []
         advancedCondition:
@@ -111,6 +184,24 @@ MonoBehaviour:
           boolValue: 1
           stringValue: 
           filters: []
+          trickRequirement:
+            flavor: 0
+            minimumSpinDegrees: 0
+            requiredSpinDirection: 0
+            minimumFlipCount: 0
+            requiredFlipDirection: 0
+            requiresGrind: 0
+            requiresSlide: 0
+            requiresValidAuthoredPose: 0
+            requiresPoseRotationCombo: 0
+            requiredPoseFamily: 0
+            requiredPoseShape: 0
+            requiredOrientationModifier: 0
+            explicitPoseLabel: 
+            requiresSwitchLanding: 0
+            requiresNoseLanding: 0
+            requiresTailLanding: 0
+            requiredZoneId: 
           children: []
       advancedCondition:
         kind: 0
@@ -122,10 +213,28 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []
     - id: tutorial.move_and_lean.backward
       title: Lean back to settle your speed
-      description: Press S to shift your weight back and feel the skis calm down.
+      description: Shift your weight back and feel the skis calm down.
       optional: 0
       hiddenUntilAvailable: 0
       autoPinWhenAvailable: 1
@@ -143,6 +252,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 0
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -155,4 +282,22 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []

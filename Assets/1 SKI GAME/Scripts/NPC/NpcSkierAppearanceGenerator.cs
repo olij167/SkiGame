@@ -201,7 +201,11 @@ public class NpcSkierAppearanceGenerator : MonoBehaviour
         if (option == null)
         {
             if (isHat) customizer.ClearHat();
-            else customizer.ClearJacket();
+            else
+            {
+                customizer.SetCurrentJacketOption(null);
+                customizer.ClearJacket();
+            }
             return;
         }
 
@@ -218,6 +222,7 @@ public class NpcSkierAppearanceGenerator : MonoBehaviour
             if (option.jacketPrefab != null) customizer.SetJacketPrefab(option.jacketPrefab);
             else if (option.customizerIndex >= 0) customizer.SetJacket(option.customizerIndex);
 
+            customizer.SetCurrentJacketOption(option);
             customizer.SetJacketColor(colour);
             customizer.SetJacketPatternTexture(pattern);
         }

@@ -43,6 +43,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 0
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -55,6 +73,24 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []
     - id: tutorial.quickstop
       title: Quick stop
@@ -76,6 +112,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 0
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -88,6 +142,24 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []
     - id: tutorial.polepush
       title: Push with poles
@@ -109,6 +181,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 0
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -121,6 +211,24 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []
     - id: tutorial.poledrag
       title: Drag your poles
@@ -142,6 +250,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 0
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -154,6 +280,24 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []
   - id: tutorial.speed_and_air.stage2
     title: Jump and Adjust
@@ -180,6 +324,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 0
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -192,6 +354,24 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []
     - id: tutorial.airpose
       title: Use an air pose
@@ -213,6 +393,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 0
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -225,4 +423,22 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []

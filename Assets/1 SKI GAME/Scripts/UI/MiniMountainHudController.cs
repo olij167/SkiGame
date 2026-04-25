@@ -18,6 +18,8 @@ namespace SkiGame.Progression
     [DisallowMultipleComponent]
     public sealed class MiniMountainHudController : MonoBehaviour
     {
+        public static event Action<QuestDefinitionSO, QuestRuntimeState> OnFocusedQuestChanged;
+
         [Header("UI Document")]
         [SerializeField] private UIDocument document;
         [SerializeField] private StyleSheet styleSheet;
@@ -359,12 +361,38 @@ namespace SkiGame.Progression
             if (string.IsNullOrWhiteSpace(questId))
                 return;
 
-            _selectedQuestId = questId;
-
+            bool changed = SetSelectedQuestInternal(questId);
+            bool expandChanged = expandSummary && !_questSummaryExpanded;
             if (expandSummary)
                 _questSummaryExpanded = true;
 
-            RefreshQuestTracker(forceStructureRebuild: true);
+            if (changed || expandChanged)
+                RefreshQuestTracker(forceStructureRebuild: true);
+        }
+
+        private bool SetSelectedQuestInternal(string questId, bool forceNotify = false)
+        {
+            if (string.IsNullOrWhiteSpace(questId))
+                return false;
+
+            questId = questId.Trim();
+            string previousQuestId = _selectedQuestId;
+            bool changed = !string.Equals(previousQuestId, questId, StringComparison.OrdinalIgnoreCase);
+
+            _selectedQuestId = questId;
+
+            if (!changed && !forceNotify)
+                return false;
+
+            QuestDefinitionSO definition = questDirector != null
+                ? questDirector.GetQuestDefinition(_selectedQuestId)
+                : null;
+            QuestRuntimeState runtimeState = questDirector != null
+                ? questDirector.GetQuestState(_selectedQuestId)
+                : null;
+
+            OnFocusedQuestChanged?.Invoke(definition, runtimeState);
+            return true;
         }
 
         private void ResolveReferences()
@@ -721,7 +749,7 @@ namespace SkiGame.Progression
             }
             else
             {
-                _selectedQuestId = focusedDefinition.SafeId;
+                SetSelectedQuestInternal(focusedDefinition.SafeId);
 
                 QuestObjectiveDefinition objectiveDefinition = null;
                 QuestObjectiveRuntimeState objectiveState = null;
@@ -992,26 +1020,11 @@ namespace SkiGame.Progression
             }
 
             bool showDirective = !string.IsNullOrWhiteSpace(snapshot.objectiveText);
-            var directiveRow = card.Q<VisualElement>("PrimaryDirectiveRow");
-            SetElementVisible(directiveRow, showDirective);
-
+            SetElementVisible(card.Q<VisualElement>("PrimaryDirectiveRow"), showDirective);
             if (showDirective)
             {
-                bool urgentRescueReturn =
-                    snapshot.activityKind == MountainActivityKind.Rescue &&
-                    snapshot.source is RescueService rescue &&
-                    rescue.IsAwaitingReturnToSnowmobile;
-
-                directiveRow?.EnableInClassList("is-urgent", urgentRescueReturn);
-
-                SetLabelText(card, "PrimaryDirectiveKicker",
-                    urgentRescueReturn ? "RETURN" : ResolveDirectiveLabel(snapshot)?.ToUpperInvariant());
-
+                SetLabelText(card, "PrimaryDirectiveKicker", ResolveDirectiveLabel(snapshot)?.ToUpperInvariant());
                 SetLabelText(card, "PrimaryDirectiveText", snapshot.objectiveText.Trim());
-            }
-            else
-            {
-                directiveRow?.EnableInClassList("is-urgent", false);
             }
 
             bool showProgress = snapshot.showProgressBar;
@@ -1197,8 +1210,8 @@ namespace SkiGame.Progression
             var next = _trackedQuestBuffer[nextIndex];
             if (next != null)
             {
-                _selectedQuestId = next.questId;
-                RefreshQuestTracker(forceStructureRebuild: true); 
+                if (SetSelectedQuestInternal(next.questId))
+                    RefreshQuestTracker(forceStructureRebuild: true);
             }
         }
 
@@ -2152,9 +2165,14 @@ namespace SkiGame.Progression
 
             card.RegisterCallback<ClickEvent>(_ =>
             {
-                _selectedQuestId = definition.SafeId;
+                bool changed = SetSelectedQuestInternal(definition.SafeId);
+                bool expandChanged = !_questSummaryExpanded;
                 _questSummaryExpanded = true;
-                RefreshQuestTracker(forceStructureRebuild: true);
+
+                if (changed || expandChanged)
+                {
+                    RefreshQuestTracker(forceStructureRebuild: true);
+                }
             });
 
             return card;
@@ -2390,9 +2408,13 @@ namespace SkiGame.Progression
                         case QuestActivityTargetType.RescueCompleted: return "Finish rescue";
                     }
                     break;
+
+                case QuestObjectiveTemplate.Compound:
+                    return BuildCompoundDetailedPrompt(objectiveDefinition);
             }
 
-            return objectiveDefinition.BuildPromptLabel();
+            string fallback = objectiveDefinition.BuildPromptLabel();
+            return InputPromptResolver.FormatBindingPlaceholders(fallback, inputActions);
         }
 
         private string BuildOverlayRoutePrompt(string tabName)
@@ -2478,9 +2500,182 @@ namespace SkiGame.Progression
                         case QuestActivityTargetType.RescueCompleted: return InputPromptTokens.Text("Finish rescue");
                     }
                     break;
+
+                case QuestObjectiveTemplate.Compound:
+                    return BuildCompoundDetailedPromptTokens(objectiveDefinition);
             }
 
-            return InputPromptTokens.Text(objectiveDefinition.BuildPromptLabel());
+            string fallback = InputPromptResolver.FormatBindingPlaceholders(objectiveDefinition.BuildPromptLabel(), inputActions);
+            return InputPromptTokens.Text(fallback);
+        }
+
+        private string BuildCompoundDetailedPrompt(QuestObjectiveDefinition objectiveDefinition)
+        {
+            if (objectiveDefinition?.compoundObjectives == null || objectiveDefinition.compoundObjectives.Count == 0)
+                return "-";
+
+            string first = string.Empty;
+            string second = string.Empty;
+
+            for (int i = 0; i < objectiveDefinition.compoundObjectives.Count; i++)
+            {
+                var child = objectiveDefinition.compoundObjectives[i];
+                if (child == null)
+                    continue;
+
+                string prompt = BuildDetailedPrompt(child);
+                if (!IsUsablePrompt(prompt))
+                    continue;
+
+                if (string.IsNullOrWhiteSpace(first))
+                {
+                    first = prompt;
+                    continue;
+                }
+
+                second = prompt;
+                break;
+            }
+
+            return JoinPromptText(first, second);
+        }
+
+        private InputPromptToken[] BuildCompoundDetailedPromptTokens(QuestObjectiveDefinition objectiveDefinition)
+        {
+            if (objectiveDefinition?.compoundObjectives == null || objectiveDefinition.compoundObjectives.Count == 0)
+                return InputPromptTokens.Text("-");
+
+            InputPromptToken[] first = null;
+            InputPromptToken[] second = null;
+
+            for (int i = 0; i < objectiveDefinition.compoundObjectives.Count; i++)
+            {
+                var child = objectiveDefinition.compoundObjectives[i];
+                if (child == null)
+                    continue;
+
+                var tokens = BuildDetailedPromptTokens(child);
+                string plain = TokensToPlainText(tokens);
+                if (!IsUsablePrompt(plain))
+                    continue;
+
+                if (first == null)
+                {
+                    first = tokens;
+                    continue;
+                }
+
+                second = tokens;
+                break;
+            }
+
+            if (first == null)
+                return InputPromptTokens.Text("-");
+
+            if (second == null)
+                return first;
+
+            string firstText = TokensToPlainText(first);
+            string secondText = TokensToPlainText(second);
+            if (string.Equals(GetTrailingPromptFragment(firstText), GetLeadingPromptFragment(secondText), StringComparison.OrdinalIgnoreCase))
+                return first;
+
+            return Join(first, "->", second);
+        }
+
+        private static bool IsUsablePrompt(string prompt)
+        {
+            return !string.IsNullOrWhiteSpace(prompt) && prompt.Trim() != "-";
+        }
+
+        private static string JoinPromptText(string first, string second)
+        {
+            first = first?.Trim() ?? string.Empty;
+            second = second?.Trim() ?? string.Empty;
+
+            if (!IsUsablePrompt(first))
+                return IsUsablePrompt(second) ? second : "-";
+
+            if (!IsUsablePrompt(second))
+                return first;
+
+            string trailingFirst = GetTrailingPromptFragment(first);
+            string leadingSecond = GetLeadingPromptFragment(second);
+
+            if (!string.IsNullOrWhiteSpace(trailingFirst) &&
+                string.Equals(trailingFirst, leadingSecond, StringComparison.OrdinalIgnoreCase))
+            {
+                string remainder = RemoveLeadingPromptFragment(second);
+                return IsUsablePrompt(remainder) ? $"{first} -> {remainder}" : first;
+            }
+
+            return $"{first} -> {second}";
+        }
+
+        private static string TokensToPlainText(IReadOnlyList<InputPromptToken> tokens)
+        {
+            if (tokens == null || tokens.Count == 0)
+                return string.Empty;
+
+            var builder = new System.Text.StringBuilder(tokens.Count * 8);
+            for (int i = 0; i < tokens.Count; i++)
+            {
+                string value = tokens[i].Value;
+                if (string.IsNullOrWhiteSpace(value))
+                    continue;
+
+                if (builder.Length > 0)
+                    builder.Append(' ');
+
+                builder.Append(value.Trim());
+            }
+
+            return builder.ToString();
+        }
+
+        private static string GetLeadingPromptFragment(string prompt)
+        {
+            var fragments = SplitPromptFragments(prompt);
+            return fragments.Count > 0 ? fragments[0] : string.Empty;
+        }
+
+        private static string GetTrailingPromptFragment(string prompt)
+        {
+            var fragments = SplitPromptFragments(prompt);
+            return fragments.Count > 0 ? fragments[fragments.Count - 1] : string.Empty;
+        }
+
+        private static string RemoveLeadingPromptFragment(string prompt)
+        {
+            var fragments = SplitPromptFragments(prompt);
+            if (fragments.Count <= 1)
+                return string.Empty;
+
+            fragments.RemoveAt(0);
+            return string.Join(" -> ", fragments);
+        }
+
+        private static List<string> SplitPromptFragments(string prompt)
+        {
+            var fragments = new List<string>();
+            if (string.IsNullOrWhiteSpace(prompt))
+                return fragments;
+
+            string normalized = prompt
+                .Replace(", THEN ", "|", StringComparison.OrdinalIgnoreCase)
+                .Replace(" THEN ", "|", StringComparison.OrdinalIgnoreCase)
+                .Replace(" -> ", "|", StringComparison.OrdinalIgnoreCase)
+                .Replace(" + ", "|", StringComparison.OrdinalIgnoreCase);
+
+            string[] parts = normalized.Split('|');
+            for (int i = 0; i < parts.Length; i++)
+            {
+                string part = parts[i]?.Trim() ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(part))
+                    fragments.Add(part);
+            }
+
+            return fragments;
         }
 
         private InputPromptToken[] Action(string actionName, params string[] compositePartNames)

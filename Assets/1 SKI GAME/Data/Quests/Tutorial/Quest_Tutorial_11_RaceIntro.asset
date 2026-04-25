@@ -26,8 +26,7 @@ MonoBehaviour:
     objectives:
     - id: tutorial.race_intro.kiosk
       title: Open the race kiosk
-      description: Follow the race beacon to the signup kiosk and press E to open
-        it.
+      description: Follow the race beacon to the signup kiosk and open it.
       optional: 0
       hiddenUntilAvailable: 0
       autoPinWhenAvailable: 1
@@ -45,6 +44,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 80
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -57,6 +74,24 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []
     - id: tutorial.race_intro.start
       title: Start a race
@@ -78,6 +113,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 0
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -90,6 +143,24 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []
     - id: tutorial.race_intro.complete
       title: Finish the race
@@ -112,6 +183,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 0
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -124,4 +213,22 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []

@@ -18,14 +18,20 @@ MonoBehaviour:
     priority: 0
     overallWeight: 1
     overridePoseLabel: Leap of Faith
-    requiredPoseFamily: 0
-    requiredPoseShape: 0
+    isCoveragePlaceholder: 0
+    coverageSlotId: 
+    requiredPoseFamily: 1
+    requiredPoseShape: 3
+    requiredVerticalOrientation: 1
+    requiredHorizontalOrientation: 1
+    requiredMotionState: 1
     requiredOrientationModifier: 4
     requiredPoseName: 
-    requireAirborne: 0
-    requirePoseButtonHeld: 0
-    requiredSpinDirection: 1
-    requiredFlipDirection: 1
+    requireAirborne: 1
+    requirePoseButtonHeld: 1
+    useAdvancedModifierConditions: 0
+    requiredSpinDirection: 0
+    requiredFlipDirection: 0
     yawAngularVelocityRange:
       enabled: 0
       range: {x: 5, y: 10}
@@ -38,110 +44,86 @@ MonoBehaviour:
     totalAngularSpeedRange:
       enabled: 0
       range: {x: 5, y: 10}
+    entryPitchAngleRange:
+      enabled: 0
+      range: {x: 40, y: 80}
+    entryYawAngleRange:
+      enabled: 0
+      range: {x: -45, y: 0}
+    entryRollAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
     bodyPose:
       enabled: 1
-      localPosition: {x: 0, y: 0, z: 0}
-      localEulerAngles: {x: -0, y: 0, z: 0}
+      localPosition: {x: 0, y: 0.000024408102, z: 0}
+      localEulerAngles: {x: 28.73076, y: -0.000004348186, z: -0.000001887857}
       weight: 1
     headPose:
       enabled: 1
-      localPosition: {x: 0, y: 0.28588867, z: 0.5876465}
-      localEulerAngles: {x: 319.23148, y: 0, z: 0}
+      localPosition: {x: 0.0000000031768455, y: 0.0000047683716, z: -0.000011384487}
+      localEulerAngles: {x: 323.8387, y: -2.5109745e-14, z: -1.4470312e-13}
       weight: 1
     leftSkiPose:
       enabled: 1
-      localPosition: {x: -0.09999609, y: -0.2999878, z: -0.40001073}
-      localEulerAngles: {x: 22.812006, y: 308.38498, z: 331.56708}
+      localPosition: {x: 0.76552343, y: 0.65563965, z: -1.145372}
+      localEulerAngles: {x: 71.17304, y: -10.737092, z: -343.49268}
       weight: 1
     rightSkiPose:
       enabled: 1
-      localPosition: {x: 0.099975586, y: -0.2999878, z: -0.4000244}
-      localEulerAngles: {x: 12.646995, y: 46.13117, z: 26.270777}
+      localPosition: {x: -0.76552343, y: 0.65563965, z: -1.145372}
+      localEulerAngles: {x: 71.17304, y: 10.737092, z: 343.49268}
       weight: 1
     leftPolePose:
       enabled: 1
-      localPosition: {x: -0.25, y: 0.5, z: 0}
-      localEulerAngles: {x: 340, y: 310, z: 285}
+      localPosition: {x: -0.2798584, y: 1.2098999, z: -0.8821289}
+      localEulerAngles: {x: 342.94223, y: 34.810966, z: 270.41983}
       weight: 1
     rightPolePose:
       enabled: 1
-      localPosition: {x: 0.25, y: 0.5, z: 0}
-      localEulerAngles: {x: 20.000015, y: 50.00001, z: 75.00002}
+      localPosition: {x: 0.2798584, y: 1.2098999, z: -0.8821289}
+      localEulerAngles: {x: 342.94223, y: -34.810966, z: -270.41983}
+      weight: 1
+    leftElbowPose:
+      enabled: 1
+      localPosition: {x: -0.62438965, y: 0.85812193, z: -0.4040045}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightElbowPose:
+      enabled: 1
+      localPosition: {x: 0.62438965, y: 0.85812193, z: -0.4040045}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    leftKneePose:
+      enabled: 1
+      localPosition: {x: -0.073120125, y: -0.63662535, z: -0.09634149}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightKneePose:
+      enabled: 1
+      localPosition: {x: 0.073120125, y: -0.63662535, z: -0.09634149}
+      localEulerAngles: {x: 0, y: -0, z: -0}
       weight: 1
     blendInSpeed: 8
     blendOutSpeed: 8
-    snapOnPreview: 1
-    allowBlendWithOthers: 0
+    snapOnPreview: 0
+    allowBlendWithOthers: 1
   - enabled: 1
     displayName: Lazy Boy Recliner
     priority: 0
     overallWeight: 1
     overridePoseLabel: 
-    requiredPoseFamily: 0
+    isCoveragePlaceholder: 0
+    coverageSlotId: 
+    requiredPoseFamily: 1
     requiredPoseShape: 4
+    requiredVerticalOrientation: 1
+    requiredHorizontalOrientation: 1
+    requiredMotionState: 0
     requiredOrientationModifier: 0
     requiredPoseName: 
-    requireAirborne: 0
-    requirePoseButtonHeld: 0
-    requiredSpinDirection: -1
-    requiredFlipDirection: -1
-    yawAngularVelocityRange:
-      enabled: 0
-      range: {x: 0, y: 0}
-    pitchAngularVelocityRange:
-      enabled: 0
-      range: {x: 0, y: 0}
-    rollAngularVelocityRange:
-      enabled: 0
-      range: {x: 0, y: 0}
-    totalAngularSpeedRange:
-      enabled: 0
-      range: {x: 0, y: 0}
-    bodyPose:
-      enabled: 1
-      localPosition: {x: 0, y: 0, z: 0}
-      localEulerAngles: {x: 326.91226, y: 0, z: 0}
-      weight: 1
-    headPose:
-      enabled: 1
-      localPosition: {x: 0, y: 0.16779107, z: -0.3487416}
-      localEulerAngles: {x: 33.005756, y: 0, z: 0}
-      weight: 1
-    leftSkiPose:
-      enabled: 1
-      localPosition: {x: -0.1, y: 0.3, z: 0.5}
-      localEulerAngles: {x: 320, y: 339.99997, z: 349.99997}
-      weight: 1
-    rightSkiPose:
-      enabled: 1
-      localPosition: {x: 0.1, y: 0.3, z: 0.5}
-      localEulerAngles: {x: 320, y: -339.99997, z: -349.99997}
-      weight: 1
-    leftPolePose:
-      enabled: 1
-      localPosition: {x: -0.100000024, y: 0.40000004, z: -0.4}
-      localEulerAngles: {x: 75, y: 140, z: 210}
-      weight: 1
-    rightPolePose:
-      enabled: 1
-      localPosition: {x: 0.100000024, y: 0.40000004, z: -0.4}
-      localEulerAngles: {x: 75, y: -140, z: -210}
-      weight: 1
-    blendInSpeed: 8
-    blendOutSpeed: 8
-    snapOnPreview: 1
-    allowBlendWithOthers: 0
-  - enabled: 0
-    displayName: New Trick Pose
-    priority: 0
-    overallWeight: 1
-    overridePoseLabel: 
-    requiredPoseFamily: 0
-    requiredPoseShape: 0
-    requiredOrientationModifier: 0
-    requiredPoseName: 
-    requireAirborne: 0
-    requirePoseButtonHeld: 0
+    requireAirborne: 1
+    requirePoseButtonHeld: 1
+    useAdvancedModifierConditions: 0
     requiredSpinDirection: 0
     requiredFlipDirection: 0
     yawAngularVelocityRange:
@@ -156,6 +138,1237 @@ MonoBehaviour:
     totalAngularSpeedRange:
       enabled: 0
       range: {x: 0, y: 0}
+    entryPitchAngleRange:
+      enabled: 0
+      range: {x: -20, y: 10}
+    entryYawAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryRollAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    bodyPose:
+      enabled: 1
+      localPosition: {x: 0, y: 0.000024408102, z: 0}
+      localEulerAngles: {x: -45, y: 0, z: 0}
+      weight: 1
+    headPose:
+      enabled: 1
+      localPosition: {x: 0, y: -0.000085532665, z: 0.000022053719}
+      localEulerAngles: {x: 8.88034, y: 0.0000017365804, z: -0.0000010256732}
+      weight: 1
+    leftSkiPose:
+      enabled: 1
+      localPosition: {x: 0.47768164, y: 2.5960693, z: 1.1558701}
+      localEulerAngles: {x: 306.65787, y: 193.66997, z: 182.26381}
+      weight: 1
+    rightSkiPose:
+      enabled: 1
+      localPosition: {x: -0.76173925, y: 2.0219727, z: 1.1419815}
+      localEulerAngles: {x: 289.98828, y: 296.92914, z: 31.793636}
+      weight: 1
+    leftPolePose:
+      enabled: 1
+      localPosition: {x: 0.67998046, y: 0.5187378, z: -2.1418946}
+      localEulerAngles: {x: 6.662259, y: -26.558428, z: -256.933}
+      weight: 1
+    rightPolePose:
+      enabled: 1
+      localPosition: {x: -0.67998046, y: 0.5187378, z: -2.1418946}
+      localEulerAngles: {x: 6.662259, y: 26.558428, z: 256.933}
+      weight: 1
+    leftElbowPose:
+      enabled: 1
+      localPosition: {x: -0.8859863, y: 0.9579283, z: -0.00085541606}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightElbowPose:
+      enabled: 1
+      localPosition: {x: 0.8859863, y: 0.9579283, z: -0.00085541606}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    leftKneePose:
+      enabled: 1
+      localPosition: {x: -0.17285156, y: 0.11486161, z: 0.64450127}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightKneePose:
+      enabled: 1
+      localPosition: {x: 0.17283258, y: -0.071172655, z: 0.644506}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    blendInSpeed: 8
+    blendOutSpeed: 8
+    snapOnPreview: 1
+    allowBlendWithOthers: 0
+  - enabled: 1
+    displayName: Left Karate Kick
+    priority: 0
+    overallWeight: 1
+    overridePoseLabel: 
+    isCoveragePlaceholder: 0
+    coverageSlotId: 
+    requiredPoseFamily: 2
+    requiredPoseShape: 2
+    requiredVerticalOrientation: 1
+    requiredHorizontalOrientation: 1
+    requiredMotionState: 0
+    requiredOrientationModifier: 4
+    requiredPoseName: 
+    requireAirborne: 1
+    requirePoseButtonHeld: 1
+    useAdvancedModifierConditions: 0
+    requiredSpinDirection: -1
+    requiredFlipDirection: -1
+    yawAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    pitchAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    rollAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    totalAngularSpeedRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryPitchAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryYawAngleRange:
+      enabled: 0
+      range: {x: 0, y: 90}
+    entryRollAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    bodyPose:
+      enabled: 1
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 323.18817, y: 0, z: 0}
+      weight: 1
+    headPose:
+      enabled: 1
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 27.79194, y: 0, z: 0}
+      weight: 1
+    leftSkiPose:
+      enabled: 1
+      localPosition: {x: -0.029886723, y: 1.6621704, z: 1.3321396}
+      localEulerAngles: {x: 300.08936, y: 95.85375, z: 238.07466}
+      weight: 1
+    rightSkiPose:
+      enabled: 1
+      localPosition: {x: -0.15907812, y: 0.9143677, z: 0.81068265}
+      localEulerAngles: {x: 313.5345, y: 359.18048, z: 1.4956346}
+      weight: 1
+    leftPolePose:
+      enabled: 1
+      localPosition: {x: 0.019580066, y: 1.0512085, z: -0.41606444}
+      localEulerAngles: {x: 287.73715, y: 213.65039, z: 160.82614}
+      weight: 1
+    rightPolePose:
+      enabled: 1
+      localPosition: {x: 0.33039552, y: 0.8847656, z: -0.7789795}
+      localEulerAngles: {x: 35.101063, y: 265.86145, z: 113.58834}
+      weight: 1
+    leftElbowPose:
+      enabled: 1
+      localPosition: {x: -0.5345459, y: 0.803252, z: 0.44290215}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightElbowPose:
+      enabled: 1
+      localPosition: {x: 0.7595215, y: 0.86608493, z: 0.09685445}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    leftKneePose:
+      enabled: 1
+      localPosition: {x: -0.31237793, y: -0.104204506, z: 0.65021825}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightKneePose:
+      enabled: 1
+      localPosition: {x: 0.82714844, y: -0.41293436, z: 0.05825779}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    blendInSpeed: 8
+    blendOutSpeed: 8
+    snapOnPreview: 1
+    allowBlendWithOthers: 0
+  - enabled: 1
+    displayName: Right Karate Kick
+    priority: 0
+    overallWeight: 1
+    overridePoseLabel: 
+    isCoveragePlaceholder: 0
+    coverageSlotId: 
+    requiredPoseFamily: 3
+    requiredPoseShape: 2
+    requiredVerticalOrientation: 1
+    requiredHorizontalOrientation: 0
+    requiredMotionState: 0
+    requiredOrientationModifier: 4
+    requiredPoseName: 
+    requireAirborne: 1
+    requirePoseButtonHeld: 1
+    useAdvancedModifierConditions: 0
+    requiredSpinDirection: -1
+    requiredFlipDirection: -1
+    yawAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    pitchAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    rollAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    totalAngularSpeedRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryPitchAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryYawAngleRange:
+      enabled: 0
+      range: {x: 0, y: 90}
+    entryRollAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    bodyPose:
+      enabled: 1
+      localPosition: {x: -0, y: 0, z: 0}
+      localEulerAngles: {x: 323.18817, y: -0, z: -0}
+      weight: 1
+    headPose:
+      enabled: 1
+      localPosition: {x: -0, y: 0, z: 0}
+      localEulerAngles: {x: 27.79194, y: -0, z: -0}
+      weight: 1
+    leftSkiPose:
+      enabled: 1
+      localPosition: {x: 0.15907812, y: 0.9143677, z: 0.81068265}
+      localEulerAngles: {x: 313.5345, y: -359.18048, z: -1.4956346}
+      weight: 1
+    rightSkiPose:
+      enabled: 1
+      localPosition: {x: 0.029886723, y: 1.6621704, z: 1.3321396}
+      localEulerAngles: {x: 300.08936, y: -95.85375, z: -238.07466}
+      weight: 1
+    leftPolePose:
+      enabled: 1
+      localPosition: {x: -0.33039552, y: 0.8847656, z: -0.7789795}
+      localEulerAngles: {x: 35.101063, y: -265.86145, z: -113.58834}
+      weight: 1
+    rightPolePose:
+      enabled: 1
+      localPosition: {x: -0.019580066, y: 1.0512085, z: -0.41606444}
+      localEulerAngles: {x: 287.73715, y: -213.65039, z: -160.82614}
+      weight: 1
+    leftElbowPose:
+      enabled: 1
+      localPosition: {x: -0.7595215, y: 0.86608493, z: 0.09685445}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    rightElbowPose:
+      enabled: 1
+      localPosition: {x: 0.5345459, y: 0.803252, z: 0.44290215}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    leftKneePose:
+      enabled: 1
+      localPosition: {x: -0.82714844, y: -0.41293436, z: 0.05825779}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    rightKneePose:
+      enabled: 1
+      localPosition: {x: 0.31237793, y: -0.104204506, z: 0.65021825}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    blendInSpeed: 8
+    blendOutSpeed: 8
+    snapOnPreview: 1
+    allowBlendWithOthers: 0
+  - enabled: 1
+    displayName: Mantis
+    priority: 0
+    overallWeight: 1
+    overridePoseLabel: 
+    isCoveragePlaceholder: 0
+    coverageSlotId: 
+    requiredPoseFamily: 1
+    requiredPoseShape: 1
+    requiredVerticalOrientation: 1
+    requiredHorizontalOrientation: 1
+    requiredMotionState: 0
+    requiredOrientationModifier: 5
+    requiredPoseName: 
+    requireAirborne: 1
+    requirePoseButtonHeld: 1
+    useAdvancedModifierConditions: 0
+    requiredSpinDirection: 0
+    requiredFlipDirection: 0
+    yawAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    pitchAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    rollAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    totalAngularSpeedRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryPitchAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryYawAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryRollAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    bodyPose:
+      enabled: 1
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      weight: 1
+    headPose:
+      enabled: 1
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      weight: 1
+    leftSkiPose:
+      enabled: 1
+      localPosition: {x: 0.000020503998, y: 1.0292358, z: -0.5869278}
+      localEulerAngles: {x: 79.97624, y: -0.0000032687055, z: -0.0000033540387}
+      weight: 1
+    rightSkiPose:
+      enabled: 1
+      localPosition: {x: -0.000020503998, y: 0.92315674, z: 1.1853164}
+      localEulerAngles: {x: 311.84384, y: 0, z: 0}
+      weight: 1
+    leftPolePose:
+      enabled: 1
+      localPosition: {x: -0.048291028, y: 1.3676147, z: -0.37626952}
+      localEulerAngles: {x: 286.5672, y: 15.920901, z: 1.0803038}
+      weight: 1
+    rightPolePose:
+      enabled: 1
+      localPosition: {x: 0.048291028, y: 1.3676147, z: -0.37626952}
+      localEulerAngles: {x: 286.5672, y: -15.920901, z: -1.0803038}
+      weight: 1
+    leftElbowPose:
+      enabled: 1
+      localPosition: {x: -0.7421875, y: 1.1546875, z: -0.16516113}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightElbowPose:
+      enabled: 1
+      localPosition: {x: 0.7421875, y: 1.1546875, z: -0.16516113}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    leftKneePose:
+      enabled: 0
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightKneePose:
+      enabled: 1
+      localPosition: {x: 0.37561035, y: -0.063452154, z: 0.6485596}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    blendInSpeed: 8
+    blendOutSpeed: 8
+    snapOnPreview: 1
+    allowBlendWithOthers: 0
+  - enabled: 1
+    displayName: Warlock
+    priority: 0
+    overallWeight: 1
+    overridePoseLabel: 
+    isCoveragePlaceholder: 0
+    coverageSlotId: 
+    requiredPoseFamily: 1
+    requiredPoseShape: 3
+    requiredVerticalOrientation: 2
+    requiredHorizontalOrientation: 1
+    requiredMotionState: 0
+    requiredOrientationModifier: 7
+    requiredPoseName: 
+    requireAirborne: 1
+    requirePoseButtonHeld: 1
+    useAdvancedModifierConditions: 0
+    requiredSpinDirection: 0
+    requiredFlipDirection: 0
+    yawAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    pitchAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    rollAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    totalAngularSpeedRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryPitchAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryYawAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryRollAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    bodyPose:
+      enabled: 1
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      weight: 1
+    headPose:
+      enabled: 1
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 293.75726, y: 0, z: 0}
+      weight: 1
+    leftSkiPose:
+      enabled: 1
+      localPosition: {x: 0.25343847, y: -0.36993408, z: -0.58253324}
+      localEulerAngles: {x: 87.437225, y: 182.1603, z: 169.48148}
+      weight: 1
+    rightSkiPose:
+      enabled: 1
+      localPosition: {x: -0.25343847, y: -0.36993408, z: -0.5825058}
+      localEulerAngles: {x: 87.43746, y: 177.8397, z: 190.51851}
+      weight: 1
+    leftPolePose:
+      enabled: 1
+      localPosition: {x: 0.15202636, y: -0.5863037, z: -0.705249}
+      localEulerAngles: {x: 358.32056, y: 0, z: 0}
+      weight: 1
+    rightPolePose:
+      enabled: 1
+      localPosition: {x: -0.15202636, y: -0.5863037, z: -0.705249}
+      localEulerAngles: {x: 358.32056, y: -0, z: -0}
+      weight: 1
+    leftElbowPose:
+      enabled: 1
+      localPosition: {x: -0.4822998, y: 0.204187, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightElbowPose:
+      enabled: 1
+      localPosition: {x: 0.4822998, y: 0.204187, z: 0}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    leftKneePose:
+      enabled: 1
+      localPosition: {x: -0.37561035, y: -1.0920166, z: -0.10241699}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    rightKneePose:
+      enabled: 1
+      localPosition: {x: 0.37561035, y: -1.0920166, z: -0.10241699}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    blendInSpeed: 8
+    blendOutSpeed: 8
+    snapOnPreview: 1
+    allowBlendWithOthers: 0
+  - enabled: 1
+    displayName: Swan Dive
+    priority: 0
+    overallWeight: 1
+    overridePoseLabel: 
+    isCoveragePlaceholder: 0
+    coverageSlotId: 
+    requiredPoseFamily: 1
+    requiredPoseShape: 3
+    requiredVerticalOrientation: 1
+    requiredHorizontalOrientation: 1
+    requiredMotionState: 2
+    requiredOrientationModifier: 5
+    requiredPoseName: 
+    requireAirborne: 1
+    requirePoseButtonHeld: 1
+    useAdvancedModifierConditions: 0
+    requiredSpinDirection: 0
+    requiredFlipDirection: 0
+    yawAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    pitchAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    rollAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    totalAngularSpeedRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryPitchAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryYawAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryRollAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    bodyPose:
+      enabled: 1
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 30.000004, y: 0, z: 0}
+      weight: 1
+    headPose:
+      enabled: 1
+      localPosition: {x: 0, y: -0.1, z: -0.05}
+      localEulerAngles: {x: 25, y: 0, z: 0}
+      weight: 1
+    leftSkiPose:
+      enabled: 1
+      localPosition: {x: 0.32631445, y: 0.5615845, z: -1.146254}
+      localEulerAngles: {x: 51.265728, y: 159.81104, z: 151.0565}
+      weight: 1
+    rightSkiPose:
+      enabled: 1
+      localPosition: {x: -0.32631445, y: 0.5615845, z: -1.1462265}
+      localEulerAngles: {x: 51.265728, y: 200.18896, z: 208.9435}
+      weight: 1
+    leftPolePose:
+      enabled: 1
+      localPosition: {x: 0.31853026, y: 1.0351089, z: 0.49123508}
+      localEulerAngles: {x: 295.4756, y: 75.00316, z: 293.00745}
+      weight: 1
+    rightPolePose:
+      enabled: 1
+      localPosition: {x: -0.31853026, y: 1.0351089, z: 0.49123508}
+      localEulerAngles: {x: 295.4756, y: -75.00316, z: -293.00745}
+      weight: 1
+    leftElbowPose:
+      enabled: 1
+      localPosition: {x: -0.7211914, y: 1.0525843, z: 0.40146405}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightElbowPose:
+      enabled: 1
+      localPosition: {x: 0.7211914, y: 1.0525843, z: 0.40146405}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    leftKneePose:
+      enabled: 1
+      localPosition: {x: -0.21655273, y: -0.9200474, z: -0.033192784}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightKneePose:
+      enabled: 1
+      localPosition: {x: 0.21655273, y: -0.9200474, z: -0.033192784}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    blendInSpeed: 8
+    blendOutSpeed: 8
+    snapOnPreview: 1
+    allowBlendWithOthers: 0
+  - enabled: 1
+    displayName: Yippeeee
+    priority: 0
+    overallWeight: 1
+    overridePoseLabel: 
+    isCoveragePlaceholder: 0
+    coverageSlotId: 
+    requiredPoseFamily: 4
+    requiredPoseShape: 1
+    requiredVerticalOrientation: 1
+    requiredHorizontalOrientation: 1
+    requiredMotionState: 0
+    requiredOrientationModifier: 0
+    requiredPoseName: 
+    requireAirborne: 1
+    requirePoseButtonHeld: 1
+    useAdvancedModifierConditions: 0
+    requiredSpinDirection: 0
+    requiredFlipDirection: 0
+    yawAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    pitchAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    rollAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    totalAngularSpeedRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryPitchAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryYawAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryRollAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    bodyPose:
+      enabled: 1
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      weight: 1
+    headPose:
+      enabled: 1
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      weight: 1
+    leftSkiPose:
+      enabled: 1
+      localPosition: {x: -0.14524317, y: 0.7371826, z: -0.022230476}
+      localEulerAngles: {x: 337.03125, y: 344.8766, z: 322.73785}
+      weight: 1
+    rightSkiPose:
+      enabled: 1
+      localPosition: {x: 0.14524317, y: 0.7371826, z: -0.022230476}
+      localEulerAngles: {x: 337.03125, y: -344.8766, z: -322.73785}
+      weight: 1
+    leftPolePose:
+      enabled: 1
+      localPosition: {x: -0.1688965, y: 1.4046631, z: -0.78532714}
+      localEulerAngles: {x: 349.45987, y: 116.87254, z: 149.96889}
+      weight: 1
+    rightPolePose:
+      enabled: 1
+      localPosition: {x: 0.1688965, y: 1.4046631, z: -0.78532714}
+      localEulerAngles: {x: 349.45987, y: -116.87254, z: -149.96889}
+      weight: 1
+    leftElbowPose:
+      enabled: 1
+      localPosition: {x: -0.72143555, y: 1.0248657, z: -0.23144531}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightElbowPose:
+      enabled: 1
+      localPosition: {x: 0.72143555, y: 1.0248657, z: -0.23144531}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    leftKneePose:
+      enabled: 1
+      localPosition: {x: -0.43408203, y: -0.25229493, z: 0.8914795}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    rightKneePose:
+      enabled: 1
+      localPosition: {x: 0.43408203, y: -0.25229493, z: 0.8914795}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    blendInSpeed: 8
+    blendOutSpeed: 8
+    snapOnPreview: 1
+    allowBlendWithOthers: 0
+  - enabled: 1
+    displayName: All Fours
+    priority: 0
+    overallWeight: 1
+    overridePoseLabel: 
+    isCoveragePlaceholder: 0
+    coverageSlotId: 
+    requiredPoseFamily: 1
+    requiredPoseShape: 2
+    requiredVerticalOrientation: 0
+    requiredHorizontalOrientation: 0
+    requiredMotionState: 0
+    requiredOrientationModifier: 7
+    requiredPoseName: 
+    requireAirborne: 1
+    requirePoseButtonHeld: 1
+    useAdvancedModifierConditions: 0
+    requiredSpinDirection: 0
+    requiredFlipDirection: 0
+    yawAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    pitchAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    rollAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    totalAngularSpeedRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryPitchAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryYawAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryRollAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    bodyPose:
+      enabled: 1
+      localPosition: {x: 0, y: 0.000024467707, z: -0.000000059604645}
+      localEulerAngles: {x: 338.79977, y: 0, z: 0}
+      weight: 1
+    headPose:
+      enabled: 1
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    leftSkiPose:
+      enabled: 1
+      localPosition: {x: -0.28647852, y: 0.6875, z: 0.7125381}
+      localEulerAngles: {x: 355.54578, y: -11.655068, z: -356.3928}
+      weight: 1
+    rightSkiPose:
+      enabled: 1
+      localPosition: {x: 0.28647852, y: 0.6875, z: 0.7125381}
+      localEulerAngles: {x: 355.54578, y: 11.655068, z: 356.3928}
+      weight: 1
+    leftPolePose:
+      enabled: 1
+      localPosition: {x: -0.32575685, y: 0.57788086, z: -0.3783447}
+      localEulerAngles: {x: 278.19678, y: -178.8363, z: -185.26036}
+      weight: 1
+    rightPolePose:
+      enabled: 1
+      localPosition: {x: 0.32575685, y: 0.57788086, z: -0.3783447}
+      localEulerAngles: {x: 278.19678, y: 178.8363, z: 185.26036}
+      weight: 1
+    leftElbowPose:
+      enabled: 1
+      localPosition: {x: -0.8244629, y: 0.64974767, z: 0.1398154}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    rightElbowPose:
+      enabled: 1
+      localPosition: {x: 0.8244629, y: 0.64974767, z: 0.1398154}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    leftKneePose:
+      enabled: 1
+      localPosition: {x: -0.39233398, y: -0.24582508, z: 0.7687379}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightKneePose:
+      enabled: 1
+      localPosition: {x: 0.39233398, y: -0.24582508, z: 0.7687379}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    blendInSpeed: 8
+    blendOutSpeed: 8
+    snapOnPreview: 1
+    allowBlendWithOthers: 0
+  - enabled: 1
+    displayName: Zen
+    priority: 0
+    overallWeight: 1
+    overridePoseLabel: 
+    isCoveragePlaceholder: 0
+    coverageSlotId: 
+    requiredPoseFamily: 1
+    requiredPoseShape: 2
+    requiredVerticalOrientation: 1
+    requiredHorizontalOrientation: 1
+    requiredMotionState: 0
+    requiredOrientationModifier: 4
+    requiredPoseName: 
+    requireAirborne: 1
+    requirePoseButtonHeld: 1
+    useAdvancedModifierConditions: 0
+    requiredSpinDirection: 0
+    requiredFlipDirection: 0
+    yawAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    pitchAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    rollAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    totalAngularSpeedRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryPitchAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryYawAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryRollAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    bodyPose:
+      enabled: 1
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      weight: 1
+    headPose:
+      enabled: 1
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      weight: 1
+    leftSkiPose:
+      enabled: 1
+      localPosition: {x: 0.45717382, y: 0.8052368, z: 0.64940035}
+      localEulerAngles: {x: 9.439987, y: 359.92368, z: 89.674065}
+      weight: 1
+    rightSkiPose:
+      enabled: 1
+      localPosition: {x: -0.45717382, y: 0.8052368, z: 0.6494278}
+      localEulerAngles: {x: 9.439987, y: 0.07632449, z: 270.32593}
+      weight: 1
+    leftPolePose:
+      enabled: 1
+      localPosition: {x: -0.6239746, y: 0.6937256, z: -0.000048816204}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      weight: 1
+    rightPolePose:
+      enabled: 1
+      localPosition: {x: 0.6239746, y: 0.6937256, z: -0.000048816204}
+      localEulerAngles: {x: -0, y: 0, z: 0}
+      weight: 1
+    leftElbowPose:
+      enabled: 1
+      localPosition: {x: -0.90234375, y: 0.3394409, z: 0.28344727}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightElbowPose:
+      enabled: 1
+      localPosition: {x: 0.90234375, y: 0.3394409, z: 0.28344727}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    leftKneePose:
+      enabled: 1
+      localPosition: {x: -1.1810303, y: -0.75638425, z: 0.19140625}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightKneePose:
+      enabled: 1
+      localPosition: {x: 1.1810303, y: -0.75638425, z: 0.19140625}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    blendInSpeed: 8
+    blendOutSpeed: 8
+    snapOnPreview: 1
+    allowBlendWithOthers: 0
+  - enabled: 1
+    displayName: Right Handstand
+    priority: 0
+    overallWeight: 1
+    overridePoseLabel: 
+    isCoveragePlaceholder: 0
+    coverageSlotId: 
+    requiredPoseFamily: 3
+    requiredPoseShape: 1
+    requiredVerticalOrientation: 3
+    requiredHorizontalOrientation: 1
+    requiredMotionState: 0
+    requiredOrientationModifier: 0
+    requiredPoseName: 
+    requireAirborne: 1
+    requirePoseButtonHeld: 1
+    useAdvancedModifierConditions: 0
+    requiredSpinDirection: 0
+    requiredFlipDirection: 0
+    yawAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    pitchAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    rollAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    totalAngularSpeedRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryPitchAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryYawAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryRollAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    bodyPose:
+      enabled: 1
+      localPosition: {x: 0, y: 0.000024408102, z: 0}
+      localEulerAngles: {x: -0, y: 0, z: 20.210697}
+      weight: 1
+    headPose:
+      enabled: 1
+      localPosition: {x: 0.0000060498714, y: -0.000021159649, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 340.7446}
+      weight: 1
+    leftSkiPose:
+      enabled: 1
+      localPosition: {x: -0.17087793, y: 0.035461426, z: 0.3890244}
+      localEulerAngles: {x: 9.1571865, y: 328.16998, z: 19.294073}
+      weight: 1
+    rightSkiPose:
+      enabled: 1
+      localPosition: {x: 0.655375, y: 0.23345947, z: 0.000013679266}
+      localEulerAngles: {x: 27.374132, y: 25.771173, z: 12.516132}
+      weight: 1
+    leftPolePose:
+      enabled: 1
+      localPosition: {x: -0.5126465, y: -0.152771, z: -0.5104248}
+      localEulerAngles: {x: 72.75721, y: 56.22263, z: 348.66907}
+      weight: 1
+    rightPolePose:
+      enabled: 1
+      localPosition: {x: -0.67473143, y: 1.5253296, z: -0.46611327}
+      localEulerAngles: {x: 4.2931485, y: 180, z: 161.0131}
+      weight: 1
+    leftElbowPose:
+      enabled: 1
+      localPosition: {x: -0.77939147, y: 0.5301351, z: -0.09472656}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightElbowPose:
+      enabled: 1
+      localPosition: {x: 0.6166606, y: 1.0270398, z: 0.15454102}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    leftKneePose:
+      enabled: 1
+      localPosition: {x: -0.7263842, y: -0.4477397, z: 0.19140625}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightKneePose:
+      enabled: 0
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    blendInSpeed: 8
+    blendOutSpeed: 8
+    snapOnPreview: 1
+    allowBlendWithOthers: 0
+  - enabled: 1
+    displayName: Left Handstand
+    priority: 0
+    overallWeight: 1
+    overridePoseLabel: 
+    isCoveragePlaceholder: 0
+    coverageSlotId: 
+    requiredPoseFamily: 2
+    requiredPoseShape: 1
+    requiredVerticalOrientation: 3
+    requiredHorizontalOrientation: 1
+    requiredMotionState: 0
+    requiredOrientationModifier: 0
+    requiredPoseName: 
+    requireAirborne: 1
+    requirePoseButtonHeld: 1
+    useAdvancedModifierConditions: 0
+    requiredSpinDirection: 0
+    requiredFlipDirection: 0
+    yawAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    pitchAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    rollAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    totalAngularSpeedRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryPitchAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryYawAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryRollAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    bodyPose:
+      enabled: 1
+      localPosition: {x: -0, y: 0.000024408102, z: 0}
+      localEulerAngles: {x: 0, y: -0, z: -20.210697}
+      weight: 1
+    headPose:
+      enabled: 1
+      localPosition: {x: -0.0000060498714, y: -0.000021159649, z: 0}
+      localEulerAngles: {x: 0, y: -0, z: -340.7446}
+      weight: 1
+    leftSkiPose:
+      enabled: 1
+      localPosition: {x: -0.655375, y: 0.23345947, z: 0.000013679266}
+      localEulerAngles: {x: 27.374132, y: -25.771173, z: -12.516132}
+      weight: 1
+    rightSkiPose:
+      enabled: 1
+      localPosition: {x: 0.17087793, y: 0.035461426, z: 0.3890244}
+      localEulerAngles: {x: 9.1571865, y: -328.16998, z: -19.294073}
+      weight: 1
+    leftPolePose:
+      enabled: 1
+      localPosition: {x: 0.67473143, y: 1.5253296, z: -0.46611327}
+      localEulerAngles: {x: 4.2931485, y: -180, z: -161.0131}
+      weight: 1
+    rightPolePose:
+      enabled: 1
+      localPosition: {x: 0.5126465, y: -0.152771, z: -0.5104248}
+      localEulerAngles: {x: 72.75721, y: -56.22263, z: -348.66907}
+      weight: 1
+    leftElbowPose:
+      enabled: 1
+      localPosition: {x: -0.6166606, y: 1.0270398, z: 0.15454102}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    rightElbowPose:
+      enabled: 1
+      localPosition: {x: 0.77939147, y: 0.5301351, z: -0.09472656}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    leftKneePose:
+      enabled: 0
+      localPosition: {x: -0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    rightKneePose:
+      enabled: 1
+      localPosition: {x: 0.7263842, y: -0.4477397, z: 0.19140625}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    blendInSpeed: 8
+    blendOutSpeed: 8
+    snapOnPreview: 1
+    allowBlendWithOthers: 0
+  - enabled: 1
+    displayName: Twist Left
+    priority: 0
+    overallWeight: 1
+    overridePoseLabel: 
+    isCoveragePlaceholder: 0
+    coverageSlotId: Air|PoseHeld|Left|Neutral|Upright|Upright|Any
+    requiredPoseFamily: 2
+    requiredPoseShape: 1
+    requiredVerticalOrientation: 1
+    requiredHorizontalOrientation: 1
+    requiredMotionState: 0
+    requiredOrientationModifier: 0
+    requiredPoseName: Scarecrow
+    requireAirborne: 1
+    requirePoseButtonHeld: 1
+    useAdvancedModifierConditions: 0
+    requiredSpinDirection: 0
+    requiredFlipDirection: 0
+    yawAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    pitchAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    rollAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    totalAngularSpeedRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryPitchAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryYawAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryRollAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    bodyPose:
+      enabled: 0
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    headPose:
+      enabled: 0
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    leftSkiPose:
+      enabled: 1
+      localPosition: {x: 0.011352539, y: 0, z: -0.016113251}
+      localEulerAngles: {x: 341.8137, y: 324.79718, z: -0.0000026959945}
+      weight: 1
+    rightSkiPose:
+      enabled: 1
+      localPosition: {x: -0.44665527, y: 0.524353, z: 0.10437015}
+      localEulerAngles: {x: 354.35773, y: 335.6008, z: 49.18291}
+      weight: 1
+    leftPolePose:
+      enabled: 1
+      localPosition: {x: 0.71606445, y: 0.35083008, z: -0.0026855469}
+      localEulerAngles: {x: 358.1076, y: 36.032093, z: 92.61303}
+      weight: 1
+    rightPolePose:
+      enabled: 1
+      localPosition: {x: 0.1597901, y: -0.00030517578, z: -1.3308105}
+      localEulerAngles: {x: 22.636179, y: 50.10858, z: 72.12759}
+      weight: 1
+    leftElbowPose:
+      enabled: 1
+      localPosition: {x: -0.41275445, y: 0.7732178, z: 0.45411557}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightElbowPose:
+      enabled: 1
+      localPosition: {x: 0.76765656, y: 0.61843264, z: -0.27522758}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    leftKneePose:
+      enabled: 1
+      localPosition: {x: -0.7709388, y: -0.7564453, z: 0.19144928}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightKneePose:
+      enabled: 1
+      localPosition: {x: -0.15233576, y: -0.40646973, z: 0.46488178}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    blendInSpeed: 8
+    blendOutSpeed: 8
+    snapOnPreview: 1
+    allowBlendWithOthers: 0
+  - enabled: 1
+    displayName: Twist Right
+    priority: 0
+    overallWeight: 1
+    overridePoseLabel: 
+    isCoveragePlaceholder: 0
+    coverageSlotId: Air|PoseHeld|Right|Neutral|Upright|Upright|Any
+    requiredPoseFamily: 3
+    requiredPoseShape: 1
+    requiredVerticalOrientation: 1
+    requiredHorizontalOrientation: 1
+    requiredMotionState: 0
+    requiredOrientationModifier: 0
+    requiredPoseName: Crowbar
+    requireAirborne: 1
+    requirePoseButtonHeld: 1
+    useAdvancedModifierConditions: 0
+    requiredSpinDirection: 0
+    requiredFlipDirection: 0
+    yawAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    pitchAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    rollAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    totalAngularSpeedRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryPitchAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryYawAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryRollAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    bodyPose:
+      enabled: 0
+      localPosition: {x: -0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    headPose:
+      enabled: 0
+      localPosition: {x: -0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    leftSkiPose:
+      enabled: 1
+      localPosition: {x: 0.44665527, y: 0.524353, z: 0.10437015}
+      localEulerAngles: {x: 354.35773, y: -335.6008, z: -49.18291}
+      weight: 1
+    rightSkiPose:
+      enabled: 1
+      localPosition: {x: -0.011352539, y: 0, z: -0.016113251}
+      localEulerAngles: {x: 341.8137, y: -324.79718, z: 0.0000026959945}
+      weight: 1
+    leftPolePose:
+      enabled: 1
+      localPosition: {x: -0.1597901, y: -0.00030517578, z: -1.3308105}
+      localEulerAngles: {x: 22.636179, y: -50.10858, z: -72.12759}
+      weight: 1
+    rightPolePose:
+      enabled: 1
+      localPosition: {x: -0.71606445, y: 0.35083008, z: -0.0026855469}
+      localEulerAngles: {x: 358.1076, y: -36.032093, z: -92.61303}
+      weight: 1
+    leftElbowPose:
+      enabled: 1
+      localPosition: {x: -0.76765656, y: 0.61843264, z: -0.27522758}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    rightElbowPose:
+      enabled: 1
+      localPosition: {x: 0.41275445, y: 0.7732178, z: 0.45411557}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    leftKneePose:
+      enabled: 1
+      localPosition: {x: 0.15233576, y: -0.40646973, z: 0.46488178}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    rightKneePose:
+      enabled: 1
+      localPosition: {x: 0.7709388, y: -0.7564453, z: 0.19144928}
+      localEulerAngles: {x: 0, y: -0, z: -0}
+      weight: 1
+    blendInSpeed: 8
+    blendOutSpeed: 8
+    snapOnPreview: 1
+    allowBlendWithOthers: 0
+  - enabled: 0
+    displayName: New Trick Pose
+    priority: 0
+    overallWeight: 1
+    overridePoseLabel: 
+    isCoveragePlaceholder: 0
+    coverageSlotId: 
+    requiredPoseFamily: 0
+    requiredPoseShape: 0
+    requiredVerticalOrientation: 0
+    requiredHorizontalOrientation: 0
+    requiredMotionState: 0
+    requiredOrientationModifier: 0
+    requiredPoseName: 
+    requireAirborne: 0
+    requirePoseButtonHeld: 0
+    useAdvancedModifierConditions: 0
+    requiredSpinDirection: 0
+    requiredFlipDirection: 0
+    yawAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    pitchAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    rollAngularVelocityRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    totalAngularSpeedRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryPitchAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryYawAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
+    entryRollAngleRange:
+      enabled: 0
+      range: {x: 0, y: 0}
     bodyPose:
       enabled: 0
       localPosition: {x: 0, y: 0, z: 0}
@@ -186,6 +1399,26 @@ MonoBehaviour:
       localPosition: {x: 0, y: 0, z: 0}
       localEulerAngles: {x: 0, y: 0, z: 0}
       weight: 1
+    leftElbowPose:
+      enabled: 0
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightElbowPose:
+      enabled: 0
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    leftKneePose:
+      enabled: 0
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
+    rightKneePose:
+      enabled: 0
+      localPosition: {x: 0, y: 0, z: 0}
+      localEulerAngles: {x: 0, y: 0, z: 0}
+      weight: 1
     blendInSpeed: 8
     blendOutSpeed: 8
     snapOnPreview: 1
@@ -193,3 +1426,29 @@ MonoBehaviour:
   defaultBlendInSpeed: 8
   defaultBlendOutSpeed: 8
   previewLerpSpeed: 10
+  rigAssistSettings:
+    headAssistMode: 2
+    headAnchorTolerance: 0.15
+    constrainHeadToNeckAnchor: 1
+    enablePreviewSolve: 1
+    enableRuntimeHeadSolve: 1
+    enableSceneAuthoringConstraints: 1
+    lockHeadPositionInSceneAuthoring: 0
+    enforceLimbLengthsInSceneAuthoring: 1
+    solveLimbsAfterBodyEdit: 1
+    preserveLimbLengthsInPreview: 1
+    showLimbLengthGuidesInScene: 0
+    segmentLengthTolerance: 1
+    conformMode: 0
+    hasCapturedNeckAnchor: 1
+    neckAnchorBodyLocal: {x: 0, y: 0.9, z: 0}
+    restSegments:
+      captured: 1
+      leftUpperArm: 0.49691686
+      leftLowerArm: 0.49706402
+      rightUpperArm: 0.49691686
+      rightLowerArm: 0.49706402
+      leftUpperLeg: 0.65392727
+      leftLowerLeg: 0.7753422
+      rightUpperLeg: 0.65392727
+      rightLowerLeg: 0.77534896

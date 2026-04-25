@@ -67,6 +67,13 @@ Shader "Skybox/ProceduralGradient"
         _FogHorizonBoost("Fog Horizon Boost", Range(0, 8)) = 3.0
         _FogMax("Fog Max Blend", Range(0,1)) = 0.95
 
+        _FogTintStart("Fog Tint Start", Range(0, 1)) = 0.08
+        _FogTintEnd("Fog Tint End", Range(0, 1)) = 0.45
+        _FogTintStrength("Fog Tint Strength", Range(0, 1)) = 0.65
+        _FogTintTopWeight("Fog Tint Top Weight", Range(0, 2)) = 0.45
+        _FogTintHorizonWeight("Fog Tint Horizon Weight", Range(0, 2)) = 1.0
+        _FogVisualInfluence("Fog Visual Influence", Range(0, 1)) = 0
+
         // Driven by TimeController (your scripts already set these)
         [HideInInspector]_SunDir("Sun Dir", Vector) = (0,1,0,0)
         [HideInInspector]_MoonDir("Moon Dir", Vector) = (0,-1,0,0)
@@ -144,6 +151,13 @@ Shader "Skybox/ProceduralGradient"
     half  _FogHorizonBoost;
     half  _FogMax;
 
+    half  _FogTintStart;
+    half  _FogTintEnd;
+    half  _FogTintStrength;
+    half  _FogTintTopWeight;
+    half  _FogTintHorizonWeight;
+    half  _FogVisualInfluence;
+    
     float4 _SunDir;
     float4 _MoonDir;
 
@@ -268,8 +282,29 @@ Shader "Skybox/ProceduralGradient"
         half sunAtten = lerp(1.0h, 0.35h, cloudiness); // sun disc fades under heavy overcast
         half skyAtten = lerp(1.0h, 0.70h, cloudiness); // sky darkens but never black
 
-        half4 skycol = half4((c_sky * (_SkyIntensity * skyAtten)) + (c_sun * (_SunIntensity * sunAtten)) + nightSky, 0);
+        // --- Pre-tint the base sky toward fog colour once fog passes a threshold ---
+        half dens = saturate(_FogDensity);
 
+        // 1 at horizon, 0 near zenith
+        half horizon = 1.0h - saturate((v.y - 0.02h) / 0.45h);
+        horizon = pow(horizon, 1.35h);
+
+        half fogTintRange = max(0.0001h, _FogTintEnd - _FogTintStart);
+        half fogTintByDensity = saturate((dens - _FogTintStart) / fogTintRange);
+
+        // Use whichever is stronger:
+        // - density-based tint from actual fog density
+        // - normalized visual influence from weather controller
+        half fogTintDriver = max(fogTintByDensity, saturate(_FogVisualInfluence));
+
+        // Horizon receives more tint than the top of the sky
+        half fogTintWeight = lerp(_FogTintTopWeight, _FogTintHorizonWeight, horizon);
+        half fogTintMask = saturate(fogTintDriver * fogTintWeight * _FogTintStrength);
+
+        // Keep some of the original sky hue so this never becomes a flat fog fill
+        half3 fogInfluencedSky = lerp(c_sky, _FogColor.rgb, fogTintMask);
+
+        half4 skycol = half4((fogInfluencedSky * (_SkyIntensity * skyAtten)) + (c_sun * (_SunIntensity * sunAtten)) + nightSky, 0);
 
         // --- Clouds ---
         half cm = (_CloudsEnabled > 0.5h && _CloudAlpha > 0.001h) ? CloudMask(v) : 0.0h;
@@ -314,11 +349,7 @@ Shader "Skybox/ProceduralGradient"
         // Treat sky as “infinite distance”: fog comes from density + view angle.
         // Stronger near horizon, and can still wash out zenith in heavy fog.
 
-        half dens = saturate(_FogDensity);
-
-        // Horizon factor: 1 at horizon, 0 at zenith (above)
-        half horizon = 1.0h - saturate((v.y - 0.02h) / 0.45h); // tuneable band
-        horizon = pow(horizon, 1.35h);
+        // dens and horizon were already computed above for the fog-tint pass
 
         // Base fog amount: exponential-ish response
         half fogAmt = 1.0h - exp(-dens * _FogSkyStrength);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using SkiGame.Map;
 using SkiGame.Map.UI;
@@ -73,6 +73,13 @@ namespace SkiGame.Progression
         private Label _lblTopCurrency;
         private Label _lblTopHint;
 
+        private VisualElement _mapSelectionPanel;
+        private VisualElement _overlayActionStack;
+        private VisualElement _utilityPopupPanel;
+        private Label _lblUtilityPopupTitle;
+        private VisualElement _achievementModalRoot;
+        private Label _achievementBadge;
+
         // Context panel
         private Label _lblContextTitle;
         private Label _lblContextBody;
@@ -80,6 +87,7 @@ namespace SkiGame.Progression
         private VisualElement _contextHighlights;
         private Button _btnContextExpand;
         private ScrollView _contextAttemptsList;
+        private VisualElement _contextDetailRow;
 
         private Label _lblTopWeatherIcon;
 
@@ -99,7 +107,6 @@ namespace SkiGame.Progression
         // Goals
         private Button _btnGoalsQuests;
         private Button _btnGoalsTasks;
-        private Button _btnGoalsAchievements;
         private ScrollView _goalsList;
         private VisualElement _questPanel;
         private ScrollView _questList;
@@ -109,7 +116,7 @@ namespace SkiGame.Progression
         private readonly HashSet<string> _expandedQuestIds = new();
         private VisualElement _achievementCategoryRow;
         private VisualElement _achievementGrid;
-        private GoalsViewMode _goalsViewMode = GoalsViewMode.Quests;
+        private GoalsViewMode _goalsViewMode = GoalsViewMode.Tasks;
         private bool _questShowCompleted;
         private AchievementCategory _achievementCategory = AchievementCategory.Performance;
 
@@ -120,6 +127,17 @@ namespace SkiGame.Progression
         private bool _tutorialVisitedMap;
 
         private ScrollView _achievementScroll;
+        private Button _btnGoalsAchievements;
+        private Button _btnOpenStats;
+        private Button _btnOpenRunHistory;
+        private Button _btnOpenAchievements;
+        private Button _btnOpenPasses;
+        private Button _btnOpenRescue;
+        private Button _btnCloseUtilityPopup;
+        private Button _btnCloseAchievements;
+        private ScrollView _runHistoryList;
+        private UtilityPanelMode _utilityPanelMode;
+        private bool _achievementsModalOpen;
         private bool _contextHistoryExpanded;
         private bool _contextHistoryAvailable;
 
@@ -138,8 +156,9 @@ namespace SkiGame.Progression
         private Button _btnPassTabRescue;
         private Button _btnPassBack;
 
-        private ScrollView _passCurrentList;
-
+        private Label _lblPassCurrent;
+        private Label _lblPassExpiryMeta;
+        private Label _lblPassPermanentSummary;
         private Label _lblPassDetailTitle;
         private Label _lblPassDetailMeta;
 
@@ -149,7 +168,8 @@ namespace SkiGame.Progression
         private VisualElement _passInfoView;
         private VisualElement _passLiftDetailView;
         private VisualElement _rescueUtilitiesView;
-
+        private VisualElement _passExpiryBar;
+        private VisualElement _passExpiryFill;
         private VisualElement _screenFade;
 
         private bool _passShowRescueTab;
@@ -185,9 +205,19 @@ namespace SkiGame.Progression
         private enum SelectedMapKind
         {
             None = 0,
+            Waypoint = 5,
             Run = 10,
             Lift = 20,
             POI = 30,
+        }
+
+        private enum UtilityPanelMode
+        {
+            None = 0,
+            Stats = 10,
+            RunHistory = 20,
+            Passes = 30,
+            Rescue = 40,
         }
 
         private enum AchievementCategory
@@ -201,7 +231,6 @@ namespace SkiGame.Progression
         {
             Quests = 0,
             Tasks = 10,
-            Achievements = 20,
         }
 
         private SelectedMapKind _selectedKind;
@@ -693,6 +722,12 @@ namespace SkiGame.Progression
             _lblTopCurrency = _root.Q<Label>("Lbl_TopCurrency");
             _lblTopHint = _root.Q<Label>("Lbl_TopHint");
             _btnCloseOverlay = _root.Q<Button>("Btn_CloseOverlay");
+            _mapSelectionPanel = _root.Q<VisualElement>("MapSelectionPanel");
+            _overlayActionStack = _root.Q<VisualElement>("OverlayActionStack");
+            _utilityPopupPanel = _root.Q<VisualElement>("UtilityPopupPanel");
+            _lblUtilityPopupTitle = _root.Q<Label>("Lbl_UtilityPopupTitle");
+            _achievementModalRoot = _root.Q<VisualElement>("AchievementModalRoot");
+            _achievementBadge = _root.Q<Label>("Badge_Achievements");
 
             _lblTopWeatherIcon = _root.Q<Label>("Lbl_TopWeatherIcon");
 
@@ -713,18 +748,24 @@ namespace SkiGame.Progression
             _lblContextBody = _root.Q<Label>("Lbl_ContextBody");
             _contextMetaRow = _root.Q<VisualElement>("ContextMetaRow");
             _contextHighlights = _root.Q<VisualElement>("ContextHighlights");
-            _btnContextExpand = _root.Q<Button>("Btn_ContextExpand");
-            _contextAttemptsList = _root.Q<ScrollView>("ContextAttemptsList");
+            _contextDetailRow = _root.Q<VisualElement>("ContextDetailRow");
 
             _btnStatsToday = _root.Q<Button>("Btn_StatsToday");
             _btnStatsLifetime = _root.Q<Button>("Btn_StatsLifetime");
             _lblStatsModeSummary = _root.Q<Label>("Lbl_StatsModeSummary");
             _statsGrid = _root.Q<VisualElement>("StatsGrid");
             _lblStatsBody = _root.Q<Label>("Lbl_StatsBody");
+            _btnOpenStats = _root.Q<Button>("Btn_OpenStats");
+            _btnOpenRunHistory = _root.Q<Button>("Btn_OpenRunHistory");
+            _btnOpenAchievements = _root.Q<Button>("Btn_OpenAchievements");
+            _btnOpenPasses = _root.Q<Button>("Btn_OpenPasses");
+            _btnOpenRescue = _root.Q<Button>("Btn_OpenRescue");
+            _btnCloseUtilityPopup = _root.Q<Button>("Btn_CloseUtilityPopup");
+            _btnCloseAchievements = _root.Q<Button>("Btn_CloseAchievements");
+            _runHistoryList = _root.Q<ScrollView>("RunHistoryList");
 
             _btnGoalsQuests = _root.Q<Button>("Btn_GoalsQuests");
             _btnGoalsTasks = _root.Q<Button>("Btn_GoalsTasks");
-            _btnGoalsAchievements = _root.Q<Button>("Btn_GoalsAchievements");
             _goalsList = _root.Q<ScrollView>("GoalsList");
             _questPanel = _root.Q<VisualElement>("QuestPanel");
             _questList = _root.Q<ScrollView>("QuestList");
@@ -741,7 +782,9 @@ namespace SkiGame.Progression
             _btnPassTabRescue = _root.Q<Button>("Btn_PassTabRescue");
             _btnPassBack = _root.Q<Button>("Btn_PassBack");
 
-            _passCurrentList = _root.Q<ScrollView>("PassCurrentList");
+            _lblPassCurrent = _root.Q<Label>("Lbl_PassCurrent");
+            _lblPassExpiryMeta = _root.Q<Label>("Lbl_PassExpiryMeta");
+            _lblPassPermanentSummary = _root.Q<Label>("Lbl_PassPermanentSummary");
             _lblPassDetailTitle = _root.Q<Label>("Lbl_PassDetailTitle");
             _lblPassDetailMeta = _root.Q<Label>("Lbl_PassDetailMeta");
 
@@ -751,12 +794,13 @@ namespace SkiGame.Progression
             _passInfoView = _root.Q<VisualElement>("PassInfoView");
             _passLiftDetailView = _root.Q<VisualElement>("PassLiftDetailView");
             _rescueUtilitiesView = _root.Q<VisualElement>("RescueUtilitiesView");
+            _passExpiryBar = _root.Q<VisualElement>("PassExpiryBar");
+            _passExpiryFill = _root.Q<VisualElement>("PassExpiryFill");
             _screenFade = _root.Q<VisualElement>("OverlayScreenFade");
 
             bool hasRequiredUi =
                 _btnGoalsQuests != null &&
                 _btnGoalsTasks != null &&
-                _btnGoalsAchievements != null &&
                 _goalsList != null &&
                 _questPanel != null &&
                 _questList != null &&
@@ -765,7 +809,15 @@ namespace SkiGame.Progression
                 _achievementGrid != null &&
                 _btnStatsToday != null &&
                 _btnStatsLifetime != null &&
-                _statsGrid != null;
+                _statsGrid != null &&
+                _btnOpenStats != null &&
+                _btnOpenRunHistory != null &&
+                _btnOpenAchievements != null &&
+                _btnOpenPasses != null &&
+                _btnOpenRescue != null &&
+                _btnCloseUtilityPopup != null &&
+                _btnCloseAchievements != null &&
+                _runHistoryList != null;
 
             if (!hasRequiredUi)
             {
@@ -773,7 +825,6 @@ namespace SkiGame.Progression
                     "[MountainHudOverlayController] Required UI elements are missing. " +
                     $"Btn_GoalsQuests={_btnGoalsQuests != null}, " +
                     $"Btn_GoalsTasks={_btnGoalsTasks != null}, " +
-                    $"Btn_GoalsAchievements={_btnGoalsAchievements != null}, " +
                     $"GoalsList={_goalsList != null}, " +
                     $"QuestPanel={_questPanel != null}, " +
                     $"QuestList={_questList != null}, " +
@@ -791,12 +842,6 @@ namespace SkiGame.Progression
                 _achievementScroll.mode = ScrollViewMode.Vertical;
                 _achievementScroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
                 _achievementScroll.verticalScrollerVisibility = ScrollerVisibility.Auto;
-            }
-
-            if (_btnContextExpand != null)
-            {
-                _btnContextExpand.clicked -= ToggleContextExpand;
-                _btnContextExpand.clicked += ToggleContextExpand;
             }
 
             if (_btnCloseOverlay != null)
@@ -829,12 +874,6 @@ namespace SkiGame.Progression
                 _btnGoalsTasks.clicked += ShowTasksGoals;
             }
 
-            if (_btnGoalsAchievements != null)
-            {
-                _btnGoalsAchievements.clicked -= ShowAchievementsGoals;
-                _btnGoalsAchievements.clicked += ShowAchievementsGoals;
-            }
-
             if (_btnQuestCurrent != null)
             {
                 _btnQuestCurrent.clicked -= ShowCurrentQuests;
@@ -865,6 +904,48 @@ namespace SkiGame.Progression
                 _btnPassBack.clicked += ShowPassOverview;
             }
 
+            if (_btnOpenStats != null)
+            {
+                _btnOpenStats.clicked -= OpenStatsUtility;
+                _btnOpenStats.clicked += OpenStatsUtility;
+            }
+
+            if (_btnOpenRunHistory != null)
+            {
+                _btnOpenRunHistory.clicked -= OpenRunHistoryUtility;
+                _btnOpenRunHistory.clicked += OpenRunHistoryUtility;
+            }
+
+            if (_btnOpenAchievements != null)
+            {
+                _btnOpenAchievements.clicked -= OpenAchievementsModal;
+                _btnOpenAchievements.clicked += OpenAchievementsModal;
+            }
+
+            if (_btnOpenPasses != null)
+            {
+                _btnOpenPasses.clicked -= OpenPassesUtility;
+                _btnOpenPasses.clicked += OpenPassesUtility;
+            }
+
+            if (_btnOpenRescue != null)
+            {
+                _btnOpenRescue.clicked -= OpenRescueUtility;
+                _btnOpenRescue.clicked += OpenRescueUtility;
+            }
+
+            if (_btnCloseUtilityPopup != null)
+            {
+                _btnCloseUtilityPopup.clicked -= CloseUtilityPopup;
+                _btnCloseUtilityPopup.clicked += CloseUtilityPopup;
+            }
+
+            if (_btnCloseAchievements != null)
+            {
+                _btnCloseAchievements.clicked -= CloseAchievementsModal;
+                _btnCloseAchievements.clicked += CloseAchievementsModal;
+            }
+
             if (_btnRescueMedicalDrop != null)
             {
                 _btnRescueMedicalDrop.clicked -= RequestMedicalSupplyDrop;
@@ -893,13 +974,8 @@ namespace SkiGame.Progression
             ApplyPassPanelViewState();
 
             BuildAchievementCategoryButtons();
-
-            if (_contextAttemptsList != null)
-                _contextAttemptsList.style.display = DisplayStyle.None;
-
-            _contextHistoryExpanded = false;
-            _contextHistoryAvailable = false;
-            ApplyContextHistoryVisibility();
+            ApplyOverlayPanelState();
+            RefreshAchievementUnclaimedBadge();
 
             return true;
         }
@@ -943,11 +1019,24 @@ namespace SkiGame.Progression
             RefreshGoalsPanel();
         }
 
-        private void ShowAchievementsGoals()
+        private void OpenStatsUtility()
         {
-            _goalsViewMode = GoalsViewMode.Achievements;
-            _tutorialLastViewedSection = "Achievements";
-            RefreshGoalsPanel();
+            ToggleUtilityPanel(UtilityPanelMode.Stats);
+        }
+
+        private void OpenRunHistoryUtility()
+        {
+            ToggleUtilityPanel(UtilityPanelMode.RunHistory);
+        }
+
+        private void OpenPassesUtility()
+        {
+            ToggleUtilityPanel(UtilityPanelMode.Passes);
+        }
+
+        private void OpenRescueUtility()
+        {
+            ToggleUtilityPanel(UtilityPanelMode.Rescue);
         }
 
         private void ShowCurrentQuests()
@@ -960,6 +1049,151 @@ namespace SkiGame.Progression
         {
             _questShowCompleted = true;
             RefreshGoalsPanel();
+        }
+
+        private void ToggleUtilityPanel(UtilityPanelMode mode)
+        {
+            if (_utilityPanelMode == mode)
+            {
+                CloseUtilityPopup();
+                return;
+            }
+
+            _utilityPanelMode = mode;
+
+            if (mode == UtilityPanelMode.Passes)
+            {
+                _passShowRescueTab = false;
+                _passShowLiftDetail = false;
+            }
+            else if (mode == UtilityPanelMode.Rescue)
+            {
+                _passShowRescueTab = true;
+                _passShowLiftDetail = false;
+            }
+
+            if (mode == UtilityPanelMode.RunHistory)
+                RaiseQuestUiEvent("ui.overlay.run_history_viewed");
+            else if (mode == UtilityPanelMode.Stats)
+                RaiseQuestUiEvent("ui.overlay.stats_viewed");
+
+            RefreshPassPanel();
+            RefreshRunHistoryPanel();
+            ApplyOverlayPanelState();
+        }
+
+        private void CloseUtilityPopup()
+        {
+            _utilityPanelMode = UtilityPanelMode.None;
+            ApplyOverlayPanelState();
+        }
+
+        private void OpenAchievementsModal()
+        {
+            _achievementsModalOpen = true;
+            _selectedAchievementId = null;
+            RefreshAchievementsView();
+            RefreshAchievementUnclaimedBadge();
+            ApplyOverlayPanelState();
+        }
+
+        private void CloseAchievementsModal()
+        {
+            _achievementsModalOpen = false;
+            ApplyOverlayPanelState();
+        }
+
+        private void ApplyOverlayPanelState()
+        {
+            if (_mapSelectionPanel != null)
+            {
+                bool showSelection = _selectedKind != SelectedMapKind.None && !string.IsNullOrWhiteSpace(_selectedId);
+                _mapSelectionPanel.style.display = showSelection ? DisplayStyle.Flex : DisplayStyle.None;
+                _mapSelectionPanel.pickingMode = showSelection ? PickingMode.Position : PickingMode.Ignore;
+            }
+
+            if (_utilityPopupPanel != null)
+            {
+                bool showPopup = _utilityPanelMode != UtilityPanelMode.None;
+                _utilityPopupPanel.style.display = showPopup ? DisplayStyle.Flex : DisplayStyle.None;
+                _utilityPopupPanel.pickingMode = showPopup ? PickingMode.Position : PickingMode.Ignore;
+            }
+
+            if (_achievementModalRoot != null)
+            {
+                _achievementModalRoot.style.display = _achievementsModalOpen ? DisplayStyle.Flex : DisplayStyle.None;
+                _achievementModalRoot.pickingMode = _achievementsModalOpen ? PickingMode.Position : PickingMode.Ignore;
+            }
+
+            if (_lblUtilityPopupTitle != null)
+            {
+                _lblUtilityPopupTitle.text = _utilityPanelMode switch
+                {
+                    UtilityPanelMode.Stats => "Stats",
+                    UtilityPanelMode.RunHistory => "Run History",
+                    UtilityPanelMode.Passes => "Ski Passes",
+                    UtilityPanelMode.Rescue => "Rescue",
+                    _ => "Utility"
+                };
+            }
+
+            if (_statsGrid != null && _statsGrid.parent != null)
+            {
+                var statsPanel = _statsGrid.parent;
+                if (statsPanel != null)
+                    statsPanel.style.display = _utilityPanelMode == UtilityPanelMode.Stats ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            if (_runHistoryList != null && _runHistoryList.parent != null)
+            {
+                var runHistoryPanel = _runHistoryList.parent;
+                runHistoryPanel.style.display = _utilityPanelMode == UtilityPanelMode.RunHistory ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            if (_passInfoView != null && _passInfoView.parent != null)
+            {
+                var passPanel = _passInfoView.parent;
+                bool showPassPanel = _utilityPanelMode == UtilityPanelMode.Passes || _utilityPanelMode == UtilityPanelMode.Rescue;
+                passPanel.style.display = showPassPanel ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            SetToggleState(_btnOpenStats, _utilityPanelMode == UtilityPanelMode.Stats);
+            SetToggleState(_btnOpenRunHistory, _utilityPanelMode == UtilityPanelMode.RunHistory);
+            SetToggleState(_btnOpenAchievements, _achievementsModalOpen);
+            SetToggleState(_btnOpenPasses, _utilityPanelMode == UtilityPanelMode.Passes);
+            SetToggleState(_btnOpenRescue, _utilityPanelMode == UtilityPanelMode.Rescue);
+        }
+
+        private void RefreshAchievementUnclaimedBadge()
+        {
+            if (_achievementBadge == null)
+                return;
+
+            if (progressionDirector == null)
+            {
+                _achievementBadge.style.display = DisplayStyle.None;
+                return;
+            }
+
+            _achievementQueryBuffer.Clear();
+            progressionDirector.GetAllAchievements(_achievementQueryBuffer);
+
+            var profile = Profile;
+            int unclaimed = 0;
+            _achievementDedup.Clear();
+
+            for (int i = 0; i < _achievementQueryBuffer.Count; i++)
+            {
+                var def = _achievementQueryBuffer[i];
+                if (def == null || string.IsNullOrWhiteSpace(def.id) || !_achievementDedup.Add(def.id))
+                    continue;
+
+                if (profile != null && profile.HasAchievement(def.id) && !profile.HasClaimedAchievement(def.id))
+                    unclaimed++;
+            }
+
+            _achievementBadge.text = unclaimed > 9 ? "9+" : unclaimed.ToString();
+            _achievementBadge.style.display = unclaimed > 0 ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private void BindMap()
@@ -983,8 +1217,6 @@ namespace SkiGame.Progression
 
             host.Clear();
 
-            // Respect the authored UXML placement so the map stays centered under the overlay,
-            // rather than stretching edge-to-edge behind the side rails.
             host.style.position = Position.Absolute;
             host.pickingMode = PickingMode.Position;
 
@@ -995,12 +1227,20 @@ namespace SkiGame.Progression
             host.SendToBack();
 
             var topStrip = overlayRoot.Q<VisualElement>("TopStrip");
-            var leftRail = overlayRoot.Q<VisualElement>("LeftRail");
-            var rightRail = overlayRoot.Q<VisualElement>("RightRail");
+            var goalsPanel = overlayRoot.Q<VisualElement>("GoalsPanel");
+            var actionStack = overlayRoot.Q<VisualElement>("OverlayActionStack");
+            var utilityPopup = overlayRoot.Q<VisualElement>("UtilityPopupPanel");
+            var selectionPanel = overlayRoot.Q<VisualElement>("MapSelectionPanel");
+            var achievementsModal = overlayRoot.Q<VisualElement>("AchievementModalRoot");
+            var screenFade = overlayRoot.Q<VisualElement>("OverlayScreenFade");
 
             topStrip?.BringToFront();
-            leftRail?.BringToFront();
-            rightRail?.BringToFront();
+            goalsPanel?.BringToFront();
+            actionStack?.BringToFront();
+            utilityPopup?.BringToFront();
+            selectionPanel?.BringToFront();
+            achievementsModal?.BringToFront();
+            screenFade?.BringToFront();
 
             _mapUI = new PhoneMapPageUI();
             _mapUI.Bind(runtimeMapRoot, mapData, mapReferenceCamera);
@@ -1103,6 +1343,9 @@ namespace SkiGame.Progression
             RefreshStatsPanel();
             RefreshGoalsPanel();
             RefreshPassPanel();
+            RefreshRunHistoryPanel();
+            RefreshAchievementUnclaimedBadge();
+            ApplyOverlayPanelState();
 
             if (force)
                 ScheduleMapRecenterOnOpen();
@@ -1138,7 +1381,63 @@ namespace SkiGame.Progression
 
             _contextMetaRow?.Clear();
             _contextHighlights?.Clear();
+            ApplySelectionTraySectionVisibility();
 
+            if (_selectedKind == SelectedMapKind.None || string.IsNullOrWhiteSpace(_selectedId))
+            {
+                ApplyOverlayPanelState();
+                return;
+            }
+
+            _lblContextTitle.text = _selectedTitle;
+            _lblContextBody.text = _selectedBody;
+
+            switch (_selectedKind)
+            {
+                case SelectedMapKind.Run:
+                    SetContextPresentation(
+                        icon: "Run",
+                        status: "Run Selected",
+                        guidance: "Double click its marker to place or cycle a linked waypoint. Use Run History for the full travel log.");
+                    break;
+
+                case SelectedMapKind.Lift:
+                    SetContextPresentation(
+                        icon: "Lift",
+                        status: "Lift Selected",
+                        guidance: "Review pass access here, then open Ski Passes if you want the full access list.");
+                    break;
+
+                case SelectedMapKind.Waypoint:
+                    SetContextPresentation(
+                        icon: "WP",
+                        status: "Waypoint Selected",
+                        guidance: "Double click the waypoint to cycle its color, or use the map actions to rename or remove it.");
+                    break;
+
+                case SelectedMapKind.POI:
+                    SetContextPresentation(
+                        icon: "POI",
+                        status: "Point of Interest",
+                        guidance: "Use landmarks to orient yourself, then place a custom waypoint if you want a beacon.");
+                    break;
+
+                default:
+                    SetContextPresentation(
+                        icon: "Info",
+                        status: "Selection",
+                        guidance: "Inspect the map, then act from here.");
+                    break;
+            }
+
+            PopulateSelectedContextMeta();
+            PopulateSelectedContextHighlights();
+            AppendSelectedRunVisitSummary();
+            ApplySelectionTraySectionVisibility();
+            ApplyOverlayPanelState();
+            return;
+
+#if false
             if (!string.IsNullOrWhiteSpace(_selectedId))
             {
                 _lblContextTitle.text = _selectedTitle;
@@ -1220,6 +1519,64 @@ namespace SkiGame.Progression
             }
 
             BuildNearbyRunsContext();
+#endif
+        }
+
+        private void AppendSelectedRunVisitSummary()
+        {
+            if (_selectedKind != SelectedMapKind.Run ||
+                _contextHighlights == null ||
+                Profile == null ||
+                string.IsNullOrWhiteSpace(_selectedId))
+            {
+                return;
+            }
+
+            if (!Profile.TryGetRunRecord(_selectedId, out var record) ||
+                record == null ||
+                record.attempts == null ||
+                record.attempts.Count == 0)
+            {
+                return;
+            }
+
+            RunAttemptEntry latest = null;
+
+            for (int i = record.attempts.Count - 1; i >= 0; i--)
+            {
+                if (record.attempts[i] != null)
+                {
+                    latest = record.attempts[i];
+                    break;
+                }
+            }
+
+            if (latest == null)
+                return;
+
+            string range = BuildAttemptRangeText(latest);
+            string covered = latest.isCompletion
+                ? "Completed"
+                : $"{Mathf.RoundToInt(GetAttemptCoveredFraction01(latest) * 100f)}% covered";
+
+            _contextHighlights.Add(MakeContextHighlightCard(
+                "Latest Visit",
+                FormatClockTime(latest.gameTimeOfDay),
+                $"{range} • {covered}"));
+        }
+
+        private string BuildAttemptRangeText(RunAttemptEntry attempt)
+        {
+            if (attempt == null)
+                return "Route logged";
+
+            int entry = Mathf.RoundToInt(Mathf.Clamp01(attempt.entryFraction01) * 100f);
+            int exit = Mathf.RoundToInt(Mathf.Clamp01(attempt.exitFraction01) * 100f);
+
+            if (entry == exit)
+                return $"Around {entry}%";
+
+            return $"{entry}% → {exit}%";
         }
 
         private void SetContextPresentation(string icon, string status, string guidance)
@@ -1239,6 +1596,42 @@ namespace SkiGame.Progression
                 _contextGuidanceBox.style.display = DisplayStyle.Flex;
         }
 
+        private void ApplySelectionTraySectionVisibility()
+        {
+            bool hasMeta = _contextMetaRow != null && _contextMetaRow.childCount > 0;
+            bool hasHighlights = _contextHighlights != null && _contextHighlights.childCount > 0;
+            bool hasDetails = hasMeta || hasHighlights;
+
+            if (_contextMetaRow != null)
+            {
+                _contextMetaRow.style.display = hasMeta ? DisplayStyle.Flex : DisplayStyle.None;
+                _contextMetaRow.pickingMode = hasMeta ? PickingMode.Position : PickingMode.Ignore;
+            }
+
+            if (_contextHighlights != null)
+            {
+                _contextHighlights.style.display = hasHighlights ? DisplayStyle.Flex : DisplayStyle.None;
+                _contextHighlights.pickingMode = hasHighlights ? PickingMode.Position : PickingMode.Ignore;
+            }
+
+            if (_contextDetailRow != null)
+            {
+                _contextDetailRow.style.display = hasDetails ? DisplayStyle.Flex : DisplayStyle.None;
+                _contextDetailRow.pickingMode = hasDetails ? PickingMode.Position : PickingMode.Ignore;
+            }
+
+            if (_mapSelectionPanel != null)
+            {
+                _mapSelectionPanel.EnableInClassList("has-context-meta", hasMeta);
+                _mapSelectionPanel.EnableInClassList("has-context-highlights", hasHighlights);
+                _mapSelectionPanel.EnableInClassList("has-only-context-identity", !hasDetails);
+
+                // USS-safe replacements for unsupported :not(...) selectors.
+                _mapSelectionPanel.EnableInClassList("has-only-context-meta", hasMeta && !hasHighlights);
+                _mapSelectionPanel.EnableInClassList("has-only-context-highlights", hasHighlights && !hasMeta);
+            }
+        }
+
         private void PopulateSelectedContextHighlights()
         {
             if (_contextHighlights == null)
@@ -1252,33 +1645,8 @@ namespace SkiGame.Progression
             {
                 case SelectedMapKind.Run:
                     {
-                        if (profile.TryGetRunRecord(_selectedId, out var record) && record != null)
-                        {
-                            int attempts = record.attempts != null ? record.attempts.Count : 0;
-
-                            _contextHighlights.Add(MakeContextHighlightCard(
-                                "Run Record",
-                                $"{record.timesCompleted} completions",
-                                $"{attempts} stored attempt{(attempts == 1 ? "" : "s")}"));
-
-                            var bestCard = MakeContextHighlightCard(
-                                "Best Speed",
-                                FormatSpeed(record.bestTopSpeedMps),
-                                record.bestTopSpeedMps > 0f ? "Your strongest recorded pace on this run." : "No strong benchmark recorded yet.");
-
-                            if (record.bestTopSpeedMps > 0f)
-                                bestCard.AddToClassList("is-positive");
-
-                            _contextHighlights.Add(bestCard);
-                        }
-                        else
-                        {
-                            _contextHighlights.Add(MakeContextHighlightCard(
-                                "First Descent",
-                                "No record yet",
-                                "This route has not been logged in your profile yet."));
-                        }
-
+                        // Run history is appended separately by AppendSelectedRunVisitSummary().
+                        // Avoid duplicating attempts, completions, visited state, or best speed here.
                         break;
                     }
 
@@ -1290,34 +1658,33 @@ namespace SkiGame.Progression
 
                         var accessCard = MakeContextHighlightCard(
                             "Access",
-                            canUse ? "Available now" : $"Requires {requirementText}",
+                            canUse ? "Available" : $"Needs {requirementText}",
                             canUse
-                                ? "You can ride this lift with your current pass."
-                                : "Upgrade at the kiosk before attempting to board.");
+                                ? "Current pass allows this lift."
+                                : "Open Ski Passes for access.");
 
                         accessCard.AddToClassList(canUse ? "is-positive" : "is-warning");
                         _contextHighlights.Add(accessCard);
-
-                        int rides = profile.GetLiftRideCount(_selectedId, session: false);
-                        _contextHighlights.Add(MakeContextHighlightCard(
-                            "Usage",
-                            $"{rides} total ride{(rides == 1 ? "" : "s")}",
-                            rides > 0 ? "You have already used this lift before." : "This lift has not been ridden yet."));
                         break;
                     }
 
                 case SelectedMapKind.POI:
                     {
-                        bool visited = profile.HasVisitedLandmark(_selectedId);
-                        var visitCard = MakeContextHighlightCard(
-                            "Discovery",
-                            visited ? "Visited" : "Undiscovered",
-                            visited
-                                ? "This landmark is already in your exploration history."
-                                : "Visit this point to add it to your discoveries.");
+                        // Intentionally empty.
+                        // No generic Discovery/Visited card in the compact horizontal panel.
+                        break;
+                    }
 
-                        visitCard.AddToClassList(visited ? "is-positive" : "is-warning");
-                        _contextHighlights.Add(visitCard);
+                case SelectedMapKind.Waypoint:
+                    {
+                        if (_waypointManager != null && _waypointManager.TryGetWaypoint(_selectedId, out var waypoint))
+                        {
+                            _contextHighlights.Add(MakeContextHighlightCard(
+                                "Coordinates",
+                                $"{waypoint.worldPosition.x:0}, {waypoint.worldPosition.z:0}",
+                                "Map reference point."));
+                        }
+
                         break;
                     }
             }
@@ -1346,38 +1713,54 @@ namespace SkiGame.Progression
             {
                 case SelectedMapKind.Run:
                     {
-                        AddContextMetaChip("Type", "Run", accent: true);
-
-                        bool visited = !string.IsNullOrWhiteSpace(_selectedId) && profile.HasVisitedRun(_selectedId);
-                        AddContextMetaChip("Visited", visited ? "Yes" : "No");
-
-                        if (!string.IsNullOrWhiteSpace(_selectedId) && profile.TryGetRunRecord(_selectedId, out var record) && record != null)
+                        if (!string.IsNullOrWhiteSpace(_selectedId) &&
+                            profile.TryGetRunRecord(_selectedId, out var record) &&
+                            record != null)
                         {
                             int attempts = record.attempts != null ? record.attempts.Count : 0;
-                            AddContextMetaChip("Attempts", attempts.ToString());
-                            AddContextMetaChip("Best Speed", FormatSpeed(record.bestTopSpeedMps));
+
+                            if (attempts > 0)
+                                AddContextMetaChip("Attempts", attempts.ToString());
+
+                            if (record.timesCompleted > 0)
+                                AddContextMetaChip("Completed", record.timesCompleted.ToString());
+
+                            if (record.bestTopSpeedMps > 0f)
+                                AddContextMetaChip("Best Speed", FormatSpeed(record.bestTopSpeedMps));
                         }
+
                         break;
                     }
 
                 case SelectedMapKind.Lift:
                     {
-                        AddContextMetaChip("Type", "Lift", accent: true);
+                        var lift = FindLiftById(_selectedId);
+                        if (lift != null)
+                            AddContextMetaChip("Pass", lift.GetRequiredPassDisplayName());
 
                         int rides = !string.IsNullOrWhiteSpace(_selectedId)
                             ? profile.GetLiftRideCount(_selectedId, session: false)
                             : 0;
 
-                        AddContextMetaChip("Rides", rides.ToString());
+                        if (rides > 0)
+                            AddContextMetaChip("Rides", rides.ToString());
+
                         break;
                     }
 
                 case SelectedMapKind.POI:
                     {
-                        AddContextMetaChip("Type", "Landmark", accent: true);
+                        break;
+                    }
 
-                        bool visited = !string.IsNullOrWhiteSpace(_selectedId) && profile.HasVisitedLandmark(_selectedId);
-                        AddContextMetaChip("Visited", visited ? "Yes" : "No");
+                case SelectedMapKind.Waypoint:
+                    {
+                        if (_waypointManager != null && _waypointManager.TryGetWaypoint(_selectedId, out var waypoint))
+                        {
+                            AddContextMetaChip("Mode", waypoint.kind.ToString());
+                            AddContextMetaChip("Color", $"#{ColorUtility.ToHtmlStringRGB(waypoint.color)}");
+                        }
+
                         break;
                     }
             }
@@ -1495,6 +1878,104 @@ namespace SkiGame.Progression
             RefreshRescueDispatchPanel();
         }
 
+        private void RefreshRunHistoryPanel()
+        {
+            if (_runHistoryList == null)
+                return;
+
+            _runHistoryList.contentContainer.Clear();
+
+            var profile = Profile;
+            if (profile == null || profile.runRecords == null || profile.runRecords.Count == 0)
+            {
+                _runHistoryList.Add(new Label("No travel log entries yet."));
+                return;
+            }
+
+            var entries = new List<(string runId, string runName, RunAttemptEntry attempt)>();
+            foreach (var record in profile.runRecords)
+            {
+                if (record?.attempts == null)
+                    continue;
+
+                string runId = record.runId;
+                string runName = ResolveRunDisplayName(runId);
+                for (int i = 0; i < record.attempts.Count; i++)
+                {
+                    var attempt = record.attempts[i];
+                    if (attempt == null)
+                        continue;
+
+                    entries.Add((runId, runName, attempt));
+                }
+            }
+
+            if (entries.Count == 0)
+            {
+                _runHistoryList.Add(new Label("No travel log entries yet."));
+                return;
+            }
+
+            entries.Sort((a, b) => CompareRunHistoryEntries(a.attempt, b.attempt));
+
+            string lastDayKey = null;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                var entry = entries[i];
+                string dayKey = BuildRunHistoryDayKey(entry.attempt);
+                if (!string.Equals(dayKey, lastDayKey, StringComparison.Ordinal))
+                {
+                    var header = new Label(dayKey);
+                    header.AddToClassList("run-history-day");
+                    _runHistoryList.Add(header);
+                    lastDayKey = dayKey;
+                }
+
+                _runHistoryList.Add(MakeRunHistoryRow(entry.runId, entry.runName, entry.attempt));
+            }
+        }
+
+        private VisualElement MakeRunHistoryRow(string runId, string runName, RunAttemptEntry attempt)
+        {
+            var row = new Button(() => FocusRunHistoryEntry(runId))
+            {
+                focusable = true
+            };
+            row.AddToClassList("run-history-row");
+
+            var title = new Label(runName);
+            title.AddToClassList("run-history-title");
+            row.Add(title);
+
+            var segment = new Label($"Entered {Mathf.RoundToInt(Mathf.Clamp01(attempt.entryFraction01) * 100f)}% → exited {Mathf.RoundToInt(Mathf.Clamp01(attempt.exitFraction01) * 100f)}%");
+            segment.AddToClassList("run-history-meta");
+            row.Add(segment);
+
+            float covered01 = GetAttemptCoveredFraction01(attempt);
+            var meta = new Label($"{FormatClockTime(attempt.gameTimeOfDay)} • {FormatDurationLong(attempt.timeSeconds)} • {Mathf.RoundToInt(covered01 * 100f)}% covered");
+            meta.AddToClassList("run-history-meta");
+            row.Add(meta);
+
+            string secondaryText = BuildRunHistorySecondaryLine(attempt);
+            if (!string.IsNullOrWhiteSpace(secondaryText))
+            {
+                var secondary = new Label(secondaryText);
+                secondary.AddToClassList("run-history-meta");
+                row.Add(secondary);
+            }
+
+            return row;
+        }
+
+        private void FocusRunHistoryEntry(string runId)
+        {
+            if (_mapUI == null || string.IsNullOrWhiteSpace(runId))
+                return;
+
+            _mapUI.SelectPolylineById(runId, center: false, minZoom: -1f);
+            _mapUI.FramePolylineById(runId, paddingPx: 28f, minZoom: 0.85f);
+        }
+
         private void RefreshStatsPanel()
         {
             SetToggleState(_btnStatsToday, !_statsShowLifetime);
@@ -1576,11 +2057,9 @@ namespace SkiGame.Progression
         {
             bool showQuests = _goalsViewMode == GoalsViewMode.Quests;
             bool showTasks = _goalsViewMode == GoalsViewMode.Tasks;
-            bool showAchievements = _goalsViewMode == GoalsViewMode.Achievements;
 
             SetToggleState(_btnGoalsQuests, showQuests);
             SetToggleState(_btnGoalsTasks, showTasks);
-            SetToggleState(_btnGoalsAchievements, showAchievements);
 
             if (_goalsList == null || _achievementCategoryRow == null || _achievementGrid == null)
                 return;
@@ -1592,30 +2071,31 @@ namespace SkiGame.Progression
                 _questPanel.style.display = showQuests ? DisplayStyle.Flex : DisplayStyle.None;
 
             if (_achievementPanel != null)
-                _achievementPanel.style.display = showAchievements ? DisplayStyle.Flex : DisplayStyle.None;
+                _achievementPanel.style.display = _achievementsModalOpen ? DisplayStyle.Flex : DisplayStyle.None;
             else
             {
                 if (_achievementHeaderShell != null)
-                    _achievementHeaderShell.style.display = showAchievements ? DisplayStyle.Flex : DisplayStyle.None;
+                    _achievementHeaderShell.style.display = _achievementsModalOpen ? DisplayStyle.Flex : DisplayStyle.None;
 
                 if (_achievementScroll != null)
-                    _achievementScroll.style.display = showAchievements ? DisplayStyle.Flex : DisplayStyle.None;
+                    _achievementScroll.style.display = _achievementsModalOpen ? DisplayStyle.Flex : DisplayStyle.None;
                 else if (_achievementGrid != null)
-                    _achievementGrid.style.display = showAchievements ? DisplayStyle.Flex : DisplayStyle.None;
+                    _achievementGrid.style.display = _achievementsModalOpen ? DisplayStyle.Flex : DisplayStyle.None;
             }
 
-            if (showAchievements)
-            {
-                BuildAchievementCategoryButtons();
-                RefreshAchievementsView();
-            }
-            else if (showQuests)
+            if (showQuests)
             {
                 RefreshQuestView();
             }
             else
             {
                 RefreshTasksView();
+            }
+
+            if (_achievementsModalOpen)
+            {
+                BuildAchievementCategoryButtons();
+                RefreshAchievementsView();
             }
         }
 
@@ -1964,6 +2444,7 @@ namespace SkiGame.Progression
                         {
                             RefreshGoalsPanel();
                             RefreshPassPanel();
+                            RefreshAchievementUnclaimedBadge();
                         }
                     })
                     {
@@ -2005,11 +2486,17 @@ namespace SkiGame.Progression
 
             if (skiPassManager == null || skiPassManager.Config == null)
             {
-                if (_passCurrentList != null)
-                {
-                    _passCurrentList.Clear();
-                    _passCurrentList.Add(new Label("No ski pass system found."));
-                }
+                if (_lblPassCurrent != null)
+                    _lblPassCurrent.text = "No ski pass system found.";
+
+                if (_lblPassExpiryMeta != null)
+                    _lblPassExpiryMeta.text = string.Empty;
+
+                if (_lblPassPermanentSummary != null)
+                    _lblPassPermanentSummary.text = string.Empty;
+
+                if (_passExpiryBar != null)
+                    _passExpiryBar.style.display = DisplayStyle.None;
 
                 if (_passOverviewList != null)
                     _passOverviewList.Clear();
@@ -2020,7 +2507,7 @@ namespace SkiGame.Progression
                 return;
             }
 
-            RebuildPassCurrentList();
+            RefreshPassSummary();
             RebuildPassOverviewList();
 
             if (_passShowLiftDetail)
@@ -2074,257 +2561,29 @@ namespace SkiGame.Progression
                 _rescueUtilitiesView.style.display = _passShowRescueTab ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
-        private bool TryGetNowGameHours(out double nowHours)
+        private void RefreshPassSummary()
         {
-            nowHours = 0.0;
+            if (_lblPassCurrent != null)
+                _lblPassCurrent.text = skiPassManager.GetCurrentPassDisplayName();
 
-            var t = TimeWeather.TimeController.instance != null
-                ? TimeWeather.TimeController.instance
-                : FindObjectOfType<TimeWeather.TimeController>();
+            bool hasTimedPass = skiPassManager.HasTimedPass;
 
-            if (t == null)
-                return false;
+            if (_lblPassExpiryMeta != null)
+                _lblPassExpiryMeta.text = hasTimedPass
+                    ? skiPassManager.GetRemainingTimeString()
+                    : "No timed expiry on the current pass";
 
-            int day = Mathf.Max(0, t.dayCount);
-            int hh = Mathf.Clamp(t.timeHours, 0, 23);
-            float mm = Mathf.Clamp((float)t.timeMinutes, 0f, 59f);
+            if (_passExpiryBar != null)
+                _passExpiryBar.style.display = hasTimedPass ? DisplayStyle.Flex : DisplayStyle.None;
 
-            nowHours = (day * 24.0) + hh + (mm / 60.0);
-            return true;
-        }
-
-        private string FormatGameHoursTimestamp(double gameHours)
-        {
-            if (double.IsNaN(gameHours) || double.IsInfinity(gameHours))
-                return string.Empty;
-
-            int totalMinutes = Mathf.Max(0, Mathf.RoundToInt((float)(gameHours * 60.0)));
-            int day = totalMinutes / (24 * 60);
-            int minutesIntoDay = totalMinutes % (24 * 60);
-            int hour = minutesIntoDay / 60;
-            int minute = minutesIntoDay % 60;
-
-            return $"Day {day + 1} • {hour:00}:{minute:00}";
-        }
-
-        private Color GetPassUiColor(SkiPassConfigSO.PassLevel pass)
-        {
-            if (pass != null && pass.mapColor.a > 0.001f)
-                return pass.mapColor;
-
-            return new Color(0.36f, 0.77f, 1f, 1f);
-        }
-
-        private VisualElement BuildCurrentPassRow(
-            string displayName,
-            Color passColor,
-            string statusText,
-            bool showProgress,
-            float progress01,
-            string progressText,
-            string tooltipText)
-        {
-            var row = new VisualElement();
-            row.AddToClassList("pass-current-row");
-            row.tooltip = tooltipText ?? string.Empty;
-
-            var left = new VisualElement();
-            left.AddToClassList("pass-current-row-left");
-
-            var chip = new Label(displayName);
-            chip.AddToClassList("pass-current-chip");
-            chip.style.backgroundColor = new Color(passColor.r, passColor.g, passColor.b, 0.18f);
-            chip.style.borderLeftColor = new Color(passColor.r, passColor.g, passColor.b, 0.70f);
-            chip.style.borderRightColor = new Color(passColor.r, passColor.g, passColor.b, 0.70f);
-            chip.style.borderTopColor = new Color(passColor.r, passColor.g, passColor.b, 0.70f);
-            chip.style.borderBottomColor = new Color(passColor.r, passColor.g, passColor.b, 0.70f);
-
-            left.Add(chip);
-            row.Add(left);
-
-            var right = new VisualElement();
-            right.AddToClassList("pass-current-row-right");
-
-            if (showProgress)
+            if (_passExpiryFill != null && hasTimedPass)
             {
-                var progressWrap = new VisualElement();
-                progressWrap.AddToClassList("pass-current-progress-wrap");
-                progressWrap.tooltip = tooltipText ?? string.Empty;
-
-                var progressTrack = new VisualElement();
-                progressTrack.AddToClassList("pass-current-progress-track");
-
-                var progressFill = new VisualElement();
-                progressFill.AddToClassList("pass-current-progress-fill");
-                progressFill.style.width = Length.Percent(Mathf.Clamp01(progress01) * 100f);
-                progressFill.style.backgroundColor = new Color(passColor.r, passColor.g, passColor.b, 0.92f);
-
-                var progressLabel = new Label(progressText);
-                progressLabel.AddToClassList("pass-current-progress-label");
-
-                progressTrack.Add(progressFill);
-                progressWrap.Add(progressTrack);
-                progressWrap.Add(progressLabel);
-                right.Add(progressWrap);
-            }
-            else
-            {
-                var status = new Label(statusText);
-                status.AddToClassList("pass-current-status");
-                right.Add(status);
+                float fraction = skiPassManager.GetRemainingFraction01();
+                _passExpiryFill.style.width = Length.Percent(Mathf.RoundToInt(fraction * 100f));
             }
 
-            row.Add(right);
-            return row;
-        }
-
-        private void RebuildPassCurrentList()
-        {
-            if (_passCurrentList == null || skiPassManager == null || skiPassManager.Config == null)
-                return;
-
-            _passCurrentList.Clear();
-
-            var cfg = skiPassManager.Config;
-            HashSet<string> addedPassIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            var activePasses = skiPassManager.ActivePasses;
-            if (activePasses != null)
-            {
-                List<SkiPassManager.ActivePassRecord> sortedActive = new List<SkiPassManager.ActivePassRecord>();
-                for (int i = 0; i < activePasses.Count; i++)
-                {
-                    var record = activePasses[i];
-                    if (record != null && !string.IsNullOrWhiteSpace(record.passId))
-                        sortedActive.Add(record);
-                }
-
-                sortedActive.Sort((a, b) =>
-                {
-                    int levelA = cfg.GetLevelIndexByPassId(a.passId);
-                    int levelB = cfg.GetLevelIndexByPassId(b.passId);
-
-                    int levelCmp = levelB.CompareTo(levelA);
-                    if (levelCmp != 0)
-                        return levelCmp;
-
-                    return a.expiryGameHours.CompareTo(b.expiryGameHours);
-                });
-
-                for (int i = 0; i < sortedActive.Count; i++)
-                {
-                    var record = sortedActive[i];
-                    string passId = record.passId.Trim();
-                    if (!addedPassIds.Add(passId))
-                        continue;
-
-                    var pass = cfg.GetByPassId(passId);
-                    if (pass == null)
-                        continue;
-
-                    double nowHours = 0.0;
-                    TryGetNowGameHours(out nowHours);
-
-                    double totalHours = Math.Max(0.0001, record.totalHoursPurchased);
-                    double remainingHours = Math.Max(0.0, record.expiryGameHours - nowHours);
-                    float progress01 = Mathf.Clamp01((float)(remainingHours / totalHours));
-
-                    string tooltip = $"Started: {FormatGameHoursTimestamp(record.startGameHours)}\nExpires: {FormatGameHoursTimestamp(record.expiryGameHours)}";
-
-                    _passCurrentList.Add(BuildCurrentPassRow(
-                        pass.displayName,
-                        GetPassUiColor(pass),
-                        statusText: string.Empty,
-                        showProgress: true,
-                        progress01: progress01,
-                        progressText: $"Expires in {Mathf.CeilToInt((float)remainingHours)}h",
-                        tooltipText: tooltip));
-                }
-            }
-
-            List<string> permanentIds = RaceRescueProgression.GetPermanentlyUnlockedPassIds();
-            if (permanentIds != null)
-            {
-                for (int i = 0; i < permanentIds.Count; i++)
-                {
-                    string passId = permanentIds[i];
-                    if (string.IsNullOrWhiteSpace(passId))
-                        continue;
-
-                    string normalized = passId.Trim();
-                    if (!addedPassIds.Add(normalized))
-                        continue;
-
-                    var pass = cfg.GetByPassId(normalized);
-                    if (pass == null)
-                        continue;
-
-                    _passCurrentList.Add(BuildCurrentPassRow(
-                        pass.displayName,
-                        GetPassUiColor(pass),
-                        "Permanent",
-                        showProgress: false,
-                        progress01: 1f,
-                        progressText: string.Empty,
-                        tooltipText: string.Empty));
-                }
-            }
-
-            var profile = Profile;
-            List<int> legacyLevels = profile != null ? profile.permanentlyUnlockedPassLevels : null;
-            if (legacyLevels != null)
-            {
-                for (int i = 0; i < legacyLevels.Count; i++)
-                {
-                    string passId = cfg.GetPassIdForLevel(legacyLevels[i]);
-                    if (string.IsNullOrWhiteSpace(passId))
-                        continue;
-
-                    string normalized = passId.Trim();
-                    if (!addedPassIds.Add(normalized))
-                        continue;
-
-                    var pass = cfg.GetByPassId(normalized);
-                    if (pass == null)
-                        continue;
-
-                    _passCurrentList.Add(BuildCurrentPassRow(
-                        pass.displayName,
-                        GetPassUiColor(pass),
-                        "Permanent",
-                        showProgress: false,
-                        progress01: 1f,
-                        progressText: string.Empty,
-                        tooltipText: string.Empty));
-                }
-            }
-
-            if (skiPassManager.HasClaimedDefaultPass)
-            {
-                string defaultPassId = cfg.GetDefaultPassId();
-                if (!string.IsNullOrWhiteSpace(defaultPassId) && addedPassIds.Add(defaultPassId.Trim()))
-                {
-                    var pass = cfg.GetByPassId(defaultPassId);
-                    if (pass != null)
-                    {
-                        _passCurrentList.Add(BuildCurrentPassRow(
-                            pass.displayName,
-                            GetPassUiColor(pass),
-                            "Permanent",
-                            showProgress: false,
-                            progress01: 1f,
-                            progressText: string.Empty,
-                            tooltipText: string.Empty));
-                    }
-                }
-            }
-
-            if (_passCurrentList.childCount == 0)
-            {
-                var empty = new Label("No active or owned passes");
-                empty.AddToClassList("pass-current-empty");
-                _passCurrentList.Add(empty);
-            }
+            if (_lblPassPermanentSummary != null)
+                _lblPassPermanentSummary.text = BuildPermanentPassSummary();
         }
 
         private string BuildPermanentPassSummary()
@@ -2368,10 +2627,10 @@ namespace SkiGame.Progression
                 string meta = entry.isCurrent && entry.isPermanent
                     ? "Current • Permanent"
                     : entry.isCurrent
-                        ? "Active access"
+                        ? "Current access"
                         : entry.isPermanent
-                            ? "Permanent"
-                            : "Temporary";
+                            ? "Permanent unlock"
+                            : "Pass";
 
                 var button = new Button(() => OpenPassLiftDetail(entry.passId, entry.level, entry.displayName))
                 {
@@ -2462,62 +2721,14 @@ namespace SkiGame.Progression
                 return;
 
             var cfg = skiPassManager.Config;
-            HashSet<string> addedPassIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            var activePasses = skiPassManager.ActivePasses;
-            if (activePasses != null)
-            {
-                List<SkiPassManager.ActivePassRecord> sortedActive = new List<SkiPassManager.ActivePassRecord>();
-                for (int i = 0; i < activePasses.Count; i++)
-                {
-                    var record = activePasses[i];
-                    if (record != null && !string.IsNullOrWhiteSpace(record.passId))
-                        sortedActive.Add(record);
-                }
-
-                sortedActive.Sort((a, b) =>
-                {
-                    int levelA = cfg.GetLevelIndexByPassId(a.passId);
-                    int levelB = cfg.GetLevelIndexByPassId(b.passId);
-
-                    int levelCmp = levelB.CompareTo(levelA);
-                    if (levelCmp != 0)
-                        return levelCmp;
-
-                    return a.expiryGameHours.CompareTo(b.expiryGameHours);
-                });
-
-                for (int i = 0; i < sortedActive.Count; i++)
-                {
-                    var record = sortedActive[i];
-                    string passId = record.passId.Trim();
-                    if (!addedPassIds.Add(passId))
-                        continue;
-
-                    int level = Mathf.Max(0, cfg.GetLevelIndexByPassId(passId));
-                    string displayName = cfg.GetDisplayNameForPassId(passId);
-
-                    AddOrUpdatePassPanelEntry(dst, passId, level, displayName, isCurrent: true, isPermanent: false);
-                }
-            }
-
-            List<string> permanentIds = RaceRescueProgression.GetPermanentlyUnlockedPassIds();
-            if (permanentIds != null)
-            {
-                for (int i = 0; i < permanentIds.Count; i++)
-                {
-                    string passId = permanentIds[i];
-                    if (string.IsNullOrWhiteSpace(passId))
-                        continue;
-
-                    string normalized = passId.Trim();
-                    int level = Mathf.Max(0, cfg.GetLevelIndexByPassId(normalized));
-                    string displayName = cfg.GetDisplayNameForPassId(normalized);
-
-                    AddOrUpdatePassPanelEntry(dst, normalized, level, displayName, isCurrent: skiPassManager.IsPassActive(normalized), isPermanent: true);
-                    addedPassIds.Add(normalized);
-                }
-            }
+            AddOrUpdatePassPanelEntry(
+                dst,
+                cfg.GetPassIdForLevel(skiPassManager.CurrentLevel),
+                skiPassManager.CurrentLevel,
+                skiPassManager.GetCurrentPassDisplayName(),
+                isCurrent: true,
+                isPermanent: skiPassManager.IsPassPermanentlyUnlocked(skiPassManager.CurrentLevel));
 
             var profile = Profile;
             if (profile != null && profile.permanentlyUnlockedPassLevels != null)
@@ -2526,41 +2737,10 @@ namespace SkiGame.Progression
                 {
                     int level = Mathf.Max(0, profile.permanentlyUnlockedPassLevels[i]);
                     string passId = cfg.GetPassIdForLevel(level);
-                    if (string.IsNullOrWhiteSpace(passId))
-                        continue;
-
-                    string normalized = passId.Trim();
-                    string displayName = cfg.GetDisplayNameForPassId(normalized);
-
-                    AddOrUpdatePassPanelEntry(dst, normalized, level, displayName, isCurrent: skiPassManager.IsPassActive(normalized), isPermanent: true);
-                    addedPassIds.Add(normalized);
+                    string displayName = cfg.Get(level) != null ? cfg.Get(level).displayName : $"Pass {level}";
+                    AddOrUpdatePassPanelEntry(dst, passId, level, displayName, isCurrent: level == skiPassManager.CurrentLevel, isPermanent: true);
                 }
             }
-
-            if (skiPassManager.HasClaimedDefaultPass)
-            {
-                string defaultPassId = cfg.GetDefaultPassId();
-                if (!string.IsNullOrWhiteSpace(defaultPassId))
-                {
-                    string normalized = defaultPassId.Trim();
-                    int level = Mathf.Max(0, cfg.GetLevelIndexByPassId(normalized));
-                    string displayName = cfg.GetDisplayNameForPassId(normalized);
-
-                    AddOrUpdatePassPanelEntry(dst, normalized, level, displayName, isCurrent: skiPassManager.IsPassActive(normalized), isPermanent: true);
-                    addedPassIds.Add(normalized);
-                }
-            }
-
-            dst.Sort((a, b) =>
-            {
-                if (a.isCurrent != b.isCurrent)
-                    return a.isCurrent ? -1 : 1;
-
-                if (a.isPermanent != b.isPermanent)
-                    return a.isPermanent ? -1 : 1;
-
-                return string.Compare(a.displayName, b.displayName, StringComparison.OrdinalIgnoreCase);
-            });
         }
 
         private static void AddOrUpdatePassPanelEntry(List<PassPanelEntry> dst, string passId, int level, string displayName, bool isCurrent, bool isPermanent)
@@ -2929,6 +3109,15 @@ namespace SkiGame.Progression
                 return;
 
             _waypointManager.SelectWaypoint(waypointId, setActive: true);
+
+            if (_waypointManager.TryGetWaypoint(waypointId, out var waypoint))
+            {
+                _selectedKind = SelectedMapKind.Waypoint;
+                _selectedId = waypoint.id;
+                _selectedTitle = string.IsNullOrWhiteSpace(waypoint.displayName) ? "Waypoint" : waypoint.displayName;
+                _selectedBody = $"Navigation point • {waypoint.kind} • {waypoint.worldPosition.x:0}, {waypoint.worldPosition.z:0}";
+                RefreshContextPanel();
+            }
         }
 
         private void OnMapWaypointDoubleClicked(string waypointId)
@@ -2945,6 +3134,9 @@ namespace SkiGame.Progression
         private void OnMapWaypointDeleteRequested(string waypointId)
         {
             _waypointManager?.RemoveWaypoint(waypointId);
+
+            if (string.Equals(_selectedId, waypointId, StringComparison.Ordinal))
+                OnMapSelectionCleared();
         }
 
         private void OnMapWaypointLabelEditRequested(string waypointId)
@@ -3307,10 +3499,16 @@ namespace SkiGame.Progression
 
             var chip = new VisualElement();
             chip.AddToClassList("context-meta-chip");
+            chip.AddToClassList("context-meta-chip--compact");
+
             if (accent)
                 chip.AddToClassList("is-accent");
 
-            var labelEl = new Label(label);
+            chip.tooltip = string.IsNullOrWhiteSpace(label)
+                ? value
+                : $"{label}: {value}";
+
+            var labelEl = new Label(string.IsNullOrWhiteSpace(label) ? string.Empty : $"{label}:");
             labelEl.AddToClassList("context-meta-chip-label");
             chip.Add(labelEl);
 
@@ -3325,8 +3523,14 @@ namespace SkiGame.Progression
         {
             var card = new VisualElement();
             card.AddToClassList("context-highlight-card");
+            card.AddToClassList("context-highlight-card--compact");
 
-            var titleEl = new Label(title);
+            if (!string.IsNullOrWhiteSpace(detail))
+                card.tooltip = $"{title}: {value}\n{detail}";
+            else
+                card.tooltip = $"{title}: {value}";
+
+            var titleEl = new Label(string.IsNullOrWhiteSpace(title) ? string.Empty : $"{title}:");
             titleEl.AddToClassList("context-highlight-title");
             card.Add(titleEl);
 
@@ -4054,6 +4258,88 @@ namespace SkiGame.Progression
             return $"{mins:00}:{secs:00}";
         }
 
+        private static string FormatDurationLong(float seconds)
+        {
+            seconds = Mathf.Max(0f, seconds);
+            int total = Mathf.RoundToInt(seconds);
+            int hours = total / 3600;
+            int mins = (total % 3600) / 60;
+            int secs = total % 60;
+
+            return hours > 0
+                ? $"{hours}h {mins:00}m {secs:00}s"
+                : $"{mins}m {secs:00}s";
+        }
+
+        private static string FormatClockTime(float gameTimeOfDay)
+        {
+            float wrapped = gameTimeOfDay;
+            while (wrapped < 0f) wrapped += 24f;
+            while (wrapped >= 24f) wrapped -= 24f;
+
+            int hours = Mathf.FloorToInt(wrapped);
+            int minutes = Mathf.Clamp(Mathf.RoundToInt((wrapped - hours) * 60f), 0, 59);
+            return $"{hours:00}:{minutes:00}";
+        }
+
+        private static float GetAttemptCoveredFraction01(RunAttemptEntry attempt)
+        {
+            if (attempt == null)
+                return 0f;
+
+            if (attempt.isCompletion)
+                return 1f;
+
+            float covered = attempt.coveredFraction01;
+            if (covered <= 0f)
+                covered = Mathf.Abs(attempt.exitFraction01 - attempt.entryFraction01);
+
+            return Mathf.Clamp01(covered);
+        }
+
+        private static string BuildRunHistorySecondaryLine(RunAttemptEntry attempt)
+        {
+            if (attempt == null)
+                return string.Empty;
+
+            string speed = attempt.topSpeedMps > 0f ? $"Top speed {FormatSpeed(attempt.topSpeedMps)}" : null;
+            string stacks = attempt.stacks > 0 ? $"{attempt.stacks} stack{(attempt.stacks == 1 ? "" : "s")}" : null;
+
+            if (!string.IsNullOrWhiteSpace(speed) && !string.IsNullOrWhiteSpace(stacks))
+                return $"{speed} • {stacks}";
+
+            return speed ?? stacks ?? string.Empty;
+        }
+
+        private static int CompareRunHistoryEntries(RunAttemptEntry a, RunAttemptEntry b)
+        {
+            if (a == null && b == null) return 0;
+            if (a == null) return 1;
+            if (b == null) return -1;
+
+            int year = b.gameYear.CompareTo(a.gameYear);
+            if (year != 0) return year;
+
+            int month = b.gameMonthIndex.CompareTo(a.gameMonthIndex);
+            if (month != 0) return month;
+
+            int day = b.gameDayOfMonth.CompareTo(a.gameDayOfMonth);
+            if (day != 0) return day;
+
+            return b.gameTimeOfDay.CompareTo(a.gameTimeOfDay);
+        }
+
+        private static string BuildRunHistoryDayKey(RunAttemptEntry attempt)
+        {
+            if (attempt == null)
+                return "Unknown day";
+
+            if (attempt.gameDayOfMonth <= 0)
+                return $"Day {Mathf.Max(1, attempt.gameDayOfWeek + 1)}";
+
+            return $"Day {attempt.gameDayOfMonth} • Month {attempt.gameMonthIndex + 1} • Year {Mathf.Max(1, attempt.gameYear)}";
+        }
+
         private static string FormatMeters(float meters)
         {
             if (meters >= 1000f)
@@ -4072,6 +4358,31 @@ namespace SkiGame.Progression
                 return "--";
 
             return $"{name} • {Mathf.Sqrt(sqrDist):0} m";
+        }
+
+        private string ResolveRunDisplayName(string runId)
+        {
+            if (string.IsNullOrWhiteSpace(runId))
+                return "Run";
+
+            if (PointOfInterestRegistry.Instance != null &&
+                PointOfInterestRegistry.Instance.TryGetById(runId, out var poi) &&
+                !string.IsNullOrWhiteSpace(poi.displayName))
+            {
+                return poi.displayName;
+            }
+
+            if (mapData != null && mapData.Polylines != null)
+            {
+                for (int i = 0; i < mapData.Polylines.Count; i++)
+                {
+                    var poly = mapData.Polylines[i];
+                    if (poly.IsValid && string.Equals(poly.id, runId, StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(poly.displayName))
+                        return poly.displayName;
+                }
+            }
+
+            return runId;
         }
 
         private static LiftLine FindLiftById(string liftId)

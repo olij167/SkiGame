@@ -25,7 +25,7 @@ Transform:
   m_GameObject: {fileID: 1954649777478580484}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0.1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -43,17 +43,21 @@ PrefabInstance:
       propertyPath: m_Name
       value: Crown
       objectReference: {fileID: 0}
+    - target: {fileID: 100000, guid: 598a1f45fefa08846b93be35e98f166e, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 598a1f45fefa08846b93be35e98f166e, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 598a1f45fefa08846b93be35e98f166e, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 598a1f45fefa08846b93be35e98f166e, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 598a1f45fefa08846b93be35e98f166e, type: 3}
       propertyPath: m_LocalPosition.x
@@ -131,6 +135,7 @@ MonoBehaviour:
   primaryBindings:
   - renderer: {fileID: 7640441833318430867}
     materialIndices: 0000000001000000
+  primaryComponentBindings: []
   renderers:
   - {fileID: 7640441833318430867}
   colorPropertyName: _BaseColor
@@ -142,6 +147,7 @@ MonoBehaviour:
     bindings:
     - renderer: {fileID: 7640441833318430867}
       materialIndices: 02000000
+    componentBindings: []
     renderers: []
     colorPropertyName: _BaseColor
     defaultColor: {r: 0.62352943, g: 0.039215688, b: 0.027450982, a: 1}

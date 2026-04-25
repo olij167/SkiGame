@@ -44,6 +44,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 30
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -56,6 +74,24 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []
     - id: tutorial.resort_services.claim
       title: Claim a task reward
@@ -77,6 +113,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 70
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -89,10 +143,28 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []
     - id: tutorial.resort_services.shop
       title: Open the customisation shop
-      description: Follow the beacon to the customisation shop and press E to enter.
+      description: Follow the beacon to the customisation shop and enter.
       optional: 0
       hiddenUntilAvailable: 0
       autoPinWhenAvailable: 1
@@ -110,6 +182,24 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 50
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives: []
       advancedCondition:
@@ -122,6 +212,24 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []
     - id: tutorial.resort_services.pass
       title: Get your ski pass
@@ -143,12 +251,29 @@ MonoBehaviour:
       interactionTarget: 0
       uiTarget: 0
       namedTrick: 
+      trickRequirement:
+        flavor: 0
+        minimumSpinDegrees: 0
+        requiredSpinDirection: 0
+        minimumFlipCount: 0
+        requiredFlipDirection: 0
+        requiresGrind: 0
+        requiresSlide: 0
+        requiresValidAuthoredPose: 0
+        requiresPoseRotationCombo: 0
+        requiredPoseFamily: 0
+        requiredPoseShape: 0
+        requiredOrientationModifier: 0
+        explicitPoseLabel: 
+        requiresSwitchLanding: 0
+        requiresNoseLanding: 0
+        requiresTailLanding: 0
+        requiredZoneId: 
       compoundMode: 40
       compoundObjectives:
       - id: tutorial.resort_services.kiosk
         title: Open the ski pass kiosk
-        description: Follow the beacon to the ski pass kiosk and press E to open
-          it.
+        description: Follow the beacon to the ski pass kiosk and open it.
         optional: 0
         hiddenUntilAvailable: 0
         autoPinWhenAvailable: 1
@@ -166,6 +291,24 @@ MonoBehaviour:
         interactionTarget: 0
         uiTarget: 60
         namedTrick: 
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         compoundMode: 40
         compoundObjectives: []
         advancedCondition:
@@ -178,6 +321,24 @@ MonoBehaviour:
           boolValue: 1
           stringValue: 
           filters: []
+          trickRequirement:
+            flavor: 0
+            minimumSpinDegrees: 0
+            requiredSpinDirection: 0
+            minimumFlipCount: 0
+            requiredFlipDirection: 0
+            requiresGrind: 0
+            requiresSlide: 0
+            requiresValidAuthoredPose: 0
+            requiresPoseRotationCombo: 0
+            requiredPoseFamily: 0
+            requiredPoseShape: 0
+            requiredOrientationModifier: 0
+            explicitPoseLabel: 
+            requiresSwitchLanding: 0
+            requiresNoseLanding: 0
+            requiresTailLanding: 0
+            requiredZoneId: 
           children: []
       - id: tutorial.resort_services.claim_default
         title: Claim the default pass
@@ -199,6 +360,24 @@ MonoBehaviour:
         interactionTarget: 60
         uiTarget: 0
         namedTrick: 
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         compoundMode: 40
         compoundObjectives: []
         advancedCondition:
@@ -211,6 +390,24 @@ MonoBehaviour:
           boolValue: 1
           stringValue: 
           filters: []
+          trickRequirement:
+            flavor: 0
+            minimumSpinDegrees: 0
+            requiredSpinDirection: 0
+            minimumFlipCount: 0
+            requiredFlipDirection: 0
+            requiresGrind: 0
+            requiresSlide: 0
+            requiresValidAuthoredPose: 0
+            requiresPoseRotationCombo: 0
+            requiredPoseFamily: 0
+            requiredPoseShape: 0
+            requiredOrientationModifier: 0
+            explicitPoseLabel: 
+            requiresSwitchLanding: 0
+            requiresNoseLanding: 0
+            requiresTailLanding: 0
+            requiredZoneId: 
           children: []
       advancedCondition:
         kind: 0
@@ -222,4 +419,22 @@ MonoBehaviour:
         boolValue: 1
         stringValue: 
         filters: []
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
         children: []

@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using SkiGame.Activities;
@@ -6,6 +6,7 @@ using SkiGame.Progression;
 using UnityEngine;
 using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
+using UnityEngine.InputSystem;
 
 namespace SkiGame.UI
 {
@@ -18,12 +19,15 @@ namespace SkiGame.UI
             RaceVictory,
             RaceFinish,
             RaceFailure,
+            RaceCountdown,
+            RaceGo,
             RescueSuccess,
             RescueFailure,
             Cancelled,
             QuestStageAdvanced,
             QuestCompleted,
-            CustomDebug
+            CustomDebug,
+            QuestFocused
         }
 
         [Serializable]
@@ -75,12 +79,14 @@ namespace SkiGame.UI
 
         private readonly struct FanfareRequest
         {
+            public readonly FanfareStateId StateId;
             public readonly string Headline;
             public readonly string Detail;
             public readonly FanfareStateStyle Style;
 
-            public FanfareRequest(string headline, string detail, FanfareStateStyle style)
+            public FanfareRequest(FanfareStateId stateId, string headline, string detail, FanfareStateStyle style)
             {
+                StateId = stateId;
                 Headline = headline ?? string.Empty;
                 Detail = detail ?? string.Empty;
                 Style = style;
@@ -107,9 +113,12 @@ namespace SkiGame.UI
         [Header("State Styles")]
         [SerializeField] private List<FanfareStateStyle> stateStyles = new List<FanfareStateStyle>();
 
+        [Header("Input Prompts")]
+        [SerializeField] private InputActionAsset inputActions;
+
         [Header("Debug")]
         [SerializeField] private string debugHeadline = "QUEST STAGE COMPLETE";
-        [SerializeField] private string debugDetail = "Unlocked: Ride the lift  •  New goals: Board, Dismount safely";
+        [SerializeField] private string debugDetail = "Unlocked: Ride the lift  â€¢  New goals: Board, Dismount safely";
         [SerializeField] private FanfareStateId debugState = FanfareStateId.QuestStageAdvanced;
 
         private VisualElement _root;
@@ -127,6 +136,7 @@ namespace SkiGame.UI
 
         private string _headline = string.Empty;
         private string _detail = string.Empty;
+        private FanfareStateId _activeStateId = FanfareStateId.CustomDebug;
         private FanfareStateStyle _activeStyle;
         private float _showUntil = -1f;
         private float _duration = 0f;
@@ -155,15 +165,25 @@ namespace SkiGame.UI
             document.sortingOrder = documentSortOrder;
             _root = document.rootVisualElement;
 
+            if (inputActions == null)
+                inputActions = new InputSystem_Actions().asset;
+
             Bind();
             EnsureDefaultStateStyles();
             TryBindActivityManager();
             TryBindQuestDirector();
+            RaceCourseLine.OnRaceCountdownTick += HandleRaceCountdownTick;
+            RaceCourseLine.OnRaceCountdownGo += HandleRaceCountdownGo;
+            MiniMountainHudController.OnFocusedQuestChanged += HandleFocusedQuestChanged;
             HideImmediate();
         }
 
         private void OnDisable()
         {
+            MiniMountainHudController.OnFocusedQuestChanged -= HandleFocusedQuestChanged;
+            RaceCourseLine.OnRaceCountdownTick -= HandleRaceCountdownTick;
+            RaceCourseLine.OnRaceCountdownGo -= HandleRaceCountdownGo;
+
             UnbindActivityManager();
             UnbindQuestDirector();
             HideImmediate();
@@ -311,6 +331,16 @@ namespace SkiGame.UI
             }
         }
 
+        private void HandleRaceCountdownTick(RaceCourseLine race, int seconds)
+        {
+            ShowRaceCountdown(seconds, race);
+        }
+
+        private void HandleRaceCountdownGo(RaceCourseLine race)
+        {
+            ShowRaceGo(race);
+        }
+
         private void HandleQuestStageAdvanced(QuestDefinitionSO definition, QuestRuntimeState runtimeState)
         {
             if (definition == null || runtimeState == null)
@@ -333,6 +363,31 @@ namespace SkiGame.UI
                 BuildQuestCompletedDetail(definition));
         }
 
+        private void HandleFocusedQuestChanged(QuestDefinitionSO definition, QuestRuntimeState runtimeState)
+        {
+            if (definition == null)
+                return;
+
+            if (runtimeState != null && runtimeState.completed)
+                return;
+
+            if (_boundQuestDirector != null && _boundQuestDirector.IsQuestCompleted(definition.SafeId))
+                return;
+
+            string headline = string.IsNullOrWhiteSpace(definition.title)
+                ? "Quest Updated"
+                : definition.title.Trim();
+
+            string detail = string.IsNullOrWhiteSpace(definition.description)
+                ? "Current quest changed."
+                : definition.description.Trim();
+
+            Enqueue(
+                FanfareStateId.QuestFocused,
+                InputPromptResolver.FormatBindingPlaceholders(headline, inputActions),
+                InputPromptResolver.FormatBindingPlaceholders(detail, inputActions));
+        }
+
         private void Enqueue(FanfareStateId stateId, string headline, string detail)
         {
             FanfareStateStyle style = ResolveStyle(stateId);
@@ -341,10 +396,64 @@ namespace SkiGame.UI
             if (style.uppercaseHeadline)
                 resolvedHeadline = resolvedHeadline.ToUpperInvariant();
 
-            _pendingRequests.Enqueue(new FanfareRequest(resolvedHeadline, detail?.Trim() ?? string.Empty, style));
+            _pendingRequests.Enqueue(new FanfareRequest(stateId, resolvedHeadline, detail?.Trim() ?? string.Empty, style));
 
             if (!HasActiveRequest())
                 ActivateNextRequest();
+        }
+
+        public void ShowRaceCountdown(int seconds, RaceCourseLine race)
+        {
+            if (seconds <= 0)
+                return;
+
+            ShowImmediate(
+                FanfareStateId.RaceCountdown,
+                seconds.ToString(),
+                BuildRaceCountdownDetail(race));
+        }
+
+        public void ShowRaceGo(RaceCourseLine race)
+        {
+            ShowImmediate(
+                FanfareStateId.RaceGo,
+                "GO!",
+                BuildRaceCountdownDetail(race));
+        }
+
+        private void ShowImmediate(FanfareStateId stateId, string headline, string detail)
+        {
+            FanfareStateStyle style = ResolveStyle(stateId);
+            string resolvedHeadline = string.IsNullOrWhiteSpace(headline) ? "GO!" : headline.Trim();
+
+            if (style.uppercaseHeadline)
+                resolvedHeadline = resolvedHeadline.ToUpperInvariant();
+
+            RemovePendingCountdownRequests();
+
+            _headline = resolvedHeadline;
+            _detail = detail?.Trim() ?? string.Empty;
+            _activeStateId = stateId;
+            _activeStyle = style;
+            _duration = Mathf.Max(0.25f, style != null ? style.duration : defaultDuration);
+            _showUntil = Time.unscaledTime + _duration;
+        }
+
+        private void RemovePendingCountdownRequests()
+        {
+            if (_pendingRequests.Count <= 0)
+                return;
+
+            int count = _pendingRequests.Count;
+            for (int i = 0; i < count; i++)
+            {
+                FanfareRequest request = _pendingRequests.Dequeue();
+
+                if (request.StateId == FanfareStateId.RaceCountdown || request.StateId == FanfareStateId.RaceGo)
+                    continue;
+
+                _pendingRequests.Enqueue(request);
+            }
         }
 
         private void ActivateNextRequest()
@@ -353,6 +462,7 @@ namespace SkiGame.UI
             {
                 _headline = string.Empty;
                 _detail = string.Empty;
+                _activeStateId = FanfareStateId.CustomDebug;
                 _activeStyle = null;
                 _showUntil = -1f;
                 _duration = 0f;
@@ -362,6 +472,7 @@ namespace SkiGame.UI
             FanfareRequest request = _pendingRequests.Dequeue();
             _headline = request.Headline;
             _detail = request.Detail;
+            _activeStateId = request.StateId;
             _activeStyle = request.Style;
             _duration = Mathf.Max(0.5f, _activeStyle != null ? _activeStyle.duration : defaultDuration);
             _showUntil = Time.unscaledTime + _duration;
@@ -376,6 +487,7 @@ namespace SkiGame.UI
         {
             _headline = string.Empty;
             _detail = string.Empty;
+            _activeStateId = FanfareStateId.CustomDebug;
             _activeStyle = null;
             _showUntil = -1f;
             _duration = 0f;
@@ -586,6 +698,18 @@ namespace SkiGame.UI
                 2.1f);
 
             EnsureStyle(
+                FanfareStateId.RaceCountdown,
+                new Color(1f, 0.88f, 0.36f, 1f),
+                new Color(1f, 0.985f, 0.94f, 0.99f),
+                0.82f);
+
+            EnsureStyle(
+                FanfareStateId.RaceGo,
+                new Color(0.42f, 1f, 0.62f, 1f),
+                new Color(0.94f, 1f, 0.96f, 0.99f),
+                1.1f);
+
+            EnsureStyle(
                 FanfareStateId.RescueSuccess,
                 new Color(0.58f, 0.92f, 1f, 1f),
                 new Color(0.94f, 0.98f, 1f, 0.98f),
@@ -602,6 +726,12 @@ namespace SkiGame.UI
                 new Color(1f, 0.84f, 0.52f, 1f),
                 new Color(1f, 0.98f, 0.94f, 0.98f),
                 1.75f);
+
+            EnsureStyle(
+                FanfareStateId.QuestFocused,
+                new Color(0.78f, 0.92f, 1f, 1f),
+                new Color(0.96f, 0.99f, 1f, 0.98f),
+                2.15f);
 
             EnsureStyle(
                 FanfareStateId.QuestStageAdvanced,
@@ -658,19 +788,27 @@ namespace SkiGame.UI
             switch (stateId)
             {
                 case FanfareStateId.RaceVictory:
-                    Enqueue(stateId, "VICTORY", "1ST / 12  •  +$500  •  New PB");
+                    Enqueue(stateId, "VICTORY", "1ST / 12  â€¢  +$500  â€¢  New PB");
                     break;
 
                 case FanfareStateId.RaceFinish:
-                    Enqueue(stateId, "FINISHED", "4TH / 12  •  +$125  •  61.42s");
+                    Enqueue(stateId, "FINISHED", "4TH / 12  â€¢  +$125  â€¢  61.42s");
                     break;
 
                 case FanfareStateId.RaceFailure:
                     Enqueue(stateId, "FAILED", "Missed checkpoint.");
                     break;
 
+                case FanfareStateId.RaceCountdown:
+                    Enqueue(stateId, "3", "Race starting");
+                    break;
+
+                case FanfareStateId.RaceGo:
+                    Enqueue(stateId, "GO!", "Race started");
+                    break;
+
                 case FanfareStateId.RescueSuccess:
-                    Enqueue(stateId, "RESCUED", "Rank 3  •  +$200  •  98.4s");
+                    Enqueue(stateId, "RESCUED", "Rank 3  â€¢  +$200  â€¢  98.4s");
                     break;
 
                 case FanfareStateId.RescueFailure:
@@ -681,8 +819,12 @@ namespace SkiGame.UI
                     Enqueue(stateId, "CANCELLED", "Activity cancelled.");
                     break;
 
+                case FanfareStateId.QuestFocused:
+                    Enqueue(stateId, "LIFT BASICS", "Now that you have a pass, use the lift to move uphill instead of hiking or skating back up.");
+                    break;
+
                 case FanfareStateId.QuestStageAdvanced:
-                    Enqueue(stateId, "LEARN THE BASICS COMPLETE", "Unlocked: Ride Your First Lift  •  New goals: Board the lift, Dismount safely");
+                    Enqueue(stateId, "LEARN THE BASICS COMPLETE", "Unlocked: Ride Your First Lift  â€¢  New goals: Board the lift, Dismount safely");
                     break;
 
                 case FanfareStateId.QuestCompleted:
@@ -761,6 +903,22 @@ namespace SkiGame.UI
                 AppendPart(ref parts, $"{race.LastCompletionTimeSeconds:0.00}s");
 
             return parts;
+        }
+
+        private static string BuildRaceCountdownDetail(RaceCourseLine race)
+        {
+            if (race == null)
+                return "Race starting";
+
+            string parts = string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(race.RaceName))
+                AppendPart(ref parts, race.RaceName);
+
+            if (race.ActiveLeagueNumber > 0)
+                AppendPart(ref parts, race.GetLeagueDisplayName(race.ActiveLeagueNumber));
+
+            return string.IsNullOrWhiteSpace(parts) ? "Race starting" : parts;
         }
 
         private static string BuildRescueSuccessHeadline(RescueService rescue)
@@ -891,7 +1049,7 @@ namespace SkiGame.UI
                 return;
 
             if (!string.IsNullOrWhiteSpace(buffer))
-                buffer += "  •  ";
+                buffer += "  â€¢  ";
 
             buffer += value.Trim();
         }

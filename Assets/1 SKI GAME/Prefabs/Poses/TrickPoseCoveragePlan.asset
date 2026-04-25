@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2d220768ce3e9a44a05fd361ed5c287, type: 3}
+  m_Name: TrickPoseCoveragePlan
+  m_EditorClassIdentifier: Assembly-CSharp::TrickPoseCoveragePlanSO
+  includeAirborne: 1
+  includeGrounded: 0
+  includePoseHeld: 1
+  includePoseReleased: 0
+  usePoseFamily: 1
+  usePoseShape: 1
+  useVerticalOrientation: 1
+  useHorizontalOrientation: 1
+  useMotionState: 1
+  useOrientation: 0
+  useSpinDirection: 0
+  useFlipDirection: 0
+  useYawBuckets: 0
+  usePitchBuckets: 0
+  useRollBuckets: 0
+  useTotalSpeedBuckets: 0
+  poseFamilies: 01000000020000000300000004000000
+  poseShapes: 01000000020000000300000004000000
+  orientationModifiers: 000000000100000002000000060000000700000008000000
+  verticalOrientations: 01000000020000000300000004000000
+  horizontalOrientations: 010000000200000003000000
+  motionStates: 000000000100000002000000
+  spinDirections: 01000000ffffffff
+  flipDirections: 01000000ffffffff
+  yawBuckets: []
+  pitchBuckets: []
+  rollBuckets: []
+  totalSpeedBuckets: []
+  exclusions: []
+  rowAxis: 3
+  columnAxis: 4
+  pageAxis: 5

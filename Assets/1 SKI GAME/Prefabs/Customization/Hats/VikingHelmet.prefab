@@ -43,6 +43,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: VikingHelmet
       objectReference: {fileID: 0}
+    - target: {fileID: 100000, guid: a20ea7771cebbda4696ef82ef45481a0, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: a20ea7771cebbda4696ef82ef45481a0, type: 3}
       propertyPath: m_LocalScale.x
       value: 1
@@ -141,6 +145,7 @@ MonoBehaviour:
   primaryBindings:
   - renderer: {fileID: 8466252261555022656}
     materialIndices: 000000000300000004000000
+  primaryComponentBindings: []
   renderers:
   - {fileID: 8466252261555022656}
   colorPropertyName: _BaseColor
@@ -152,6 +157,7 @@ MonoBehaviour:
     bindings:
     - renderer: {fileID: 8466252261555022656}
       materialIndices: 0200000005000000
+    componentBindings: []
     renderers: []
     colorPropertyName: _BaseColor
     defaultColor: {r: 0.9882353, g: 0.7647059, b: 0.59607846, a: 1}

@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
+using UnityEngine.UIElements;
 using SkiGame.Progression;
 
 /// <summary>
@@ -79,12 +81,27 @@ public class CameraController : MonoBehaviour
     [SerializeField] private float shopOrbitHeight = 1.35f;
     [SerializeField] private float shopOrbitYaw = 180f;
     [SerializeField] private float shopOrbitRotateSpeed = 140f;
+    [SerializeField] private float shopOrbitMinDistance = 1.8f;
+    [SerializeField] private float shopOrbitMaxDistance = 4.5f;
+    [SerializeField] private float shopOrbitScrollZoomSpeed = 0.5f;
 
-    [SerializeField] private InputActionReference shopOrbitPressAction; // <Pointer>/press
     [SerializeField] private InputActionReference shopOrbitDeltaAction; // <Pointer>/delta
     [SerializeField] private bool shopOrbitRequiresPress = true;
 
+    private const string ShopPreviewPanelName = "Panel_Preview";
+    private const string ShopPreviewPanelClass = "preview-panel";
+    private const string ShopModalOverlayClass = "color-overlay";
+    private const string ShopModalPanelClass = "color-popover";
+    private const string ShopEyeSizeSliderName = "Sld_EyeSize";
+
     private bool _shopOrbitHeld;
+    private bool _shopOrbitPointerWasDown;
+    private bool _shopOrbitBlockedByUiUntilRelease;
+    private bool _shopOrbitBlockedByExplicitControlUntilRelease;
+    private bool _shopOrbitExplicitUiInteractionLock;
+    private UIDocument _shopUiDoc;
+    private VisualElement _shopPreviewPanel;
+    private VisualElement _shopEyeSizeSlider;
 
     private float _yaw;
     private float _pitch;
@@ -128,17 +145,23 @@ public class CameraController : MonoBehaviour
 
     public bool IsExternalUiLookLocked => externalUiLookLock;
 
+    public void SetShopOrbitExplicitUiInteractionLock(bool locked)
+    {
+        _shopOrbitExplicitUiInteractionLock = locked;
+
+        if (!locked)
+            return;
+
+        // Stop pointer orbit immediately when a shop widget actively owns the interaction.
+        _shopOrbitHeld = false;
+        _shopOrbitBlockedByUiUntilRelease = true;
+        _shopOrbitBlockedByExplicitControlUntilRelease = true;
+    }
+
     private void OnEnable()
     {
         if (lookAction != null && lookAction.action != null)
             lookAction.action.Enable();
-
-        if (shopOrbitPressAction != null && shopOrbitPressAction.action != null)
-        {
-            shopOrbitPressAction.action.Enable();
-            shopOrbitPressAction.action.performed += OnShopOrbitPressPerformed;
-            shopOrbitPressAction.action.canceled += OnShopOrbitPressCanceled;
-        }
 
         if (shopOrbitDeltaAction != null)
             shopOrbitDeltaAction.action.Enable();
@@ -152,11 +175,11 @@ public class CameraController : MonoBehaviour
         if (lookAction != null && lookAction.action != null)
             lookAction.action.Disable();
 
-        if (shopOrbitPressAction != null && shopOrbitPressAction.action != null)
-        {
-            shopOrbitPressAction.action.performed -= OnShopOrbitPressPerformed;
-            shopOrbitPressAction.action.canceled -= OnShopOrbitPressCanceled;
-        }
+        _shopOrbitHeld = false;
+        _shopOrbitPointerWasDown = false;
+        _shopOrbitBlockedByUiUntilRelease = false;
+        _shopOrbitBlockedByExplicitControlUntilRelease = false;
+        _shopOrbitExplicitUiInteractionLock = false;
 
         UnhookSettings();
 
@@ -228,6 +251,9 @@ public class CameraController : MonoBehaviour
         bool phoneOpen = (_phoneHUD != null) && _phoneHUD.IsPhoneOpen;
         bool uiLookLocked = (phoneOpen || externalUiLookLock) && lockBehindWhenPhoneOpen;
 
+        if (mode == CameraMode.ShopOrbit)
+            return;
+
         // While a UI overlay is open, suppress manual look and keep the camera stable.
         if (uiLookLocked)
         {
@@ -239,82 +265,47 @@ public class CameraController : MonoBehaviour
             return;
         }
 
-        if (mode == CameraMode.ShopOrbit)
+        Vector2 look = Vector2.zero;
+        if (lookAction != null && lookAction.action != null)
+            look = lookAction.action.ReadValue<Vector2>();
+
+        bool manualLooking = look.sqrMagnitude > (manualLookDeadzone * manualLookDeadzone);
+        if (manualLooking)
+            _lastManualLookTime = Time.unscaledTime;
+
+        // Orbit input, with per-frame clamp to prevent spikes.
+        float dyaw = look.x * sensitivityX * dt;
+        float dpitch = -look.y * sensitivityY * dt;
+
+        float maxDelta = Mathf.Max(0f, maxOrbitDegreesPerSecond) * dt;
+        if (maxDelta > 0f)
         {
-            // In shop orbit, we orbit around shopOrbitTarget (or fallback to target)
-            Transform t = shopOrbitTarget != null ? shopOrbitTarget : target;
-            if (t == null) return;
-
-            Vector2 look = Vector2.zero;
-            if (lookAction != null && lookAction.action != null)
-                look = lookAction.action.ReadValue<Vector2>();
-
-            bool allow = !shopOrbitRequiresPress || _shopOrbitHeld;
-
-            if (allow)
-            {
-                float dyaw = look.x * sensitivityX * dt;
-                float dpitch = -look.y * sensitivityY * dt;
-
-                float maxDelta = Mathf.Max(0f, maxOrbitDegreesPerSecond) * dt;
-                if (maxDelta > 0f)
-                {
-                    dyaw = Mathf.Clamp(dyaw, -maxDelta, maxDelta);
-                    dpitch = Mathf.Clamp(dpitch, -maxDelta, maxDelta);
-                }
-
-                _yaw += dyaw;
-                _pitch += dpitch;
-                _pitch = Mathf.Clamp(_pitch, minPitch, maxPitch);
-            }
-
-            // IMPORTANT: in shop mode, do NOT auto-follow.
-            return;
+            dyaw = Mathf.Clamp(dyaw, -maxDelta, maxDelta);
+            dpitch = Mathf.Clamp(dpitch, -maxDelta, maxDelta);
         }
-        else
+
+        _yaw += dyaw;
+        _pitch += dpitch;
+        _pitch = Mathf.Clamp(_pitch, minPitch, maxPitch);
+
+        // Soft auto-follow behind at speed, unless the player has recently looked around.
+        if (target != null)
         {
-            Vector2 look = Vector2.zero;
-            if (lookAction != null && lookAction.action != null)
-                look = lookAction.action.ReadValue<Vector2>();
+            if (_targetRb == null)
+                _targetRb = target.GetComponentInParent<Rigidbody>();
 
-            bool manualLooking = look.sqrMagnitude > (manualLookDeadzone * manualLookDeadzone);
-            if (manualLooking)
-                _lastManualLookTime = Time.unscaledTime;
+            float speed = (_targetRb != null) ? _targetRb.linearVelocity.magnitude : 0f;
+            bool graceActive = (Time.unscaledTime - _lastManualLookTime) < manualLookGraceSeconds;
 
-            // Orbit input, with per-frame clamp to prevent spikes.
-            float dyaw = look.x * sensitivityX * dt;
-            float dpitch = -look.y * sensitivityY * dt;
-
-            float maxDelta = Mathf.Max(0f, maxOrbitDegreesPerSecond) * dt;
-            if (maxDelta > 0f)
+            if (!graceActive && speed >= autoFollowSpeedThreshold)
             {
-                dyaw = Mathf.Clamp(dyaw, -maxDelta, maxDelta);
-                dpitch = Mathf.Clamp(dpitch, -maxDelta, maxDelta);
-            }
+                float desiredYaw = GetAutoFollowYaw();
 
-            _yaw += dyaw;
-            _pitch += dpitch;
-            _pitch = Mathf.Clamp(_pitch, minPitch, maxPitch);
-
-            // Soft auto-follow behind at speed, unless the player has recently looked around.
-            if (target != null)
-            {
-                if (_targetRb == null)
-                    _targetRb = target.GetComponentInParent<Rigidbody>();
-
-                float speed = (_targetRb != null) ? _targetRb.linearVelocity.magnitude : 0f;
-                bool graceActive = (Time.unscaledTime - _lastManualLookTime) < manualLookGraceSeconds;
-
-                if (!graceActive && speed >= autoFollowSpeedThreshold)
+                // Let the player deviate a bit before the camera tries to re-center.
+                float yawError = Mathf.Abs(Mathf.DeltaAngle(_yaw, desiredYaw));
+                if (yawError > autoFollowAngleThreshold)
                 {
-                    float desiredYaw = GetAutoFollowYaw();
-
-                    // Let the player deviate a bit before the camera tries to re-center.
-                    float yawError = Mathf.Abs(Mathf.DeltaAngle(_yaw, desiredYaw));
-                    if (yawError > autoFollowAngleThreshold)
-                    {
-                        _yaw = Mathf.MoveTowardsAngle(_yaw, desiredYaw, autoFollowYawSpeed * dt);
-                    }
+                    _yaw = Mathf.MoveTowardsAngle(_yaw, desiredYaw, autoFollowYawSpeed * dt);
                 }
             }
         }
@@ -322,13 +313,13 @@ public class CameraController : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (target == null) return;
-
         if (mode == CameraMode.ShopOrbit)
         {
             TickShopOrbit();
             return;
         }
+
+        if (target == null) return;
         Quaternion rot = Quaternion.Euler(_pitch, _yaw, 0f);
         Vector3 targetPos = target.position + Vector3.up * height;
         Vector3 desiredPos = targetPos - rot * Vector3.forward * distance;
@@ -355,30 +346,262 @@ public class CameraController : MonoBehaviour
         transform.rotation = rot;
     }
 
-    public void EnterShopOrbit(Transform targetLookAt)
+    public void EnterShopOrbit(Transform targetLookAt, UIDocument shopUiDocument = null)
     {
         mode = CameraMode.ShopOrbit;
+
         shopOrbitTarget = targetLookAt;
+        _shopUiDoc = shopUiDocument;
+        _shopPreviewPanel = _shopUiDoc != null ? _shopUiDoc.rootVisualElement?.Q<VisualElement>(ShopPreviewPanelName) : null;
+        _shopEyeSizeSlider = _shopUiDoc != null ? _shopUiDoc.rootVisualElement?.Q<VisualElement>(ShopEyeSizeSliderName) : null;
+        _shopOrbitHeld = false;
+        _shopOrbitPointerWasDown = false;
+        _shopOrbitBlockedByUiUntilRelease = false;
+        _shopOrbitBlockedByExplicitControlUntilRelease = false;
+        _shopOrbitExplicitUiInteractionLock = false;
+        ApplyShopOrbitPose();
     }
 
     public void ExitShopOrbit()
     {
         mode = CameraMode.Normal;
         shopOrbitTarget = null;
+        _shopUiDoc = null;
+        _shopPreviewPanel = null;
+        _shopEyeSizeSlider = null;
+        _shopOrbitHeld = false;
+        _shopOrbitPointerWasDown = false;
+        _shopOrbitBlockedByUiUntilRelease = false;
+        _shopOrbitBlockedByExplicitControlUntilRelease = false;
+        _shopOrbitExplicitUiInteractionLock = false;
     }
 
     private void TickShopOrbit()
     {
         if (shopOrbitTarget == null) return;
 
-        if (_shopOrbitHeld && shopOrbitDeltaAction != null)
+        UpdateShopOrbitPressState();
+
+        bool pointerOverBlockingUi = _shopOrbitExplicitUiInteractionLock || IsShopPointerOverBlockingUI();
+        if (!pointerOverBlockingUi && Mouse.current != null)
+        {
+            float scrollY = Mouse.current.scroll.ReadValue().y;
+            if (Mathf.Abs(scrollY) > 0.001f)
+            {
+                shopOrbitDistance = Mathf.Clamp(
+                    shopOrbitDistance - (scrollY * shopOrbitScrollZoomSpeed),
+                    shopOrbitMinDistance,
+                    shopOrbitMaxDistance);
+            }
+        }
+
+        float deltaYaw = 0f;
+        bool allowPointerOrbit = !shopOrbitRequiresPress || (_shopOrbitHeld && !_shopOrbitBlockedByUiUntilRelease && !_shopOrbitBlockedByExplicitControlUntilRelease && !_shopOrbitExplicitUiInteractionLock && !pointerOverBlockingUi);
+
+        if (allowPointerOrbit && shopOrbitDeltaAction != null && shopOrbitDeltaAction.action != null)
         {
             Vector2 delta = shopOrbitDeltaAction.action.ReadValue<Vector2>();
             if (delta.sqrMagnitude > 0.0001f)
-                shopOrbitYaw += -delta.x * shopOrbitRotateSpeed * Time.unscaledDeltaTime;
+                deltaYaw += -delta.x * shopOrbitRotateSpeed * Time.unscaledDeltaTime;
         }
 
+        if (Gamepad.current != null)
+        {
+            Vector2 stick = Gamepad.current.rightStick.ReadValue();
+            if (stick.sqrMagnitude > (manualLookDeadzone * manualLookDeadzone))
+                deltaYaw += stick.x * sensitivityX * Time.unscaledDeltaTime;
+        }
+
+        if (Mathf.Abs(deltaYaw) > 0.0001f)
+            shopOrbitYaw += deltaYaw;
+
         ApplyShopOrbitPose();
+    }
+
+    private void UpdateShopOrbitPressState()
+    {
+        if (Mouse.current == null)
+        {
+            _shopOrbitPointerWasDown = false;
+            _shopOrbitBlockedByExplicitControlUntilRelease = false;
+            _shopOrbitExplicitUiInteractionLock = false;
+            return;
+        }
+
+        bool isDown = Mouse.current.leftButton.isPressed;
+        if (isDown == _shopOrbitPointerWasDown)
+            return;
+
+        _shopOrbitPointerWasDown = isDown;
+        if (isDown)
+            BeginShopOrbitPointerPress();
+        else
+            EndShopOrbitPointerPress();
+    }
+
+    private void BeginShopOrbitPointerPress()
+    {
+        if (_shopOrbitExplicitUiInteractionLock)
+        {
+            _shopOrbitBlockedByExplicitControlUntilRelease = true;
+            _shopOrbitBlockedByUiUntilRelease = true;
+            _shopOrbitHeld = false;
+            return;
+        }
+
+        if (IsShopPointerOverExplicitOrbitBlocker())
+        {
+            _shopOrbitBlockedByExplicitControlUntilRelease = true;
+            _shopOrbitBlockedByUiUntilRelease = true;
+            _shopOrbitHeld = false;
+            return;
+        }
+
+        if (IsShopPointerOverBlockingUI())
+        {
+            _shopOrbitBlockedByUiUntilRelease = true;
+            _shopOrbitHeld = false;
+            return;
+        }
+
+        _shopOrbitBlockedByExplicitControlUntilRelease = false;
+        _shopOrbitBlockedByUiUntilRelease = false;
+        _shopOrbitHeld = true;
+    }
+
+    private void EndShopOrbitPointerPress()
+    {
+        _shopOrbitHeld = false;
+        _shopOrbitBlockedByUiUntilRelease = false;
+        _shopOrbitBlockedByExplicitControlUntilRelease = false;
+    }
+
+    private bool IsShopPointerOverBlockingUI()
+    {
+        VisualElement root = _shopUiDoc != null ? _shopUiDoc.rootVisualElement : null;
+        if (root != null)
+        {
+            var panel = root.panel;
+            if (panel != null && Mouse.current != null)
+            {
+                Vector2 screen = Mouse.current.position.ReadValue();
+                Vector2 panelPos = RuntimePanelUtils.ScreenToPanel(panel, screen);
+                VisualElement picked = panel.Pick(panelPos);
+                if (IsBlockingShopUiPick(picked, root))
+                    return true;
+            }
+
+            return false;
+        }
+
+        return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+    }
+
+    private bool IsBlockingShopUiPick(VisualElement picked, VisualElement root)
+    {
+        for (VisualElement current = picked; current != null && current != root; current = current.parent)
+        {
+            if (!IsEligibleForShopHitTest(current))
+                continue;
+
+            if (IsExplicitOrbitBlocker(current))
+                return true;
+
+            if (IsShopPreviewElement(current))
+                return false;
+
+            if (IsExplicitlyBlockingShopElement(current) || IsInteractiveShopElement(current))
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool IsShopPointerOverExplicitOrbitBlocker()
+    {
+        VisualElement root = _shopUiDoc != null ? _shopUiDoc.rootVisualElement : null;
+        if (root == null || root.panel == null || Mouse.current == null)
+            return false;
+
+        Vector2 screen = Mouse.current.position.ReadValue();
+        Vector2 panelPos = RuntimePanelUtils.ScreenToPanel(root.panel, screen);
+        VisualElement picked = root.panel.Pick(panelPos);
+        return IsExplicitOrbitBlockerInPickChain(picked, root);
+    }
+
+    private bool IsExplicitOrbitBlockerInPickChain(VisualElement picked, VisualElement root)
+    {
+        for (VisualElement current = picked; current != null && current != root; current = current.parent)
+        {
+            if (!IsEligibleForShopHitTest(current))
+                continue;
+
+            if (IsExplicitOrbitBlocker(current))
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool IsShopPreviewElement(VisualElement element)
+    {
+        if (element == null)
+            return false;
+
+        if (_shopPreviewPanel != null && (element == _shopPreviewPanel || _shopPreviewPanel.Contains(element)))
+            return true;
+
+        return element.name == ShopPreviewPanelName || element.ClassListContains(ShopPreviewPanelClass);
+    }
+
+    private bool IsExplicitOrbitBlocker(VisualElement element)
+    {
+        if (element == null)
+            return false;
+
+        if (_shopEyeSizeSlider != null && (element == _shopEyeSizeSlider || _shopEyeSizeSlider.Contains(element)))
+            return true;
+
+        return element.name == ShopEyeSizeSliderName;
+    }
+
+    private static bool IsEligibleForShopHitTest(VisualElement element)
+    {
+        if (element == null)
+            return false;
+
+        if (element.pickingMode != PickingMode.Position || !element.enabledInHierarchy)
+            return false;
+
+        return element.resolvedStyle.display != DisplayStyle.None
+            && element.resolvedStyle.visibility == Visibility.Visible;
+    }
+
+    private static bool IsExplicitlyBlockingShopElement(VisualElement element)
+    {
+        if (element == null)
+            return false;
+
+        return element.ClassListContains(ShopModalOverlayClass)
+            || element.ClassListContains(ShopModalPanelClass);
+    }
+
+    private static bool IsInteractiveShopElement(VisualElement element)
+    {
+        return element is Button
+            || element is RepeatButton
+            || element is Toggle
+            || element is Slider
+            || element is SliderInt
+            || element is Scroller
+            || element is ScrollView
+            || element is ListView
+            || element is DropdownField
+            || element is TextField
+            || element is BaseBoolField
+            || element is BaseField<float>
+            || element is BaseField<int>
+            || element is BaseField<string>;
     }
 
     private void ApplyShopOrbitPose()
@@ -394,9 +617,6 @@ public class CameraController : MonoBehaviour
         transform.position = target + offset;
         transform.LookAt(target);
     }
-
-    private void OnShopOrbitPressPerformed(InputAction.CallbackContext ctx) => _shopOrbitHeld = true;
-    private void OnShopOrbitPressCanceled(InputAction.CallbackContext ctx) => _shopOrbitHeld = false;
 
     private void HookSettingsIfNeeded()
     {
@@ -435,7 +655,7 @@ public class CameraController : MonoBehaviour
         float ySign = s.invertLookY ? -1f : 1f;
         sensitivityY = _baseSensitivityY * sensMul * ySign;
 
-        // Reduce motion: conservative damping knobs that won’t break behaviour.
+        // Reduce motion: conservative damping knobs that won't break behaviour.
         if (s.reduceMotion)
         {
             smoothTime = Mathf.Max(_baseSmoothTime, _baseSmoothTime * 1.35f);

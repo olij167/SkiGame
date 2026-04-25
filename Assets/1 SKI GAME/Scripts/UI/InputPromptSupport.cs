@@ -405,6 +405,80 @@ namespace SkiGame.UI
         {
             return value.Replace(" ", string.Empty).Replace("_", string.Empty).ToLowerInvariant();
         }
+
+        public static string FormatBindingPlaceholders(string text, InputActionAsset inputActions)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return text ?? string.Empty;
+
+            const string openToken = "{input:";
+            int searchIndex = 0;
+            int tokenStart = text.IndexOf(openToken, searchIndex, StringComparison.OrdinalIgnoreCase);
+            if (tokenStart < 0)
+                return text;
+
+            var builder = new System.Text.StringBuilder(text.Length + 16);
+
+            while (tokenStart >= 0)
+            {
+                builder.Append(text, searchIndex, tokenStart - searchIndex);
+
+                int tokenEnd = text.IndexOf('}', tokenStart);
+                if (tokenEnd < 0)
+                {
+                    builder.Append(text, tokenStart, text.Length - tokenStart);
+                    return builder.ToString();
+                }
+
+                int payloadStart = tokenStart + openToken.Length;
+                string payload = text.Substring(payloadStart, tokenEnd - payloadStart);
+                builder.Append(ResolveBindingPlaceholderPayload(payload, inputActions));
+
+                searchIndex = tokenEnd + 1;
+                tokenStart = text.IndexOf(openToken, searchIndex, StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (searchIndex < text.Length)
+                builder.Append(text, searchIndex, text.Length - searchIndex);
+
+            return builder.ToString();
+        }
+
+        private static string ResolveBindingPlaceholderPayload(string payload, InputActionAsset inputActions)
+        {
+            if (string.IsNullOrWhiteSpace(payload))
+                return "-";
+
+            string[] parts = payload.Split(':');
+            string actionName = parts[0]?.Trim();
+
+            if (string.IsNullOrWhiteSpace(actionName))
+                return "-";
+
+            if (parts.Length <= 1)
+                return GetBindingDisplay(inputActions, actionName);
+
+            var compositeParts = new List<string>();
+            for (int i = 1; i < parts.Length; i++)
+            {
+                string segment = parts[i];
+                if (string.IsNullOrWhiteSpace(segment))
+                    continue;
+
+                string[] names = segment.Split('|');
+                for (int n = 0; n < names.Length; n++)
+                {
+                    string name = names[n]?.Trim();
+                    if (!string.IsNullOrWhiteSpace(name))
+                        compositeParts.Add(name);
+                }
+            }
+
+            return compositeParts.Count > 0
+                ? GetBindingDisplay(inputActions, actionName, compositeParts.ToArray())
+                : GetBindingDisplay(inputActions, actionName);
+        }
+
     }
 
     public static class InputPromptVisualBuilder

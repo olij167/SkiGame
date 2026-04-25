@@ -5,6 +5,7 @@ using UnityEngine;
 public class WearableAttachment : MonoBehaviour
 {
     public const string PrimaryChannelId = "primary";
+    private static readonly string[] ColorPropCandidates = { "_BaseColor", "_Color", "Base_Colour", "BaseColor" };
 
     [Serializable]
     public class WearableMaterialBinding
@@ -103,6 +104,9 @@ public class WearableAttachment : MonoBehaviour
     private int _colorPropertyId;
     private int _texturePropertyId;
 
+    private Color _lastPrimaryColor = Color.white;
+    private readonly Dictionary<string, Color> _lastChannelColors = new Dictionary<string, Color>();
+
     private void Awake()
     {
         if (!string.IsNullOrEmpty(colorPropertyName))
@@ -168,10 +172,12 @@ public class WearableAttachment : MonoBehaviour
 
     public void SetColor(Color color)
     {
+        _lastPrimaryColor = color;
+
         if (_colorPropertyId == 0 && !string.IsNullOrEmpty(colorPropertyName))
             _colorPropertyId = Shader.PropertyToID(colorPropertyName);
 
-        ApplyColorToBindings(primaryBindings, renderers, _colorPropertyId, color);
+        ApplyColorToBindings(primaryBindings, ResolvePrimaryRenderers(), colorPropertyName, _colorPropertyId, color);
         ApplyComponentColorBindings(primaryComponentBindings, color);
     }
 
@@ -183,9 +189,9 @@ public class WearableAttachment : MonoBehaviour
             return;
         }
 
-        var channel = GetChannel(channelId);
-        if (channel == null)
-            return;
+        _lastChannelColors[channelId] = color;
+
+        var channel = GetOrCreateRuntimeChannel(channelId, color);
 
         int propId = 0;
         if (!string.IsNullOrEmpty(channel.colorPropertyName))
@@ -195,12 +201,181 @@ public class WearableAttachment : MonoBehaviour
         ApplyComponentColorBindings(channel.componentBindings, color);
     }
 
+    public void AddPrimaryRenderer(Renderer renderer)
+    {
+        if (renderer == null)
+            return;
+
+        if (renderers == null || renderers.Length == 0)
+        {
+            renderers = new[] { renderer };
+            SetColor(_lastPrimaryColor);
+            return;
+        }
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            if (renderers[i] == renderer)
+                return;
+        }
+
+        Renderer[] newArray = new Renderer[renderers.Length + 1];
+        for (int i = 0; i < renderers.Length; i++)
+            newArray[i] = renderers[i];
+
+        newArray[renderers.Length] = renderer;
+        renderers = newArray;
+
+        SetColor(_lastPrimaryColor);
+    }
+
+    public void RemovePrimaryRenderer(Renderer renderer)
+    {
+        if (renderer == null || renderers == null || renderers.Length == 0)
+            return;
+
+        int removeIndex = -1;
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            if (renderers[i] == renderer)
+            {
+                removeIndex = i;
+                break;
+            }
+        }
+
+        if (removeIndex < 0)
+            return;
+
+        if (renderers.Length == 1)
+        {
+            renderers = Array.Empty<Renderer>();
+            return;
+        }
+
+        Renderer[] newArray = new Renderer[renderers.Length - 1];
+        int dst = 0;
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            if (i == removeIndex)
+                continue;
+
+            newArray[dst++] = renderers[i];
+        }
+
+        renderers = newArray;
+    }
+
+    public void AddExtraRenderer(string channelId, Renderer renderer)
+    {
+        if (renderer == null || string.IsNullOrWhiteSpace(channelId))
+            return;
+
+        var channel = GetOrCreateRuntimeChannel(channelId, _lastChannelColors.TryGetValue(channelId, out var savedColor) ? savedColor : Color.white);
+
+        if (channel.renderers == null || channel.renderers.Length == 0)
+        {
+            channel.renderers = new[] { renderer };
+            ReapplyChannelColor(channelId);
+            return;
+        }
+
+        for (int i = 0; i < channel.renderers.Length; i++)
+        {
+            if (channel.renderers[i] == renderer)
+                return;
+        }
+
+        Renderer[] newArray = new Renderer[channel.renderers.Length + 1];
+        for (int i = 0; i < channel.renderers.Length; i++)
+            newArray[i] = channel.renderers[i];
+
+        newArray[channel.renderers.Length] = renderer;
+        channel.renderers = newArray;
+
+        ReapplyChannelColor(channelId);
+    }
+
+    private WearableColorChannel GetOrCreateRuntimeChannel(string channelId, Color defaultColor)
+    {
+        var channel = GetChannel(channelId);
+        if (channel != null)
+            return channel;
+
+        if (extraChannels == null)
+            extraChannels = new List<WearableColorChannel>();
+
+        channel = new WearableColorChannel
+        {
+            id = channelId,
+            displayName = channelId,
+            colorPropertyName = colorPropertyName,
+            defaultColor = defaultColor,
+            renderers = Array.Empty<Renderer>()
+        };
+
+        extraChannels.Add(channel);
+        return channel;
+    }
+
+    public void RemoveExtraRenderer(string channelId, Renderer renderer)
+    {
+        if (renderer == null || string.IsNullOrWhiteSpace(channelId))
+            return;
+
+        var channel = GetChannel(channelId);
+        if (channel == null || channel.renderers == null || channel.renderers.Length == 0)
+            return;
+
+        int removeIndex = -1;
+        for (int i = 0; i < channel.renderers.Length; i++)
+        {
+            if (channel.renderers[i] == renderer)
+            {
+                removeIndex = i;
+                break;
+            }
+        }
+
+        if (removeIndex < 0)
+            return;
+
+        if (channel.renderers.Length == 1)
+        {
+            channel.renderers = Array.Empty<Renderer>();
+            return;
+        }
+
+        Renderer[] newArray = new Renderer[channel.renderers.Length - 1];
+        int dst = 0;
+        for (int i = 0; i < channel.renderers.Length; i++)
+        {
+            if (i == removeIndex)
+                continue;
+
+            newArray[dst++] = channel.renderers[i];
+        }
+
+        channel.renderers = newArray;
+    }
+
+    private void ReapplyChannelColor(string channelId)
+    {
+        if (!_lastChannelColors.TryGetValue(channelId, out var color))
+        {
+            var channel = GetChannel(channelId);
+            color = channel != null ? channel.defaultColor : Color.white;
+        }
+
+        SetChannelColor(channelId, color);
+    }
+
     public void SetTexture(Texture tex)
     {
         if (_texturePropertyId == 0 && !string.IsNullOrEmpty(texturePropertyName))
             _texturePropertyId = Shader.PropertyToID(texturePropertyName);
 
-        ApplyTextureToBindings(primaryBindings, renderers, _texturePropertyId, tex);
+        ApplyTextureToBindings(primaryBindings, ResolvePrimaryRenderers(), _texturePropertyId, tex);
     }
 
     public void SetMaterial(Material mat)
@@ -208,7 +383,7 @@ public class WearableAttachment : MonoBehaviour
         if (mat == null)
             return;
 
-        ApplyMaterialToBindings(primaryBindings, renderers, mat);
+        ApplyMaterialToBindings(primaryBindings, ResolvePrimaryRenderers(), mat);
     }
 
     private void ApplyColorToChannel(WearableColorChannel channel, int colorPropertyId, Color color)
@@ -216,14 +391,8 @@ public class WearableAttachment : MonoBehaviour
         if (channel == null)
             return;
 
-        if (channel.bindings != null && channel.bindings.Count > 0)
-        {
-            ApplyColorToBindings(channel.bindings, null, colorPropertyId, color);
-            return;
-        }
-
         var resolved = ResolveRenderers(channel);
-        ApplyColorToBindings(null, resolved, colorPropertyId, color);
+        ApplyColorToBindings(channel.bindings, resolved, channel.colorPropertyName, colorPropertyId, color);
     }
 
     private static Renderer[] ResolveRenderers(WearableColorChannel channel)
@@ -232,12 +401,118 @@ public class WearableAttachment : MonoBehaviour
             return Array.Empty<Renderer>();
 
         if (channel.renderers != null && channel.renderers.Length > 0)
-            return channel.renderers;
+            return DeduplicateRenderers(channel.renderers);
 
         if (channel.targetRoot != null)
-            return channel.targetRoot.GetComponentsInChildren<Renderer>(true);
+            return GetLocalRenderers(channel.targetRoot);
 
         return Array.Empty<Renderer>();
+    }
+
+    public bool HasPrimaryVisualTargets()
+    {
+        if (HasValidBindings(primaryBindings))
+            return true;
+
+        return ResolvePrimaryRenderers().Length > 0 || (primaryComponentBindings != null && primaryComponentBindings.Count > 0);
+    }
+
+    private Renderer[] ResolvePrimaryRenderers()
+    {
+        if (renderers != null && renderers.Length > 0)
+            return DeduplicateRenderers(renderers);
+
+        return GetLocalRenderers(transform);
+    }
+
+    private static bool HasValidBindings(List<WearableMaterialBinding> bindings)
+    {
+        if (bindings == null)
+            return false;
+
+        for (int i = 0; i < bindings.Count; i++)
+        {
+            var binding = bindings[i];
+            if (binding != null && binding.renderer != null)
+                return true;
+        }
+
+        return false;
+    }
+
+    private static Renderer[] GetLocalRenderers(Transform root)
+    {
+        if (root == null)
+            return Array.Empty<Renderer>();
+
+        return FilterLocalRenderers(root, root.GetComponentsInChildren<Renderer>(true));
+    }
+
+    private static Renderer[] DeduplicateRenderers(Renderer[] candidates)
+    {
+        if (candidates == null || candidates.Length == 0)
+            return Array.Empty<Renderer>();
+
+        var filtered = new List<Renderer>(candidates.Length);
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            var renderer = candidates[i];
+            if (renderer == null || filtered.Contains(renderer))
+                continue;
+
+            filtered.Add(renderer);
+        }
+
+        return filtered.ToArray();
+    }
+
+    private static Renderer[] FilterLocalRenderers(Transform root, Renderer[] candidates, bool includeFallbackChildrenWhenEmpty = false)
+    {
+        Transform effectiveRoot = root;
+        if (effectiveRoot == null && candidates != null)
+        {
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                if (candidates[i] != null)
+                {
+                    effectiveRoot = candidates[i].transform.root;
+                    break;
+                }
+            }
+        }
+
+        var filtered = new List<Renderer>();
+        if (candidates != null)
+        {
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                var renderer = candidates[i];
+                if (renderer == null)
+                    continue;
+
+                if (effectiveRoot != null && !renderer.transform.IsChildOf(effectiveRoot))
+                    continue;
+
+                if (!filtered.Contains(renderer))
+                    filtered.Add(renderer);
+            }
+        }
+
+        if (filtered.Count == 0 && includeFallbackChildrenWhenEmpty && effectiveRoot != null)
+        {
+            var localChildren = effectiveRoot.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < localChildren.Length; i++)
+            {
+                var renderer = localChildren[i];
+                if (renderer == null)
+                    continue;
+
+                if (!filtered.Contains(renderer))
+                    filtered.Add(renderer);
+            }
+        }
+
+        return filtered.ToArray();
     }
 
     private static List<int> GetValidMaterialIndices(List<int> rawIndices, int materialCount)
@@ -266,18 +541,20 @@ public class WearableAttachment : MonoBehaviour
         return result;
     }
 
-    private static void ApplyColorToBindings(List<WearableMaterialBinding> bindings, Renderer[] legacyRenderers, int colorPropertyId, Color color)
+    private static void ApplyColorToBindings(List<WearableMaterialBinding> bindings, Renderer[] legacyRenderers, string configuredPropertyName, int colorPropertyId, Color color)
     {
-        if (colorPropertyId == 0)
-            return;
+        HashSet<Renderer> bindingRenderers = null;
 
         if (bindings != null && bindings.Count > 0)
         {
+            bindingRenderers = new HashSet<Renderer>();
             for (int i = 0; i < bindings.Count; i++)
             {
                 var binding = bindings[i];
                 if (binding == null || binding.renderer == null)
                     continue;
+
+                bindingRenderers.Add(binding.renderer);
 
                 var mats = binding.renderer.materials;
                 if (mats == null || mats.Length == 0)
@@ -290,9 +567,8 @@ public class WearableAttachment : MonoBehaviour
                 {
                     int idx = indices[j];
                     var mat = mats[idx];
-                    if (mat != null && mat.HasProperty(colorPropertyId))
+                    if (ApplyColorToMaterial(mat, color, configuredPropertyName, colorPropertyId))
                     {
-                        mat.SetColor(colorPropertyId, color);
                         mats[idx] = mat;
                         changed = true;
                     }
@@ -301,8 +577,6 @@ public class WearableAttachment : MonoBehaviour
                 if (changed)
                     binding.renderer.materials = mats;
             }
-
-            return;
         }
 
         if (legacyRenderers == null || legacyRenderers.Length == 0)
@@ -311,7 +585,7 @@ public class WearableAttachment : MonoBehaviour
         for (int i = 0; i < legacyRenderers.Length; i++)
         {
             var r = legacyRenderers[i];
-            if (r == null)
+            if (r == null || (bindingRenderers != null && bindingRenderers.Contains(r)))
                 continue;
 
             var mats = r.materials;
@@ -322,9 +596,8 @@ public class WearableAttachment : MonoBehaviour
             for (int m = 0; m < mats.Length; m++)
             {
                 var mat = mats[m];
-                if (mat != null && mat.HasProperty(colorPropertyId))
+                if (ApplyColorToMaterial(mat, color, configuredPropertyName, colorPropertyId))
                 {
-                    mat.SetColor(colorPropertyId, color);
                     mats[m] = mat;
                     changed = true;
                 }
@@ -333,6 +606,32 @@ public class WearableAttachment : MonoBehaviour
             if (changed)
                 r.materials = mats;
         }
+    }
+
+    private static bool ApplyColorToMaterial(Material mat, Color color, string configuredPropertyName, int configuredPropertyId)
+    {
+        if (mat == null)
+            return false;
+
+        bool changed = false;
+
+        if (!string.IsNullOrEmpty(configuredPropertyName) && mat.HasProperty(configuredPropertyName))
+        {
+            mat.SetColor(configuredPropertyId != 0 ? configuredPropertyId : Shader.PropertyToID(configuredPropertyName), color);
+            changed = true;
+        }
+
+        for (int i = 0; i < ColorPropCandidates.Length; i++)
+        {
+            string propertyName = ColorPropCandidates[i];
+            if (string.IsNullOrEmpty(propertyName) || propertyName == configuredPropertyName || !mat.HasProperty(propertyName))
+                continue;
+
+            mat.SetColor(propertyName, color);
+            changed = true;
+        }
+
+        return changed;
     }
 
     private static void ApplyTextureToBindings(List<WearableMaterialBinding> bindings, Renderer[] legacyRenderers, int texturePropertyId, Texture tex)

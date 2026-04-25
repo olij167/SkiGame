@@ -43,6 +43,8 @@ public class TrickPosePreviewWindow : EditorWindow
     [SerializeField] private bool _influenceUseYaw = true;
     [SerializeField] private bool _influenceUsePitch = true;
     [SerializeField] private bool _influenceUseRoll = true;
+    [SerializeField] private Vector3 _influenceManualRotation;
+    private string _autoInfluenceReadout = "Auto Influence is off.";
 
     private bool _isPlaying;
     private bool _influenceIsPlaying;
@@ -50,12 +52,28 @@ public class TrickPosePreviewWindow : EditorWindow
     private bool _isScrubbing;
     private ManualLerpState _manualLerp;
     private Vector3 _influenceAccumulatedAngles;
+    private bool _editorUpdateRegistered;
     private static TrickPosePreviewWindow _instance;
 
     [MenuItem("Window/Ski Game/Trick Pose Preview")]
     public static void Open()
     {
         _instance = GetWindow<TrickPosePreviewWindow>("Trick Pose Preview");
+    }
+
+    public static void RepaintOpenWindow()
+    {
+        if (_instance != null)
+            _instance.Repaint();
+    }
+
+    public static void InterruptManualPreview()
+    {
+        if (_instance != null)
+        {
+            _instance._manualLerp = null;
+            _instance.UpdateEditorUpdateRegistration();
+        }
     }
 
     public static void LerpToEntry(TrickPoseEntry entry, float duration)
@@ -66,11 +84,27 @@ public class TrickPosePreviewWindow : EditorWindow
         _instance?.StartManualLerpToEntry(entry, duration);
     }
 
+    public static void PushInfluenceState(TrickPoseEditorPreviewContext context)
+    {
+        if (_instance == null)
+            Open();
+
+        _instance?.ApplyInfluenceStateFromContext(context);
+    }
+
+    public static void PreviewCoverageSlot(TrickPoseCoverageSlot slot)
+    {
+        if (_instance == null)
+            Open();
+
+        _instance?.ApplyCoverageSlot(slot);
+    }
+
     private void OnEnable()
     {
         _instance = this;
         _lastEditorTime = EditorApplication.timeSinceStartup;
-        EditorApplication.update += OnEditorUpdate;
+        UpdateEditorUpdateRegistration();
     }
 
     private void OnDisable()
@@ -82,7 +116,8 @@ public class TrickPosePreviewWindow : EditorWindow
         TrickPoseEditorSession.RestorePresentation();
         TrickPoseEditorSession.ClearPreviewWindowSimulatedEntry();
         TrickPoseEditorSession.ClearActiveSimulatedContext();
-        EditorApplication.update -= OnEditorUpdate;
+        TrickPoseEditorSession.PreviewTarget?.RestoreTrueDefaultPose(true);
+        SetEditorUpdateRegistration(false);
     }
 
     private void OnGUI()
@@ -91,20 +126,23 @@ public class TrickPosePreviewWindow : EditorWindow
         SkiController controller = TrickPoseEditorSession.PreviewTarget;
 
         DrawModeToolbar();
+        DrawModeHelp();
 
         _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
 
         DrawSectionHeader("Preview Setup");
         using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
         {
-            EditorGUILayout.ObjectField("Profile", profile, typeof(TrickPoseProfileSO), false);
-            EditorGUILayout.ObjectField("Preview Target", controller, typeof(SkiController), true);
+            EditorGUILayout.ObjectField(TrickPoseEditorHelp.Label("Profile", "Coverage.ProfileField"), profile, typeof(TrickPoseProfileSO), false);
+            EditorGUILayout.ObjectField(TrickPoseEditorHelp.Label("Preview Target", "Profile.PreviewTarget"), controller, typeof(SkiController), true);
         }
 
         if (TrickPoseEditorSession.PreviewMode == TrickPosePreviewMode.Sequence)
             DrawSequencePreview(profile, controller);
-        else
+        else if (TrickPoseEditorSession.PreviewMode == TrickPosePreviewMode.Influence)
             DrawInfluencePreview(profile, controller);
+        else
+            DrawCoveragePreview(profile, controller);
 
         EditorGUILayout.EndScrollView();
     }
@@ -114,7 +152,12 @@ public class TrickPosePreviewWindow : EditorWindow
         EditorGUI.BeginChangeCheck();
         TrickPosePreviewMode mode = (TrickPosePreviewMode)GUILayout.Toolbar(
             (int)TrickPoseEditorSession.PreviewMode,
-            new[] { "Sequence Preview", "Influence Preview" });
+            new[]
+            {
+                TrickPoseEditorHelp.Button("Preview.Mode.Sequence", "Sequence Preview"),
+                TrickPoseEditorHelp.Button("Preview.Mode.Influence", "Influence Preview"),
+                TrickPoseEditorHelp.Button("Preview.Mode.Coverage", "Coverage Preview")
+            });
         if (EditorGUI.EndChangeCheck())
         {
             if (TrickPoseEditorSession.PreviewMode == TrickPosePreviewMode.Influence)
@@ -125,13 +168,95 @@ public class TrickPosePreviewWindow : EditorWindow
             _manualLerp = null;
             if (mode == TrickPosePreviewMode.Influence)
                 EvaluateAndApplyInfluencePreview(useAccumulatedAngles: false);
-            else
+            else if (mode == TrickPosePreviewMode.Sequence)
                 EvaluateAndApplyCurrentTime();
+            else
+                ApplyCoverageSlot(TrickPoseEditorSession.SelectedCoverageSlot);
+        }
+    }
+
+    private void DrawModeHelp()
+    {
+        if (!TrickPoseEditorHelpState.ShowInlineHelp)
+            return;
+
+        EditorGUILayout.HelpBox(TrickPoseEditorHelp.GetPreviewModeDescription(TrickPoseEditorSession.PreviewMode), MessageType.None);
+
+        bool shouldShowBanner = TrickPoseEditorHelpState.ShowFirstTimeBanner &&
+            !TrickPoseEditorHelpState.PreviewGettingStartedDismissed &&
+            (TrickPoseEditorSession.PreviewTarget == null || TrickPoseEditorSession.ActiveProfile == null);
+        if (!shouldShowBanner)
+            return;
+
+        using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+        {
+            EditorGUILayout.LabelField("Preview Setup", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Assign a profile, assign a preview target, then choose the preview mode that matches the task: sequence for playback, influence for rule behavior, coverage for slot-first authoring.", EditorStyles.wordWrappedLabel);
+            if (GUILayout.Button("Dismiss", GUILayout.Width(80f)))
+                TrickPoseEditorHelpState.PreviewGettingStartedDismissed = true;
+        }
+    }
+
+    private void DrawCoveragePreview(TrickPoseProfileSO profile, SkiController controller)
+    {
+        TrickPoseCoverageSlot slot = TrickPoseEditorSession.SelectedCoverageSlot;
+        DrawSectionHeader("Coverage Slot");
+        using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+        {
+            if (TrickPoseEditorHelpState.ShowInlineHelp)
+                EditorGUILayout.HelpBox("Coverage Preview shows the selected authored slot. Use it to preview the slot state, assign the selected entry, or copy slot conditions before tuning the pose in Influence Preview.", MessageType.Info);
+
+            if (slot == null)
+            {
+                EditorGUILayout.LabelField("Select a slot from the coverage window to preview it here.");
+                return;
+            }
+
+            EditorGUILayout.LabelField("Pose Slot State", TrickPoseAuthoredStateFormatter.Format(slot), EditorStyles.wordWrappedLabel);
+            EditorGUILayout.LabelField("Status", slot.validationStatus.ToString());
+            EditorGUILayout.LabelField("Assigned Entry", slot.assignedEntry != null ? slot.assignedEntry.GetSummary() : "(none)");
+            EditorGUILayout.LabelField("Summary", slot.summary, EditorStyles.wordWrappedLabel);
+            if (slot.candidateEntryLabels != null && slot.candidateEntryLabels.Count > 0)
+                EditorGUILayout.LabelField("Candidate Matches", string.Join(", ", slot.candidateEntryLabels), EditorStyles.wordWrappedMiniLabel);
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button(TrickPoseEditorHelp.Button("Preview.Mode.Coverage", "Preview Slot")))
+                    ApplyCoverageSlot(slot);
+
+                GUI.enabled = profile != null && TrickPoseEditorSession.SelectedEntryIndex >= 0;
+                if (GUILayout.Button(TrickPoseEditorHelp.Button("Preview.AssignSelectedEntry", "Assign Selected Entry")))
+                {
+                    TrickPoseCoverageAssignmentUtility.AssignEntryToSlot(profile, slot, TrickPoseEditorSession.SelectedEntryIndex);
+                    slot.representativeContext = TrickPoseCoveragePlanBuilder.BuildRepresentativeContext(controller, slot);
+                    TrickPoseEditorSession.RefreshCoverageWorkspace(3);
+                }
+                GUI.enabled = true;
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUI.enabled = TrickPoseEditorSession.SelectedEntry != null;
+                if (GUILayout.Button(TrickPoseEditorHelp.Button("Preview.CopySlotConditions", "Copy Slot Conditions Into Selected Entry")))
+                {
+                    Undo.RecordObject(profile, "Apply Slot Conditions");
+                    TrickPoseCoverageAssignmentUtility.ApplySlotConditionsToEntry(slot, TrickPoseEditorSession.SelectedEntry);
+                    EditorUtility.SetDirty(profile);
+                    TrickPoseEditorSession.RefreshCoverageWorkspace(3);
+                }
+                GUI.enabled = true;
+            }
+
+            if (slot.representativeContext != null)
+                DrawPreviewDiagnostics(profile, slot.representativeContext);
         }
     }
 
     private void DrawSequencePreview(TrickPoseProfileSO profile, SkiController controller)
     {
+        if (TrickPoseEditorHelpState.ShowInlineHelp)
+            EditorGUILayout.HelpBox("Sequence Preview is for playback intent, timing, and transition feel. It can simulate rule contexts, but it is not the same thing as exhaustively validating rule ownership.", MessageType.None);
+
         float totalDuration = GetTotalDuration();
         int activeStepIndex = GetActiveStepIndex(totalDuration);
         SequenceEvaluation evaluation = EvaluateSequenceAtTime(profile, controller, _sequenceTime, totalDuration);
@@ -196,15 +321,23 @@ public class TrickPosePreviewWindow : EditorWindow
 
     private void DrawInfluencePreview(TrickPoseProfileSO profile, SkiController controller)
     {
+        if (TrickPoseEditorHelpState.ShowInlineHelp)
+            EditorGUILayout.HelpBox("Influence Preview simulates derived pose matching from inputs and angular motion. It helps explain what the rules respond to, but it does not prove full coverage quality or intended slot ownership by itself.", MessageType.None);
+
         TrickPoseInfluencePreviewState state = TrickPoseEditorSession.InfluencePreviewState;
+        if (state.manualRotationEuler == Vector3.zero && _influenceManualRotation != Vector3.zero)
+            state.manualRotationEuler = _influenceManualRotation;
+
         DrawSectionHeader("Influence Controls");
         using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
         {
             EditorGUI.BeginChangeCheck();
+            bool autoInfluence = EditorGUILayout.Toggle(TrickPoseEditorHelp.Label("Auto Influence", "Preview.AutoInfluence"), state.autoInfluence);
             state.poseInputHeld = EditorGUILayout.Toggle("Pose Input", state.poseInputHeld);
             state.tuckInput = EditorGUILayout.Toggle("Tuck Input", state.tuckInput);
             state.leftInput = EditorGUILayout.Toggle("Left Input", state.leftInput);
             state.rightInput = EditorGUILayout.Toggle("Right Input", state.rightInput);
+            state.leanInput = EditorGUILayout.Slider(TrickPoseEditorHelp.Label("Lean Input", "Preview.LeanInput"), state.leanInput, -1f, 1f);
             bool airborne = EditorGUILayout.Toggle("Airborne", state.airborne);
             if (airborne != state.airborne)
                 state.airborne = airborne;
@@ -213,22 +346,52 @@ public class TrickPosePreviewWindow : EditorWindow
             bool diving = EditorGUILayout.Toggle("Diving", state.diving);
             state.rising = rising && !diving;
             state.diving = diving && !rising;
+            Vector3 previousManualRotation = state.manualRotationEuler;
+            _influenceManualRotation = EditorGUILayout.Vector3Field(TrickPoseEditorHelp.Label("Manual Rotation", "Preview.ManualRotation"), state.manualRotationEuler);
+            if (_influenceManualRotation != previousManualRotation)
+                state.manualRotationActive = true;
+            state.autoInfluence = autoInfluence;
             state.yawAngularVelocity = EditorGUILayout.FloatField("Yaw Angular Velocity", state.yawAngularVelocity);
             state.pitchAngularVelocity = EditorGUILayout.FloatField("Pitch Angular Velocity", state.pitchAngularVelocity);
             state.rollAngularVelocity = EditorGUILayout.FloatField("Roll Angular Velocity", state.rollAngularVelocity);
 
             if (EditorGUI.EndChangeCheck())
             {
+                state.manualRotationEuler = _influenceManualRotation;
+                if (state.autoInfluence)
+                    ApplyAutoInfluence(profile, controller, state);
+
                 if (_influenceIsPlaying)
                     EvaluateAndApplyInfluencePreview(useAccumulatedAngles: true);
                 else
                     EvaluateAndApplyInfluencePreview(useAccumulatedAngles: false);
             }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Set Rotation"))
+                {
+                    state.manualRotationEuler = _influenceManualRotation;
+                    state.manualRotationActive = true;
+                    if (state.autoInfluence)
+                        ApplyAutoInfluence(profile, controller, state);
+                    EvaluateAndApplyInfluencePreview(useAccumulatedAngles: false);
+                }
+                if (GUILayout.Button("Reset Manual Rotation"))
+                {
+                    _influenceManualRotation = Vector3.zero;
+                    state.manualRotationEuler = Vector3.zero;
+                    state.manualRotationActive = false;
+                    EvaluateAndApplyInfluencePreview(useAccumulatedAngles: false);
+                }
+            }
+
+            EditorGUILayout.HelpBox(_autoInfluenceReadout, MessageType.None);
         }
 
         TrickPoseEditorPreviewContext context = BuildEffectiveInfluenceContext(controller);
         List<TrickPoseEntry> matches = TrickPoseEditorPreviewUtility.EvaluateMatchingEntries(profile, context);
-        TrickPoseEntry bestMatchedEntry = matches.Count > 0 ? TrickPoseEditorPreviewUtility.EvaluateBestMatchingEntry(profile, context) : null;
+        TrickPoseEntry bestMatchedEntry = TrickPoseEditorPreviewUtility.SelectBestMatchingEntry(matches);
 
         DrawSectionHeader("Influence Playback");
         using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
@@ -263,21 +426,47 @@ public class TrickPosePreviewWindow : EditorWindow
             }
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Apply Influence Preview"))
+        if (GUILayout.Button("Apply Influence Preview"))
                     EvaluateAndApplyInfluencePreview(useAccumulatedAngles: _influenceIsPlaying);
                 if (GUILayout.Button("Clear Preview"))
                     ClearPreview();
             }
         }
 
-        DrawSectionHeader("Derived Preview Context");
+        DrawSectionHeader("Derived Authored State");
         using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
         {
+            bool blocked = context == null || !context.airborne || !context.poseInputHeld;
+            DrawDerivedInfluenceHint(context);
+
             using (new EditorGUI.DisabledScope(true))
             {
-                EditorGUILayout.TextField("Pose Family", context != null ? context.poseFamily.ToString() : "(none)");
-                EditorGUILayout.TextField("Pose Shape", context != null ? context.poseShape.ToString() : "(none)");
-                EditorGUILayout.TextField("Orientation Modifier", context != null ? context.orientationModifier.ToString() : "(none)");
+                EditorGUILayout.TextField(
+                    "Pose Slot State",
+                    context != null ? FormatDerivedValueBlockedAware(blocked, TrickPoseAuthoredStateFormatter.Format(context)) : "(none)");
+
+                EditorGUILayout.TextField(
+                    "Pose Family",
+                    context != null ? FormatDerivedValueBlockedAware(blocked, context.poseFamily.ToString()) : "(none)");
+
+                EditorGUILayout.TextField(
+                    "Pose Shape",
+                    context != null ? FormatDerivedValueBlockedAware(blocked, FormatPoseShape(context.poseShape)) : "(none)");
+
+                EditorGUILayout.TextField(
+                    "Vertical Orientation",
+                    context != null ? FormatDerivedValueBlockedAware(blocked, context.verticalOrientation.ToString()) : "(none)");
+
+                EditorGUILayout.TextField(
+                    "Horizontal Orientation",
+                    context != null ? FormatDerivedValueBlockedAware(blocked, context.horizontalOrientation.ToString()) : "(none)");
+
+                EditorGUILayout.TextField(
+                    "Motion State",
+                    context != null ? FormatDerivedValueBlockedAware(blocked, context.motionState.ToString()) : "(none)");
+
+                EditorGUILayout.FloatField("Lean Input", context != null ? context.leanInput : 0f);
+                EditorGUILayout.Vector3Field("Entry Rotation", context != null ? context.entryEulerAngles : Vector3.zero);
                 EditorGUILayout.TextField("Spin Direction", context != null ? SpinLabel(context.spinDirectionSign) : "None");
                 EditorGUILayout.TextField("Flip Direction", context != null ? FlipLabel(context.flipDirectionSign) : "None");
                 EditorGUILayout.FloatField("Total Angular Speed", context != null ? context.totalAngularSpeed : 0f);
@@ -300,22 +489,42 @@ public class TrickPosePreviewWindow : EditorWindow
             }
         }
 
+        DrawPreviewDiagnostics(profile, context);
+
         TrickPoseEntry selected = TrickPoseEditorSession.SelectedEntry;
         if (selected != null && context != null)
         {
-            List<TrickPoseEntryConditionStatus> statuses = TrickPoseEditorPreviewUtility.BuildConditionStatuses(selected, context);
+            List<TrickPoseEntryConditionStatus> statuses = TrickPoseEditorPreviewUtility.BuildConditionStatuses(
+                selected,
+                context,
+                TrickPoseEditorSession.ShowLegacyAdvancedGates);
             DrawSectionHeader("Selected Entry Conditions");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 EditorGUILayout.LabelField("Selected Entry", selected.GetSummary());
                 for (int i = 0; i < statuses.Count; i++)
                     EditorGUILayout.LabelField(statuses[i].label, statuses[i].status);
+
+                List<string> failReasons = TrickPoseEditorPreviewUtility.BuildFailReasons(selected, context, 6);
+                if (failReasons.Count > 0)
+                {
+                    EditorGUILayout.Space();
+                    EditorGUILayout.LabelField("Near-Miss Summary", EditorStyles.boldLabel);
+                    for (int i = 0; i < failReasons.Count; i++)
+                        EditorGUILayout.LabelField($"- {failReasons[i]}", EditorStyles.wordWrappedMiniLabel);
+                }
             }
         }
     }
 
     private void OnEditorUpdate()
     {
+        if (!NeedsEditorTick())
+        {
+            SetEditorUpdateRegistration(false);
+            return;
+        }
+
         double now = EditorApplication.timeSinceStartup;
         float deltaTime = (float)(now - _lastEditorTime);
         _lastEditorTime = now;
@@ -447,7 +656,6 @@ public class TrickPosePreviewWindow : EditorWindow
 
         TrickPoseRigSnapshot snapshot = TrickPoseRigSnapshot.Lerp(_manualLerp.fromSnapshot, _manualLerp.toSnapshot, t);
         TrickPoseEditorSession.ApplyPreviewSnapshot(controller, snapshot, _manualLerp.context);
-        SceneView.RepaintAll();
         Repaint();
 
         if (t >= 1f)
@@ -488,6 +696,7 @@ public class TrickPosePreviewWindow : EditorWindow
             TrickPoseEditorSession.RestorePresentation();
             TrickPoseEditorSession.ClearPreviewWindowSimulatedEntry();
             TrickPoseEditorSession.ClearActiveSimulatedContext();
+            controller?.RestoreTrueDefaultPose(true);
             return;
         }
 
@@ -504,11 +713,10 @@ public class TrickPosePreviewWindow : EditorWindow
             return;
 
         TrickPoseEditorPreviewContext context = BuildEffectiveInfluenceContext(controller);
-        List<TrickPoseEntry> matches = TrickPoseEditorPreviewUtility.EvaluateMatchingEntries(profile, context);
-        TrickPoseEntry matched = matches.Count > 0 ? TrickPoseEditorPreviewUtility.EvaluateBestMatchingEntry(profile, context) : null;
+        TrickPoseEntry matched = TrickPoseEditorPreviewUtility.EvaluateBestMatchingEntry(profile, context);
         TrickPoseRigSnapshot snapshot = matched != null
             ? controller.CreateRigSnapshotFromEntry(matched)
-            : controller.CaptureDefaultRigSnapshot();
+            : controller.CaptureTrueDefaultRigSnapshot();
 
         TrickPoseEditorSession.SetPreviewWindowSimulatedEntry(matched);
         TrickPoseEditorSession.SetActiveSimulatedContext(context, matched);
@@ -531,6 +739,7 @@ public class TrickPosePreviewWindow : EditorWindow
         TrickPoseInfluencePreviewState source = TrickPoseEditorSession.InfluencePreviewState;
         return new TrickPoseInfluencePreviewState
         {
+            autoInfluence = source.autoInfluence,
             poseInputHeld = source.poseInputHeld,
             tuckInput = source.tuckInput,
             leftInput = source.leftInput,
@@ -538,17 +747,70 @@ public class TrickPosePreviewWindow : EditorWindow
             airborne = source.airborne,
             rising = source.rising,
             diving = source.diving,
+            leanInput = source.leanInput,
+            manualRotationActive = source.manualRotationActive,
+            manualRotationEuler = source.manualRotationEuler,
             yawAngularVelocity = _influenceUseYaw ? source.yawAngularVelocity : 0f,
             pitchAngularVelocity = _influenceUsePitch ? source.pitchAngularVelocity : 0f,
             rollAngularVelocity = _influenceUseRoll ? source.rollAngularVelocity : 0f
         };
     }
 
+    private void ApplyAutoInfluence(TrickPoseProfileSO profile, SkiController controller, TrickPoseInfluencePreviewState state)
+    {
+        TrickPoseEditorPreviewContext context = TrickPoseEditorPreviewUtility.BuildFromInfluences(controller, state);
+        TrickPoseCoverageContextEvaluation evaluation = TrickPoseCoverageAnalyzer.EvaluateContext(profile, context, 6);
+        TrickPoseEntry closest = evaluation.bestEntry;
+        if (closest == null && evaluation.nearestEntries.Count > 0)
+            closest = evaluation.nearestEntries[0].entry;
+
+        if (closest == null)
+        {
+            _autoInfluenceReadout = "Auto Influence: no entries available to approximate.";
+            return;
+        }
+
+        ApplyEntryConditionHintsToInfluenceState(closest, state);
+        List<string> reasons = TrickPoseEditorPreviewUtility.BuildFailReasons(closest, context, 3);
+        string why = reasons.Count > 0 ? string.Join(" | ", reasons) : "current state already matches";
+        _autoInfluenceReadout = $"Auto Influence closest entry: {closest.GetSummary()} ({why}). Angular velocity values were left unchanged.";
+    }
+
+    private void ApplyEntryConditionHintsToInfluenceState(TrickPoseEntry entry, TrickPoseInfluencePreviewState state)
+    {
+        if (entry == null || state == null)
+            return;
+
+        state.airborne = entry.requireAirborne != TrickPoseBoolRequirement.False;
+        state.poseInputHeld = entry.requirePoseButtonHeld != TrickPoseBoolRequirement.False;
+        state.leftInput = entry.requiredPoseFamily == SkiController.AerialPoseFamily.Left || entry.requiredPoseFamily == SkiController.AerialPoseFamily.Spread;
+        state.rightInput = entry.requiredPoseFamily == SkiController.AerialPoseFamily.Right || entry.requiredPoseFamily == SkiController.AerialPoseFamily.Spread;
+        state.tuckInput = entry.requiredPoseShape == SkiController.AerialPoseShape.Compact;
+        state.leanInput = entry.requiredPoseShape switch
+        {
+            SkiController.AerialPoseShape.Driving => 0.65f,
+            SkiController.AerialPoseShape.LaidOut => -0.65f,
+            _ => state.tuckInput ? 0f : state.leanInput
+        };
+
+        if (entry.requiredPoseShape == SkiController.AerialPoseShape.Neutral)
+            state.leanInput = 0f;
+
+        state.rising = entry.requiredMotionState == TrickPoseMotionStateRequirement.Rising;
+        state.diving = entry.requiredMotionState == TrickPoseMotionStateRequirement.Diving;
+        if (TrickPoseOrientationUtility.TryBuildPresentationEuler(entry.requiredVerticalOrientation, entry.requiredHorizontalOrientation, out Vector3 orientationEuler))
+        {
+            state.manualRotationActive = true;
+            state.manualRotationEuler = orientationEuler;
+            _influenceManualRotation = orientationEuler;
+        }
+    }
+
     private SequenceEvaluation EvaluateSequenceAtTime(TrickPoseProfileSO profile, SkiController controller, float time, float totalDuration)
     {
         SequenceEvaluation result = new SequenceEvaluation
         {
-            snapshot = controller != null ? controller.CaptureDefaultRigSnapshot() : null,
+            snapshot = controller != null ? controller.CaptureTrueDefaultRigSnapshot() : null,
             stepIndex = -1,
             label = string.Empty,
             entry = null,
@@ -629,11 +891,13 @@ public class TrickPosePreviewWindow : EditorWindow
         _isPlaying = true;
         _manualLerp = null;
         _lastEditorTime = EditorApplication.timeSinceStartup;
+        UpdateEditorUpdateRegistration();
     }
 
     private void Pause()
     {
         _isPlaying = false;
+        UpdateEditorUpdateRegistration();
     }
 
     private void StartInfluencePlayback()
@@ -645,17 +909,20 @@ public class TrickPosePreviewWindow : EditorWindow
         TrickPoseEditorSession.PreparePresentationBasis(controller);
         _influenceIsPlaying = true;
         _lastEditorTime = EditorApplication.timeSinceStartup;
+        UpdateEditorUpdateRegistration();
         EvaluateAndApplyInfluencePreview(useAccumulatedAngles: true);
     }
 
     private void PauseInfluencePlayback()
     {
         _influenceIsPlaying = false;
+        UpdateEditorUpdateRegistration();
     }
 
     private void StopInfluencePlayback(bool restoreRotation, bool reapplyStaticPreview)
     {
         _influenceIsPlaying = false;
+        UpdateEditorUpdateRegistration();
         if (restoreRotation)
             TrickPoseEditorSession.RestorePresentation();
 
@@ -675,15 +942,14 @@ public class TrickPosePreviewWindow : EditorWindow
         _influenceAccumulatedAngles = Vector3.zero;
         TrickPoseEditorPreviewContext context = BuildEffectiveInfluenceContext(controller);
         TrickPoseProfileSO profile = TrickPoseEditorSession.ActiveProfile;
-        List<TrickPoseEntry> matches = TrickPoseEditorPreviewUtility.EvaluateMatchingEntries(profile, context);
-        TrickPoseEntry matched = matches.Count > 0 ? TrickPoseEditorPreviewUtility.EvaluateBestMatchingEntry(profile, context) : null;
+        TrickPoseEntry matched = TrickPoseEditorPreviewUtility.EvaluateBestMatchingEntry(profile, context);
         TrickPoseRigSnapshot snapshot = matched != null
             ? controller.CreateRigSnapshotFromEntry(matched)
-            : controller.CaptureDefaultRigSnapshot();
+            : controller.CaptureTrueDefaultRigSnapshot();
 
         TrickPoseEditorSession.SetPreviewWindowSimulatedEntry(matched);
         TrickPoseEditorSession.SetActiveSimulatedContext(context, matched);
-        TrickPoseEditorSession.ApplyPreviewSnapshotWithoutPresentationRotation(controller, snapshot, context);
+        TrickPoseEditorSession.ApplyPreviewSnapshot(controller, snapshot, context, true, Vector3.zero);
         Repaint();
     }
 
@@ -692,6 +958,7 @@ public class TrickPosePreviewWindow : EditorWindow
         _isPlaying = false;
         _manualLerp = null;
         _sequenceTime = 0f;
+        UpdateEditorUpdateRegistration();
         if (previewStartFrame)
             EvaluateAndApplyCurrentTime();
     }
@@ -702,10 +969,11 @@ public class TrickPosePreviewWindow : EditorWindow
         PauseInfluencePlayback();
         _manualLerp = null;
         _influenceAccumulatedAngles = Vector3.zero;
+        UpdateEditorUpdateRegistration();
         TrickPoseEditorSession.RestorePresentation();
         TrickPoseEditorSession.ClearPreviewWindowSimulatedEntry();
         TrickPoseEditorSession.ClearActiveSimulatedContext();
-        TrickPoseEditorSession.PreviewTarget?.RestoreDefaultRigSnapshot(true);
+        TrickPoseEditorSession.PreviewTarget?.RestoreTrueDefaultPose(true);
         SceneView.RepaintAll();
         Repaint();
     }
@@ -774,11 +1042,98 @@ public class TrickPosePreviewWindow : EditorWindow
         _manualLerp = new ManualLerpState
         {
             fromSnapshot = controller.CaptureCurrentRigSnapshot(),
-            toSnapshot = entry != null ? controller.CreateRigSnapshotFromEntry(entry) : controller.CaptureDefaultRigSnapshot(),
+            toSnapshot = entry != null ? controller.CreateRigSnapshotFromEntry(entry) : controller.CaptureTrueDefaultRigSnapshot(),
             duration = Mathf.Max(0.01f, duration),
             startTime = EditorApplication.timeSinceStartup,
             context = context
         };
+        UpdateEditorUpdateRegistration();
+    }
+
+    private void ApplyInfluenceStateFromContext(TrickPoseEditorPreviewContext context)
+    {
+        if (context == null)
+            return;
+
+        TrickPoseEditorSession.PreviewMode = TrickPosePreviewMode.Influence;
+        Pause();
+        PauseInfluencePlayback();
+        _manualLerp = null;
+        _influenceAccumulatedAngles = Vector3.zero;
+
+        TrickPoseInfluencePreviewState state = TrickPoseEditorSession.InfluencePreviewState;
+        state.poseInputHeld = context.poseInputHeld;
+        state.tuckInput = context.tuckInput;
+        state.leftInput = context.leftInput;
+        state.rightInput = context.rightInput;
+        state.airborne = context.airborne;
+        state.leanInput = context.leanInput;
+        state.rising = context.rising;
+        state.diving = context.diving;
+        state.manualRotationEuler = context.hasPresentationRotation
+            ? context.presentationRotationEuler
+            : context.entryEulerAngles;
+        state.manualRotationActive = context.hasPresentationRotation;
+        _influenceManualRotation = state.manualRotationEuler;
+        state.yawAngularVelocity = context.yawAngularVelocity;
+        state.pitchAngularVelocity = context.pitchAngularVelocity;
+        state.rollAngularVelocity = context.rollAngularVelocity;
+
+        EvaluateAndApplyInfluencePreview(useAccumulatedAngles: false);
+        Repaint();
+    }
+
+    private void ApplyCoverageSlot(TrickPoseCoverageSlot slot)
+    {
+        if (slot == null)
+            return;
+
+        TrickPoseEditorSession.PreviewMode = TrickPosePreviewMode.Coverage;
+        Pause();
+        PauseInfluencePlayback();
+        _manualLerp = null;
+        _influenceAccumulatedAngles = Vector3.zero;
+
+        SkiController controller = TrickPoseEditorSession.PreviewTarget;
+        if (controller == null)
+            return;
+
+        TrickPoseEditorPreviewContext context = slot.representativeContext ?? TrickPoseCoveragePlanBuilder.BuildRepresentativeContext(controller, slot);
+        slot.representativeContext = context;
+        TrickPoseRigSnapshot snapshot = slot.assignedEntry != null
+            ? controller.CreateRigSnapshotFromEntry(slot.assignedEntry)
+            : controller.CaptureTrueDefaultRigSnapshot();
+
+        TrickPoseEditorSession.SetActiveSimulatedContext(context, slot.assignedEntry);
+        TrickPoseEditorSession.SetPreviewWindowSimulatedEntry(slot.assignedEntry);
+        TrickPoseEditorSession.ApplyPreviewSnapshot(controller, snapshot, context);
+        Repaint();
+    }
+
+    private bool NeedsEditorTick()
+    {
+        return _isPlaying || _influenceIsPlaying || _manualLerp != null;
+    }
+
+    private void UpdateEditorUpdateRegistration()
+    {
+        if (NeedsEditorTick())
+            _lastEditorTime = EditorApplication.timeSinceStartup;
+
+        SetEditorUpdateRegistration(NeedsEditorTick());
+    }
+
+    private void SetEditorUpdateRegistration(bool enabled)
+    {
+        if (_editorUpdateRegistered == enabled)
+            return;
+
+        if (enabled)
+            EditorApplication.update += OnEditorUpdate;
+        else
+            EditorApplication.update -= OnEditorUpdate;
+
+        _editorUpdateRegistered = enabled;
     }
 
     private int GetActiveStepIndex(float totalDuration)
@@ -854,5 +1209,96 @@ public class TrickPosePreviewWindow : EditorWindow
     private static string FlipLabel(int sign)
     {
         return sign > 0 ? "Front" : sign < 0 ? "Back" : "None";
+    }
+
+    private static string FormatPoseShape(SkiController.AerialPoseShape shape)
+    {
+        return shape switch
+        {
+            SkiController.AerialPoseShape.Compact => "Compact",
+            SkiController.AerialPoseShape.Driving => "Forward Lean",
+            SkiController.AerialPoseShape.LaidOut => "Backward Lean",
+            _ => shape.ToString()
+        };
+    }
+
+    private static string FormatOrientation(SkiController.AerialOrientationModifier orientation)
+    {
+        string label = SkiController.GetAerialOrientationModifierLabel(orientation);
+        return string.IsNullOrWhiteSpace(label) ? "None" : label;
+    }
+
+    private void DrawDerivedInfluenceHint(TrickPoseEditorPreviewContext context)
+    {
+        if (context == null)
+            return;
+
+        bool canDeriveAerialState = context.airborne && context.poseInputHeld;
+        if (canDeriveAerialState)
+            return;
+
+        string reason;
+        if (!context.airborne && !context.poseInputHeld)
+            reason = "Family / Shape / Orientation derivation is blocked because Airborne and Pose Input are both off.";
+        else if (!context.airborne)
+            reason = "Family / Shape / Orientation derivation is blocked because Airborne is off.";
+        else
+            reason = "Family / Shape / Orientation derivation is blocked because Pose Input is off.";
+
+        EditorGUILayout.HelpBox(reason, MessageType.Info);
+    }
+
+    private string FormatDerivedValueBlockedAware(bool blocked, string value)
+    {
+        return blocked ? $"{value} (blocked)" : value;
+    }
+
+    private void DrawPreviewDiagnostics(TrickPoseProfileSO profile, TrickPoseEditorPreviewContext context)
+    {
+        if (profile == null || context == null)
+            return;
+
+        TrickPoseCoverageContextEvaluation evaluation = TrickPoseCoverageAnalyzer.EvaluateContext(profile, context, 3);
+
+        DrawSectionHeader("Preview Diagnostics");
+        using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+        {
+            EditorGUILayout.LabelField("State", TrickPoseCoverageAnalyzer.DescribeContext(context), EditorStyles.wordWrappedLabel);
+            EditorGUILayout.LabelField("Classification", evaluation.classification.ToString());
+            EditorGUILayout.LabelField("Summary", evaluation.Summary, EditorStyles.wordWrappedLabel);
+
+            if (evaluation.ambiguousEntries.Count > 1)
+                EditorGUILayout.LabelField("Ambiguous With", string.Join(", ", evaluation.ambiguousEntries.ConvertAll(entry => entry.GetSummary())));
+
+            if (evaluation.suppressedEntries.Count > 0)
+                EditorGUILayout.LabelField("Suppressed", string.Join(", ", evaluation.suppressedEntries.ConvertAll(entry => entry.GetSummary())), EditorStyles.wordWrappedLabel);
+
+            if (evaluation.classification == TrickPoseCoverageClassification.Gap)
+            {
+                TrickPoseCoverageEntryDiagnostic nearest = evaluation.nearestEntries.Count > 0 ? evaluation.nearestEntries[0] : null;
+                EditorGUILayout.HelpBox(TrickPoseCoverageAnalyzer.BuildGapSuggestion(context, nearest), MessageType.Info);
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Nearest Entries", EditorStyles.boldLabel);
+            if (evaluation.nearestEntries.Count == 0)
+            {
+                EditorGUILayout.LabelField("(none)");
+            }
+            else
+            {
+                for (int i = 0; i < evaluation.nearestEntries.Count; i++)
+                {
+                    TrickPoseCoverageEntryDiagnostic diagnostic = evaluation.nearestEntries[i];
+                    string failSummary = diagnostic.failReasons.Count > 0
+                        ? string.Join(" | ", diagnostic.failReasons)
+                        : "Matches current state";
+                    EditorGUILayout.LabelField(
+                        $"{i + 1}. {diagnostic.Summary} (P{diagnostic.priority}, S{diagnostic.specificity}, D {diagnostic.heuristicDistance:0.##})",
+                        EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField(failSummary, EditorStyles.wordWrappedMiniLabel);
+                }
+            }
+        }
     }
 }

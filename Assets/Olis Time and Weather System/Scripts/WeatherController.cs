@@ -31,6 +31,27 @@ namespace TimeWeather
             [Tooltip("Glyph shown in UI for this weather preset, e.g. ☀, ☁, ❄, 🌧, ⛈")]
             public string weatherGlyph = "◌";
 
+            [Header("Simple Authoring")]
+            [Tooltip("Enable this to hand-author the detailed controls below. Disable it to derive them from the simple controls.")]
+            public bool useAdvancedOverrides;
+            [Tooltip("How much of the sky and scene should read as cloudy.")]
+            [Range(0f, 1f)] public float simpleCloudCoverage = 0.35f;
+            [Tooltip("How solid, dark, shadow-casting, and volumetric the clouds should feel.")]
+            [Range(0f, 1f)] public float simpleCloudHeaviness = 0.30f;
+            [Tooltip("How soft and feathered cloud edges should look.")]
+            [Range(0f, 1f)] public float simpleCloudSoftness = 0.45f;
+            [Tooltip("How turbulent, gusty, and storm-shaped the weather should look.")]
+            [Range(0f, 1f)] public float simpleStorminess = 0.10f;
+            [Tooltip("Direct target fog strength for reduced distance visibility and sky-atmosphere blending. Zero means no fog from this preset.")]
+            [Range(0f, 1f)] public float simpleFogginess = 0.10f;
+            [Tooltip("How much the weather blocks sunlight, greys clouds, and darkens cloud undersides.")]
+            [Range(0f, 1f)] public float simpleGloom = 0.20f;
+            [Tooltip("How strongly clouds and gust-driven weather move.")]
+            [Range(0f, 1f)] public float simpleWindiness = 0.25f;
+            [Tooltip("Overall atmosphere tint applied to derived clouds, sky fog response, and cloud shadows.")]
+            public Color overallWeatherTint = Color.white;
+            [HideInInspector] public bool simpleAuthoringInitialized;
+
             [Header("Requirements for Weather Selection")]
             [Tooltip("The temperature range required for this condition. \n This can be used to differentiate between weather conditions")]
             public Vector2 tempRange;
@@ -170,6 +191,29 @@ namespace TimeWeather
         [Range(0f, 1f)] public float fogSpeed;
         private float desiredWindSpeed;
         [Space(5f)]
+
+        [Header("Skybox Fog Tint")]
+        [Tooltip("Fog density at which density-based sky tint starts.")]
+        [Range(0f, 1f)] public float skyFogTintStart = 0.005f;
+
+        [Tooltip("Fog density at which density-based sky tint reaches full influence.")]
+        [Range(0f, 1f)] public float skyFogTintEnd = 0.05f;
+
+        [Tooltip("Overall strength of fog colour influence on the sky gradient.")]
+        [Range(0f, 1f)] public float skyFogTintStrength = 1f;
+
+        [Tooltip("How much the top of the sky is affected by fog tint.")]
+        [Range(0f, 2f)] public float skyFogTintTopWeight = 0.85f;
+
+        [Tooltip("How much the horizon is affected by fog tint.")]
+        [Range(0f, 2f)] public float skyFogTintHorizonWeight = 1.6f;
+
+        [Header("Skybox Fog Visual Response")]
+        [Tooltip("Weather fog strength at which visual sky tint begins.")]
+        [Range(0f, 1f)] public float skyFogVisualStart = 0.015f;
+
+        [Tooltip("Weather fog strength at which visual sky tint reaches full effect.")]
+        [Range(0f, 1f)] public float skyFogVisualEnd = 0.06f;
 
         [Tooltip("The current surface wetness. \n Only applied to materials with the 'Wet' or 'WetAndSnowy' shader")]
         [Range(0f, 5f)] public float wetness;
@@ -314,6 +358,21 @@ namespace TimeWeather
         private WeatherData _lastAppliedPreset;
         private readonly HashSet<ParticleSystem> _presetParticleSet = new HashSet<ParticleSystem>();
 
+        private void OnValidate()
+        {
+            EnsureWeatherPresetAuthoringData();
+        }
+
+        public void EnsureWeatherPresetAuthoringData()
+        {
+            if (weatherDataPresets == null)
+                return;
+
+            for (int i = 0; i < weatherDataPresets.Length; i++)
+            {
+                WeatherPresetAuthoringUtility.EnsureSimpleAuthoringInitialized(weatherDataPresets[i]);
+            }
+        }
 
         private void OnEnable()
         {
@@ -475,7 +534,7 @@ namespace TimeWeather
             int sunriseHour = (int)timeController.sunriseTime;
             float sunriseTimeClamped = Mathf.Clamp((timeController.sunriseTime - sunriseHour) * 60, 0f, 59.49f);
 
-              int sunsetHour = (int)timeController.sunsetTime;
+            int sunsetHour = (int)timeController.sunsetTime;
             float sunsetTimeClamped = Mathf.Clamp((timeController.sunsetTime - sunsetHour) * 60, 0f, 59.49f);
 
             if (timeController.toggleSunTimeUI)
@@ -507,6 +566,7 @@ namespace TimeWeather
                     hourly.rainChance = midnightCondition.rainChance;
                     hourly.weatherCondition = midnightCondition.weatherCondition;
                     hourly.cloudPower = midnightCondition.cloudPower;
+                    hourly.fogStrength = midnightCondition.fogStrength;
 
 
                     //hourly.windSpeed = midnightCondition.windSpeed;
@@ -620,6 +680,7 @@ namespace TimeWeather
                         hourly.cloudAlphaTarget = 0f;
                         hourly.skyCloudAlpha = 0f;
                         hourly.skyCloudPower = 5f;
+                        hourly.fogStrength = 0f;
                     }
 
                 }
@@ -658,6 +719,7 @@ namespace TimeWeather
                 hourlyWeather[hour].cloudAlphaTarget = 0f;
                 hourlyWeather[hour].skyCloudAlpha = 0f;
                 hourlyWeather[hour].skyCloudPower = 5f;
+                hourlyWeather[hour].fogStrength = 0f;
             }
         }
 
@@ -665,62 +727,198 @@ namespace TimeWeather
         {
             if (preset == null || hourly == null) return;
 
+            WeatherPresetAuthoringUtility.ResolvedWeatherProfile resolvedProfile =
+                WeatherPresetAuthoringUtility.BuildResolvedProfile(preset);
+
             // Shared wind / timing
-            hourly.windSpeedTarget = Random.Range(preset.windSpeedRange.x, preset.windSpeedRange.y);
-            hourly.windDirection = Random.Range(preset.windDirectionRange.x, preset.windDirectionRange.y);
-            hourly.gustStrength = Random.Range(preset.gustStrengthRange.x, preset.gustStrengthRange.y);
+            hourly.windSpeedTarget = Random.Range(resolvedProfile.windSpeedRange.x, resolvedProfile.windSpeedRange.y);
+            hourly.windDirection = Random.Range(resolvedProfile.windDirectionRange.x, resolvedProfile.windDirectionRange.y);
+            hourly.gustStrength = Random.Range(resolvedProfile.gustStrengthRange.x, resolvedProfile.gustStrengthRange.y);
+            hourly.fogStrength = resolvedProfile.fogStrength;
 
             // Skybox clouds
-            hourly.skyCloudAlpha = Random.Range(preset.skyCloudAlphaRange.x, preset.skyCloudAlphaRange.y);
-            hourly.skyCloudPower = Random.Range(preset.skyCloudPowerRange.x, preset.skyCloudPowerRange.y);
-            hourly.cloudSoftness = preset.cloudSoftness;
-            hourly.cloudCoverageBias = preset.cloudCoverageBias;
-            hourly.cloudTurbulence = preset.cloudTurbulence;
-            hourly.cloudWarpStrength = preset.cloudWarpStrength;
-            hourly.cloudTint = preset.cloudTint;
-            hourly.cloudShadowStrength = preset.cloudShadowStrength;
-            hourly.cloudGreyStrength = preset.cloudGreyStrength;
-            hourly.cloudSunLightStrength = preset.cloudSunLightStrength;
+            hourly.cloudPower = Random.Range(resolvedProfile.cloudPowerRange.x, resolvedProfile.cloudPowerRange.y);
+            hourly.cloudAlphaTarget = Random.Range(resolvedProfile.cloudAlphaRange.x, resolvedProfile.cloudAlphaRange.y);
+            hourly.skyCloudAlpha = Random.Range(resolvedProfile.skyCloudAlphaRange.x, resolvedProfile.skyCloudAlphaRange.y);
+            hourly.skyCloudPower = Random.Range(resolvedProfile.skyCloudPowerRange.x, resolvedProfile.skyCloudPowerRange.y);
+            hourly.cloudSoftness = resolvedProfile.cloudSoftness;
+            hourly.cloudCoverageBias = resolvedProfile.cloudCoverageBias;
+            hourly.cloudTurbulence = resolvedProfile.cloudTurbulence;
+            hourly.cloudWarpStrength = resolvedProfile.cloudWarpStrength;
+            hourly.cloudTint = resolvedProfile.cloudTint;
+            hourly.cloudShadowStrength = resolvedProfile.cloudShadowStrength;
+            hourly.cloudGreyStrength = resolvedProfile.cloudGreyStrength;
+            hourly.cloudSunLightStrength = resolvedProfile.cloudSunLightStrength;
 
             // Dedicated scene cloud layer
-            hourly.sceneCloudAlpha = Random.Range(preset.sceneCloudAlphaRange.x, preset.sceneCloudAlphaRange.y);
-            hourly.sceneCloudPower = Random.Range(preset.sceneCloudPowerRange.x, preset.sceneCloudPowerRange.y);
-            hourly.sceneCloudSoftness = preset.sceneCloudSoftness;
-            hourly.sceneCloudCoverageBias = preset.sceneCloudCoverageBias;
-            hourly.sceneCloudTurbulence = preset.sceneCloudTurbulence;
-            hourly.sceneCloudWarpStrength = preset.sceneCloudWarpStrength;
-            hourly.sceneCloudTint = preset.sceneCloudTint;
-            hourly.sceneCloudShadowTint = preset.sceneCloudShadowTint;
-            hourly.planeEdgeFade = preset.planeEdgeFade;
-            hourly.planeRadialFade = preset.planeRadialFade;
-            hourly.planeHeightFade = preset.planeHeightFade;
-            hourly.sceneCloudFresnelFade = preset.sceneCloudFresnelFade;
-            hourly.sceneCloudMacroRoundness = preset.sceneCloudMacroRoundness;
-            hourly.sceneCloudDetailStrength = preset.sceneCloudDetailStrength;
-            hourly.sceneCloudDensityContrast = preset.sceneCloudDensityContrast;
-            hourly.sceneCloudErosionStrength = preset.sceneCloudErosionStrength;
-            hourly.sceneCloudSecondLayerStrength = preset.sceneCloudSecondLayerStrength;
-            hourly.sceneCloudSilverLiningStrength = preset.sceneCloudSilverLiningStrength;
-            hourly.sceneCloudBottomDarkening = preset.sceneCloudBottomDarkening;
-            hourly.sceneCloudDriftMultiplier = preset.sceneCloudDriftMultiplier;
+            hourly.sceneCloudAlpha = Random.Range(resolvedProfile.sceneCloudAlphaRange.x, resolvedProfile.sceneCloudAlphaRange.y);
+            hourly.sceneCloudPower = Random.Range(resolvedProfile.sceneCloudPowerRange.x, resolvedProfile.sceneCloudPowerRange.y);
+            hourly.sceneCloudSoftness = resolvedProfile.sceneCloudSoftness;
+            hourly.sceneCloudCoverageBias = resolvedProfile.sceneCloudCoverageBias;
+            hourly.sceneCloudTurbulence = resolvedProfile.sceneCloudTurbulence;
+            hourly.sceneCloudWarpStrength = resolvedProfile.sceneCloudWarpStrength;
+            hourly.sceneCloudTint = resolvedProfile.sceneCloudTint;
+            hourly.sceneCloudShadowTint = resolvedProfile.sceneCloudShadowTint;
+            hourly.planeEdgeFade = resolvedProfile.planeEdgeFade;
+            hourly.planeRadialFade = resolvedProfile.planeRadialFade;
+            hourly.planeHeightFade = resolvedProfile.planeHeightFade;
+            hourly.sceneCloudFresnelFade = resolvedProfile.sceneCloudFresnelFade;
+            hourly.sceneCloudMacroRoundness = resolvedProfile.sceneCloudMacroRoundness;
+            hourly.sceneCloudDetailStrength = resolvedProfile.sceneCloudDetailStrength;
+            hourly.sceneCloudDensityContrast = resolvedProfile.sceneCloudDensityContrast;
+            hourly.sceneCloudErosionStrength = resolvedProfile.sceneCloudErosionStrength;
+            hourly.sceneCloudSecondLayerStrength = resolvedProfile.sceneCloudSecondLayerStrength;
+            hourly.sceneCloudSilverLiningStrength = resolvedProfile.sceneCloudSilverLiningStrength;
+            hourly.sceneCloudBottomDarkening = resolvedProfile.sceneCloudBottomDarkening;
+            hourly.sceneCloudDriftMultiplier = resolvedProfile.sceneCloudDriftMultiplier;
 
             // Terrain cloud shadow field
-            hourly.terrainCloudShadowStrength = preset.terrainCloudShadowStrength;
-            hourly.terrainCloudShadowScale = preset.terrainCloudShadowScale;
-            hourly.terrainCloudShadowSoftness = preset.terrainCloudShadowSoftness;
-            hourly.terrainCloudShadowBias = preset.terrainCloudShadowBias;
-            hourly.terrainCloudShadowDriftMultiplier = preset.terrainCloudShadowDriftMultiplier;
-            hourly.terrainCloudShadowTint = preset.terrainCloudShadowTint;
+            hourly.terrainCloudShadowStrength = resolvedProfile.terrainCloudShadowStrength;
+            hourly.terrainCloudShadowScale = resolvedProfile.terrainCloudShadowScale;
+            hourly.terrainCloudShadowSoftness = resolvedProfile.terrainCloudShadowSoftness;
+            hourly.terrainCloudShadowBias = resolvedProfile.terrainCloudShadowBias;
+            hourly.terrainCloudShadowDriftMultiplier = resolvedProfile.terrainCloudShadowDriftMultiplier;
+            hourly.terrainCloudShadowTint = resolvedProfile.terrainCloudShadowTint;
 
             // Volumetric clouds
-            hourly.volumeDensity = preset.volumeDensity;
-            hourly.volumeAbsorption = preset.volumeAbsorption;
-            hourly.volumeLightingStrength = preset.volumeLightingStrength;
-            hourly.volumeAlphaMultiplier = preset.volumeAlphaMultiplier;
-            hourly.volumeClusterScale = preset.volumeClusterScale;
-            hourly.volumeClusterDensity = preset.volumeClusterDensity;
-            hourly.volumeDetailStrength = preset.volumeDetailStrength;
-            hourly.volumeEdgeFade = preset.volumeEdgeFade;
+            hourly.volumeDensity = resolvedProfile.volumeDensity;
+            hourly.volumeAbsorption = resolvedProfile.volumeAbsorption;
+            hourly.volumeLightingStrength = resolvedProfile.volumeLightingStrength;
+            hourly.volumeAlphaMultiplier = resolvedProfile.volumeAlphaMultiplier;
+            hourly.volumeClusterScale = resolvedProfile.volumeClusterScale;
+            hourly.volumeClusterDensity = resolvedProfile.volumeClusterDensity;
+            hourly.volumeDetailStrength = resolvedProfile.volumeDetailStrength;
+            hourly.volumeEdgeFade = resolvedProfile.volumeEdgeFade;
+        }
+
+#if UNITY_EDITOR
+        public void ApplyWeatherPresetPreviewInEditor(int presetIndex)
+        {
+            if (weatherDataPresets == null || presetIndex < 0 || presetIndex >= weatherDataPresets.Length)
+                return;
+
+            ApplyWeatherPresetPreviewInEditor(weatherDataPresets[presetIndex]);
+        }
+
+        public void ApplyWeatherPresetPreviewInEditor(WeatherData preset)
+        {
+            if (preset == null)
+                return;
+
+            WeatherPresetAuthoringUtility.ResolvedWeatherProfile resolvedProfile =
+                WeatherPresetAuthoringUtility.BuildResolvedProfile(preset);
+
+            currentWeatherPreset = preset;
+            weatherCondition = preset.weatherCondition;
+            RenderSettings.fogDensity = resolvedProfile.fogStrength;
+
+            float sceneCloudAlpha = Midpoint(resolvedProfile.sceneCloudAlphaRange);
+            float sceneCloudPower = Midpoint(resolvedProfile.sceneCloudPowerRange);
+            float skyCloudAlpha = Midpoint(resolvedProfile.skyCloudAlphaRange);
+            float skyCloudPower = Midpoint(resolvedProfile.skyCloudPowerRange);
+
+            HashSet<Renderer> previewActiveClouds = new HashSet<Renderer>();
+            if (preset.activeClouds != null)
+            {
+                for (int i = 0; i < preset.activeClouds.Count; i++)
+                {
+                    if (preset.activeClouds[i] != null)
+                        previewActiveClouds.Add(preset.activeClouds[i]);
+                }
+            }
+
+            if (cloudRenderer != null)
+            {
+                for (int i = 0; i < cloudRenderer.Length; i++)
+                {
+                    HourlyClouds hourlyCloud = cloudRenderer[i];
+                    if (hourlyCloud == null || hourlyCloud.cloudRenderer == null)
+                        continue;
+
+                    if (hourlyCloud.mpb == null)
+                        hourlyCloud.mpb = new MaterialPropertyBlock();
+
+                    bool isActive = previewActiveClouds.Contains(hourlyCloud.cloudRenderer);
+                    hourlyCloud.cloudAlpha = isActive ? sceneCloudAlpha : 0f;
+                    hourlyCloud.cloudPower = isActive ? sceneCloudPower : 5f;
+
+                    hourlyCloud.cloudRenderer.GetPropertyBlock(hourlyCloud.mpb);
+                    hourlyCloud.mpb.SetFloat(ID_CloudAlpha, hourlyCloud.cloudAlpha);
+                    hourlyCloud.mpb.SetFloat(ID_CloudPower, hourlyCloud.cloudPower);
+                    hourlyCloud.mpb.SetVector(ID_CloudSpeed, Vector4.zero);
+                    hourlyCloud.mpb.SetFloat(ID_CloudSoftness, resolvedProfile.sceneCloudSoftness);
+                    hourlyCloud.mpb.SetFloat(ID_CloudCoverageBias, resolvedProfile.sceneCloudCoverageBias);
+                    hourlyCloud.mpb.SetFloat(ID_CloudTurbulence, resolvedProfile.sceneCloudTurbulence);
+                    hourlyCloud.mpb.SetFloat(ID_CloudWarpStrength, resolvedProfile.sceneCloudWarpStrength);
+                    hourlyCloud.mpb.SetFloat(ID_EdgeFade, resolvedProfile.planeEdgeFade);
+                    hourlyCloud.mpb.SetFloat(ID_RadialFade, resolvedProfile.planeRadialFade);
+                    hourlyCloud.mpb.SetFloat(ID_HeightFade, resolvedProfile.planeHeightFade);
+                    hourlyCloud.mpb.SetFloat(ID_FresnelFade, resolvedProfile.sceneCloudFresnelFade);
+                    hourlyCloud.mpb.SetFloat(ID_MacroRoundness, resolvedProfile.sceneCloudMacroRoundness);
+                    hourlyCloud.mpb.SetFloat(ID_DetailStrength, resolvedProfile.sceneCloudDetailStrength);
+                    hourlyCloud.mpb.SetFloat(ID_DensityContrast, resolvedProfile.sceneCloudDensityContrast);
+                    hourlyCloud.mpb.SetFloat(ID_ErosionStrength, resolvedProfile.sceneCloudErosionStrength);
+                    hourlyCloud.mpb.SetFloat(ID_SecondLayerStrength, resolvedProfile.sceneCloudSecondLayerStrength);
+                    hourlyCloud.mpb.SetFloat(ID_SilverLiningStrength, resolvedProfile.sceneCloudSilverLiningStrength);
+                    hourlyCloud.mpb.SetFloat(ID_BottomDarkening, resolvedProfile.sceneCloudBottomDarkening);
+                    hourlyCloud.mpb.SetColor(ID_CloudColour, resolvedProfile.sceneCloudTint);
+                    hourlyCloud.mpb.SetColor(ID_ShadowColour, resolvedProfile.sceneCloudShadowTint);
+                    hourlyCloud.cloudRenderer.SetPropertyBlock(hourlyCloud.mpb);
+
+                    cloudRenderer[i] = hourlyCloud;
+                }
+            }
+
+            Shader.SetGlobalFloat(ID_WeatherCloudShadowStrength, resolvedProfile.terrainCloudShadowStrength);
+            Shader.SetGlobalFloat(ID_WeatherCloudShadowScale, Mathf.Max(1f, resolvedProfile.terrainCloudShadowScale));
+            Shader.SetGlobalFloat(ID_WeatherCloudShadowSoftness, Mathf.Max(0.01f, resolvedProfile.terrainCloudShadowSoftness));
+            Shader.SetGlobalFloat(ID_WeatherCloudShadowBias, resolvedProfile.terrainCloudShadowBias);
+            Shader.SetGlobalVector(ID_WeatherCloudShadowOffset, Vector4.zero);
+            Shader.SetGlobalColor(ID_WeatherCloudShadowTint, resolvedProfile.terrainCloudShadowTint);
+
+            Shader.SetGlobalColor(ID_VolCloudColour, resolvedProfile.cloudTint);
+            Shader.SetGlobalColor(ID_VolShadowColour, Color.Lerp(resolvedProfile.cloudTint * 0.65f, new Color(0.62f, 0.68f, 0.76f, 1f), 0.65f));
+            Shader.SetGlobalFloat(ID_VolDensity, resolvedProfile.volumeDensity);
+            Shader.SetGlobalFloat(ID_VolAbsorption, resolvedProfile.volumeAbsorption);
+            Shader.SetGlobalFloat(ID_VolLightingStrength, resolvedProfile.volumeLightingStrength);
+            Shader.SetGlobalVector(ID_VolCloudSpeed, Vector4.zero);
+            Shader.SetGlobalFloat(ID_VolCloudSoftness, resolvedProfile.cloudSoftness);
+            Shader.SetGlobalFloat(ID_VolCoverageBias, resolvedProfile.cloudCoverageBias);
+            Shader.SetGlobalFloat(ID_VolTurbulence, resolvedProfile.cloudTurbulence);
+            Shader.SetGlobalFloat(ID_VolWarpStrength, resolvedProfile.cloudWarpStrength);
+            Shader.SetGlobalFloat(ID_VolAlphaMultiplier, resolvedProfile.volumeAlphaMultiplier);
+            Shader.SetGlobalFloat(ID_VolClusterScale, resolvedProfile.volumeClusterScale);
+            Shader.SetGlobalFloat(ID_VolClusterDensity, resolvedProfile.volumeClusterDensity);
+            Shader.SetGlobalFloat(ID_VolDetailStrength, resolvedProfile.volumeDetailStrength);
+            Shader.SetGlobalFloat(ID_VolEdgeFade, resolvedProfile.volumeEdgeFade);
+            Shader.SetGlobalVector(ID_VolFieldOffset, Vector4.zero);
+
+            Material skyMat = RenderSettings.skybox;
+            if (skyMat != null)
+            {
+                if (skyMat.HasProperty("_CloudAlpha")) skyMat.SetFloat("_CloudAlpha", skyCloudAlpha);
+                if (skyMat.HasProperty("_CloudPower")) skyMat.SetFloat("_CloudPower", skyCloudPower);
+                if (skyMat.HasProperty("_CloudSpeed")) skyMat.SetVector("_CloudSpeed", Vector4.zero);
+                if (skyMat.HasProperty("_CloudSoftness")) skyMat.SetFloat("_CloudSoftness", resolvedProfile.cloudSoftness);
+                if (skyMat.HasProperty("_CloudCoverageBias")) skyMat.SetFloat("_CloudCoverageBias", resolvedProfile.cloudCoverageBias);
+                if (skyMat.HasProperty("_CloudTurbulence")) skyMat.SetFloat("_CloudTurbulence", resolvedProfile.cloudTurbulence);
+                if (skyMat.HasProperty("_CloudWarpStrength")) skyMat.SetFloat("_CloudWarpStrength", resolvedProfile.cloudWarpStrength);
+                if (skyMat.HasProperty("_CloudColor")) skyMat.SetColor("_CloudColor", resolvedProfile.cloudTint);
+                if (skyMat.HasProperty("_CloudShadowStrength")) skyMat.SetFloat("_CloudShadowStrength", resolvedProfile.cloudShadowStrength);
+                if (skyMat.HasProperty("_CloudGreyStrength")) skyMat.SetFloat("_CloudGreyStrength", resolvedProfile.cloudGreyStrength);
+                if (skyMat.HasProperty("_CloudSunLightStrength")) skyMat.SetFloat("_CloudSunLightStrength", resolvedProfile.cloudSunLightStrength);
+                if (skyMat.HasProperty("_FogColor")) skyMat.SetColor("_FogColor", RenderSettings.fogColor);
+                if (skyMat.HasProperty("_FogDensity")) skyMat.SetFloat("_FogDensity", RenderSettings.fogDensity);
+            }
+
+            UnityEditor.EditorUtility.SetDirty(this);
+            UnityEditor.SceneView.RepaintAll();
+        }
+#endif
+
+        private static float Midpoint(Vector2 range)
+        {
+            return (range.x + range.y) * 0.5f;
         }
 
         private static Vector2 DirectionFromDegrees(float degrees)
@@ -882,7 +1080,8 @@ namespace TimeWeather
             if (currentWeatherPreset == null)
                 return;
 
-            RenderSettings.fogDensity = Mathf.Lerp(RenderSettings.fogDensity, currentWeatherPreset.fogStrength, hourlyTimePercent * fogSpeed);
+            float currentFogStrength = Mathf.Lerp(currentHour.fogStrength, nextHour.fogStrength, hourlyTimePercent);
+            RenderSettings.fogDensity = Mathf.Lerp(RenderSettings.fogDensity, currentFogStrength, hourlyTimePercent * fogSpeed);
 
             if (weatherAudio == null)
             {
@@ -1070,11 +1269,38 @@ namespace TimeWeather
                 if (skyMat.HasProperty("_FogDensity"))
                     skyMat.SetFloat("_FogDensity", RenderSettings.fogDensity);
 
+                float fogVisualInfluence = Mathf.InverseLerp(
+    skyFogVisualStart,
+    Mathf.Max(skyFogVisualStart + 0.0001f, skyFogVisualEnd),
+    currentFogStrength
+);
+
+                if (skyMat.HasProperty("_FogVisualInfluence"))
+                    skyMat.SetFloat("_FogVisualInfluence", fogVisualInfluence);
+
+                if (skyMat.HasProperty("_FogTintStart"))
+                    skyMat.SetFloat("_FogTintStart", skyFogTintStart);
+
+                if (skyMat.HasProperty("_FogTintEnd"))
+                    skyMat.SetFloat("_FogTintEnd", skyFogTintEnd);
+
+                if (skyMat.HasProperty("_FogTintStrength"))
+                    skyMat.SetFloat("_FogTintStrength", skyFogTintStrength);
+
+                if (skyMat.HasProperty("_FogTintTopWeight"))
+                    skyMat.SetFloat("_FogTintTopWeight", skyFogTintTopWeight);
+
+                if (skyMat.HasProperty("_FogTintHorizonWeight"))
+                    skyMat.SetFloat("_FogTintHorizonWeight", skyFogTintHorizonWeight);
+
                 if (skyMat.HasProperty("_FogSkyStrength"))
-                    skyMat.SetFloat("_FogSkyStrength", Mathf.Lerp(2.0f, 6.0f, Mathf.Clamp01(currentWeatherPreset.fogStrength)));
+                    skyMat.SetFloat("_FogSkyStrength", Mathf.Lerp(2.5f, 18.0f, fogVisualInfluence));
 
                 if (skyMat.HasProperty("_FogHorizonBoost"))
-                    skyMat.SetFloat("_FogHorizonBoost", Mathf.Lerp(2.0f, 5.0f, Mathf.Clamp01(currentWeatherPreset.fogStrength)));
+                    skyMat.SetFloat("_FogHorizonBoost", Mathf.Lerp(2.5f, 12.0f, fogVisualInfluence));
+
+                if (skyMat.HasProperty("_FogMax"))
+                    skyMat.SetFloat("_FogMax", Mathf.Lerp(0.95f, 1.0f, fogVisualInfluence));
 
                 if (TryGetCurrentVolumetricCloudState(
     out Color volCloudTint,
@@ -1278,6 +1504,7 @@ namespace TimeWeather
         public float volumeClusterDensity;
         public float volumeDetailStrength;
         public float volumeEdgeFade;
+        public float fogStrength;
 
         [Tooltip("Whether it is raining during this hour")]
         public bool isRaining = false;

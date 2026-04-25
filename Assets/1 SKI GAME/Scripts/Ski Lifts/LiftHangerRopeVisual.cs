@@ -4,7 +4,7 @@ using UnityEngine;
 /// Purely visual rope between a cable anchor and a hanger (chair/t-bar assembly).
 /// Deterministic (no physics), updates every frame to match LiftCarrierHanger.
 /// </summary>
-[ExecuteAlways]
+//[ExecuteAlways]
 [DisallowMultipleComponent]
 public class LiftHangerRopeVisual : MonoBehaviour
 {

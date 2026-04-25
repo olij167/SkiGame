@@ -43,6 +43,9 @@ public static class DailyShopService
         int polesCount,
         int hatCount,
         int jacketCount,
+        int glovesCount,
+        int bootsCount,
+        int accessoryCount,
         int stockPerOffer,
         Func<string, bool> isOwnedId)
     {
@@ -53,7 +56,7 @@ public static class DailyShopService
         {
             BackfillMissingOffers(
                 catalog, state,
-                skinPatternCount, eyeIconCount, skisCount, polesCount, hatCount, jacketCount,
+                skinPatternCount, eyeIconCount, skisCount, polesCount, hatCount, jacketCount, glovesCount, bootsCount, accessoryCount,
                 stockPerOffer, dayKey,
                 isOwnedId
             );
@@ -65,7 +68,7 @@ public static class DailyShopService
         state = new DayOffers
         {
             dayKey = dayKey,
-            entries = new List<Entry>(skinPatternCount + eyeIconCount + skisCount + polesCount + hatCount + jacketCount)
+            entries = new List<Entry>(skinPatternCount + eyeIconCount + skisCount + polesCount + hatCount + jacketCount + glovesCount + bootsCount + accessoryCount)
         };
 
         var rng = new System.Random(dayKey);
@@ -89,6 +92,9 @@ public static class DailyShopService
         // Wearables: treat like gear for offer logic
         BuildGearOffers(catalog, CustomizationOptionType.Hat, hatCount, stockPerOffer, rng, state.entries, included, isOwnedId);
         BuildGearOffers(catalog, CustomizationOptionType.Jacket, jacketCount, stockPerOffer, rng, state.entries, included, isOwnedId);
+        BuildGearOffers(catalog, CustomizationOptionType.Gloves, glovesCount, stockPerOffer, rng, state.entries, included, isOwnedId);
+        BuildGearOffers(catalog, CustomizationOptionType.Boots, bootsCount, stockPerOffer, rng, state.entries, included, isOwnedId);
+        BuildGearOffers(catalog, CustomizationOptionType.Accessory, accessoryCount, stockPerOffer, rng, state.entries, included, isOwnedId);
 
         Save(state);
     }
@@ -102,6 +108,9 @@ public static class DailyShopService
         int polesCount,
         int hatCount,
         int jacketCount,
+        int glovesCount,
+        int bootsCount,
+        int accessoryCount,
         int stockPerOffer,
         int dayKey,
         Func<string, bool> isOwnedId)
@@ -167,6 +176,18 @@ public static class DailyShopService
         int needJackets = Mathf.Max(0, jacketCount - Count(CustomizationOptionType.Jacket));
         if (needJackets > 0)
             BuildGearOffers(catalog, CustomizationOptionType.Jacket, needJackets, stockPerOffer, rng, state.entries, included, isOwnedId);
+
+        int needGloves = Mathf.Max(0, glovesCount - Count(CustomizationOptionType.Gloves));
+        if (needGloves > 0)
+            BuildGearOffers(catalog, CustomizationOptionType.Gloves, needGloves, stockPerOffer, rng, state.entries, included, isOwnedId);
+
+        int needBoots = Mathf.Max(0, bootsCount - Count(CustomizationOptionType.Boots));
+        if (needBoots > 0)
+            BuildGearOffers(catalog, CustomizationOptionType.Boots, needBoots, stockPerOffer, rng, state.entries, included, isOwnedId);
+
+        int needAccessories = Mathf.Max(0, accessoryCount - Count(CustomizationOptionType.Accessory));
+        if (needAccessories > 0)
+            BuildGearOffers(catalog, CustomizationOptionType.Accessory, needAccessories, stockPerOffer, rng, state.entries, included, isOwnedId);
     }
 
     private static void BuildGearOffers(
@@ -278,7 +299,7 @@ public static class DailyShopService
 
         if (candidates.Count == 0) return;
 
-        // Shuffle (Fisher–Yates)
+        // Shuffle (Fisher-Yates)
         for (int i = candidates.Count - 1; i > 0; i--)
         {
             int j = rng.Next(i + 1);

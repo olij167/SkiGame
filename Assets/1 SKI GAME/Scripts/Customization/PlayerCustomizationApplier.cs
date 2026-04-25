@@ -153,7 +153,7 @@ public class PlayerCustomizationApplier : MonoBehaviour
         if (profile == null || profile.customization == null) return;
         var state = profile.customization;
 
-        // Defaults (only on first-time init; later empty hat/jacket means "none")
+        // Defaults (only on first-time init; later empty wearable ids mean "none")
         if (catalog != null && state != null)
         {
             if (!state.customizationInitialized)
@@ -173,6 +173,15 @@ public class PlayerCustomizationApplier : MonoBehaviour
 
                 if (string.IsNullOrEmpty(state.equippedJacketId))
                     state.equippedJacketId = "";
+
+                if (string.IsNullOrEmpty(state.equippedGlovesId))
+                    state.equippedGlovesId = "";
+
+                if (string.IsNullOrEmpty(state.equippedBootsId))
+                    state.equippedBootsId = "";
+
+                if (string.IsNullOrEmpty(state.equippedAccessoryId))
+                    state.equippedAccessoryId = "";
 
                 state.customizationInitialized = true;
             }
@@ -194,18 +203,50 @@ public class PlayerCustomizationApplier : MonoBehaviour
             else ApplyCosmetic(state.equippedHatId);
 
             // Jacket: empty = none
-            if (string.IsNullOrEmpty(state.equippedJacketId)) characterCustomizer.ClearJacket();
-            else ApplyCosmetic(state.equippedJacketId);
+            if (string.IsNullOrEmpty(state.equippedJacketId))
+            {
+                characterCustomizer.SetCurrentJacketOption(null);
+                characterCustomizer.ClearJacket();
+            }
+            else
+            {
+                ApplyCosmetic(state.equippedJacketId);
+            }
 
-            // Hat/Jacket colors are applied after cosmetics are ensured
+            if (string.IsNullOrEmpty(state.equippedAccessoryId))
+            {
+                characterCustomizer.SetCurrentAccessoryOption(null);
+                characterCustomizer.ClearAccessory();
+            }
+            else
+            {
+                ApplyCosmetic(state.equippedAccessoryId);
+            }
+
+            // Wearable colors are applied after cosmetics are ensured
             var hatApplied = ResolveAppliedGearColor(state.hatColor, state.hatUseDefaultColor, state.equippedHatId);
             var jacketApplied = ResolveAppliedGearColor(state.jacketColor, state.jacketUseDefaultColor, state.equippedJacketId);
+            var glovesApplied = ResolveAppliedGearColor(state.glovesColor, state.glovesUseDefaultColor, state.equippedGlovesId);
+            var bootsApplied = ResolveAppliedGearColor(state.bootsColor, state.bootsUseDefaultColor, state.equippedBootsId);
+            var accessoryApplied = ResolveAppliedGearColor(state.accessoryColor, state.accessoryUseDefaultColor, state.equippedAccessoryId);
+
+            if (string.IsNullOrEmpty(state.equippedGlovesId)) characterCustomizer.ClearGloves();
+            else ApplyCosmetic(state.equippedGlovesId);
+
+            if (string.IsNullOrEmpty(state.equippedBootsId)) characterCustomizer.ClearBoots();
+            else ApplyCosmetic(state.equippedBootsId);
 
             characterCustomizer.SetHatColor(hatApplied);
             characterCustomizer.SetJacketColor(jacketApplied);
+            characterCustomizer.SetGlovesColor(glovesApplied);
+            characterCustomizer.SetBootsColor(bootsApplied);
+            characterCustomizer.SetAccessoryColor(accessoryApplied);
 
             ApplyWearableExtraColors(state, CustomizationUIController.PatternTarget.Hat);
             ApplyWearableExtraColors(state, CustomizationUIController.PatternTarget.Jacket);
+            ApplyWearableExtraColors(state, CustomizationUIController.PatternTarget.Gloves);
+            ApplyWearableExtraColors(state, CustomizationUIController.PatternTarget.Boots);
+            ApplyWearableExtraColors(state, CustomizationUIController.PatternTarget.Accessory);
         }
 
         // Apply gear prefabs
@@ -255,6 +296,40 @@ public class PlayerCustomizationApplier : MonoBehaviour
             var previewPatternId = ResolveDefaultPatternIdForGear(optionId);
             skiController?.SetPolesPatternTexture(ResolvePatternTextureById(previewPatternId));
         }
+        else if (opt.type == CustomizationOptionType.Gloves)
+        {
+            if (characterCustomizer == null)
+                return;
+
+            if (opt.glovePrefab != null) characterCustomizer.SetGlovesPrefab(opt.glovePrefab);
+            else characterCustomizer.SetGloves(opt.customizerIndex);
+
+            characterCustomizer.SetGlovesColor(ResolveGearDefaultTint(optionId));
+            characterCustomizer.SetGlovesPatternTexture(ResolvePatternTextureById(ResolveDefaultPatternIdForGear(optionId)));
+        }
+        else if (opt.type == CustomizationOptionType.Boots)
+        {
+            if (characterCustomizer == null)
+                return;
+
+            if (opt.bootPrefab != null) characterCustomizer.SetBootsPrefab(opt.bootPrefab);
+            else characterCustomizer.SetBoots(opt.customizerIndex);
+
+            characterCustomizer.SetBootsColor(ResolveGearDefaultTint(optionId));
+            characterCustomizer.SetBootsPatternTexture(ResolvePatternTextureById(ResolveDefaultPatternIdForGear(optionId)));
+        }
+        else if (opt.type == CustomizationOptionType.Accessory)
+        {
+            if (characterCustomizer == null)
+                return;
+
+            if (opt.accessoryPrefab != null) characterCustomizer.SetAccessoryPrefab(opt.accessoryPrefab);
+            else characterCustomizer.SetAccessory(opt.customizerIndex);
+
+            characterCustomizer.SetCurrentAccessoryOption(opt);
+            characterCustomizer.SetAccessoryColor(ResolveGearDefaultTint(optionId));
+            characterCustomizer.SetAccessoryPatternTexture(ResolvePatternTextureById(ResolveDefaultPatternIdForGear(optionId)));
+        }
     }
 
     public void ApplySkisColorToLoadout(PlayerStatsProfile profile, Color c)
@@ -277,17 +352,26 @@ public class PlayerCustomizationApplier : MonoBehaviour
         var polesPatternId = ResolveAppliedPatternId(state.equippedPolesPatternId, state.polesUseDefaultPattern, state.equippedPolesId);
         var hatPatternId = ResolveAppliedPatternId(state.equippedHatPatternId, state.hatUseDefaultPattern, state.equippedHatId);
         var jacketPatternId = ResolveAppliedPatternId(state.equippedJacketPatternId, state.jacketUseDefaultPattern, state.equippedJacketId);
+        var glovesPatternId = ResolveAppliedPatternId(state.equippedGlovesPatternId, state.glovesUseDefaultPattern, state.equippedGlovesId);
+        var bootsPatternId = ResolveAppliedPatternId(state.equippedBootsPatternId, state.bootsUseDefaultPattern, state.equippedBootsId);
+        var accessoryPatternId = ResolveAppliedPatternId(state.equippedAccessoryPatternId, state.accessoryUseDefaultPattern, state.equippedAccessoryId);
 
         var skisTex = ResolvePatternTextureById(skisPatternId);
         var polesTex = ResolvePatternTextureById(polesPatternId);
         var hatTex = ResolvePatternTextureById(hatPatternId);
         var jacketTex = ResolvePatternTextureById(jacketPatternId);
+        var glovesTex = ResolvePatternTextureById(glovesPatternId);
+        var bootsTex = ResolvePatternTextureById(bootsPatternId);
+        var accessoryTex = ResolvePatternTextureById(accessoryPatternId);
 
         skiController?.SetSkisPatternTexture(skisTex);
         skiController?.SetPolesPatternTexture(polesTex);
 
         characterCustomizer?.SetHatPatternTexture(hatTex);
         characterCustomizer?.SetJacketPatternTexture(jacketTex);
+        characterCustomizer?.SetGlovesPatternTexture(glovesTex);
+        characterCustomizer?.SetBootsPatternTexture(bootsTex);
+        characterCustomizer?.SetAccessoryPatternTexture(accessoryTex);
     }
 
     private string GetDefaultId(CustomizationOptionType type)
@@ -338,8 +422,47 @@ public class PlayerCustomizationApplier : MonoBehaviour
             case CustomizationOptionType.Jacket:
                 if (opt.jacketPrefab != null) characterCustomizer.SetJacketPrefab(opt.jacketPrefab);
                 else characterCustomizer.SetJacket(opt.customizerIndex);
+
+                characterCustomizer.SetCurrentJacketOption(opt);
+                break;
+
+            case CustomizationOptionType.Gloves:
+                if (opt.glovePrefab != null) characterCustomizer.SetGlovesPrefab(opt.glovePrefab);
+                else characterCustomizer.SetGloves(opt.customizerIndex);
+                break;
+
+            case CustomizationOptionType.Boots:
+                if (opt.bootPrefab != null) characterCustomizer.SetBootsPrefab(opt.bootPrefab);
+                else characterCustomizer.SetBoots(opt.customizerIndex);
+                break;
+
+            case CustomizationOptionType.Accessory:
+                if (opt.accessoryPrefab != null) characterCustomizer.SetAccessoryPrefab(opt.accessoryPrefab);
+                else characterCustomizer.SetAccessory(opt.customizerIndex);
+
+                characterCustomizer.SetCurrentAccessoryOption(opt);
                 break;
         }
+    }
+
+    private GameObject ResolveWearablePrefabByOptionId(string optionId)
+    {
+        if (string.IsNullOrEmpty(optionId) || catalog == null)
+            return null;
+
+        var opt = catalog.FindById(optionId);
+        if (opt == null)
+            return null;
+
+        return opt.type switch
+        {
+            CustomizationOptionType.Hat => opt.hatPrefab != null ? opt.hatPrefab : characterCustomizer != null ? characterCustomizer.GetHatPrefabAtIndex(opt.customizerIndex) : null,
+            CustomizationOptionType.Jacket => opt.jacketPrefab != null ? opt.jacketPrefab : characterCustomizer != null ? characterCustomizer.GetJacketPrefabAtIndex(opt.customizerIndex) : null,
+            CustomizationOptionType.Gloves => opt.glovePrefab != null ? opt.glovePrefab : characterCustomizer != null ? characterCustomizer.GetGlovePrefabAtIndex(opt.customizerIndex) : null,
+            CustomizationOptionType.Boots => opt.bootPrefab != null ? opt.bootPrefab : characterCustomizer != null ? characterCustomizer.GetBootPrefabAtIndex(opt.customizerIndex) : null,
+            CustomizationOptionType.Accessory => opt.accessoryPrefab != null ? opt.accessoryPrefab : characterCustomizer != null ? characterCustomizer.GetAccessoryPrefabAtIndex(opt.customizerIndex) : null,
+            _ => null
+        };
     }
 
     private void ApplyGear(string optionId, bool isSkis)
@@ -445,6 +568,21 @@ public class PlayerCustomizationApplier : MonoBehaviour
                 equippedId = state.equippedJacketId;
                 break;
 
+            case CustomizationUIController.PatternTarget.Gloves:
+                slotKey = "Gloves";
+                equippedId = state.equippedGlovesId;
+                break;
+
+            case CustomizationUIController.PatternTarget.Boots:
+                slotKey = "Boots";
+                equippedId = state.equippedBootsId;
+                break;
+
+            case CustomizationUIController.PatternTarget.Accessory:
+                slotKey = "Accessory";
+                equippedId = state.equippedAccessoryId;
+                break;
+
             default:
                 return;
         }
@@ -456,37 +594,199 @@ public class PlayerCustomizationApplier : MonoBehaviour
         if (opt == null) return;
 
         GameObject prefab = null;
-        if (target == CustomizationUIController.PatternTarget.Hat)
+        switch (target)
         {
-            prefab = opt.hatPrefab != null
-                ? opt.hatPrefab
-                : characterCustomizer.GetHatPrefabAtIndex(opt.customizerIndex);
-        }
-        else
-        {
-            prefab = opt.jacketPrefab != null
-                ? opt.jacketPrefab
-                : characterCustomizer.GetJacketPrefabAtIndex(opt.customizerIndex);
+            case CustomizationUIController.PatternTarget.Hat:
+                prefab = opt.hatPrefab != null
+                    ? opt.hatPrefab
+                    : characterCustomizer.GetHatPrefabAtIndex(opt.customizerIndex);
+                break;
+
+            case CustomizationUIController.PatternTarget.Jacket:
+                prefab = opt.jacketPrefab != null
+                    ? opt.jacketPrefab
+                    : characterCustomizer.GetJacketPrefabAtIndex(opt.customizerIndex);
+                break;
+
+            case CustomizationUIController.PatternTarget.Gloves:
+                prefab = opt.glovePrefab != null
+                    ? opt.glovePrefab
+                    : characterCustomizer.GetGlovePrefabAtIndex(opt.customizerIndex);
+                break;
+
+            case CustomizationUIController.PatternTarget.Boots:
+                prefab = opt.bootPrefab != null
+                    ? opt.bootPrefab
+                    : characterCustomizer.GetBootPrefabAtIndex(opt.customizerIndex);
+                break;
+
+            case CustomizationUIController.PatternTarget.Accessory:
+                prefab = opt.accessoryPrefab != null
+                    ? opt.accessoryPrefab
+                    : characterCustomizer.GetAccessoryPrefabAtIndex(opt.customizerIndex);
+                break;
         }
 
         var wearable = prefab != null ? prefab.GetComponent<WearableAttachment>() : null;
         var channels = wearable != null ? wearable.GetExtraChannels() : null;
-        if (channels == null) return;
-
-        for (int i = 0; i < channels.Count; i++)
+        if (channels != null)
         {
-            var channel = channels[i];
-            if (channel == null || string.IsNullOrEmpty(channel.id))
-                continue;
+            for (int i = 0; i < channels.Count; i++)
+            {
+                var channel = channels[i];
+                if (channel == null || string.IsNullOrEmpty(channel.id))
+                    continue;
 
-            var color = channel.defaultColor;
-            if (state.TryGetExtraColor(slotKey, channel.id, out var saved))
-                color = saved;
-
-            if (target == CustomizationUIController.PatternTarget.Hat)
-                characterCustomizer.SetHatChannelColor(channel.id, color);
-            else
-                characterCustomizer.SetJacketChannelColor(channel.id, color);
+                ApplyWearableChannelColor(target, slotKey, state, channel.id, channel.defaultColor);
+            }
         }
+
+        if (target == CustomizationUIController.PatternTarget.Jacket &&
+            opt.UsesLimbSecondaryColour())
+        {
+            string limbChannelId = opt.GetResolvedLimbSecondaryChannelId("secondary");
+            var authoredChannel = wearable != null ? wearable.GetChannel(limbChannelId) : null;
+
+            if (authoredChannel == null)
+                ApplyWearableChannelColor(target, slotKey, state, limbChannelId, Color.white);
+        }
+    }
+
+    private void ApplyWearableChannelColor(
+        CustomizationUIController.PatternTarget target,
+        string slotKey,
+        PlayerStatsProfile.CustomizationState state,
+        string channelId,
+        Color defaultColor)
+    {
+        if (string.IsNullOrEmpty(channelId) || characterCustomizer == null || state == null)
+            return;
+
+        var color = defaultColor;
+        if (state.TryGetExtraColor(slotKey, channelId, out var saved))
+            color = saved;
+
+        switch (target)
+        {
+            case CustomizationUIController.PatternTarget.Hat:
+                characterCustomizer.SetHatChannelColor(channelId, color);
+                break;
+            case CustomizationUIController.PatternTarget.Jacket:
+                characterCustomizer.SetJacketChannelColor(channelId, color);
+                break;
+            case CustomizationUIController.PatternTarget.Gloves:
+                characterCustomizer.SetGlovesChannelColor(channelId, color);
+                break;
+            case CustomizationUIController.PatternTarget.Boots:
+                characterCustomizer.SetBootsChannelColor(channelId, color);
+                break;
+            case CustomizationUIController.PatternTarget.Accessory:
+                characterCustomizer.SetAccessoryChannelColor(channelId, color);
+                break;
+        }
+    }
+
+    public CustomizationOptionSO GetEquippedJacketOption()
+    {
+        if (_statsMgr == null)
+        {
+            _statsMgr = PlayerStatsManager.Instance != null
+                ? PlayerStatsManager.Instance
+                : FindObjectOfType<PlayerStatsManager>();
+        }
+
+        var profile = _statsMgr != null ? _statsMgr.Profile : null;
+        var state = profile != null ? profile.customization : null;
+        if (state == null || catalog == null || string.IsNullOrEmpty(state.equippedJacketId))
+            return null;
+
+        return catalog.FindById(state.equippedJacketId);
+    }
+
+    public Color GetResolvedEquippedJacketPrimaryColor(Color fallback)
+    {
+        if (_statsMgr == null)
+        {
+            _statsMgr = PlayerStatsManager.Instance != null
+                ? PlayerStatsManager.Instance
+                : FindObjectOfType<PlayerStatsManager>();
+        }
+
+        var profile = _statsMgr != null ? _statsMgr.Profile : null;
+        var state = profile != null ? profile.customization : null;
+        if (state == null)
+            return fallback;
+
+        if (string.IsNullOrEmpty(state.equippedJacketId))
+            return fallback;
+
+        return ResolveAppliedGearColor(state.jacketColor, state.jacketUseDefaultColor, state.equippedJacketId);
+    }
+
+    public Color GetResolvedEquippedJacketExtraColor(string channelId, Color fallback)
+    {
+        if (string.IsNullOrEmpty(channelId))
+            return fallback;
+
+        if (_statsMgr == null)
+        {
+            _statsMgr = PlayerStatsManager.Instance != null
+                ? PlayerStatsManager.Instance
+                : FindObjectOfType<PlayerStatsManager>();
+        }
+
+        var profile = _statsMgr != null ? _statsMgr.Profile : null;
+        var state = profile != null ? profile.customization : null;
+        if (state == null || catalog == null)
+            return fallback;
+
+        if (string.IsNullOrEmpty(state.equippedJacketId))
+            return fallback;
+
+        var opt = catalog.FindById(state.equippedJacketId);
+        if (opt == null)
+            return fallback;
+
+        GameObject prefab = opt.jacketPrefab != null
+            ? opt.jacketPrefab
+            : characterCustomizer != null ? characterCustomizer.GetJacketPrefabAtIndex(opt.customizerIndex) : null;
+
+        var wearable = prefab != null ? prefab.GetComponent<WearableAttachment>() : null;
+        if (wearable == null)
+        {
+            if (opt.UsesLimbSecondaryColour() &&
+                string.Equals(channelId, opt.GetResolvedLimbSecondaryChannelId("secondary"), System.StringComparison.Ordinal))
+            {
+                Color impliedColor = Color.white;
+                if (state.TryGetExtraColor("Jacket", channelId, out var savedColor))
+                    impliedColor = savedColor;
+
+                return impliedColor;
+            }
+
+            return fallback;
+        }
+
+        var channel = wearable.GetChannel(channelId);
+        if (channel == null)
+        {
+            if (!opt.UsesLimbSecondaryColour() ||
+                !string.Equals(channelId, opt.GetResolvedLimbSecondaryChannelId("secondary"), System.StringComparison.Ordinal))
+            {
+                return fallback;
+            }
+
+            Color impliedColor = Color.white;
+            if (state.TryGetExtraColor("Jacket", channelId, out var impliedSavedColor))
+                impliedColor = impliedSavedColor;
+
+            return impliedColor;
+        }
+
+        Color color = channel.defaultColor;
+        if (state.TryGetExtraColor("Jacket", channelId, out var saved))
+            color = saved;
+
+        return color;
     }
 }

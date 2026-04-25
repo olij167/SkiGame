@@ -5,7 +5,7 @@ using UnityEngine;
 /// using a LineRenderer instead of RopeToolkit. This should visually match
 /// the cyan gizmo path drawn by LiftLine at edit time and runtime.
 /// </summary>
-[ExecuteAlways]
+//[ExecuteAlways]
 [RequireComponent(typeof(LiftLine))]
 public class LiftRopeVisual : MonoBehaviour
 {

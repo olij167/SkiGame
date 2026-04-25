@@ -10,20 +10,28 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fdbcba145e2b2044cb595c56dafb02f8, type: 3}
-  m_Name: Beginner
+  m_Name: Expert
   m_EditorClassIdentifier: Assembly-CSharp::CustomizationOptionSO
-  id: ski 1
+  id: ski 4
   type: 4
-  displayName: Beginner Skis
+  displayName: Expert Skis
   description: 
-  icon: {fileID: 21300000, guid: 9cb8882496a07764185d4c01d8faf909, type: 3}
-  cost: 0
+  icon: {fileID: 21300000, guid: d8fffb9e4bfb8b745bbb5a1810d64997, type: 3}
+  cost: 30
   skinPatternTexture: {fileID: 0}
   eyeSprite: {fileID: 0}
   hatPrefab: {fileID: 0}
   jacketPrefab: {fileID: 0}
+  glovePrefab: {fileID: 0}
+  bootPrefab: {fileID: 0}
+  accessoryPrefab: {fileID: 0}
   customizerIndex: -1
-  gearProfile: {fileID: 11400000, guid: aea6564c77c1a1449b18e01828c56a86, type: 2}
+  gearProfile: {fileID: 11400000, guid: 041ca89061d637246bca9a148d2dedb1, type: 2}
+  leftArmLimbColourSource: 0
+  rightArmLimbColourSource: 0
+  leftLegLimbColourSource: 0
+  rightLegLimbColourSource: 0
+  limbSecondaryChannelId: secondary
   defaultPatternOption: {fileID: 0}
   defaultPatternId: 
   unlockPatternOptionsOnPurchase: []
@@ -32,6 +40,6 @@ MonoBehaviour:
   defaultPatternOffset: {x: 0, y: 0}
   defaultPatternRotation: 0
   hasTint: 1
-  defaultTint: {r: 0.8156863, g: 0.1254902, b: 0.5647059, a: 1}
+  defaultTint: {r: 0.5450981, g: 0, b: 0, a: 1}
   alwaysInStoreUntilOwned: 1
   excludeFromDailyRotation: 0

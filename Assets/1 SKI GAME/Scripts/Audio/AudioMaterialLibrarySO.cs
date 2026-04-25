@@ -3,7 +3,7 @@ using UnityEngine;
 
 [CreateAssetMenu(
     fileName = "AudioMaterialLibrary",
-    menuName = "Ski Game/Audio/Material Library")]
+    menuName = "SkiGame/Audio/Material Library")]
 public sealed class AudioMaterialLibrarySO : ScriptableObject
 {
     [SerializeField] private List<AudioSurfaceMaterialSO> materials = new List<AudioSurfaceMaterialSO>();

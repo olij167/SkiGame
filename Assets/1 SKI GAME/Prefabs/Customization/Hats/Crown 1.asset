@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fdbcba145e2b2044cb595c56dafb02f8, type: 3}
   m_Name: Crown 1
   m_EditorClassIdentifier: Assembly-CSharp::CustomizationOptionSO
-  id: crown
+  id: crown1
   type: 2
-  displayName: Crown
+  displayName: Another Crown
   description: 
   icon: {fileID: 21300000, guid: b4f3bf6d5ef9afa4e973b25177d6b2ff, type: 3}
   cost: 50
@@ -22,8 +22,16 @@ MonoBehaviour:
   eyeSprite: {fileID: 0}
   hatPrefab: {fileID: 9032651673039368988, guid: f8cff7329d4fa2440b366cd027fd7d30, type: 3}
   jacketPrefab: {fileID: 0}
-  customizerIndex: 4
+  glovePrefab: {fileID: 0}
+  bootPrefab: {fileID: 0}
+  accessoryPrefab: {fileID: 0}
+  customizerIndex: -1
   gearProfile: {fileID: 0}
+  leftArmLimbColourSource: 0
+  rightArmLimbColourSource: 0
+  leftLegLimbColourSource: 0
+  rightLegLimbColourSource: 0
+  limbSecondaryChannelId: secondary
   defaultPatternOption: {fileID: 0}
   defaultPatternId: 
   unlockPatternOptionsOnPurchase: []

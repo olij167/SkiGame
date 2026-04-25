@@ -2,7 +2,7 @@ using UnityEngine;
 
 [CreateAssetMenu(
     fileName = "SkierAudioConfig",
-    menuName = "Ski Game/Audio/Skier Audio Config")]
+    menuName = "SkiGame/Audio/Skier Audio Config")]
 public sealed class SkierAudioConfigSO : ScriptableObject
 {
     [Header("Base Ski Layer")]

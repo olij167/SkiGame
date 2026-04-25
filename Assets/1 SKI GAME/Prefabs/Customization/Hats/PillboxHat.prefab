@@ -43,6 +43,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: PillboxHat
       objectReference: {fileID: 0}
+    - target: {fileID: 100000, guid: 565e3543feaac1b408a41f8c0d67febd, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 565e3543feaac1b408a41f8c0d67febd, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.5
@@ -131,6 +135,7 @@ MonoBehaviour:
   primaryBindings:
   - renderer: {fileID: 2455646333132927314}
     materialIndices: 00000000
+  primaryComponentBindings: []
   renderers:
   - {fileID: 2455646333132927314}
   colorPropertyName: _BaseColor
@@ -142,6 +147,7 @@ MonoBehaviour:
     bindings:
     - renderer: {fileID: 2455646333132927314}
       materialIndices: 02000000
+    componentBindings: []
     renderers: []
     colorPropertyName: _BaseColor
     defaultColor: {r: 0.5058824, g: 0.14117648, b: 0.03529412, a: 1}

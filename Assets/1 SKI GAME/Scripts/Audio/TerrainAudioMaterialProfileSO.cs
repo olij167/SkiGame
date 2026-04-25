@@ -18,7 +18,7 @@ public struct TerrainLayerAudioBinding
 
 [CreateAssetMenu(
     fileName = "TerrainAudioMaterialProfile",
-    menuName = "Ski Game/Audio/Terrain Material Profile")]
+    menuName = "SkiGame/Audio/Terrain Material Profile")]
 public sealed class TerrainAudioMaterialProfileSO : ScriptableObject
 {
     [SerializeField] private List<TerrainLayerAudioBinding> layerBindings = new List<TerrainLayerAudioBinding>();

@@ -10,7 +10,7 @@ using UnityEditor.SceneManagement;
 /// Generates a lightweight physics proxy (pooled CapsuleColliders) along the LiftLine analytic band.
 /// This makes the cable collide-able even when the visual is only a LineRenderer.
 /// </summary>
-[ExecuteAlways]
+//[ExecuteAlways]
 [DisallowMultipleComponent]
 [RequireComponent(typeof(LiftLine))]
 public class LiftRopeColliderProxy : MonoBehaviour

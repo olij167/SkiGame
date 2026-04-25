@@ -13,7 +13,7 @@ namespace SkiGame.Progression
     public sealed partial class PlayerStatsProfile : ISerializationCallbackReceiver
     {
         public int profileVersion = CurrentVersion;
-        public const int CurrentVersion = 11;
+        public const int CurrentVersion = 13;
         public LifetimeStats lifetime = new LifetimeStats();
         public SessionStats session = new SessionStats();
         public ExtendedProgressionStats progression = new ExtendedProgressionStats();
@@ -91,6 +91,9 @@ namespace SkiGame.Progression
             public string equippedEyeIconId;
             public string equippedHatId;
             public string equippedJacketId;
+            public string equippedGlovesId;
+            public string equippedBootsId;
+            public string equippedAccessoryId;
 
             // ---- Equipped gear ----
             public string equippedSkisId;
@@ -104,6 +107,9 @@ namespace SkiGame.Progression
             // Pattern ids per target (SkinPattern options are repurposed as gear textures)
             public string equippedHatPatternId;
             public string equippedJacketPatternId; // jacket == cloak
+            public string equippedGlovesPatternId;
+            public string equippedBootsPatternId;
+            public string equippedAccessoryPatternId;
 
             // ---- Continuous selections ----
             public Color skinColor = Color.white;
@@ -116,12 +122,18 @@ namespace SkiGame.Progression
             // Hat/Jacket continuous colours
             public Color hatColor = Color.white;
             public Color jacketColor = Color.white;
+            public Color glovesColor = Color.white;
+            public Color bootsColor = Color.white;
+            public Color accessoryColor = Color.white;
 
             // Optional extra per-slot colour channels (e.g. trim / strap / lining)
             public List<CustomizationColorOverride> skisExtraColors = new List<CustomizationColorOverride>();
             public List<CustomizationColorOverride> polesExtraColors = new List<CustomizationColorOverride>();
             public List<CustomizationColorOverride> hatExtraColors = new List<CustomizationColorOverride>();
             public List<CustomizationColorOverride> jacketExtraColors = new List<CustomizationColorOverride>();
+            public List<CustomizationColorOverride> glovesExtraColors = new List<CustomizationColorOverride>();
+            public List<CustomizationColorOverride> bootsExtraColors = new List<CustomizationColorOverride>();
+            public List<CustomizationColorOverride> accessoryExtraColors = new List<CustomizationColorOverride>();
 
             public bool customizationInitialized;
 
@@ -134,6 +146,9 @@ namespace SkiGame.Progression
             public bool hasSetPolesColor;
             public bool hasSetHatColor;
             public bool hasSetJacketColor;
+            public bool hasSetGlovesColor;
+            public bool hasSetBootsColor;
+            public bool hasSetAccessoryColor;
 
             // ---- Gear display mode toggles ----
             // True = show equipped gear defaults; False = show saved custom selections.
@@ -141,11 +156,17 @@ namespace SkiGame.Progression
             public bool polesUseDefaultColor = true;
             public bool hatUseDefaultColor = true;
             public bool jacketUseDefaultColor = true;
+            public bool glovesUseDefaultColor = true;
+            public bool bootsUseDefaultColor = true;
+            public bool accessoryUseDefaultColor = true;
 
             public bool skisUseDefaultPattern = true;
             public bool polesUseDefaultPattern = true;
             public bool hatUseDefaultPattern = true;
             public bool jacketUseDefaultPattern = true;
+            public bool glovesUseDefaultPattern = true;
+            public bool bootsUseDefaultPattern = true;
+            public bool accessoryUseDefaultPattern = true;
 
 
             public bool IsUnlocked(string id)
@@ -176,6 +197,9 @@ namespace SkiGame.Progression
                     if (string.IsNullOrEmpty(equippedPolesPatternId)) equippedPolesPatternId = equippedSkinPatternId;
                     if (string.IsNullOrEmpty(equippedHatPatternId)) equippedHatPatternId = equippedSkinPatternId;
                     if (string.IsNullOrEmpty(equippedJacketPatternId)) equippedJacketPatternId = equippedSkinPatternId;
+                    if (string.IsNullOrEmpty(equippedGlovesPatternId)) equippedGlovesPatternId = equippedSkinPatternId;
+                    if (string.IsNullOrEmpty(equippedBootsPatternId)) equippedBootsPatternId = equippedSkinPatternId;
+                    if (string.IsNullOrEmpty(equippedAccessoryPatternId)) equippedAccessoryPatternId = equippedSkinPatternId;
                 }
             }
 
@@ -187,6 +211,9 @@ namespace SkiGame.Progression
                     case "Poles": return polesExtraColors ??= new List<CustomizationColorOverride>();
                     case "Hat": return hatExtraColors ??= new List<CustomizationColorOverride>();
                     case "Jacket": return jacketExtraColors ??= new List<CustomizationColorOverride>();
+                    case "Gloves": return glovesExtraColors ??= new List<CustomizationColorOverride>();
+                    case "Boots": return bootsExtraColors ??= new List<CustomizationColorOverride>();
+                    case "Accessory": return accessoryExtraColors ??= new List<CustomizationColorOverride>();
                     default: return null;
                 }
             }
@@ -386,6 +413,30 @@ namespace SkiGame.Progression
                 regionReputations ??= new List<RegionReputationState>();
                 discoveryRewardedPoiIds ??= new List<string>();
                 profileVersion = 11;
+            }
+
+            if (profileVersion < 12)
+            {
+                if (customization != null)
+                {
+                    customization.glovesUseDefaultColor = !customization.hasSetGlovesColor;
+                    customization.bootsUseDefaultColor = !customization.hasSetBootsColor;
+                    customization.accessoryUseDefaultColor = !customization.hasSetAccessoryColor;
+                }
+
+                profileVersion = 12;
+            }
+
+            if (profileVersion < 13)
+            {
+                if (customization != null)
+                {
+                    customization.glovesUseDefaultPattern = string.IsNullOrEmpty(customization.equippedGlovesPatternId);
+                    customization.bootsUseDefaultPattern = string.IsNullOrEmpty(customization.equippedBootsPatternId);
+                    customization.accessoryUseDefaultPattern = string.IsNullOrEmpty(customization.equippedAccessoryPatternId);
+                }
+
+                profileVersion = 13;
             }
 
         }

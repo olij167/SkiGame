@@ -109,7 +109,7 @@ namespace SkiGame.Tricks
                 parts.Add(requiredPoseShape.ToString());
 
             if (requiredOrientationModifier != SkiController.AerialOrientationModifier.None)
-                parts.Add(requiredOrientationModifier.ToString());
+                parts.Add(SkiController.GetAerialOrientationModifierLabel(requiredOrientationModifier));
 
             if (!string.IsNullOrWhiteSpace(explicitPoseLabel))
                 parts.Add(explicitPoseLabel.Trim());
@@ -487,6 +487,9 @@ namespace SkiGame.Tricks
             styleScore += descriptor.primaryOrientationModifier switch
             {
                 SkiController.AerialOrientationModifier.Inverted => 36,
+                SkiController.AerialOrientationModifier.ChestDown => 30,
+                SkiController.AerialOrientationModifier.ChestUp => 26,
+                SkiController.AerialOrientationModifier.OnSide => 24,
                 SkiController.AerialOrientationModifier.Sideways => 24,
                 SkiController.AerialOrientationModifier.Switch => 18,
                 SkiController.AerialOrientationModifier.Rising => 12,

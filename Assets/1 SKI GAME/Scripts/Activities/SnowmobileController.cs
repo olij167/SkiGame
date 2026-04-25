@@ -32,6 +32,11 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
     [SerializeField] private float groundedTraction = 14f;
     [SerializeField] private float groundedLateralGrip = 10f;
     [SerializeField] private float rotationSharpness = 14f;
+    [SerializeField] private float uphillDriveForce = 12f;
+    [SerializeField] private float uphillThrottleAssist = 0.65f;
+    [SerializeField] private float lowSpeedLateralGrip = 11.5f;
+    [SerializeField] private float highSpeedLateralGrip = 7.25f;
+    [SerializeField] private float poweredDriftGripMultiplier = 0.82f;
 
     [Header("Grounding")]
     [SerializeField] private LayerMask groundMask = ~0;
@@ -59,11 +64,16 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
     [SerializeField] private float obstacleSlowdownMinMultiplier = 0.45f;
     [SerializeField] private float obstacleAngleBuffer = 8f;
 
+    [SerializeField] private float landingCompressionDampingMultiplier = 1.45f;
+    [SerializeField] private float springMaxAccel = 60f;
+
     [Header("Airborne")]
     [SerializeField] private float airborneGravityMultiplier = 1.4f;
     [SerializeField] private float airbornePlanarDrag = 0.4f;
     [SerializeField] private float airborneYawControl = 35f;
     [SerializeField] private float airbornePitchAssist = 3f;
+
+    [SerializeField] private float airborneVerticalDrag = 0.65f;
 
     [Header("Ground Transition")]
     [SerializeField] private int stableGroundedProbes = 3;
@@ -193,8 +203,8 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
         _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         _rb.useGravity = true;
         _rb.mass = Mathf.Max(180f, _rb.mass);
-        _rb.linearDamping = 0.25f;
-        _rb.angularDamping = 6f;
+        _rb.linearDamping = 0.4f;
+        _rb.angularDamping = 7f;
         _rb.centerOfMass = new Vector3(0f, -0.45f, 0f);
 
         _smoothedGroundNormal = Vector3.up;
@@ -276,7 +286,9 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
         if (currentForward.sqrMagnitude < 0.0001f)
             currentForward = _lastGroundForward;
 
-        float speed01 = Mathf.InverseLerp(0f, maxForwardSpeed, Mathf.Abs(GetPlanarForwardSpeed(currentForward)));
+        float planarSpeedAbs = Mathf.Abs(GetPlanarForwardSpeed(currentForward));
+        float speed01 = Mathf.InverseLerp(0f, maxForwardSpeed, planarSpeedAbs);
+
         float steerFactor = Mathf.Lerp(standstillSteerFactor, 1f, speed01);
         float steerStep = steerInput * steerDegreesPerSecond * steerFactor * Time.fixedDeltaTime;
 
@@ -295,7 +307,8 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
         _rb.MoveRotation(nextRotation);
 
         float slopeAngle = Vector3.Angle(up, Vector3.up);
-        bool movingUphill = Vector3.Dot(desiredForward, Vector3.up) > 0.01f;
+        float uphill01 = Mathf.Clamp01(Vector3.Dot(desiredForward, Vector3.up));
+        bool movingUphill = uphill01 > 0.01f;
         bool slopeTooSteepToDrive = slopeAngle > maxDriveSlopeAngle && movingUphill;
         bool frontBlocked = _frontBlockedBySteepSurface && throttleInput > 0.01f;
 
@@ -338,9 +351,8 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
 
         _currentSpeed = Mathf.MoveTowards(_currentSpeed, targetSpeed, accel * Time.fixedDeltaTime);
 
-        if (!slopeTooSteepToDrive && !frontBlocked && throttleInput > 0.01f)
+        if (!slopeTooSteepToDrive && throttleInput > 0.01f)
         {
-            float uphill01 = Mathf.Clamp01(Vector3.Dot(desiredForward, Vector3.up));
             _currentSpeed = Mathf.Min(
                 maxForwardSpeed,
                 _currentSpeed + uphill01 * slopeClimbAssist * Time.fixedDeltaTime);
@@ -356,9 +368,17 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
             -Mathf.Max(brakingDeceleration, reverseAcceleration),
             Mathf.Max(forwardAcceleration, reverseAcceleration));
 
-        _rb.AddForce(desiredForward * forwardAccel * Mathf.Lerp(0.5f, 1f, _landingSupport01), ForceMode.Acceleration);
-        _rb.AddForce(-lateralVelocity * groundedLateralGrip * Mathf.Lerp(0.35f, 1f, _landingSupport01), ForceMode.Acceleration);
+        float dynamicGrip = Mathf.Lerp(lowSpeedLateralGrip, highSpeedLateralGrip, speed01);
 
+        if (throttleInput > 0.01f)
+            dynamicGrip *= poweredDriftGripMultiplier;
+
+        float uphillThrottle01 = Mathf.Clamp01(throttleInput) * uphill01;
+        float uphillDriveAccel = uphillDriveForce * uphillThrottle01 * Mathf.Lerp(0.6f, 1f, uphillThrottleAssist);
+
+        _rb.AddForce(desiredForward * forwardAccel * Mathf.Lerp(0.5f, 1f, _landingSupport01), ForceMode.Acceleration);
+        _rb.AddForce(desiredForward * uphillDriveAccel, ForceMode.Acceleration);
+        _rb.AddForce(-lateralVelocity * dynamicGrip * Mathf.Lerp(0.35f, 1f, _landingSupport01), ForceMode.Acceleration);
         _rb.AddForce(-up * groundAdhesionForce * Mathf.Lerp(0.35f, 1f, _landingSupport01), ForceMode.Acceleration);
 
         ApplyRideSpring(up);
@@ -374,6 +394,14 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
             planarVelocity,
             Vector3.zero,
             airbornePlanarDrag * Time.fixedDeltaTime);
+
+        if (verticalVelocity.y > 0f)
+        {
+            verticalVelocity = Vector3.Lerp(
+                verticalVelocity,
+                Vector3.zero,
+                airborneVerticalDrag * Time.fixedDeltaTime);
+        }
 
         _rb.linearVelocity = planarVelocity + verticalVelocity;
         _rb.AddForce(Physics.gravity * (airborneGravityMultiplier - 1f), ForceMode.Acceleration);
@@ -422,8 +450,11 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
         float heightError = rideHeight - currentHeightAlongNormal;
         float velocityAlongNormal = Vector3.Dot(_rb.linearVelocity, up);
 
-        float springAccel = heightError * rideSpringStrength - velocityAlongNormal * rideSpringDamping;
-        springAccel = Mathf.Clamp(springAccel, -rideSpringStrength, rideSpringStrength);
+        float compression01 = Mathf.Clamp01(Mathf.Max(0f, -velocityAlongNormal) / 8f);
+        float compressionDamping = Mathf.Lerp(1f, landingCompressionDampingMultiplier, compression01);
+
+        float springAccel = heightError * rideSpringStrength - velocityAlongNormal * rideSpringDamping * compressionDamping;
+        springAccel = Mathf.Clamp(springAccel, -springMaxAccel, springMaxAccel);
 
         float supportScale = Mathf.Lerp(0.2f, 1f, _landingSupport01);
 

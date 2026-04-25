@@ -293,6 +293,9 @@ namespace SkiGame.Progression
             UnlockDefault(CustomizationOptionType.Poles);
             UnlockDefault(CustomizationOptionType.Hat);
             UnlockDefault(CustomizationOptionType.Jacket);
+            UnlockDefault(CustomizationOptionType.Gloves);
+            UnlockDefault(CustomizationOptionType.Boots);
+            UnlockDefault(CustomizationOptionType.Accessory);
             UnlockDefault(CustomizationOptionType.SkinPattern);
 
             void UnlockDefault(CustomizationOptionType type)

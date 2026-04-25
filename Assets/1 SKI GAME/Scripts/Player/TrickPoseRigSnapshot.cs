@@ -54,6 +54,10 @@ public class TrickPoseRigSnapshot
     public PartState rightSki;
     public PartState leftPole;
     public PartState rightPole;
+    public PartState leftElbow;
+    public PartState rightElbow;
+    public PartState leftKnee;
+    public PartState rightKnee;
 
     public TrickPoseRigSnapshot Clone()
     {
@@ -64,7 +68,11 @@ public class TrickPoseRigSnapshot
             leftSki = leftSki,
             rightSki = rightSki,
             leftPole = leftPole,
-            rightPole = rightPole
+            rightPole = rightPole,
+            leftElbow = leftElbow,
+            rightElbow = rightElbow,
+            leftKnee = leftKnee,
+            rightKnee = rightKnee
         };
     }
 
@@ -83,7 +91,11 @@ public class TrickPoseRigSnapshot
             leftSki = PartState.Lerp(from.leftSki, to.leftSki, t),
             rightSki = PartState.Lerp(from.rightSki, to.rightSki, t),
             leftPole = PartState.Lerp(from.leftPole, to.leftPole, t),
-            rightPole = PartState.Lerp(from.rightPole, to.rightPole, t)
+            rightPole = PartState.Lerp(from.rightPole, to.rightPole, t),
+            leftElbow = PartState.Lerp(from.leftElbow, to.leftElbow, t),
+            rightElbow = PartState.Lerp(from.rightElbow, to.rightElbow, t),
+            leftKnee = PartState.Lerp(from.leftKnee, to.leftKnee, t),
+            rightKnee = PartState.Lerp(from.rightKnee, to.rightKnee, t)
         };
     }
 }

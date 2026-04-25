@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 5816298688970893119}
   - component: {fileID: 6703082065356813893}
   - component: {fileID: 5809340270157213377}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Spot Light
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -169,6 +169,10 @@ PrefabInstance:
     - target: {fileID: 100000, guid: a9853556c4fc4d44087cd153918f7305, type: 3}
       propertyPath: m_Name
       value: MinerHat
+      objectReference: {fileID: 0}
+    - target: {fileID: 100000, guid: a9853556c4fc4d44087cd153918f7305, type: 3}
+      propertyPath: m_Layer
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: a9853556c4fc4d44087cd153918f7305, type: 3}
       propertyPath: m_LocalScale.x
