@@ -31,6 +31,7 @@ namespace AssetInventory
         public async Task IndexRoughLocal(FolderSpec spec, bool fromAssetStore, bool force = false)
         {
             string[] packages = await Task.Run(() => IOUtils.GetFilesSafe(spec.GetLocation(true), "*.unitypackage", SearchOption.AllDirectories).ToArray());
+            string[] excludedDirectories = StringUtils.Split(spec.excludedDirectories, new[] {';', ','});
 
             bool tagsChanged = false;
             MainCount = packages.Length;
@@ -40,6 +41,7 @@ namespace AssetInventory
 
                 string package = packages[i].Replace("\\", "/");
                 if (IsIgnoredPath(package, false)) continue;
+                if (IsExcludedDirectory(package, excludedDirectories, false)) continue;
 
                 MetaProgress.Report(ProgressId, i + 1, packages.Length, package);
                 if (i % 50 == 0) await Task.Yield(); // let editor breath

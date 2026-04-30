@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: e9cfc59e57d98d0429f3f778f0e1581b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 177244
+  packageName: MIGHTY PORTAL
+  packageVersion: 2.2.5
+  assetPath: Assets/MightyDevOps/Core/Data/MightyNotificationsData.asset
+  uploadId: 902664

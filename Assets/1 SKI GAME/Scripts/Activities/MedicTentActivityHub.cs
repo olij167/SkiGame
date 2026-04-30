@@ -96,7 +96,10 @@ public sealed class MedicTentActivityHub : MonoBehaviour, IWorldInteractionPromp
             interactionAreaTrigger = GetComponent<Collider>();
 
         if (regionSet == null)
-            regionSet = Resources.FindObjectsOfTypeAll<MapRegionSet>().Length > 0 ? Resources.FindObjectsOfTypeAll<MapRegionSet>()[0] : null;
+        {
+            MapRegionSet[] regionSets = Resources.FindObjectsOfTypeAll<MapRegionSet>();
+            regionSet = regionSets.Length > 0 ? regionSets[0] : null;
+        }
 
         if (rescueRadiusMeters < 20f) rescueRadiusMeters = 20f;
         if (rescueBoxSize.x < 20f) rescueBoxSize.x = 20f;
@@ -123,8 +126,15 @@ public sealed class MedicTentActivityHub : MonoBehaviour, IWorldInteractionPromp
 
     private void OnEnable()
     {
+        WorldInteractionPromptRegistry.Register(this);
+
         if (interactAction != null && interactAction.action != null && !interactAction.action.enabled)
             interactAction.action.Enable();
+    }
+
+    private void OnDisable()
+    {
+        WorldInteractionPromptRegistry.Unregister(this);
     }
 
     private void Update()

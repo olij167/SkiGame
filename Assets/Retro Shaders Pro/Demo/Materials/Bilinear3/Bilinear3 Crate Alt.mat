@@ -18,6 +18,7 @@ Material:
   - _RECEIVESHADOWSMODE_ON
   - _SNAPMODE_VIEW
   - _USE_SPECULAR_LIGHT
+  - _WRAPMODE_REPEAT
   m_InvalidKeywords:
   - _USE_POINT_FILTER_ON
   - _USE_SPECULAR_LIGHT_ON
@@ -102,6 +103,7 @@ Material:
     - _ResolutionLimit: 64
     - _SnapMode: 2
     - _SnapsPerUnit: 64
+    - _WrapMode: 1
     m_Floats:
     - _AffineTextureStrength: 0
     - _AlphaClip: 0

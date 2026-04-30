@@ -31,6 +31,7 @@ public sealed class RescueStretcherController : MonoBehaviour, IWorldInteraction
     [SerializeField] private float rideSpringDamping = 10f;
     [SerializeField] private float groundStickForce = 8f;
     [SerializeField] private float alignToGroundSpeed = 8f;
+    [SerializeField] private float maxRideSpringAcceleration = 45f;
 
     [Header("Stability")]
     [SerializeField] private float falloffSpeedThreshold = 18f;
@@ -50,6 +51,9 @@ public sealed class RescueStretcherController : MonoBehaviour, IWorldInteraction
     [SerializeField] private float ropeDamper = 120f;
     [SerializeField] private float ropeMaxForce = 20000f;
     [SerializeField] private float ropeTolerance = 0.03f;
+
+    [SerializeField, Range(0.05f, 2f)] private float stretcherJointMassScale = 1f;
+    [SerializeField, Range(0.01f, 1f)] private float snowmobileJointMassScale = 0.15f;
 
     [Header("Rope Visual")]
     [SerializeField] private Material ropeMaterial;
@@ -126,6 +130,8 @@ public sealed class RescueStretcherController : MonoBehaviour, IWorldInteraction
 
     private void Start()
     {
+        WorldInteractionPromptRegistry.Register(this);
+
         if (_snowmobile == null)
         {
             if (explicitSnowmobile != null)
@@ -140,6 +146,33 @@ public sealed class RescueStretcherController : MonoBehaviour, IWorldInteraction
 
         if (_snowmobile != null)
             SnapNearTowPoint();
+    }
+
+    private void OnDisable()
+    {
+        WorldInteractionPromptRegistry.Unregister(this);
+    }
+
+    private void OnValidate()
+    {
+        ropeLength = Mathf.Max(0.25f, ropeLength);
+        ropeSlack = Mathf.Clamp(ropeSlack, 0f, ropeLength);
+        ropeSpring = Mathf.Max(0f, ropeSpring);
+        ropeDamper = Mathf.Max(0f, ropeDamper);
+        ropeTolerance = Mathf.Max(0f, ropeTolerance);
+
+        rideHeight = Mathf.Max(0.01f, rideHeight);
+        rideSpringStrength = Mathf.Max(0f, rideSpringStrength);
+        rideSpringDamping = Mathf.Max(0f, rideSpringDamping);
+        groundStickForce = Mathf.Max(0f, groundStickForce);
+        maxRideSpringAcceleration = Mathf.Max(1f, maxRideSpringAcceleration);
+
+        yawAlignTorque = Mathf.Max(0f, yawAlignTorque);
+        yawAngularDamping = Mathf.Max(0f, yawAngularDamping);
+        maxYawTorque = Mathf.Max(0f, maxYawTorque);
+
+        stretcherJointMassScale = Mathf.Clamp(stretcherJointMassScale, 0.05f, 2f);
+        snowmobileJointMassScale = Mathf.Clamp(snowmobileJointMassScale, 0.01f, 1f);
     }
 
     private void OnDestroy()
@@ -324,8 +357,25 @@ public sealed class RescueStretcherController : MonoBehaviour, IWorldInteraction
         float velocityAlongNormal = Vector3.Dot(rb.linearVelocity, _groundNormal);
 
         float springAccel = heightError * rideSpringStrength - velocityAlongNormal * rideSpringDamping;
+        springAccel = Mathf.Clamp(
+            springAccel,
+            -Mathf.Abs(maxRideSpringAcceleration),
+            Mathf.Abs(maxRideSpringAcceleration));
+
         rb.AddForce(_groundNormal * springAccel, ForceMode.Acceleration);
-        rb.AddForce(-_groundNormal * groundStickForce, ForceMode.Acceleration);
+
+        // Do not add extra downward stick force when the stretcher is already too low.
+        // Otherwise the grounding system fights itself and can inject jitter into the tow joint.
+        if (heightError <= 0f && groundStickForce > 0f)
+        {
+            float stickAccel = groundStickForce;
+
+            // If already moving downward into the ground, reduce extra stick force.
+            if (velocityAlongNormal < -0.1f)
+                stickAccel *= 0.25f;
+
+            rb.AddForce(-_groundNormal * stickAccel, ForceMode.Acceleration);
+        }
     }
 
     private void ApplyTowYawAlignment()
@@ -392,6 +442,10 @@ public sealed class RescueStretcherController : MonoBehaviour, IWorldInteraction
         if (casualtyState != null)
             casualtyState.PrepareForTransport();
 
+        // Ensure the target is already in stacked/ragdoll presentation before the
+        // stretcher takes ownership of transform placement.
+        ForceLoadedCasualtyStackedRagdollPresentation(_loadedTarget.gameObject, mountedOnTransport: false);
+
         _loadedCasualtyLieOnLeft = Random.value <= sideLieChance;
 
         Transform mount = CasualtyMountPoint;
@@ -409,24 +463,74 @@ public sealed class RescueStretcherController : MonoBehaviour, IWorldInteraction
             targetRb.detectCollisions = false;
         }
 
-        ForceLoadedCasualtyWalkPresentation(_loadedTarget.gameObject);
+        ForceLoadedCasualtyStackedRagdollPresentation(_loadedTarget.gameObject, mountedOnTransport: true);
         ApplyLoadedWeightBias(true);
 
         _stability = 1f;
     }
 
-    private void ForceLoadedCasualtyWalkPresentation(GameObject casualtyRoot)
+    private void ForceLoadedCasualtyStackedRagdollPresentation(GameObject casualtyRoot, bool mountedOnTransport)
     {
         if (casualtyRoot == null)
             return;
 
-        WalkingController walk = casualtyRoot.GetComponentInParent<WalkingController>();
-        SkiController ski = casualtyRoot.GetComponentInParent<SkiController>();
+        RescueCasualtyTarget rescueTarget = casualtyRoot.GetComponent<RescueCasualtyTarget>();
+        if (rescueTarget == null)
+            rescueTarget = casualtyRoot.GetComponentInChildren<RescueCasualtyTarget>(true);
+        if (rescueTarget == null)
+            rescueTarget = casualtyRoot.GetComponentInParent<RescueCasualtyTarget>();
+
+        if (rescueTarget != null)
+        {
+            rescueTarget.ForceStackedRagdollForRescue(mountedOnTransport);
+            return;
+        }
+
+        // Fallback for older casualty prefabs that may not have RescueCasualtyTarget
+        // on the same root object.
+        WalkingController walk = casualtyRoot.GetComponent<WalkingController>();
+        if (walk == null)
+            walk = casualtyRoot.GetComponentInChildren<WalkingController>(true);
+        if (walk == null)
+            walk = casualtyRoot.GetComponentInParent<WalkingController>();
+
+        SkiController ski = casualtyRoot.GetComponent<SkiController>();
+        if (ski == null)
+            ski = casualtyRoot.GetComponentInChildren<SkiController>(true);
+        if (ski == null)
+            ski = casualtyRoot.GetComponentInParent<SkiController>();
+
+        SkierLimbLineVisual limbVisual = casualtyRoot.GetComponent<SkierLimbLineVisual>();
+        if (limbVisual == null)
+            limbVisual = casualtyRoot.GetComponentInChildren<SkierLimbLineVisual>(true);
+        if (limbVisual == null)
+            limbVisual = casualtyRoot.GetComponentInParent<SkierLimbLineVisual>();
+
+        if (limbVisual != null)
+            limbVisual.SetSeatedPoseOverride(false);
 
         if (walk != null)
-            walk.ForceEnterWalkMode();
-        else if (ski != null)
-            ski.enabled = false;
+        {
+            walk.SetRiderPoseActive(false);
+            walk.ControlsEnabled = false;
+
+            if (!mountedOnTransport)
+                walk.ForceEnterSkiMode();
+
+            walk.enabled = false;
+        }
+
+        if (ski != null)
+        {
+            ski.enabled = true;
+            ski.ForceStackedRagdollState(
+                lockRecovery: true,
+                refreshVisualState: true,
+                inheritedVelocityWorld: Vector3.zero,
+                torqueAxisWorld: ski.transform.right,
+                severity01: 0.35f,
+                reason: mountedOnTransport ? "RescueCasualtyMounted" : "RescueCasualtyInitial");
+        }
     }
 
     private Vector3 GetClosestPickupPointOnTarget(RescueCasualtyTarget target, Vector3 fromPoint)
@@ -504,6 +608,8 @@ public sealed class RescueStretcherController : MonoBehaviour, IWorldInteraction
             targetRb.linearVelocity = Vector3.zero;
             targetRb.angularVelocity = Vector3.zero;
         }
+
+        dropped.ForceStackedRagdollForRescue(mountedOnTransport: false);
 
         _service?.NotifyTargetDroppedFromTransport(droppedIndex, dropped.transform.position);
 
@@ -633,10 +739,20 @@ public sealed class RescueStretcherController : MonoBehaviour, IWorldInteraction
         _towJoint.enableCollision = false;
         _towJoint.enablePreprocessing = true;
         _towJoint.tolerance = ropeTolerance;
-        _towJoint.massScale = 1f;
-        _towJoint.connectedMassScale = 1f;
+        ApplyTowJointMassScales();
 
         UpdateTowJoint();
+    }
+
+    private void ApplyTowJointMassScales()
+    {
+        if (_towJoint == null)
+            return;
+
+        // Lower connectedMassScale makes the connected body behave heavier in the joint solver.
+        // This means the stretcher receives more of the correction and the snowmobile receives less.
+        _towJoint.massScale = Mathf.Max(0.05f, stretcherJointMassScale);
+        _towJoint.connectedMassScale = Mathf.Max(0.01f, snowmobileJointMassScale);
     }
 
     private void UpdateTowJoint()
@@ -667,6 +783,8 @@ public sealed class RescueStretcherController : MonoBehaviour, IWorldInteraction
         _towJoint.tolerance = ropeTolerance;
         _towJoint.breakForce = Mathf.Infinity;
         _towJoint.breakTorque = Mathf.Infinity;
+
+        ApplyTowJointMassScales();
     }
     private void ConfigureRopeRenderer(LineRenderer lr)
     {

@@ -162,7 +162,9 @@ namespace AssetInventory
         public bool excludeByDefault;
         public bool extractByDefault;
         public bool captionByDefault;
-        public bool convertToPipeline;
+        public bool convertToPipeline; // master toggle: adapt materials to current render pipeline
+        public bool useUnityPipelineConverter = true; // use Unity's built-in converter (BIRP→URP only, requires USE_URP)
+        public bool useCustomPipelineConverter = true; // use our custom converter (BIRP→URP and BIRP→HDRP, runs on preview instances)
         public bool skipProjectSettings = true;
         public bool scanFBXDependencies = true;
         public bool scanOBJMaterialDependencies;

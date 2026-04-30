@@ -196,7 +196,7 @@ namespace AssetInventory
                     if (req.Icon != null) continue;
 
                     req.Icon = AssetPreview.GetAssetPreview(req.Obj);
-                    if (req.Icon == null && AssetPreview.IsLoadingAssetPreview(req.Obj.GetInstanceID()))
+                    if (req.Icon == null && UnityEditorCompat.IsLoadingPreview(req.Obj))
                     {
                         AssetPreview.GetAssetPreview(req.Obj);
                     }
@@ -232,7 +232,7 @@ namespace AssetInventory
                             if (req.Icon == null)
                             {
                                 // Only check loading state and timeout, reduce redundant GetAssetPreview calls
-                                if (AssetPreview.IsLoadingAssetPreview(req.Obj.GetInstanceID()))
+                                if (UnityEditorCompat.IsLoadingPreview(req.Obj))
                                 {
                                     if (Time.realtimeSinceStartup - req.TimeStarted < PREVIEW_TIMEOUT) continue;
                                 }

@@ -193,6 +193,7 @@ public sealed class SkierTrickTracker : MonoBehaviour
     [SerializeField] private float minAirTimeForPoseOnlySegment = 0.30f;
     [SerializeField] private float minGroundedTimeToStartNewCombo = 0.18f;
     [SerializeField] private bool requireRotationOrOrientationForPoseOnlySegment = true;
+    [SerializeField] private float poseReleaseSegmentGraceTime = 0.35f;
 
     [Header("Slide Tracking")]
     [SerializeField] private float minSlideSpeed = 3.0f;
@@ -204,6 +205,38 @@ public sealed class SkierTrickTracker : MonoBehaviour
     [SerializeField] private float minNoseTailGrindDistance = 0.8f;
     [SerializeField] private float grindSwitchAngle = 135f;
 
+    [Header("Grind Tap Tricks")]
+    [Tooltip("If enabled, brief grindable-surface contacts below the minimum grind distance are recorded as Edge Tap / Nose Tap / Tail Tap instead of being discarded.")]
+    [SerializeField] private bool enableGrindTapTricks = true;
+
+    [Tooltip("Minimum distance needed before a short grind contact can count as an Edge Tap. Prevents one-frame collision noise from creating trick labels.")]
+    [SerializeField] private float minGrindTapDistance = 0.05f;
+
+    [Tooltip("Minimum contact duration needed before a short grind contact can count as an Edge Tap. Prevents tiny collider brushes from creating trick labels.")]
+    [SerializeField] private float minGrindTapDuration = 0.04f;
+
+    [Tooltip("Progression tier used for a basic Edge Tap.")]
+    [SerializeField] private int edgeTapProgressionTier = 1;
+
+    [Tooltip("Progression tier used for Nose Tap / Tail Tap.")]
+    [SerializeField] private int noseTailTapProgressionTier = 1;
+
+    [Tooltip("Visual severity used for a basic Edge Tap label.")]
+    [SerializeField, Range(0f, 1f)] private float edgeTapSeverity = 0.16f;
+
+    [Tooltip("Visual severity used for Nose Tap / Tail Tap labels.")]
+    [SerializeField, Range(0f, 1f)] private float noseTailTapSeverity = 0.2f;
+
+    [Header("Live Distance Labels")]
+    [Tooltip("Distance, in metres, represented by each live distance-trick progression tier. Lower values make grind/slide labels intensify sooner.")]
+    [SerializeField] private float liveDistanceMetersPerProgressionTier = 3.0f;
+
+    [Tooltip("Distance, in metres, that maps distance-trick live severity to full intensity. Lower values make grind/slide labels visually escalate sooner.")]
+    [SerializeField] private float liveDistanceSeverityFullAt = 18.0f;
+
+    [Tooltip("Minimum severity used for live distance-trick labels so short grinds/slides still display clearly.")]
+
+    [SerializeField, Range(0f, 1f)] private float liveDistanceMinSeverity = 0.18f;
     [Header("Recovery")]
     [SerializeField] private float recoveryDisplayMinDelay = 0.05f;
 
@@ -268,9 +301,16 @@ public sealed class SkierTrickTracker : MonoBehaviour
     private float _lastMeaningfulMotionTime;
     private float _groundedNoTrickTimer;
 
+    private const int LiveSlideSegmentId = -1001;
+    private const int LiveGrindSegmentId = -1002;
+
     private int _nextSegmentId = 1;
     private int _focusSegmentId;
+    private int _lastBroadcastLiveHash;
+
     private string _currentPoseSignature = string.Empty;
+    private string _currentPoseDescriptor = string.Empty;
+    private float _lastPoseSignatureValidTime = -999f;
 
     private float _segmentYaw;
     private float _segmentPitch;
@@ -293,6 +333,9 @@ public sealed class SkierTrickTracker : MonoBehaviour
     private float _lastGrindControllerDistance;
     private float _grindNoseDistance;
     private float _grindTailDistance;
+    private float _grindTrackStartTime;
+    private float _grindTrackDuration;
+    private int _grindTrackEndSign;
 
     private float _poseHeldStartTime = -999f;
     private float _lastPoseSegmentTime = -999f;
@@ -509,17 +552,31 @@ public sealed class SkierTrickTracker : MonoBehaviour
     private void UpdatePoseSegmentState()
     {
         string poseSignature = BuildPoseSignature();
+        string poseDescriptor = BuildLivePoseDescriptor();
 
-        if (string.IsNullOrWhiteSpace(poseSignature))
+        if (!string.IsNullOrWhiteSpace(poseSignature))
         {
-            if (!string.IsNullOrWhiteSpace(_currentPoseSignature))
+            _lastPoseSignatureValidTime = Time.time;
+        }
+        else if (!string.IsNullOrWhiteSpace(_currentPoseSignature))
+        {
+            bool withinReleaseGrace = (Time.time - _lastPoseSignatureValidTime) <= poseReleaseSegmentGraceTime;
+            if (withinReleaseGrace)
             {
-                FinalizeCurrentSegmentIfValid();
-                _currentPoseSignature = string.Empty;
-                _poseHeldStartTime = -999f;
-                _lastMeaningfulMotionTime = Time.time;
+                // Keep the already-detected pose attached to this segment briefly after release.
+                // This prevents authored pose labels from disappearing before the segment locks.
+                return;
             }
 
+            FinalizeCurrentSegmentIfValid();
+            _currentPoseSignature = string.Empty;
+            _currentPoseDescriptor = string.Empty;
+            _poseHeldStartTime = -999f;
+            _lastMeaningfulMotionTime = Time.time;
+            return;
+        }
+        else
+        {
             return;
         }
 
@@ -529,6 +586,7 @@ public sealed class SkierTrickTracker : MonoBehaviour
         if (string.IsNullOrWhiteSpace(_currentPoseSignature))
         {
             _currentPoseSignature = poseSignature;
+            _currentPoseDescriptor = !string.IsNullOrWhiteSpace(poseDescriptor) ? poseDescriptor : poseSignature;
             _poseHeldStartTime = Time.time;
             _segmentStartTime = Time.time;
             _lastMeaningfulMotionTime = Time.time;
@@ -546,6 +604,8 @@ public sealed class SkierTrickTracker : MonoBehaviour
 
             BeginNewSegmentAfterReset();
             _currentPoseSignature = poseSignature;
+            _currentPoseDescriptor = !string.IsNullOrWhiteSpace(poseDescriptor) ? poseDescriptor : poseSignature;
+            _lastPoseSignatureValidTime = Time.time;
             _poseHeldStartTime = Time.time;
             _segmentStartTime = Time.time;
             _lastMeaningfulMotionTime = Time.time;
@@ -553,15 +613,33 @@ public sealed class SkierTrickTracker : MonoBehaviour
             return;
         }
 
+        if (!string.IsNullOrWhiteSpace(poseDescriptor))
+            _currentPoseDescriptor = poseDescriptor;
+
         _lastMeaningfulMotionTime = Time.time;
     }
 
     private void CapturePoseUsage()
     {
-        if (skiController == null || !skiController.IsAirPoseActive)
+        if (skiController == null)
+            return;
+
+        bool hasPoseContext =
+            skiController.IsAirStyleActive ||
+            skiController.ActiveTrickPoseEntry != null ||
+            !string.IsNullOrWhiteSpace(_currentPoseSignature);
+
+        if (!hasPoseContext)
             return;
 
         string poseLabel = skiController.CurrentTrackedPoseName;
+
+        if (string.IsNullOrWhiteSpace(poseLabel))
+            poseLabel = _currentPoseDescriptor;
+
+        if (string.IsNullOrWhiteSpace(poseLabel))
+            poseLabel = _currentPoseSignature;
+
         if (!string.IsNullOrWhiteSpace(poseLabel))
         {
             string trimmedLabel = poseLabel.Trim();
@@ -607,6 +685,9 @@ public sealed class SkierTrickTracker : MonoBehaviour
         _segmentPitchDir = 0;
         _segmentStartTime = Time.time;
         _lastMeaningfulMotionTime = Time.time;
+        _currentPoseSignature = string.Empty;
+        _currentPoseDescriptor = string.Empty;
+        _lastPoseSignatureValidTime = -999f;
         _poseHeldStartTime = -999f;
     }
 
@@ -621,6 +702,8 @@ public sealed class SkierTrickTracker : MonoBehaviour
         _segmentStartTime = Time.time;
         _lastMeaningfulMotionTime = Time.time;
         _currentPoseSignature = string.Empty;
+        _currentPoseDescriptor = string.Empty;
+        _lastPoseSignatureValidTime = -999f;
         _poseHeldStartTime = -999f;
     }
 
@@ -643,7 +726,8 @@ public sealed class SkierTrickTracker : MonoBehaviour
         int spinCount = ComputeSpinCount(_segmentYaw);
         int spinDegrees = spinCount * Mathf.Max(1, spinStepDegrees);
         int flipCount = ComputeFlipCount(_segmentPitch, out bool backflip, out bool frontflip);
-        bool usedStyleNow = skiController != null && skiController.IsAirStyleActive;
+        bool usedPoseInSegment = !string.IsNullOrWhiteSpace(_currentPoseSignature);
+        bool usedStyleNow = skiController != null && (skiController.IsAirStyleActive || usedPoseInSegment);
         CapturePoseUsage();
 
         bool hasRotation = spinDegrees > 0 || flipCount > 0;
@@ -1342,13 +1426,21 @@ public sealed class SkierTrickTracker : MonoBehaviour
             _lastGrindControllerDistance = controllerDistance;
             _grindNoseDistance = 0f;
             _grindTailDistance = 0f;
+            _grindTrackStartTime = Time.time;
+            _grindTrackDuration = 0f;
+            _grindTrackEndSign = skiController.CurrentGrindEndContactSign;
             return;
         }
+
+        _grindTrackDuration = Mathf.Max(0f, Time.time - _grindTrackStartTime);
 
         float delta = Mathf.Max(0f, controllerDistance - _lastGrindControllerDistance);
         _lastGrindControllerDistance = controllerDistance;
 
         int endSign = skiController.CurrentGrindEndContactSign;
+        if (endSign != 0)
+            _grindTrackEndSign = endSign;
+
         if (endSign > 0)
             _grindNoseDistance += delta;
         else if (endSign < 0)
@@ -1362,10 +1454,12 @@ public sealed class SkierTrickTracker : MonoBehaviour
 
         float liveDistance = skiController != null ? skiController.CurrentGrindDistance : 0f;
         float totalDistance = Mathf.Max(_lastGrindControllerDistance, liveDistance);
+        float duration = Mathf.Max(_grindTrackDuration, Time.time - _grindTrackStartTime);
 
         if (totalDistance >= minGrindDistance)
         {
             _usedGrindDuringRun = true;
+
             string baseText = $"Grind {Mathf.RoundToInt(totalDistance)}m";
             AddSimpleSegment(
                 baseText,
@@ -1402,9 +1496,91 @@ public sealed class SkierTrickTracker : MonoBehaviour
                     false,
                     true);
             }
+
+            ResetGrindTracking();
+            return;
+        }
+
+        if (ShouldRecordGrindTap(totalDistance, duration))
+        {
+            int tapSign = ResolveGrindTapEndSign();
+            string tapName = GetGrindTapName(tapSign);
+
+            AddSimpleSegment(
+                tapName,
+                GetGrindTapProgressionTier(tapSign),
+                GetGrindTapSeverity(tapSign),
+                false,
+                true);
+
+            _usedGrindDuringRun = true;
         }
 
         ResetGrindTracking();
+    }
+
+    private bool ShouldRecordGrindTap(float distance, float duration)
+    {
+        if (!enableGrindTapTricks)
+            return false;
+
+        if (distance >= minGrindDistance)
+            return false;
+
+        return distance >= minGrindTapDistance || duration >= minGrindTapDuration;
+    }
+
+    private int ResolveGrindTapEndSign()
+    {
+        if (_grindNoseDistance > _grindTailDistance && _grindNoseDistance >= minGrindTapDistance)
+            return 1;
+
+        if (_grindTailDistance > _grindNoseDistance && _grindTailDistance >= minGrindTapDistance)
+            return -1;
+
+        if (_grindTrackEndSign != 0)
+            return _grindTrackEndSign;
+
+        return 0;
+    }
+
+    private string GetGrindTapName(int endSign)
+    {
+        if (endSign > 0)
+            return "Nose Tap";
+
+        if (endSign < 0)
+            return "Tail Tap";
+
+        return "Edge Tap";
+    }
+
+    private int GetGrindTapProgressionTier(int endSign)
+    {
+        return Mathf.Max(1, endSign == 0 ? edgeTapProgressionTier : noseTailTapProgressionTier);
+    }
+
+    private float GetGrindTapSeverity(int endSign)
+    {
+        return Mathf.Clamp01(endSign == 0 ? edgeTapSeverity : noseTailTapSeverity);
+    }
+
+    private string GetLiveGrindLabel(float distance, int endSign)
+    {
+        bool fullGrind = distance >= minGrindDistance;
+
+        if (fullGrind)
+        {
+            if (endSign > 0)
+                return "Nose Grind";
+
+            if (endSign < 0)
+                return "Tail Grind";
+
+            return "Grind";
+        }
+
+        return GetGrindTapName(endSign);
     }
 
     private void ResetGrindTracking()
@@ -1413,6 +1589,9 @@ public sealed class SkierTrickTracker : MonoBehaviour
         _lastGrindControllerDistance = 0f;
         _grindNoseDistance = 0f;
         _grindTailDistance = 0f;
+        _grindTrackStartTime = 0f;
+        _grindTrackDuration = 0f;
+        _grindTrackEndSign = 0;
     }
 
     private bool IsSwitchGrind()
@@ -1504,6 +1683,8 @@ public sealed class SkierTrickTracker : MonoBehaviour
             liveDisplayName = sb.ToString();
         }
 
+        int liveHash = ComputeLiveSegmentBroadcastHash(liveSegments);
+
         TrickLiveState state = new TrickLiveState
         {
             active = liveSegments != null && liveSegments.Length > 0,
@@ -1515,7 +1696,7 @@ public sealed class SkierTrickTracker : MonoBehaviour
             flipCount = flipCount,
             backflip = backflip,
             frontflip = frontflip,
-            usedGrind = _usedGrindDuringRun,
+            usedGrind = _usedGrindDuringRun || _grindTrackActive,
             usedSlide = _usedSlideDuringRun || _slideActive,
             usedTuck = _usedTuckDuringRun,
             usedStyle = _usedStyleDuringRun,
@@ -1542,19 +1723,48 @@ public sealed class SkierTrickTracker : MonoBehaviour
 
         bool changed =
             force ||
+            liveHash != _lastBroadcastLiveHash ||
             !string.Equals(state.displayName, _lastBroadcastDisplayName, StringComparison.Ordinal) ||
             state.active != (!string.IsNullOrEmpty(_lastBroadcastDisplayName));
 
         if (changed)
         {
             _lastBroadcastDisplayName = state.displayName ?? string.Empty;
+            _lastBroadcastLiveHash = liveHash;
             OnLiveTrickUpdated?.Invoke(state);
+        }
+    }
+
+    private static int ComputeLiveSegmentBroadcastHash(TrickComboSegment[] segments)
+    {
+        unchecked
+        {
+            int hash = 17;
+
+            if (segments == null)
+                return hash;
+
+            for (int i = 0; i < segments.Length; i++)
+            {
+                TrickComboSegment seg = segments[i];
+
+                hash = hash * 31 + seg.id;
+                hash = hash * 31 + (seg.text?.GetHashCode() ?? 0);
+                hash = hash * 31 + seg.progressionTier;
+                hash = hash * 31 + Mathf.RoundToInt(seg.severity01 * 1000f);
+                hash = hash * 31 + (int)seg.state;
+                hash = hash * 31 + (seg.usedTuck ? 1 : 0);
+                hash = hash * 31 + (seg.usedGrind ? 1 : 0);
+                hash = hash * 31 + (seg.usedStyle ? 1 : 0);
+            }
+
+            return hash;
         }
     }
 
     private TrickComboSegment[] BuildComboSegmentsForLive()
     {
-        List<TrickComboSegment> result = new List<TrickComboSegment>(_segments.Count + 1);
+        List<TrickComboSegment> result = new List<TrickComboSegment>(_segments.Count + 3);
 
         for (int i = 0; i < _segments.Count; i++)
         {
@@ -1575,6 +1785,22 @@ public sealed class SkierTrickTracker : MonoBehaviour
             });
         }
 
+        bool addedLiveDistanceSegment = false;
+
+        if (TryBuildLiveSlideSegment(out TrickComboSegment slideSegment))
+        {
+            result.Add(slideSegment);
+            _focusSegmentId = slideSegment.id;
+            addedLiveDistanceSegment = true;
+        }
+
+        if (TryBuildLiveGrindSegment(out TrickComboSegment grindSegment))
+        {
+            result.Add(grindSegment);
+            _focusSegmentId = grindSegment.id;
+            addedLiveDistanceSegment = true;
+        }
+
         if (CanShowCurrentBuildingSegmentLive())
         {
             string buildingText = BuildSegmentDisplayName();
@@ -1585,7 +1811,7 @@ public sealed class SkierTrickTracker : MonoBehaviour
                 progressionTier = ComputeLiveProgression(),
                 severity01 = ComputeLiveSeverity01(),
                 usedTuck = _usedTuckDuringRun,
-                usedGrind = _usedGrindDuringRun,
+                usedGrind = _usedGrindDuringRun || _grindTrackActive,
                 usedStyle = skiController != null && skiController.IsAirStyleActive,
                 state = SegmentState.Building,
                 adjectiveTextSeed = _nextSegmentId * 73856093,
@@ -1595,8 +1821,109 @@ public sealed class SkierTrickTracker : MonoBehaviour
 
             _focusSegmentId = _nextSegmentId;
         }
+        else if (!addedLiveDistanceSegment && _segments.Count > 0)
+        {
+            _focusSegmentId = _segments[_segments.Count - 1].id;
+        }
 
         return result.ToArray();
+    }
+
+    private bool TryBuildLiveSlideSegment(out TrickComboSegment segment)
+    {
+        segment = default;
+
+        if (!_slideActive || _slideDistance <= 0.01f)
+            return false;
+
+        string text = _slideSign > 0
+            ? $"Noseslide {Mathf.RoundToInt(_slideDistance)}m"
+            : $"Tailslide {Mathf.RoundToInt(_slideDistance)}m";
+
+        segment = BuildLiveDistanceSegment(
+            LiveSlideSegmentId,
+            text,
+            _slideDistance,
+            usedGrind: false,
+            usedTuck: _usedTuckDuringRun,
+            usedStyle: _usedStyleDuringRun);
+
+        return true;
+    }
+
+    private bool TryBuildLiveGrindSegment(out TrickComboSegment segment)
+    {
+        segment = default;
+
+        if (!_grindTrackActive || skiController == null)
+            return false;
+
+        float distance = skiController.CurrentGrindDistance;
+        float duration = Mathf.Max(_grindTrackDuration, Time.time - _grindTrackStartTime);
+
+        if (distance <= 0.01f && duration < minGrindTapDuration)
+            return false;
+
+        int endSign = skiController.CurrentGrindEndContactSign;
+        if (endSign == 0)
+            endSign = _grindTrackEndSign;
+
+        string grindName = GetLiveGrindLabel(distance, endSign);
+        string text = distance >= minGrindDistance
+            ? $"{grindName} {Mathf.RoundToInt(distance)}m"
+            : grindName;
+
+        float effectiveDistance = Mathf.Max(distance, duration * 0.75f);
+
+        segment = BuildLiveDistanceSegment(
+            LiveGrindSegmentId,
+            text,
+            effectiveDistance,
+            usedGrind: true,
+            usedTuck: _usedTuckDuringRun,
+            usedStyle: _usedStyleDuringRun);
+
+        return true;
+    }
+
+    private TrickComboSegment BuildLiveDistanceSegment(
+        int id,
+        string text,
+        float distance,
+        bool usedGrind,
+        bool usedTuck,
+        bool usedStyle)
+    {
+        int tier = ComputeDistanceProgressionTier(distance);
+        float severity = ComputeDistanceSeverity01(distance);
+
+        return new TrickComboSegment
+        {
+            id = id,
+            text = text,
+            progressionTier = tier,
+            severity01 = severity,
+            usedTuck = usedTuck,
+            usedGrind = usedGrind,
+            usedStyle = usedStyle,
+            state = SegmentState.Building,
+            adjectiveTextSeed = id * 73856093,
+            adjectiveFontSeed = id * 19349663,
+            adjectiveColorSeed = id * 83492791
+        };
+    }
+
+    private int ComputeDistanceProgressionTier(float distance)
+    {
+        float metresPerTier = Mathf.Max(0.25f, liveDistanceMetersPerProgressionTier);
+        return Mathf.Max(1, Mathf.FloorToInt(Mathf.Max(0f, distance) / metresPerTier) + 1);
+    }
+
+    private float ComputeDistanceSeverity01(float distance)
+    {
+        float fullAt = Mathf.Max(0.25f, liveDistanceSeverityFullAt);
+        float distance01 = Mathf.Clamp01(Mathf.Max(0f, distance) / fullAt);
+        return Mathf.Clamp01(Mathf.Lerp(liveDistanceMinSeverity, 1f, distance01));
     }
 
     private TrickComboSegment[] BuildComboSegmentsForResult(bool success)
@@ -1626,45 +1953,65 @@ public sealed class SkierTrickTracker : MonoBehaviour
 
     private int ComputeLiveProgression()
     {
+        int max = Mathf.Max(1, ComputeComboProgression());
+
+        if (TryBuildLiveSlideSegment(out TrickComboSegment slideSegment))
+            max = Mathf.Max(max, slideSegment.progressionTier);
+
+        if (TryBuildLiveGrindSegment(out TrickComboSegment grindSegment))
+            max = Mathf.Max(max, grindSegment.progressionTier);
+
         string liveName = BuildSegmentDisplayName();
-        int spinCount = ComputeSpinCount(_segmentYaw);
-        int spinDegrees = spinCount * Mathf.Max(1, spinStepDegrees);
-        int flipCount = ComputeFlipCount(_segmentPitch, out _, out _);
+        if (!string.IsNullOrWhiteSpace(liveName))
+        {
+            int spinCount = ComputeSpinCount(_segmentYaw);
+            int spinDegrees = spinCount * Mathf.Max(1, spinStepDegrees);
+            int flipCount = ComputeFlipCount(_segmentPitch, out _, out _);
 
-        if (string.IsNullOrWhiteSpace(liveName))
-            return Mathf.Max(1, ComputeComboProgression());
-
-        return ComputeProgressionTier(
+            max = Mathf.Max(max, ComputeProgressionTier(
                 spinDegrees,
                 flipCount,
-                _usedGrindDuringRun,
+                _usedGrindDuringRun || _grindTrackActive,
                 _usedTuckDuringRun,
                 _usedStyleDuringRun,
                 false,
                 false,
                 false,
-                liveName);
+                liveName));
+        }
+
+        return Mathf.Max(1, max);
     }
 
     private float ComputeLiveSeverity01()
     {
+        float max = ComputeComboSeverity();
+
+        if (TryBuildLiveSlideSegment(out TrickComboSegment slideSegment))
+            max = Mathf.Max(max, slideSegment.severity01);
+
+        if (TryBuildLiveGrindSegment(out TrickComboSegment grindSegment))
+            max = Mathf.Max(max, grindSegment.severity01);
+
         string liveName = BuildSegmentDisplayName();
-        int spinCount = ComputeSpinCount(_segmentYaw);
-        int spinDegrees = spinCount * Mathf.Max(1, spinStepDegrees);
-        int flipCount = ComputeFlipCount(_segmentPitch, out _, out _);
+        if (!string.IsNullOrWhiteSpace(liveName))
+        {
+            int spinCount = ComputeSpinCount(_segmentYaw);
+            int spinDegrees = spinCount * Mathf.Max(1, spinStepDegrees);
+            int flipCount = ComputeFlipCount(_segmentPitch, out _, out _);
 
-        if (string.IsNullOrWhiteSpace(liveName))
-            return ComputeComboSeverity();
+            max = Mathf.Max(max, ComputeSeverity01(
+                spinDegrees,
+                flipCount,
+                _usedTuckDuringRun,
+                _usedGrindDuringRun || _grindTrackActive,
+                _usedStyleDuringRun,
+                false,
+                false,
+                false));
+        }
 
-        return ComputeSeverity01(
-            spinDegrees,
-            flipCount,
-            _usedTuckDuringRun,
-            _usedGrindDuringRun,
-            _usedStyleDuringRun,
-            false,
-            false,
-            false);
+        return Mathf.Clamp01(max);
     }
 
     private int ComputeComboProgression()
@@ -1697,6 +2044,22 @@ public sealed class SkierTrickTracker : MonoBehaviour
 
         if (includeBuildingSegment)
         {
+            if (TryBuildLiveSlideSegment(out TrickComboSegment slideSegment))
+            {
+                if (sb.Length > 0)
+                    sb.Append(" + ");
+
+                sb.Append(slideSegment.text);
+            }
+
+            if (TryBuildLiveGrindSegment(out TrickComboSegment grindSegment))
+            {
+                if (sb.Length > 0)
+                    sb.Append(" + ");
+
+                sb.Append(grindSegment.text);
+            }
+
             string building = BuildSegmentDisplayName();
             if (!string.IsNullOrWhiteSpace(building))
             {
@@ -1705,28 +2068,12 @@ public sealed class SkierTrickTracker : MonoBehaviour
 
                 sb.Append(building);
             }
-            else if (_slideActive && _slideDistance > 0.01f)
-            {
-                if (sb.Length > 0)
-                    sb.Append(" + ");
-
-                sb.Append(_slideSign > 0
-                    ? $"Noseslide {Mathf.RoundToInt(_slideDistance)}m"
-                    : $"Tailslide {Mathf.RoundToInt(_slideDistance)}m");
-            }
-            else if (_grindTrackActive && skiController != null && skiController.CurrentGrindDistance > 0.01f)
-            {
-                if (sb.Length > 0)
-                    sb.Append(" + ");
-
-                sb.Append($"Grind {Mathf.RoundToInt(skiController.CurrentGrindDistance)}m");
-            }
         }
 
         return sb.ToString().Trim();
     }
 
-    
+
     private string BuildSegmentDisplayName()
     {
         int spinCount = ComputeSpinCount(_segmentYaw);
@@ -1763,11 +2110,15 @@ public sealed class SkierTrickTracker : MonoBehaviour
 
     private string BuildPoseSignature()
     {
-        if (skiController == null || !skiController.IsAirPoseActive)
+        if (skiController == null)
+            return string.Empty;
+
+        bool hasPoseContext = skiController.IsAirPoseActive || skiController.ActiveTrickPoseEntry != null;
+        if (!hasPoseContext)
             return string.Empty;
 
         string poseName = skiController.CurrentTrackedPoseName;
-        return string.IsNullOrWhiteSpace(poseName) ? string.Empty : poseName;
+        return string.IsNullOrWhiteSpace(poseName) ? string.Empty : poseName.Trim();
     }
 
     private string BuildOrientationModifier()
@@ -1780,10 +2131,30 @@ public sealed class SkierTrickTracker : MonoBehaviour
 
     private string BuildPoseDescriptor()
     {
-        if (skiController == null || !skiController.IsAirPoseActive)
+        string liveDescriptor = BuildLivePoseDescriptor();
+        if (!string.IsNullOrWhiteSpace(liveDescriptor))
+            return liveDescriptor;
+
+        if (!string.IsNullOrWhiteSpace(_currentPoseDescriptor))
+            return _currentPoseDescriptor;
+
+        if (!string.IsNullOrWhiteSpace(_currentPoseSignature))
+            return _currentPoseSignature;
+
+        return string.Empty;
+    }
+
+    private string BuildLivePoseDescriptor()
+    {
+        if (skiController == null)
             return string.Empty;
 
-        return skiController.CurrentPresentedPoseName;
+        bool hasPoseContext = skiController.IsAirPoseActive || skiController.ActiveTrickPoseEntry != null;
+        if (!hasPoseContext)
+            return string.Empty;
+
+        string descriptor = skiController.CurrentPresentedPoseName;
+        return string.IsNullOrWhiteSpace(descriptor) ? string.Empty : descriptor.Trim();
     }
 
     private void EvaluateLandingStyleTags(ref TrickResult result)
@@ -1989,6 +2360,9 @@ public sealed class SkierTrickTracker : MonoBehaviour
         if (!string.IsNullOrWhiteSpace(BuildSegmentDisplayName()))
             return true;
 
+        if (!string.IsNullOrWhiteSpace(_currentPoseSignature))
+            return true;
+
         if (_slideActive && _slideDistance > 0.01f)
             return true;
 
@@ -2166,8 +2540,14 @@ public sealed class SkierTrickTracker : MonoBehaviour
         if (_slideActive && _slideDistance >= minSlideDistance)
             return true;
 
-        if (_grindTrackActive && skiController != null && skiController.CurrentGrindDistance >= minGrindDistance)
-            return true;
+        if (_grindTrackActive && skiController != null)
+        {
+            float grindDistance = skiController.CurrentGrindDistance;
+            float grindDuration = Mathf.Max(_grindTrackDuration, Time.time - _grindTrackStartTime);
+
+            if (grindDistance >= minGrindDistance || ShouldRecordGrindTap(grindDistance, grindDuration))
+                return true;
+        }
 
         string building = BuildSegmentDisplayName();
         return !string.IsNullOrWhiteSpace(building);
@@ -2199,6 +2579,15 @@ public sealed class SkierTrickTracker : MonoBehaviour
         if (text.StartsWith("Tail Grind", StringComparison.OrdinalIgnoreCase))
             return true;
 
+        if (text.Equals("Edge Tap", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (text.Equals("Nose Tap", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (text.Equals("Tail Tap", StringComparison.OrdinalIgnoreCase))
+            return true;
+
         return false;
     }
 
@@ -2228,10 +2617,19 @@ public sealed class SkierTrickTracker : MonoBehaviour
 
     private bool HasNonTrivialPoseOrientation()
     {
-        if (skiController == null || !skiController.IsAirPoseActive)
+        if (skiController == null)
             return false;
 
-        return skiController.CurrentPoseOrientationModifier != SkiController.AerialOrientationModifier.None;
+        if (skiController.CurrentPoseOrientationModifier != SkiController.AerialOrientationModifier.None)
+            return true;
+
+        if (skiController.ActiveTrickPoseEntry == null)
+            return false;
+
+        return skiController.ActiveTrickPoseEntry.requiredVerticalOrientation != TrickPoseVerticalOrientationRequirement.Any ||
+               skiController.ActiveTrickPoseEntry.requiredHorizontalOrientation != TrickPoseHorizontalOrientationRequirement.Any ||
+               skiController.ActiveTrickPoseEntry.requiredTravelFacing != TrickPoseTravelFacingRequirement.Any ||
+               skiController.ActiveTrickPoseEntry.requiredMotionState != TrickPoseMotionStateRequirement.Any;
     }
 
     private bool CanShowCurrentBuildingSegmentLive()

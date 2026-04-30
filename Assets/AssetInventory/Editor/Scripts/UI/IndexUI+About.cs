@@ -9,41 +9,22 @@ namespace AssetInventory
 {
     public partial class IndexUI
     {
+        private Vector2 _aboutScrollPos;
+
         private void DrawAboutTab()
         {
-            GUIStyle textColor = EditorGUIUtility.isProSkin ? CommonUIStyles.whiteCenter : CommonUIStyles.blackCenter;
+            _aboutScrollPos = EditorGUILayout.BeginScrollView(_aboutScrollPos);
+            AboutWindow.DrawContent("AssetInventory", DrawAssetInventoryCustomSection);
+            EditorGUILayout.EndScrollView();
+        }
 
-            EditorGUILayout.Space(6);
-
-            // Header with title
-            GUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            GUILayout.BeginVertical(GUILayout.MaxWidth(520));
-            GUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            EditorGUILayout.LabelField("A tool by Impossible Robert", CommonUIStyles.centerHeading, GUILayout.Width(350), GUILayout.Height(50));
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            GUILayout.EndVertical();
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-
-            // Links row
-            GUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Online Resources", CommonUIStyles.centerLinkLabel)) Application.OpenURL(AI.HOME_LINK);
-            EditorGUILayout.LabelField(" | ", EditorStyles.centeredGreyMiniLabel, GUILayout.Width(10));
-            if (GUILayout.Button("Join Discord", CommonUIStyles.centerLinkLabel)) Application.OpenURL(AI.DISCORD_LINK);
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-
-            EditorGUILayout.Space(6);
-
+        private void DrawAssetInventoryCustomSection()
+        {
 #if !USE_TUTORIALS
             // Tutorials CTA
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            GUILayout.BeginVertical(EditorStyles.helpBox, GUILayout.MaxWidth(520));
+            GUILayout.BeginVertical(EditorStyles.helpBox, GUILayout.MaxWidth(480));
             EditorGUILayout.LabelField("Tutorials", EditorStyles.boldLabel);
             EditorGUILayout.LabelField("Integrated tutorials require the Unity Tutorials package.", EditorStyles.wordWrappedLabel);
             EditorGUILayout.Space(2);
@@ -58,42 +39,16 @@ namespace AssetInventory
             GUILayout.EndVertical();
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
-#endif
-
-            // Version/info
-            EditorGUILayout.Space(4);
-            GUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            EditorGUILayout.LabelField($"Version {AI.VERSION}", textColor, GUILayout.ExpandWidth(false));
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
 
             EditorGUILayout.Space(6);
+#endif
 
-            // Review CTA
-            GUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            GUILayout.BeginVertical(EditorStyles.helpBox, GUILayout.MaxWidth(520));
-            EditorGUILayout.LabelField("Enjoying Asset Inventory?", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField("If you like this asset, please consider leaving a review on the Unity Asset Store.", EditorStyles.wordWrappedLabel);
-            EditorGUILayout.Space(2);
-            GUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Write Review", GUILayout.Width(160))) Application.OpenURL(AI.ASSET_STORE_LINK);
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            GUILayout.EndVertical();
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-
-            EditorGUILayout.Space(8);
-
-            // Advanced tools
+            // Maintenance section
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             if (ShowAdvanced())
             {
-                GUILayout.BeginVertical(EditorStyles.helpBox, GUILayout.MaxWidth(520));
+                GUILayout.BeginVertical(EditorStyles.helpBox, GUILayout.MaxWidth(480));
                 EditorGUILayout.LabelField("Maintenance", EditorStyles.boldLabel);
                 EditorGUILayout.Space(2);
                 GUILayout.BeginHorizontal();
@@ -110,16 +65,6 @@ namespace AssetInventory
             }
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
-
-            GUILayout.FlexibleSpace();
-
-            // Logo at the bottom
-            GUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            GUILayout.Box(Logo, EditorStyles.centeredGreyMiniLabel, GUILayout.MaxWidth(200), GUILayout.MaxHeight(200));
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            GUILayout.FlexibleSpace();
 
             if (AI.DEBUG_MODE && GUILayout.Button("Reload Lookups")) ReloadLookups();
             if (AI.DEBUG_MODE && GUILayout.Button("Get Token", GUILayout.ExpandWidth(false))) Debug.Log(CloudProjectSettings.accessToken);

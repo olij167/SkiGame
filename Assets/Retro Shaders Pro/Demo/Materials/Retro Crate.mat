@@ -19,6 +19,7 @@ Material:
   - _SNAPMODE_VIEW
   - _USE_FLAT_SHADING
   - _USE_VERTEX_COLORS
+  - _WRAPMODE_CLAMP
   m_InvalidKeywords:
   - _USE_FLAT_SHADING_ON
   m_LightmapFlags: 4
@@ -103,6 +104,7 @@ Material:
     - _ResolutionLimit: 64
     - _SnapMode: 2
     - _SnapsPerUnit: 64
+    - _WrapMode: 0
     m_Floats:
     - _AffineTextureStrength: 0
     - _AlphaClip: 0

@@ -13,15 +13,7 @@ MonoBehaviour:
   m_Name: QuestCatalog_Tutorial
   m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.QuestCatalogSO
   quests:
-  - {fileID: 11400000, guid: 741f6a0892ed50f429e7a1e280265600, type: 2}
-  - {fileID: 11400000, guid: 49cba510915c7414690c93a6f50e16eb, type: 2}
-  - {fileID: 11400000, guid: b327f1144c65c5847b0a1476cba4f3c0, type: 2}
-  - {fileID: 11400000, guid: 7dee5739575dc364eb37c1dbccaa3e48, type: 2}
-  - {fileID: 11400000, guid: 97ebac66d442a5148b5e90325663ce60, type: 2}
-  - {fileID: 11400000, guid: 449a4d9fde61ff241ac3fc97c1e5901a, type: 2}
-  - {fileID: 11400000, guid: 1f9efc534636ff34586da466ae81e32e, type: 2}
-  - {fileID: 11400000, guid: 60381daeee942c94abb99dc74e5bd70e, type: 2}
-  - {fileID: 11400000, guid: 4e04274cd84b6c44d991758313db8250, type: 2}
-  - {fileID: 11400000, guid: c999ba71e9b1ab0479f505434979e94d, type: 2}
-  - {fileID: 11400000, guid: 3a9927d6b534690468b7ec8217492d13, type: 2}
-  - {fileID: 11400000, guid: 8b8a65a9cf4170540a2c8eb8d70f00de, type: 2}
+  - {fileID: 11400000, guid: 2d3a8f3c1b2749e7a6c14a1c0f6b3210, type: 2}
+  - {fileID: 11400000, guid: 5e7b1d4f9a2c43c8b1d6e7f8091a2b3c, type: 2}
+  - {fileID: 11400000, guid: 8c1f6e2d4b3a47f9a5c2d1e6b7f8091a, type: 2}
+  - {fileID: 11400000, guid: c4b7e2f19a3d46c8b5e1f2a7d9c0b314, type: 2}

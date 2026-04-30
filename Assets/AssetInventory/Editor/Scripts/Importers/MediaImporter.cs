@@ -47,12 +47,14 @@ namespace AssetInventory
             // First Level / Second Level Mode - Parent Coordinator Path
             if (spec.attachToPackage && (spec.packageMode == 1 || spec.packageMode == 2))
             {
+                string[] excludedDirs = StringUtils.Split(spec.excludedDirectories, new[] {';', ','});
+
                 // Get first-level subdirectories (used directly for mode 1, as base for mode 2)
                 IEnumerable<string> targetDirectories = Directory.GetDirectories(fullLocation)
                     .Where(subdir =>
                     {
                         string relPath = subdir.Substring(fullLocation.Length + 1).Replace("\\", "/");
-                        return !IsIgnoredPath(relPath, true);
+                        return !IsIgnoredPath(relPath, true) && !IsExcludedDirectory(relPath, excludedDirs, false);
                     });
 
                 // For Second Level mode, get subdirectories of first-level directories
@@ -63,7 +65,7 @@ namespace AssetInventory
                             .Where(secondLevel =>
                             {
                                 string relPath = secondLevel.Substring(fullLocation.Length + 1).Replace("\\", "/");
-                                return !IsIgnoredPath(relPath, true);
+                                return !IsIgnoredPath(relPath, true) && !IsExcludedDirectory(relPath, excludedDirs, false);
                             }));
                 }
 
@@ -191,6 +193,7 @@ namespace AssetInventory
 
             // scan for new files
             string[] excludedExtensions = StringUtils.Split(spec.excludedExtensions, new[] {';', ','});
+            string[] excludedDirectories = StringUtils.Split(spec.excludedDirectories, new[] {';', ','});
             string[] excludedPreviewExtensions = AI.ResolveExtensionList(AI.Config.excludedPreviewExtensions);
 
             types.ForEach(t => searchPatterns.AddRange(AI.TypeGroups[t].Select(ext => $"*.{ext}")));
@@ -208,7 +211,7 @@ namespace AssetInventory
                 .Where(file =>
                 {
                     string type = IOUtils.GetExtensionWithoutDot(file).ToLowerInvariant();
-                    return type != "meta" && !excludedExtensions.Contains(type);
+                    return type != "meta" && !excludedExtensions.Contains(type) && !IsExcludedDirectory(file, excludedDirectories);
                 })
                 .ToArray();
             int fileCount = files.Length;

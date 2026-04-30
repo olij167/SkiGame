@@ -1,0 +1,129 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 301e6494375742f4b98ef78f27b43667, type: 3}
+  m_Name: Quest_Tutorial_Lesson_Intermediate
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.QuestDefinitionSO
+  id: tutorial.lesson.intermediate
+  title: Intermediate Ski Lesson
+  description: Start with a readiness check, then work on poles, tuck, air control,
+    and the core mountain HUD tabs.
+  autoAccept: 0
+  tutorialQuest: 1
+  stages:
+  - id: tutorial.lesson.intermediate.stage1
+    title: Readiness Check
+    description: Show that you can already manage the basics before moving into
+      intermediate terrain habits.
+    objectives:
+    - id: tutorial.lesson.intermediate.lean_forward
+      title: Lean forward
+      description: Show a clean forward lean input.
+      template: 0
+      inputAction: 40
+    - id: tutorial.lesson.intermediate.lean_backward
+      title: Lean backward
+      description: Show a clean backward lean input.
+      template: 0
+      inputAction: 50
+    - id: tutorial.lesson.intermediate.wedge
+      title: Wedge to brake
+      description: Brake in control before we move on.
+      template: 10
+      movementSkill: 0
+    - id: tutorial.lesson.intermediate.distance
+      title: Travel 24m
+      description: Stay balanced over a longer glide.
+      template: 20
+      targetValue: 24
+      distanceStat: 0
+  - id: tutorial.lesson.intermediate.stage2
+    title: Poles and Tuck
+    description: Use poles to build or resist speed, then hold a tuck on the move.
+    objectives:
+    - id: tutorial.lesson.intermediate.pole_push
+      title: Push with poles
+      description: Use a pair of pole pushes on flatter terrain.
+      template: 0
+      requiredCount: 2
+      inputAction: 20
+    - id: tutorial.lesson.intermediate.pole_drag
+      title: Drag the poles
+      description: Use pole drag to add resistance.
+      template: 0
+      inputAction: 30
+    - id: tutorial.lesson.intermediate.tuck
+      title: Use a tuck
+      description: Settle into a tuck while moving.
+      template: 0
+      inputAction: 10
+    - id: tutorial.lesson.intermediate.tuck_time
+      title: Hold tuck for 3 seconds
+      description: Carry speed in a stable tuck.
+      template: 20
+      targetValue: 3
+      distanceStat: 30
+  - id: tutorial.lesson.intermediate.stage3
+    title: Air Control
+    description: Jump, adjust your body in the air, and land under control.
+    objectives:
+    - id: tutorial.lesson.intermediate.jump_adjust
+      title: Adjust in the air
+      description: Make a deliberate in-air adjustment.
+      template: 10
+      movementSkill: 30
+    - id: tutorial.lesson.intermediate.air_pose
+      title: Use an air pose
+      description: Trigger an air pose while airborne.
+      template: 0
+      inputAction: 60
+    - id: tutorial.lesson.intermediate.air_time
+      title: Stay airborne for 0.5 seconds
+      description: Spend a little more time in the air.
+      template: 20
+      targetValue: 0.5
+      distanceStat: 20
+    - id: tutorial.lesson.intermediate.grounded
+      title: Land back on snow
+      description: Touch back down cleanly.
+      optional: 1
+      template: 40
+      stateTarget: 40
+  - id: tutorial.lesson.intermediate.stage4
+    title: Mountain HUD Basics
+    description: Use the overlay to check quests, tasks, map, and stats while you
+      move around the mountain.
+    objectives:
+    - id: tutorial.lesson.intermediate.overlay_opened
+      title: Open the overlay
+      description: Open the mountain HUD.
+      template: 80
+      uiTarget: 0
+    - id: tutorial.lesson.intermediate.quests_viewed
+      title: View Quests
+      description: Visit the Quests tab.
+      template: 80
+      uiTarget: 40
+    - id: tutorial.lesson.intermediate.stats_viewed
+      title: View Stats
+      description: Visit the Stats tab.
+      template: 80
+      uiTarget: 20
+    - id: tutorial.lesson.intermediate.tasks_viewed
+      title: View Tasks
+      description: Visit the Tasks tab.
+      template: 80
+      uiTarget: 30
+    - id: tutorial.lesson.intermediate.map_viewed
+      title: View Map
+      description: Visit the map tab.
+      template: 80
+      uiTarget: 10

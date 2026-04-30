@@ -32,8 +32,15 @@ public class CustomizationPortal : MonoBehaviour, IWorldInteractionPromptSource
 
     private void OnEnable()
     {
+        WorldInteractionPromptRegistry.Register(this);
+
         if (interactAction != null && interactAction.action != null && !interactAction.action.enabled)
             interactAction.action.Enable();
+    }
+
+    private void OnDisable()
+    {
+        WorldInteractionPromptRegistry.Unregister(this);
     }
 
     private void Update()

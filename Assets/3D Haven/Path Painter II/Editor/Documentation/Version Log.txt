@@ -1,3 +1,14 @@
+[Version 2.1.12]
+Enhancements:
+· Improve handling of mismatched terrain resolutions setups.
+· Detect user changing resolutions without selection change.
+Fixes:
+· [Fix] Correctly handle grossly mismatched terrain resolutions setups that could result in a broken state of the brush size.
+
+[Version 2.1.11]
+Fixes:
+· [Fix] The detail resolution was incorectly setup on the FFT-F Demo terrains in the Demo scene.
+
 [Version 2.1.10]
 Fixes:
 · [Fix] Latest Unity versions didn't (yet?) handle a custom importer, which was introduced earlier to avoid users needing to do clean installs for some updates. Custom importing is not needed now, but you may have to do a clean install (delete the earlier version before importing) if you are updating an older version of Path Painter.

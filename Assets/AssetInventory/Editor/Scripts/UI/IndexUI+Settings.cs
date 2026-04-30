@@ -692,12 +692,21 @@ namespace AssetInventory
                         }
                     }
                 }
-#if USE_URP
-                GUILayout.Label("(URP only, supported in current project)", EditorStyles.wordWrappedLabel, GUILayout.ExpandWidth(false));
-#else
-                GUILayout.Label("(URP only, unsupported in current project, requires URP version 14 or higher)", EditorStyles.wordWrappedLabel, GUILayout.ExpandWidth(true));
-#endif
                 GUILayout.EndHorizontal();
+
+                if (AI.Config.convertToPipeline)
+                {
+                    EditorGUI.indentLevel++;
+#if USE_URP
+                    AI.Config.useUnityPipelineConverter = EditorGUILayout.Toggle(
+                        CommonUIStyles.Content("Unity Converter", "Use Unity's built-in Render Pipeline Converter to persistently convert materialized assets. Only supports BIRP → URP."),
+                        AI.Config.useUnityPipelineConverter);
+#endif
+                    AI.Config.useCustomPipelineConverter = EditorGUILayout.Toggle(
+                        CommonUIStyles.Content("Custom Converter", "The custom converter is by now on-par with the Unity one and can also handle a number of HDRP conversions as well. Supports BIRP → URP and BIRP → HDRP. If the Unity converter fails or is unavailable in your project, the custom converter will be used. If you deactivate the Unity converter, only the custom one will be used which will also be much faster since the custom converter can work on individual materials and will not affect the whole project."),
+                        AI.Config.useCustomPipelineConverter);
+                    EditorGUI.indentLevel--;
+                }
 
                 UIBlock("settings.importstructureintro", () =>
                 {
@@ -979,7 +988,7 @@ namespace AssetInventory
 
                 GUILayout.BeginHorizontal();
                 EditorGUILayout.LabelField(CommonUIStyles.Content("Backups per Asset", "Number of versions to keep per asset"), EditorStyles.boldLabel, GUILayout.Width(labelWidth));
-                AI.Config.backupsPerAsset = EditorGUILayout.IntField(AI.Config.backupsPerAsset, GUILayout.Width(50));
+                AI.Config.backupsPerAsset = EditorGUILayout.DelayedIntField(AI.Config.backupsPerAsset, GUILayout.Width(50));
                 GUILayout.EndHorizontal();
 
                 DrawFolder("Storage Folder", AI.Config.backupFolder, Paths.GetBackupFolder(false), newFolder => AI.Config.backupFolder = newFolder, labelWidth);
@@ -994,12 +1003,12 @@ namespace AssetInventory
                 {
                     GUILayout.BeginHorizontal();
                     EditorGUILayout.LabelField(CommonUIStyles.Content($"{CommonUIStyles.INDENT}Backup Interval (days)", "Number of days between automatic database backups."), EditorStyles.boldLabel, GUILayout.Width(labelWidth));
-                    AI.Config.databaseBackupInterval = EditorGUILayout.IntField(AI.Config.databaseBackupInterval, GUILayout.Width(50));
+                    AI.Config.databaseBackupInterval = EditorGUILayout.DelayedIntField(AI.Config.databaseBackupInterval, GUILayout.Width(50));
                     GUILayout.EndHorizontal();
 
                     GUILayout.BeginHorizontal();
                     EditorGUILayout.LabelField(CommonUIStyles.Content($"{CommonUIStyles.INDENT}Number of Backups to Keep", "Maximum number of database backups to retain. Older backups will be automatically deleted."), EditorStyles.boldLabel, GUILayout.Width(labelWidth));
-                    AI.Config.databaseBackupsToKeep = EditorGUILayout.IntField(AI.Config.databaseBackupsToKeep, GUILayout.Width(50));
+                    AI.Config.databaseBackupsToKeep = EditorGUILayout.DelayedIntField(AI.Config.databaseBackupsToKeep, GUILayout.Width(50));
                     EditorGUI.BeginDisabledGroup(DBAdapter.IsBackingUp);
                     if (GUILayout.Button(DBAdapter.IsBackingUp ? "Backing Up..." : "Backup Now", GUILayout.ExpandWidth(false)))
                     {
@@ -1128,7 +1137,7 @@ namespace AssetInventory
 
                         GUILayout.BeginHorizontal();
                         EditorGUILayout.LabelField(CommonUIStyles.Content("Batch Size", "Number of files that are captioned by the model at once."), EditorStyles.boldLabel, GUILayout.Width(labelWidth));
-                        AI.Config.blipChunkSize = EditorGUILayout.IntField(AI.Config.blipChunkSize, GUILayout.Width(50));
+                        AI.Config.blipChunkSize = EditorGUILayout.DelayedIntField(AI.Config.blipChunkSize, GUILayout.Width(50));
                         GUILayout.EndHorizontal();
                         break;
 
@@ -1275,7 +1284,7 @@ namespace AssetInventory
 
                             GUILayout.BeginHorizontal();
                             EditorGUILayout.LabelField(CommonUIStyles.Content("Batch Size", "Number of requests to send in parallel (1 = sequential, 2-4 recommended for better GPU utilization). LMStudio will queue requests internally."), EditorStyles.boldLabel, GUILayout.Width(labelWidth));
-                            AI.Config.lmStudioParallelRequests = EditorGUILayout.IntField(AI.Config.lmStudioParallelRequests, GUILayout.Width(50));
+                            AI.Config.lmStudioParallelRequests = EditorGUILayout.DelayedIntField(AI.Config.lmStudioParallelRequests, GUILayout.Width(50));
                             GUILayout.EndHorizontal();
                         }
                         else
@@ -1370,6 +1379,21 @@ namespace AssetInventory
                 else
                 {
                     if (GUILayout.Button("Disable", GUILayout.ExpandWidth(false))) EditorUtils.AddDefine(AI.DEFINE_SYMBOL_HIDE_BROWSER);
+                }
+                GUILayout.EndHorizontal();
+
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("'Tools' Menu", EditorStyles.largeLabel);
+
+                GUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField(CommonUIStyles.Content("Show Asset Inventory"), EditorStyles.boldLabel, GUILayout.Width(labelWidth));
+                if (EditorUtils.HasDefine(AI.DEFINE_SYMBOL_HIDE_TOOLS_MENU))
+                {
+                    if (GUILayout.Button("Enable", GUILayout.ExpandWidth(false))) EditorUtils.RemoveDefine(AI.DEFINE_SYMBOL_HIDE_TOOLS_MENU);
+                }
+                else
+                {
+                    if (GUILayout.Button("Disable", GUILayout.ExpandWidth(false))) EditorUtils.AddDefine(AI.DEFINE_SYMBOL_HIDE_TOOLS_MENU);
                 }
                 GUILayout.EndHorizontal();
 

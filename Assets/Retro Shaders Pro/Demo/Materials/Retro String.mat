@@ -32,6 +32,7 @@ Material:
   - _RECEIVESHADOWSMODE_ON
   - _SNAPMODE_VIEW
   - _USE_FLAT_SHADING
+  - _WRAPMODE_CLAMP
   m_InvalidKeywords:
   - _LIGHTINGMODE_LIT
   - _USE_FLAT_SHADING_ON
@@ -122,6 +123,7 @@ Material:
     - _ResolutionLimit: 128
     - _SnapMode: 2
     - _SnapsPerUnit: 128
+    - _WrapMode: 0
     m_Floats:
     - _AffineTextureStrength: 0
     - _AlphaClip: 1

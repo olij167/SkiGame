@@ -6,6 +6,13 @@ using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
 #pragma warning disable CS0618 // Type or member is obsolete
+#if UNITY_6000_2_OR_NEWER
+using BaseTreeViewItem = UnityEditor.IMGUI.Controls.TreeViewItem<int>;
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState<int>;
+#else
+using BaseTreeViewItem = UnityEditor.IMGUI.Controls.TreeViewItem;
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState;
+#endif
 
 namespace AssetInventory
 {
@@ -16,7 +23,7 @@ namespace AssetInventory
         public event Action<Tag> OnDeleteTag;
         public event Action OnHierarchyChanged;
 
-        public TagTreeViewControl(TreeViewState state, TreeModel<TagTreeElement> model) : base(state, model)
+        public TagTreeViewControl(BaseTreeViewState state, TreeModel<TagTreeElement> model) : base(state, model)
         {
             showAlternatingRowBackgrounds = true;
             showBorder = true;
@@ -88,7 +95,7 @@ namespace AssetInventory
 
         protected override DragAndDropVisualMode HandleDragAndDrop(DragAndDropArgs args)
         {
-            List<TreeViewItem> draggedRows = DragAndDrop.GetGenericData("GenericDragColumnDragging") as List<TreeViewItem>;
+            List<BaseTreeViewItem> draggedRows = DragAndDrop.GetGenericData("GenericDragColumnDragging") as List<BaseTreeViewItem>;
             if (draggedRows == null) return DragAndDropVisualMode.None;
 
             switch (args.dragAndDropPosition)
@@ -119,10 +126,10 @@ namespace AssetInventory
             }
         }
 
-        private bool IsValidDrag(TreeViewItem parent, List<TreeViewItem> draggedItems)
+        private bool IsValidDrag(BaseTreeViewItem parent, List<BaseTreeViewItem> draggedItems)
         {
             // Prevent dropping an item onto itself or its descendants
-            TreeViewItem currentParent = parent;
+            BaseTreeViewItem currentParent = parent;
             while (currentParent != null)
             {
                 if (draggedItems.Contains(currentParent)) return false;
@@ -131,13 +138,13 @@ namespace AssetInventory
             return true;
         }
 
-        protected override void OnDropDraggedElementsAtIndex(List<TreeViewItem> draggedRows, TagTreeElement parent, int insertIndex)
+        protected override void OnDropDraggedElementsAtIndex(List<BaseTreeViewItem> draggedRows, TagTreeElement parent, int insertIndex)
         {
             // First, let the base class handle the tree structure update
             base.OnDropDraggedElementsAtIndex(draggedRows, parent, insertIndex);
 
             // Then persist the hierarchy changes to the database
-            foreach (TreeViewItem row in draggedRows)
+            foreach (BaseTreeViewItem row in draggedRows)
             {
                 TagTreeElement tagElement = ((TreeViewItem<TagTreeElement>)row).Data;
                 if (tagElement?.Tag == null) continue;
@@ -150,7 +157,7 @@ namespace AssetInventory
             OnHierarchyChanged?.Invoke();
         }
 
-        protected override bool CanRename(TreeViewItem item)
+        protected override bool CanRename(BaseTreeViewItem item)
         {
             return false; // We use custom rename via popup
         }

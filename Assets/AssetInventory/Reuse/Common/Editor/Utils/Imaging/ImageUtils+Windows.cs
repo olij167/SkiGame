@@ -1,5 +1,6 @@
 #if UNITY_EDITOR_WIN && NET_4_6
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using System.Drawing;
@@ -39,27 +40,50 @@ namespace ImpossibleRobert.Common
             return matchCount > total * coverageThreshold;
         }
 
-        public static bool IsErrorPreview(Bitmap bmp, float requiredRatio = 0.06f, byte tol = 10)
+        public static bool IsErrorPreview(Bitmap bmp, float requiredRatio = 0.06f)
         {
             int w = bmp.Width;
             int h = bmp.Height;
             int total = w * h;
-            int magentaCount = 0;
+            int pinkCount = 0;
 
             for (int y = 0; y < h; y++)
             {
                 for (int x = 0; x < w; x++)
                 {
                     System.Drawing.Color c = bmp.GetPixel(x, y);
-                    if (Math.Abs(c.R - 255) <= tol && c.G <= tol && Math.Abs(c.B - 255) <= tol)
+                    if (IsMagentaPixel(c.R, c.G, c.B))
                     {
-                        magentaCount++;
+                        pinkCount++;
                     }
                 }
             }
 
-            float ratio = (float)magentaCount / total;
+            float ratio = (float)pinkCount / total;
             return ratio >= requiredRatio;
+        }
+
+        public static bool IsLowDiversityPinkPreview(Bitmap bmp, int maxDistinctColors = 20)
+        {
+            int w = bmp.Width;
+            int h = bmp.Height;
+            HashSet<(byte, byte, byte)> buckets = new HashSet<(byte, byte, byte)>();
+            bool hasPink = false;
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    System.Drawing.Color c = bmp.GetPixel(x, y);
+                    buckets.Add(((byte)(c.R >> 3), (byte)(c.G >> 3), (byte)(c.B >> 3)));
+                    if (!hasPink && IsMagentaPixel(c.R, c.G, c.B))
+                    {
+                        hasPink = true;
+                    }
+                }
+            }
+
+            return hasPink && buckets.Count <= maxDistinctColors;
         }
 
         public static ulong ComputePerceptualHash(Bitmap bitmap, int hashSize = 8)

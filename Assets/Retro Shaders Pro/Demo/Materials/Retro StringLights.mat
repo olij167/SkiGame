@@ -31,6 +31,7 @@ Material:
   - _LIGHTMODE_UNLIT
   - _RECEIVESHADOWSMODE_ON
   - _SNAPMODE_VIEW
+  - _WRAPMODE_CLAMP
   m_InvalidKeywords:
   - _USE_AFFINE_TEXTURES_ON
   - _USE_POINT_FILTER_ON
@@ -115,6 +116,7 @@ Material:
     - _ResolutionLimit: 128
     - _SnapMode: 2
     - _SnapsPerUnit: 64
+    - _WrapMode: 0
     m_Floats:
     - _AffineTextureStrength: 0
     - _AlphaClip: 1

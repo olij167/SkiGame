@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a43f710fb7664a64a83dc35e498b2d51, type: 3}
+  m_Name: NpcQuestOffer_Instructor_ExpertLesson
+  m_EditorClassIdentifier: Assembly-CSharp::NpcQuestOfferSO
+  questDefinition: {fileID: 11400000, guid: c4b7e2f19a3d46c8b5e1f2a7d9c0b314, type: 2}
+  offerTitle: Expert Ski Lesson
+  offerDialogue: Expert lesson? This one is about activities, races, rescue work,
+    and using the mountain systems properly.
+  acceptedDialogue: Let's see how you handle the broader mountain.
+  inProgressDialogue: Work through the activity objectives and check the relevant
+    panels as needed.
+  completedDialogue: You're ready to handle the mountain on your own.
+  turnInDialogue: Expert lesson complete.
+  requiredCompletedQuests: []
+  blockedByCompletedQuests: []
+  autoTrackOnAccept: 1
+  showNavigationTarget: 1

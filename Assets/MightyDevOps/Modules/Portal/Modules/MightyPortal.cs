@@ -1554,9 +1554,9 @@ namespace MightyPortal
 
         private void CleanupUIToolkitHelper()
         {
-            if (helperContainer != null && currentSceneView != null)
+            if (helperContainer != null)
             {
-                currentSceneView.rootVisualElement.Remove(helperContainer);
+                helperContainer.RemoveFromHierarchy();
                 helperContainer = null;
                 helperText = null;
                 helperList = null;
@@ -1572,10 +1572,9 @@ namespace MightyPortal
                 return;
             }
 
-            // Clean up any existing helper first
             if (helperContainer != null)
             {
-                currentSceneView.rootVisualElement.Remove(helperContainer);
+                helperContainer.RemoveFromHierarchy();
             }
 
             // Create main container
@@ -1676,7 +1675,7 @@ namespace MightyPortal
                 return;
             }
 
-            DevLog($"UpdateHelperContent: showInitialHelper={showInitialHelper}, isAdjust={isAdjust}, isDragging={isDragging}, isMidDown={isMidDown}, precision={precision}");
+            // DevLog($"UpdateHelperContent: showInitialHelper={showInitialHelper}, isAdjust={isAdjust}, isDragging={isDragging}, isMidDown={isMidDown}, precision={precision}");
 
             if (showInitialHelper)
             {
@@ -1686,7 +1685,7 @@ namespace MightyPortal
                 string keyText = GetActivationKeyText();
                 helperText.text = $"• Hold {keyText}";
                 helperText.style.color = new Color(0.7f, 0.9f, 1f); // Light blue to indicate it's different
-                DevLog("UpdateHelperContent: Showing activation helper");
+                // DevLog("UpdateHelperContent: Showing activation helper");
             }
             else if (!isAdjust)
             {

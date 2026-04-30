@@ -7,6 +7,11 @@ using UnityEditor.IMGUI.Controls;
 using ImpossibleRobert.Common;
 using UnityEngine;
 #pragma warning disable CS0618 // Type or member is obsolete
+#if UNITY_6000_2_OR_NEWER
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState<int>;
+#else
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState;
+#endif
 
 namespace AssetInventory
 {
@@ -18,7 +23,7 @@ namespace AssetInventory
         private bool _deleteEmptyFolders = true;
 
         private FileTreeViewControl _treeView;
-        private TreeViewState _treeViewState;
+        private BaseTreeViewState _treeViewState;
 
         // Async analysis fields
         private bool _analyzingUsages;
@@ -107,7 +112,7 @@ namespace AssetInventory
             }
 
             // Initialize TreeView
-            if (_treeViewState == null) _treeViewState = new TreeViewState();
+            if (_treeViewState == null) _treeViewState = new BaseTreeViewState();
 
             // Convert list to tree to set up parent/children references
             FileTreeElement rootElement = TreeElementUtility.ListToTree(treeElements);

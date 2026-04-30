@@ -258,6 +258,22 @@ namespace ImpossibleRobert.Common
         }
 
         /// <summary>
+        /// Detects Unity error-shader magenta pixels. Handles both sRGB (bright ~255,0,255)
+        /// and linear-space / tonemapped variants (darker ~160,0,128) that appear across
+        /// different Unity versions and render pipelines.
+        /// </summary>
+        public static bool IsMagentaPixel(byte r, byte g, byte b)
+        {
+            // R and B must both be present; G must be very low.
+            // Thresholds chosen to catch linear-space dark magenta while
+            // avoiding false positives on legitimate dark-purple content.
+            return r >= 80 && b >= 64
+                && g < 50
+                && g < r * 0.35f
+                && g < b * 0.5f;
+        }
+
+        /// <summary>
         /// Parameters for image resize operations, calculated by CalculateResizeParams.
         /// </summary>
         internal struct ResizeParams

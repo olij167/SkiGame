@@ -17,10 +17,10 @@ public static class TrickPoseCoveragePlanBuilder
 
         List<bool> airborneValues = BuildBoolOptions(plan.includeAirborne, plan.includeGrounded, true);
         List<bool> poseHeldValues = BuildBoolOptions(plan.includePoseHeld, plan.includePoseReleased, true);
-        List<SkiController.AerialPoseFamily> families = plan.usePoseFamily && plan.poseFamilies != null && plan.poseFamilies.Count > 0
+        List<SkiController.AerialPoseFamily> poseFamilies = plan.usePoseFamily && plan.poseFamilies != null && plan.poseFamilies.Count > 0
             ? plan.poseFamilies
             : new List<SkiController.AerialPoseFamily> { SkiController.AerialPoseFamily.None };
-        List<SkiController.AerialPoseShape> shapes = plan.usePoseShape && plan.poseShapes != null && plan.poseShapes.Count > 0
+        List<SkiController.AerialPoseShape> poseShapes = plan.usePoseShape && plan.poseShapes != null && plan.poseShapes.Count > 0
             ? plan.poseShapes
             : new List<SkiController.AerialPoseShape> { SkiController.AerialPoseShape.None };
         List<TrickPoseVerticalOrientationRequirement> verticalOrientations = plan.useVerticalOrientation && plan.verticalOrientations != null && plan.verticalOrientations.Count > 0
@@ -29,6 +29,9 @@ public static class TrickPoseCoveragePlanBuilder
         List<TrickPoseHorizontalOrientationRequirement> horizontalOrientations = plan.useHorizontalOrientation && plan.horizontalOrientations != null && plan.horizontalOrientations.Count > 0
             ? plan.horizontalOrientations
             : new List<TrickPoseHorizontalOrientationRequirement> { TrickPoseHorizontalOrientationRequirement.Any };
+        List<TrickPoseTravelFacingRequirement> travelFacings = plan.useTravelFacing && plan.travelFacings != null && plan.travelFacings.Count > 0
+            ? plan.travelFacings
+            : new List<TrickPoseTravelFacingRequirement> { TrickPoseTravelFacingRequirement.Any };
         List<TrickPoseMotionStateRequirement> motionStates = plan.useMotionState && plan.motionStates != null && plan.motionStates.Count > 0
             ? plan.motionStates
             : new List<TrickPoseMotionStateRequirement> { TrickPoseMotionStateRequirement.Any };
@@ -37,26 +40,39 @@ public static class TrickPoseCoveragePlanBuilder
         {
             foreach (bool poseHeld in poseHeldValues)
             {
-                foreach (SkiController.AerialPoseFamily family in families)
+                foreach (SkiController.AerialPoseFamily poseFamily in poseFamilies)
                 {
-                    foreach (SkiController.AerialPoseShape shape in shapes)
+                    foreach (SkiController.AerialPoseShape poseShape in poseShapes)
                     {
                         foreach (TrickPoseVerticalOrientationRequirement vertical in verticalOrientations)
                         {
                             foreach (TrickPoseHorizontalOrientationRequirement horizontal in horizontalOrientations)
                             {
-                                foreach (TrickPoseMotionStateRequirement motion in motionStates)
+                                foreach (TrickPoseTravelFacingRequirement travelFacing in travelFacings)
                                 {
-                                    TrickPoseCoverageSlot slot = CreateSlot(controller, airborne, poseHeld, family, shape, vertical, horizontal, motion);
-                                    if (TryFindExclusion(plan, slot, out TrickPoseCoverageExclusionRule exclusion))
+                                    foreach (TrickPoseMotionStateRequirement motion in motionStates)
                                     {
-                                        slot.excluded = true;
-                                        slot.exclusionReason = exclusion != null ? exclusion.label : "Excluded";
-                                        slot.validationStatus = TrickPoseCoverageSlotValidationStatus.Excluded;
-                                        result.excludedCount++;
-                                    }
+                                        TrickPoseCoverageSlot slot = CreateSlot(
+                                            controller,
+                                            airborne,
+                                            poseHeld,
+                                            poseFamily,
+                                            poseShape,
+                                            vertical,
+                                            horizontal,
+                                            travelFacing,
+                                            motion);
 
-                                    result.slots.Add(slot);
+                                        if (TryFindExclusion(plan, slot, out TrickPoseCoverageExclusionRule exclusion))
+                                        {
+                                            slot.excluded = true;
+                                            slot.exclusionReason = exclusion != null ? exclusion.label : "Excluded";
+                                            slot.validationStatus = TrickPoseCoverageSlotValidationStatus.Excluded;
+                                            result.excludedCount++;
+                                        }
+
+                                        result.slots.Add(slot);
+                                    }
                                 }
                             }
                         }
@@ -181,7 +197,12 @@ public static class TrickPoseCoveragePlanBuilder
         if (slot == null)
             return null;
 
-        bool hasOrientationRotation = TrickPoseOrientationUtility.TryBuildPresentationEuler(slot.verticalOrientation, slot.horizontalOrientation, out Vector3 orientationEuler);
+        bool hasOrientationRotation = TrickPoseOrientationUtility.TryBuildPresentationEuler(
+            slot.verticalOrientation,
+            slot.horizontalOrientation,
+            slot.travelFacing,
+            out Vector3 orientationEuler);
+
         TrickPoseInfluencePreviewState state = new TrickPoseInfluencePreviewState
         {
             poseInputHeld = slot.poseHeld,
@@ -210,6 +231,7 @@ public static class TrickPoseCoveragePlanBuilder
         context.poseShape = slot.poseShape;
         context.verticalOrientation = slot.verticalOrientation;
         context.horizontalOrientation = slot.horizontalOrientation;
+        context.travelFacing = slot.travelFacing;
         context.motionState = slot.motionState;
         context.orientationModifier = slot.orientationModifier;
         context.spinDirectionSign = SignFromValue(context.yawAngularVelocity);
@@ -225,7 +247,15 @@ public static class TrickPoseCoveragePlanBuilder
         if (slot == null)
             return;
 
-        string slotId = BuildSlotId(slot.airborne, slot.poseHeld, slot.poseFamily, slot.poseShape, slot.verticalOrientation, slot.horizontalOrientation, slot.motionState);
+        string slotId = BuildSlotId(
+            slot.airborne,
+            slot.poseHeld,
+            slot.poseFamily,
+            slot.poseShape,
+            slot.verticalOrientation,
+            slot.horizontalOrientation,
+            slot.travelFacing,
+            slot.motionState);
         if (!string.Equals(slot.slotId, slotId, System.StringComparison.Ordinal))
         {
             slot.slotId = slotId;
@@ -336,28 +366,30 @@ public static class TrickPoseCoveragePlanBuilder
     }
 
     private static TrickPoseCoverageSlot CreateSlot(
-        SkiController controller,
-        bool airborne,
-        bool poseHeld,
-        SkiController.AerialPoseFamily family,
-        SkiController.AerialPoseShape shape,
-        TrickPoseVerticalOrientationRequirement vertical,
-        TrickPoseHorizontalOrientationRequirement horizontal,
-        TrickPoseMotionStateRequirement motion)
+    SkiController controller,
+    bool airborne,
+    bool poseHeld,
+    SkiController.AerialPoseFamily poseFamily,
+    SkiController.AerialPoseShape poseShape,
+    TrickPoseVerticalOrientationRequirement vertical,
+    TrickPoseHorizontalOrientationRequirement horizontal,
+    TrickPoseTravelFacingRequirement travelFacing,
+    TrickPoseMotionStateRequirement motion)
     {
         TrickPoseCoverageSlot slot = new TrickPoseCoverageSlot
         {
             airborne = airborne,
             poseHeld = poseHeld,
-            poseFamily = family,
-            poseShape = shape,
+            poseFamily = poseFamily,
+            poseShape = poseShape,
             verticalOrientation = vertical,
             horizontalOrientation = horizontal,
+            travelFacing = travelFacing,
             motionState = motion,
             orientationModifier = TrickPoseOrientationUtility.ToLegacyOrientationModifier(vertical, horizontal, motion)
         };
 
-        slot.slotId = BuildSlotId(airborne, poseHeld, family, shape, vertical, horizontal, motion);
+        slot.slotId = BuildSlotId(airborne, poseHeld, poseFamily, poseShape, vertical, horizontal, travelFacing, motion);
         slot.shortLabel = TrickPoseAuthoredStateFormatter.Format(slot);
         slot.representativeContext = BuildRepresentativeContext(controller, slot);
         slot.summary = "Unassigned coverage slot.";
@@ -365,21 +397,23 @@ public static class TrickPoseCoveragePlanBuilder
     }
 
     private static string BuildSlotId(
-        bool airborne,
-        bool poseHeld,
-        SkiController.AerialPoseFamily family,
-        SkiController.AerialPoseShape shape,
-        TrickPoseVerticalOrientationRequirement vertical,
-        TrickPoseHorizontalOrientationRequirement horizontal,
-        TrickPoseMotionStateRequirement motion)
+    bool airborne,
+    bool poseHeld,
+    SkiController.AerialPoseFamily poseFamily,
+    SkiController.AerialPoseShape poseShape,
+    TrickPoseVerticalOrientationRequirement vertical,
+    TrickPoseHorizontalOrientationRequirement horizontal,
+    TrickPoseTravelFacingRequirement travelFacing,
+    TrickPoseMotionStateRequirement motion)
     {
         return string.Join("|",
             airborne ? "Air" : "Ground",
             poseHeld ? "PoseHeld" : "PoseOff",
-            family,
-            shape,
+            poseFamily,
+            poseShape,
             vertical,
             horizontal,
+            travelFacing,
             motion);
     }
 
@@ -394,6 +428,8 @@ public static class TrickPoseCoveragePlanBuilder
                a.poseShape == b.poseShape &&
                a.verticalOrientation == b.verticalOrientation &&
                a.horizontalOrientation == b.horizontalOrientation &&
+               a.travelFacing == b.travelFacing &&
+               
                a.motionState == b.motionState &&
                a.orientationModifier == b.orientationModifier &&
                a.entryEulerAngles == b.entryEulerAngles &&
@@ -442,6 +478,9 @@ public static class TrickPoseCoveragePlanBuilder
                 continue;
             if (rule.horizontalOrientation != TrickPoseHorizontalOrientationRequirement.Any && rule.horizontalOrientation != slot.horizontalOrientation)
                 continue;
+            if (rule.travelFacing != TrickPoseTravelFacingRequirement.Any && rule.travelFacing != slot.travelFacing)
+                continue;
+          
             if (rule.motionState != TrickPoseMotionStateRequirement.Any && rule.motionState != slot.motionState)
                 continue;
             if (rule.orientationModifier != SkiController.AerialOrientationModifier.None && rule.orientationModifier != slot.orientationModifier)
@@ -484,4 +523,6 @@ public static class TrickPoseCoveragePlanBuilder
             return new List<TrickPoseCoverageAngularBucket> { null };
         return source;
     }
+
+    
 }

@@ -6,6 +6,13 @@ using ImpossibleRobert.Common;
 using UnityEngine;
 
 #pragma warning disable CS0618 // Type or member is obsolete
+#if UNITY_6000_2_OR_NEWER
+using BaseTreeViewItem = UnityEditor.IMGUI.Controls.TreeViewItem<int>;
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState<int>;
+#else
+using BaseTreeViewItem = UnityEditor.IMGUI.Controls.TreeViewItem;
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState;
+#endif
 
 namespace AssetInventory
 {
@@ -60,7 +67,7 @@ namespace AssetInventory
         private readonly List<int> _previousSelection = new List<int>();
         private bool _isMediaColumnVisible;
 
-        public AssetTreeViewControl(TreeViewState state, MultiColumnHeader multiColumnHeader, TreeModel<AssetInfo> model) : base(state, multiColumnHeader, model)
+        public AssetTreeViewControl(BaseTreeViewState state, MultiColumnHeader multiColumnHeader, TreeModel<AssetInfo> model) : base(state, multiColumnHeader, model)
         {
             columnIndexForTreeFoldouts = 0;
             showAlternatingRowBackgrounds = true;
@@ -96,14 +103,14 @@ namespace AssetInventory
             // Get currently visible rows in the viewport
             GetFirstAndLastVisibleRows(out int firstRow, out int lastRow);
 
-            IList<TreeViewItem> allRows = GetRows();
+            IList<BaseTreeViewItem> allRows = GetRows();
 
             // Dispose media for items that are not in the visible area and not selected
             for (int i = 0; i < allRows.Count; i++)
             {
                 if (i < firstRow || i > lastRow)
                 {
-                    TreeViewItem item = allRows[i];
+                    BaseTreeViewItem item = allRows[i];
 
                     // Don't dispose media for selected items
                     if (state.selectedIDs.Contains(item.id)) continue;
@@ -147,9 +154,9 @@ namespace AssetInventory
         }
 
         // only build the visible rows, the backend has the full tree information 
-        protected override IList<TreeViewItem> BuildRows(TreeViewItem root)
+        protected override IList<BaseTreeViewItem> BuildRows(BaseTreeViewItem root)
         {
-            IList<TreeViewItem> rows = base.BuildRows(root);
+            IList<BaseTreeViewItem> rows = base.BuildRows(root);
             return rows;
         }
 
@@ -615,7 +622,7 @@ namespace AssetInventory
             }
         }
 
-        protected override bool CanMultiSelect(TreeViewItem item)
+        protected override bool CanMultiSelect(BaseTreeViewItem item)
         {
             return true;
         }

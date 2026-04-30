@@ -51,7 +51,8 @@ public class LiftStationTerrainSnap : MonoBehaviour
             return;
 
         float deltaY = (hit.point.y + baseOffsetAboveGround) - baseTf.position.y;
-        transform.position += Vector3.up * deltaY;
+        if (Mathf.Abs(deltaY) > 0.001f)
+            transform.position += Vector3.up * deltaY;
 
         if (alignToTerrainNormal)
         {
@@ -69,7 +70,9 @@ public class LiftStationTerrainSnap : MonoBehaviour
             Quaternion limitedTilt = Quaternion.AngleAxis(angle, axis.normalized);
             Quaternion yawOnly = Quaternion.LookRotation(Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized, Vector3.up);
 
-            transform.rotation = yawOnly * limitedTilt;
+            Quaternion desiredRotation = yawOnly * limitedTilt;
+            if (Quaternion.Angle(transform.rotation, desiredRotation) > 0.05f)
+                transform.rotation = desiredRotation;
         }
     }
 }

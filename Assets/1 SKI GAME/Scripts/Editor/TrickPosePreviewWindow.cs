@@ -5,6 +5,8 @@ using UnityEngine;
 
 public class TrickPosePreviewWindow : EditorWindow
 {
+    private const double EditorPreviewTickIntervalSeconds = 1.0d / 30.0d;
+
     [Serializable]
     private class SequenceStep
     {
@@ -526,6 +528,9 @@ public class TrickPosePreviewWindow : EditorWindow
         }
 
         double now = EditorApplication.timeSinceStartup;
+        if (now - _lastEditorTime < EditorPreviewTickIntervalSeconds)
+            return;
+
         float deltaTime = (float)(now - _lastEditorTime);
         _lastEditorTime = now;
 
@@ -783,22 +788,25 @@ public class TrickPosePreviewWindow : EditorWindow
 
         state.airborne = entry.requireAirborne != TrickPoseBoolRequirement.False;
         state.poseInputHeld = entry.requirePoseButtonHeld != TrickPoseBoolRequirement.False;
-        state.leftInput = entry.requiredPoseFamily == SkiController.AerialPoseFamily.Left || entry.requiredPoseFamily == SkiController.AerialPoseFamily.Spread;
-        state.rightInput = entry.requiredPoseFamily == SkiController.AerialPoseFamily.Right || entry.requiredPoseFamily == SkiController.AerialPoseFamily.Spread;
+        state.leftInput = entry.requiredPoseFamily == SkiController.AerialPoseFamily.Left ||
+                  entry.requiredPoseFamily == SkiController.AerialPoseFamily.Spread;
+
+        state.rightInput = entry.requiredPoseFamily == SkiController.AerialPoseFamily.Right ||
+                           entry.requiredPoseFamily == SkiController.AerialPoseFamily.Spread;
+
         state.tuckInput = entry.requiredPoseShape == SkiController.AerialPoseShape.Compact;
+
         state.leanInput = entry.requiredPoseShape switch
         {
             SkiController.AerialPoseShape.Driving => 0.65f,
             SkiController.AerialPoseShape.LaidOut => -0.65f,
+            SkiController.AerialPoseShape.Neutral => 0f,
             _ => state.tuckInput ? 0f : state.leanInput
         };
 
-        if (entry.requiredPoseShape == SkiController.AerialPoseShape.Neutral)
-            state.leanInput = 0f;
-
         state.rising = entry.requiredMotionState == TrickPoseMotionStateRequirement.Rising;
         state.diving = entry.requiredMotionState == TrickPoseMotionStateRequirement.Diving;
-        if (TrickPoseOrientationUtility.TryBuildPresentationEuler(entry.requiredVerticalOrientation, entry.requiredHorizontalOrientation, out Vector3 orientationEuler))
+        if (TrickPoseOrientationUtility.TryBuildPresentationEuler(entry.requiredVerticalOrientation, entry.requiredHorizontalOrientation, entry.requiredTravelFacing, out Vector3 orientationEuler))
         {
             state.manualRotationActive = true;
             state.manualRotationEuler = orientationEuler;

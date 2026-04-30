@@ -18,7 +18,7 @@ namespace AssetInventory
 
         public override void OnGUI(Rect rect)
         {
-            editorWindow.maxSize = new Vector2(340, 320);
+            editorWindow.maxSize = new Vector2(340, 340);
             editorWindow.minSize = editorWindow.maxSize;
             int width = 140;
 
@@ -131,6 +131,11 @@ namespace AssetInventory
 
                     RenderAssignTag(width);
                     break;
+            }
+
+            if (AI.ShowAdvanced())
+            {
+                _spec.excludedDirectories = BasicEditorUI.GUIStringListField("Exclude Directories", _spec.excludedDirectories, newValue => _spec.excludedDirectories = newValue, ",", "Excluded Directories", width, "Directory names to skip during scanning, separated by comma (e.g. node_modules,temp,build).");
             }
 
             GUILayout.BeginHorizontal();

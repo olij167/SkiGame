@@ -1,5 +1,8 @@
+using System;
+
 namespace AssetInventory
 {
+    [Serializable]
     public class TemplateExportEnvironment
     {
         public string name = "Default";

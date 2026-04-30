@@ -116,6 +116,7 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
     [SerializeField] private InputActionReference previousLeagueAction;
     [SerializeField] private InputActionReference nextLeagueAction;
     [SerializeField] private bool tapInteractCyclesNextLeague = true;
+    [SerializeField] private bool allowDebugKeyboardLeagueFallback = false;
 
     [Header("Authoring")]
     [SerializeField] private List<Vector3> pointsWorld = new List<Vector3>();
@@ -204,6 +205,13 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
 
     private readonly List<Renderer> _runtimeCheckpointRenderers = new List<Renderer>();
     private readonly List<GameObject> _runtimeCheckpointObjects = new List<GameObject>();
+
+#if UNITY_EDITOR
+    private const double CheckpointVisualRefreshDebounceSeconds = 0.15d;
+    [NonSerialized] private double _checkpointVisualRefreshRequestedAt;
+    [NonSerialized] private int _lastCheckpointVisualHash;
+    [NonSerialized] private bool _hasCheckpointVisualHash;
+#endif
 
     private readonly List<float> _cumDistCache = new List<float>(256);
     private float _totalLengthCache;
@@ -344,6 +352,8 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
 
     private void OnEnable()
     {
+        WorldInteractionPromptRegistry.Register(this);
+
         if (interactAction != null && interactAction.action != null && !interactAction.action.enabled)
             interactAction.action.Enable();
 
@@ -352,6 +362,7 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
 
     private void OnDisable()
     {
+        WorldInteractionPromptRegistry.Unregister(this);
         UnbindActivityManager();
     }
 
@@ -564,7 +575,7 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
 
         bool previousPressedThisFrame =
             (previousLeagueAction != null && previousLeagueAction.action != null && previousLeagueAction.action.WasPressedThisFrame()) ||
-            (Keyboard.current != null && Keyboard.current.qKey.wasPressedThisFrame);
+            (allowDebugKeyboardLeagueFallback && Keyboard.current != null && Keyboard.current.qKey.wasPressedThisFrame);
 
         if (!_enterArmed)
         {
@@ -2479,6 +2490,11 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
     [ContextMenu("Regenerate Checkpoint Visuals")]
     public void RegenerateCheckpointVisuals()
     {
+        RegenerateCheckpointVisuals(recordUndo: true);
+    }
+
+    private void RegenerateCheckpointVisuals(bool recordUndo)
+    {
         if (Application.isPlaying)
             return;
 
@@ -2488,53 +2504,26 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         _isRefreshingCheckpointVisuals = true;
         try
         {
-            Transform container = GetOrCreateGeneratedContainer();
-            ClearGeneratedChildren(container);
+            Transform container = GetOrCreateGeneratedContainer(recordUndo);
+            int checkpointCount = generatedCheckpoints != null ? generatedCheckpoints.Count : 0;
 
-            if (generatedCheckpoints == null || generatedCheckpoints.Count == 0)
-                return;
-
-            for (int i = 0; i < generatedCheckpoints.Count; i++)
+            for (int i = 0; i < checkpointCount; i++)
             {
                 var cp = generatedCheckpoints[i];
+                GameObject go = i < container.childCount
+                    ? container.GetChild(i).gameObject
+                    : CreateCheckpointVisualObject(container, i, recordUndo);
 
-                var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                go.name = $"Checkpoint_{i + 1:00}";
-                Undo.RegisterCreatedObjectUndo(go, "Create Race Checkpoint Gate");
-
-                go.transform.SetParent(container, true);
-
-                Vector3 upOffset = Vector3.up * (cp.height * 0.5f);
-                go.transform.position = cp.worldPos + upOffset;
-
-                if (cp.forward.sqrMagnitude > 0.0001f)
-                    go.transform.rotation = Quaternion.LookRotation(cp.forward.normalized, Vector3.up);
-                else
-                    go.transform.rotation = Quaternion.identity;
-
-                SetDesiredWorldScale(go.transform, new Vector3(cp.width, cp.height, cp.depth));
-
-                var collider = go.GetComponent<BoxCollider>();
-                if (collider == null)
-                    collider = go.AddComponent<BoxCollider>();
-
-                collider.isTrigger = true;
-                collider.size = Vector3.one; // matches the cube mesh scale
-
-                var trigger = go.GetComponent<RaceCheckpointTrigger>();
-                if (trigger == null)
-                    trigger = go.AddComponent<RaceCheckpointTrigger>();
-
-                trigger.Initialize(this, i);
-
-                var renderer = go.GetComponent<Renderer>();
-                if (renderer != null && checkpointMaterial != null)
-                    renderer.sharedMaterial = checkpointMaterial;
-
-                var heightNormalizer = go.AddComponent<InteractionAreaHeightNormalizer>();
-
-                go.hideFlags = HideFlags.None;
+                ConfigureCheckpointVisualObject(go, cp, i);
             }
+
+            for (int i = container.childCount - 1; i >= checkpointCount; i--)
+            {
+                DestroyCheckpointVisualObject(container.GetChild(i).gameObject, recordUndo);
+            }
+
+            _lastCheckpointVisualHash = ComputeCheckpointVisualHash();
+            _hasCheckpointVisualHash = true;
         }
         finally
         {
@@ -2574,6 +2563,8 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         Transform container = transform.Find(generatedContainerName);
         if (container != null)
             ClearGeneratedChildren(container);
+
+        _hasCheckpointVisualHash = false;
     }
 
     public void QueueCheckpointVisualRefresh()
@@ -2581,39 +2572,171 @@ public sealed class RaceCourseLine : MonoBehaviour, IWorldInteractionPromptSourc
         if (Application.isPlaying)
             return;
 
+        _checkpointVisualRefreshRequestedAt = EditorApplication.timeSinceStartup;
+
         int id = GetInstanceID();
         if (_queuedVisualRefreshIds.Contains(id))
             return;
 
         _queuedVisualRefreshIds.Add(id);
 
-        EditorApplication.delayCall += () =>
-        {
-            _queuedVisualRefreshIds.Remove(id);
-
-            if (this == null)
-                return;
-
-            if (Application.isPlaying)
-                return;
-
-            RegenerateCheckpointVisuals();
-            EditorUtility.SetDirty(this);
-        };
+        EditorApplication.delayCall += () => ProcessQueuedCheckpointVisualRefresh(id);
     }
 
-    private Transform GetOrCreateGeneratedContainer()
+    private void ProcessQueuedCheckpointVisualRefresh(int id)
+    {
+        if (this == null)
+        {
+            _queuedVisualRefreshIds.Remove(id);
+            return;
+        }
+
+        double elapsed = EditorApplication.timeSinceStartup - _checkpointVisualRefreshRequestedAt;
+        if (elapsed < CheckpointVisualRefreshDebounceSeconds)
+        {
+            EditorApplication.delayCall += () => ProcessQueuedCheckpointVisualRefresh(id);
+            return;
+        }
+
+        _queuedVisualRefreshIds.Remove(id);
+
+        if (Application.isPlaying)
+            return;
+
+        int visualHash = ComputeCheckpointVisualHash();
+        if (!NeedsCheckpointVisualRefresh(visualHash))
+            return;
+
+        RegenerateCheckpointVisuals(recordUndo: false);
+        EditorUtility.SetDirty(this);
+    }
+
+    private Transform GetOrCreateGeneratedContainer(bool recordUndo)
     {
         var t = transform.Find(generatedContainerName);
         if (t != null) return t;
 
         var go = new GameObject(generatedContainerName);
-        Undo.RegisterCreatedObjectUndo(go, "Create Checkpoint Container");
+        if (recordUndo)
+            Undo.RegisterCreatedObjectUndo(go, "Create Checkpoint Container");
         go.transform.SetParent(transform, false);
         go.transform.localPosition = Vector3.zero;
         go.transform.localRotation = Quaternion.identity;
         go.transform.localScale = Vector3.one;
         return go.transform;
+    }
+
+    private GameObject CreateCheckpointVisualObject(Transform container, int checkpointIndex, bool recordUndo)
+    {
+        GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        go.name = $"Checkpoint_{checkpointIndex + 1:00}";
+        if (recordUndo)
+            Undo.RegisterCreatedObjectUndo(go, "Create Race Checkpoint Gate");
+
+        go.transform.SetParent(container, true);
+        go.hideFlags = HideFlags.None;
+        return go;
+    }
+
+    private void ConfigureCheckpointVisualObject(GameObject go, GeneratedCheckpoint cp, int checkpointIndex)
+    {
+        if (go == null)
+            return;
+
+        go.name = $"Checkpoint_{checkpointIndex + 1:00}";
+
+        Vector3 upOffset = Vector3.up * (cp.height * 0.5f);
+        go.transform.position = cp.worldPos + upOffset;
+        go.transform.rotation = cp.forward.sqrMagnitude > 0.0001f
+            ? Quaternion.LookRotation(cp.forward.normalized, Vector3.up)
+            : Quaternion.identity;
+        SetDesiredWorldScale(go.transform, new Vector3(cp.width, cp.height, cp.depth));
+
+        var collider = go.GetComponent<BoxCollider>();
+        if (collider == null)
+            collider = go.AddComponent<BoxCollider>();
+
+        collider.isTrigger = true;
+        collider.size = Vector3.one;
+
+        var trigger = go.GetComponent<RaceCheckpointTrigger>();
+        if (trigger == null)
+            trigger = go.AddComponent<RaceCheckpointTrigger>();
+
+        trigger.Initialize(this, checkpointIndex);
+
+        var renderer = go.GetComponent<Renderer>();
+        if (renderer != null && checkpointMaterial != null)
+            renderer.sharedMaterial = checkpointMaterial;
+
+        var heightNormalizer = go.GetComponent<InteractionAreaHeightNormalizer>();
+        if (heightNormalizer == null)
+            heightNormalizer = go.AddComponent<InteractionAreaHeightNormalizer>();
+
+        heightNormalizer.SetContinuousUpdates(false);
+    }
+
+    private static void DestroyCheckpointVisualObject(GameObject go, bool recordUndo)
+    {
+        if (go == null)
+            return;
+
+        if (recordUndo)
+            Undo.DestroyObjectImmediate(go);
+        else
+            DestroyImmediate(go);
+    }
+
+    private bool NeedsCheckpointVisualRefresh(int visualHash)
+    {
+        if (!_hasCheckpointVisualHash || visualHash != _lastCheckpointVisualHash)
+            return true;
+
+        Transform container = transform.Find(generatedContainerName);
+        int checkpointCount = generatedCheckpoints != null ? generatedCheckpoints.Count : 0;
+        if (checkpointCount == 0)
+            return container != null && container.childCount > 0;
+
+        if (container == null || container.childCount != checkpointCount)
+            return true;
+
+        for (int i = 0; i < checkpointCount; i++)
+        {
+            Transform child = container.GetChild(i);
+            if (child == null)
+                return true;
+
+            if (child.GetComponent<BoxCollider>() == null || child.GetComponent<RaceCheckpointTrigger>() == null)
+                return true;
+        }
+
+        return false;
+    }
+
+    private int ComputeCheckpointVisualHash()
+    {
+        unchecked
+        {
+            int hash = 17;
+            hash = (hash * 31) + (checkpointMaterial != null ? checkpointMaterial.GetInstanceID() : 0);
+            hash = (hash * 31) + (generatedContainerName != null ? generatedContainerName.GetHashCode() : 0);
+            hash = (hash * 31) + (generatedCheckpoints != null ? generatedCheckpoints.Count : 0);
+
+            if (generatedCheckpoints != null)
+            {
+                for (int i = 0; i < generatedCheckpoints.Count; i++)
+                {
+                    GeneratedCheckpoint checkpoint = generatedCheckpoints[i];
+                    hash = (hash * 31) + checkpoint.worldPos.GetHashCode();
+                    hash = (hash * 31) + checkpoint.forward.GetHashCode();
+                    hash = (hash * 31) + checkpoint.width.GetHashCode();
+                    hash = (hash * 31) + checkpoint.height.GetHashCode();
+                    hash = (hash * 31) + checkpoint.depth.GetHashCode();
+                }
+            }
+
+            return hash;
+        }
     }
 
     private static void ClearGeneratedChildren(Transform container)

@@ -6,6 +6,11 @@ using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 #pragma warning disable CS0618 // Type or member is obsolete
+#if UNITY_6000_2_OR_NEWER
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState<int>;
+#else
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState;
+#endif
 
 namespace AssetInventory
 {
@@ -14,7 +19,7 @@ namespace AssetInventory
         private Vector2 _leftSidebarScrollPos;
 
         private static readonly string[] _hierarchyTypes = {"File Path", "Category", "Publisher", "Package", "File Type"};
-        private TreeViewState _hierarchyTreeState;
+        private BaseTreeViewState _hierarchyTreeState;
         private HierarchyTreeViewControl _hierarchyTreeView;
         private TreeModel<HierarchyTreeElement> _hierarchyTreeModel;
         private bool _requireHierarchyRebuild;
@@ -68,7 +73,7 @@ namespace AssetInventory
         {
             if (_hierarchyTreeState == null)
             {
-                _hierarchyTreeState = new TreeViewState();
+                _hierarchyTreeState = new BaseTreeViewState();
             }
 
             List<HierarchyTreeElement> elements = BuildHierarchyElements();

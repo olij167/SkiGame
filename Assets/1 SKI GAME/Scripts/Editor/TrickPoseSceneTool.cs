@@ -4,6 +4,8 @@ using UnityEngine;
 [InitializeOnLoad]
 public static class TrickPoseSceneTool
 {
+    private static readonly EditableHandle[] EditableHandles = new EditableHandle[10];
+
     private struct EditableHandle
     {
         public TrickPoseEditorSession.EditablePoint point;
@@ -53,26 +55,24 @@ public static class TrickPoseSceneTool
         controller.EnsurePoseRigDefaultsCaptured();
         TrickPoseEditorSession.EnsureSceneEditPreviewCurrent();
 
-        EditableHandle[] handles = BuildEditableHandles(controller, entry);
-        DrawSelectionMarkers(handles);
-        DrawSelectedHandles(controller, entry, handles);
+        int handleCount = BuildEditableHandles(controller, entry, EditableHandles);
+        DrawSelectionMarkers(EditableHandles, handleCount);
+        DrawSelectedHandles(controller, entry, EditableHandles, handleCount);
     }
 
-    private static EditableHandle[] BuildEditableHandles(SkiController controller, TrickPoseEntry entry)
+    private static int BuildEditableHandles(SkiController controller, TrickPoseEntry entry, EditableHandle[] handles)
     {
-        return new[]
-        {
-            BuildTransformHandle(TrickPoseEditorSession.EditablePoint.Body, "Body", entry.bodyPose, controller.BodyPoseTransform),
-            BuildTransformHandle(TrickPoseEditorSession.EditablePoint.Head, "Head", entry.headPose, controller.HeadPoseTransform),
-            BuildTransformHandle(TrickPoseEditorSession.EditablePoint.LeftSki, "Left Ski", entry.leftSkiPose, controller.LeftSkiTransform),
-            BuildTransformHandle(TrickPoseEditorSession.EditablePoint.RightSki, "Right Ski", entry.rightSkiPose, controller.RightSkiTransform),
-            BuildTransformHandle(TrickPoseEditorSession.EditablePoint.LeftPole, "Left Pole", entry.leftPolePose, controller.LeftPoleContact != null ? controller.LeftPoleContact.PoleRoot : null),
-            BuildTransformHandle(TrickPoseEditorSession.EditablePoint.RightPole, "Right Pole", entry.rightPolePose, controller.RightPoleContact != null ? controller.RightPoleContact.PoleRoot : null),
-            BuildJointHandle(TrickPoseEditorSession.EditablePoint.LeftElbow, "Left Elbow", entry.leftElbowPose, SkierLimbJoint.LeftElbow),
-            BuildJointHandle(TrickPoseEditorSession.EditablePoint.RightElbow, "Right Elbow", entry.rightElbowPose, SkierLimbJoint.RightElbow),
-            BuildJointHandle(TrickPoseEditorSession.EditablePoint.LeftKnee, "Left Knee", entry.leftKneePose, SkierLimbJoint.LeftKnee),
-            BuildJointHandle(TrickPoseEditorSession.EditablePoint.RightKnee, "Right Knee", entry.rightKneePose, SkierLimbJoint.RightKnee)
-        };
+        handles[0] = BuildTransformHandle(TrickPoseEditorSession.EditablePoint.Body, "Body", entry.bodyPose, controller.BodyPoseTransform);
+        handles[1] = BuildTransformHandle(TrickPoseEditorSession.EditablePoint.Head, "Head", entry.headPose, controller.HeadPoseTransform);
+        handles[2] = BuildTransformHandle(TrickPoseEditorSession.EditablePoint.LeftSki, "Left Ski", entry.leftSkiPose, controller.LeftSkiTransform);
+        handles[3] = BuildTransformHandle(TrickPoseEditorSession.EditablePoint.RightSki, "Right Ski", entry.rightSkiPose, controller.RightSkiTransform);
+        handles[4] = BuildTransformHandle(TrickPoseEditorSession.EditablePoint.LeftPole, "Left Pole", entry.leftPolePose, controller.LeftPoleContact != null ? controller.LeftPoleContact.PoleRoot : null);
+        handles[5] = BuildTransformHandle(TrickPoseEditorSession.EditablePoint.RightPole, "Right Pole", entry.rightPolePose, controller.RightPoleContact != null ? controller.RightPoleContact.PoleRoot : null);
+        handles[6] = BuildJointHandle(TrickPoseEditorSession.EditablePoint.LeftElbow, "Left Elbow", entry.leftElbowPose, SkierLimbJoint.LeftElbow);
+        handles[7] = BuildJointHandle(TrickPoseEditorSession.EditablePoint.RightElbow, "Right Elbow", entry.rightElbowPose, SkierLimbJoint.RightElbow);
+        handles[8] = BuildJointHandle(TrickPoseEditorSession.EditablePoint.LeftKnee, "Left Knee", entry.leftKneePose, SkierLimbJoint.LeftKnee);
+        handles[9] = BuildJointHandle(TrickPoseEditorSession.EditablePoint.RightKnee, "Right Knee", entry.rightKneePose, SkierLimbJoint.RightKnee);
+        return 10;
     }
 
     private static EditableHandle BuildTransformHandle(TrickPoseEditorSession.EditablePoint point, string label, PosePartTransformData pose, Transform targetTransform)
@@ -101,9 +101,9 @@ public static class TrickPoseSceneTool
         };
     }
 
-    private static void DrawSelectionMarkers(EditableHandle[] handles)
+    private static void DrawSelectionMarkers(EditableHandle[] handles, int count)
     {
-        for (int i = 0; i < handles.Length; i++)
+        for (int i = 0; i < count; i++)
         {
             if (!TryGetHandlePose(handles[i], out Vector3 position, out Quaternion rotation))
                 continue;
@@ -122,9 +122,9 @@ public static class TrickPoseSceneTool
         }
     }
 
-    private static void DrawSelectedHandles(SkiController controller, TrickPoseEntry entry, EditableHandle[] handles)
+    private static void DrawSelectedHandles(SkiController controller, TrickPoseEntry entry, EditableHandle[] handles, int count)
     {
-        int activeIndex = FindHandleIndex(handles, TrickPoseEditorSession.ActiveEditablePoint);
+        int activeIndex = FindHandleIndex(handles, count, TrickPoseEditorSession.ActiveEditablePoint);
         if (activeIndex < 0)
             return;
 
@@ -134,14 +134,14 @@ public static class TrickPoseSceneTool
             return;
 
         TrickPoseEditorSession.EditablePoint mirrored = TrickPoseEditorSession.GetMirroredPoint(handles[activeIndex].point);
-        int mirroredIndex = FindHandleIndex(handles, mirrored);
+        int mirroredIndex = FindHandleIndex(handles, count, mirrored);
         if (mirroredIndex >= 0)
             DrawHandle(controller, entry, handles[mirroredIndex]);
     }
 
-    private static int FindHandleIndex(EditableHandle[] handles, TrickPoseEditorSession.EditablePoint point)
+    private static int FindHandleIndex(EditableHandle[] handles, int count, TrickPoseEditorSession.EditablePoint point)
     {
-        for (int i = 0; i < handles.Length; i++)
+        for (int i = 0; i < count; i++)
         {
             if (handles[i].point == point)
                 return i;

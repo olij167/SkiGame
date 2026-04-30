@@ -6,6 +6,7 @@ public static class TrickPoseEditorSession
 {
     private const string SceneEditModeKey = "TrickPose.SceneEditMode";
     private const string SnapPreviewKey = "TrickPose.SnapPreview";
+    private const double SceneRepaintMinIntervalSeconds = 1.0d / 30.0d;
 
     static TrickPoseEditorSession()
     {
@@ -160,6 +161,7 @@ public static class TrickPoseEditorSession
     private static int _selectedEntryPreviewVersion;
     private static int _appliedSceneEditPreviewVersion = -1;
     private static bool _sceneRepaintQueued;
+    private static double _lastSceneRepaintTime;
     private static bool _isSceneHandleEditing;
     private static bool _refreshPreviewAfterSceneHandleEdit;
 
@@ -599,7 +601,16 @@ public static class TrickPoseEditorSession
     private static void FlushSceneRepaint()
     {
         _sceneRepaintQueued = false;
-        SceneView.RepaintAll();
+        double now = EditorApplication.timeSinceStartup;
+        if (now - _lastSceneRepaintTime < SceneRepaintMinIntervalSeconds)
+            return;
+
+        _lastSceneRepaintTime = now;
+        SceneView sceneView = SceneView.lastActiveSceneView;
+        if (sceneView != null)
+            sceneView.Repaint();
+        else
+            SceneView.RepaintAll();
     }
 
     private static void HandleUndoRedo()

@@ -27,7 +27,7 @@ namespace AssetInventory
 
         // runtime
         public bool scheduled;
-        public List<ActionProgress> progress = new List<ActionProgress>();
+        [NonSerialized] public List<ActionProgress> progress = new List<ActionProgress>();
 
         public UpdateAction()
         {

@@ -3,12 +3,19 @@ using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 #pragma warning disable CS0618 // Type or member is obsolete
+#if UNITY_6000_2_OR_NEWER
+using BaseTreeViewItem = UnityEditor.IMGUI.Controls.TreeViewItem<int>;
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState<int>;
+#else
+using BaseTreeViewItem = UnityEditor.IMGUI.Controls.TreeViewItem;
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState;
+#endif
 
 namespace AssetInventory
 {
     internal sealed class HierarchyTreeViewControl : TreeViewWithTreeModel<HierarchyTreeElement>
     {
-        public HierarchyTreeViewControl(TreeViewState state, TreeModel<HierarchyTreeElement> model) : base(state, model)
+        public HierarchyTreeViewControl(BaseTreeViewState state, TreeModel<HierarchyTreeElement> model) : base(state, model)
         {
             showAlternatingRowBackgrounds = true;
             showBorder = true;
@@ -51,7 +58,7 @@ namespace AssetInventory
             }
         }
 
-        protected override bool CanMultiSelect(TreeViewItem item)
+        protected override bool CanMultiSelect(BaseTreeViewItem item)
         {
             return false;
         }

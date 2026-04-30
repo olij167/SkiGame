@@ -199,6 +199,7 @@ public class MightySceneViewManager
                 // At this point, the element is confirmed to be displayed, proceed with positioning and opacity adjustment
                 Vector2 screenPos = WorldToScreenPoint(sceneCamera, worldPos);
 
+
                 element.style.display = DisplayStyle.Flex;
                 element.style.left = screenPos.x - (element.resolvedStyle.width / 2);
                 element.style.top = screenPos.y - (element.resolvedStyle.height / 2);
@@ -231,7 +232,7 @@ public class MightySceneViewManager
                 });
                 element.RegisterCallback<MouseLeaveEvent>(evt =>
                 {
-                    // Directly apply the visibility logic again to reset opacity or visibility as needed
+
                     Vector3 viewPos = sceneCamera.WorldToViewportPoint(worldPos);
                     float fadeStartDistance = s.distanceStart * 0.95f;
                     element.style.opacity = viewPos.z >= fadeStartDistance && viewPos.z <= s.distanceEnd ?

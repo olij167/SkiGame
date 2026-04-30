@@ -1,7 +1,9 @@
 {
     "name": "ImpossibleRobert.Common.Editor",
     "rootNamespace": "ImpossibleRobert.Common",
-    "references": [],
+    "references": [
+        "ImpossibleRobert.Common"
+    ],
     "includePlatforms": [
         "Editor"
     ],

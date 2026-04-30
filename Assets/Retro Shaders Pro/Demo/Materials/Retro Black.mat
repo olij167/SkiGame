@@ -17,6 +17,7 @@ Material:
   - _LIGHTMODE_UNLIT
   - _RECEIVESHADOWSMODE_ON
   - _SNAPMODE_VIEW
+  - _WRAPMODE_CLAMP
   m_InvalidKeywords:
   - _USE_VERTEX_COLORS_OFF
   m_LightmapFlags: 4
@@ -98,6 +99,7 @@ Material:
     - _ResolutionLimit: 64
     - _SnapMode: 2
     - _SnapsPerUnit: 64
+    - _WrapMode: 0
     m_Floats:
     - _AffineTextureStrength: 1
     - _AlphaClip: 0

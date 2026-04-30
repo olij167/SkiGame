@@ -1,6 +1,7 @@
 #if !ASSET_INVENTORY_HIDE_PROJECT_TOOLBAR
 using System;
 using System.Collections.Generic;
+using ImpossibleRobert.Common;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -94,7 +95,7 @@ namespace AssetInventory
                 if (window == null) continue;
 
                 _cachedBrowsers.Add(window);
-                int windowId = window.GetInstanceID();
+                int windowId = window.GetStableId();
 
                 if (!_injectedToolbars.ContainsKey(windowId))
                 {
@@ -111,7 +112,7 @@ namespace AssetInventory
                     bool found = false;
                     for (int i = 0; i < _cachedBrowsers.Count; i++)
                     {
-                        if (_cachedBrowsers[i].GetInstanceID() == id)
+                        if (_cachedBrowsers[i].GetStableId() == id)
                         {
                             found = true;
                             break;

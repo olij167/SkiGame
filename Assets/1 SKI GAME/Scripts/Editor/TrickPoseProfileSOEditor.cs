@@ -90,6 +90,7 @@ public class TrickPoseProfileSOEditor : Editor
     private int _verticalFilterIndex;
     private int _horizontalFilterIndex;
     private int _motionFilterIndex;
+    private int _mirrorLinkCandidateIndex = -1;
     private int _familyFilterIndex;
     private int _shapeFilterIndex;
     private readonly List<int> _filteredEntryIndices = new List<int>();
@@ -148,6 +149,7 @@ public class TrickPoseProfileSOEditor : Editor
     {
         serializedObject.Update();
         TrickPoseEditorSession.SetProfile((TrickPoseProfileSO)target);
+        EnsureEntryIds((TrickPoseProfileSO)target);
         int selectedIndexAtStart = TrickPoseEditorSession.SelectedEntryIndex;
         string selectedPreviewSignatureBefore = BuildSelectedPreviewSignature(selectedIndexAtStart);
         int dirtyCount = EditorUtility.GetDirtyCount(target);
@@ -169,6 +171,8 @@ public class TrickPoseProfileSOEditor : Editor
 
         string selectedPreviewSignatureAfter = BuildSelectedPreviewSignature(selectedIndexAtStart);
         bool applied = serializedObject.ApplyModifiedProperties();
+        if (applied)
+            SyncSelectedMirrorIfNeeded();
         if (applied &&
             selectedIndexAtStart == TrickPoseEditorSession.SelectedEntryIndex &&
             selectedPreviewSignatureBefore != selectedPreviewSignatureAfter &&
@@ -268,9 +272,26 @@ public class TrickPoseProfileSOEditor : Editor
         TrickPoseEditorPreviewContext previewContext = TrickPoseEditorSession.GetSelectedMatchPreviewContext(controller);
         bool previewEnabled = TrickPoseEditorSession.PreviewMatchConditions && previewContext != null;
         bool simulateSelectedEntry = previewEnabled && TrickPoseEditorSession.SelectedMatchPreviewMode == TrickPoseEditorSession.MatchPreviewContextMode.SimulateSelectedEntry;
-        string previewText = previewEnabled
-            ? $"{(simulateSelectedEntry ? "Simulated Entry" : "Scene Context")}: {TrickPoseAuthoredStateFormatter.Format(previewContext)}"
-            : $"Current: {TrickPoseAuthoredStateFormatter.Format(controller.CurrentPoseFamily, controller.CurrentPoseShape, controller.CurrentPoseVerticalOrientation, controller.CurrentPoseHorizontalOrientation, controller.CurrentPoseMotionState)}";
+
+        string previewText;
+        if (previewEnabled)
+        {
+            string modeLabel = simulateSelectedEntry ? "Simulated Entry" : "Scene Context";
+            previewText = $"{modeLabel}: {TrickPoseAuthoredStateFormatter.Format(previewContext)}";
+        }
+        else
+        {
+            string formattedCurrentState = TrickPoseAuthoredStateFormatter.Format(
+                controller.CurrentPoseFamily,
+                controller.CurrentPoseShape,
+                controller.CurrentPoseVerticalOrientation,
+                controller.CurrentPoseHorizontalOrientation,
+                controller.CurrentPoseTravelFacing,
+                controller.CurrentPoseMotionState);
+
+            previewText = $"Current: {formattedCurrentState}";
+        }
+
         EditorGUILayout.LabelField(previewText, EditorStyles.wordWrappedMiniLabel);
     }
 
@@ -353,6 +374,8 @@ public class TrickPoseProfileSOEditor : Editor
             return;
         }
 
+        DrawMirrorLinkPanel(entry);
+
         if (GUILayout.Button("Apply Pose") && TrickPoseEditorSession.PreviewTarget != null)
             TrickPoseEditorSession.PreviewTarget.PreviewTrickPoseEntry(entry, true);
 
@@ -367,6 +390,8 @@ public class TrickPoseProfileSOEditor : Editor
             Undo.RecordObject(target, "Capture Trick Pose");
             TrickPoseEditorSession.PreviewTarget.CaptureCurrentPoseIntoEntry(entry);
             EditorUtility.SetDirty(target);
+            SyncSelectedMirrorIfNeeded();
+            TrickPoseEditorSession.RefreshCoverageWorkspace(3);
         }
 
         if (GUILayout.Button("Duplicate"))
@@ -380,6 +405,8 @@ public class TrickPoseProfileSOEditor : Editor
             Undo.RecordObject(target, "Flip Trick Pose");
             FlipEntry(entry);
             EditorUtility.SetDirty(target);
+            SyncSelectedMirrorIfNeeded();
+            TrickPoseEditorSession.RefreshCoverageWorkspace(3);
             TrickPoseEditorSession.RefreshPreview(true);
         }
 
@@ -388,6 +415,7 @@ public class TrickPoseProfileSOEditor : Editor
             Undo.RecordObject(target, "Reset Trick Pose Entry");
             ResetEntry(entry);
             EditorUtility.SetDirty(target);
+            TrickPoseEditorSession.RefreshCoverageWorkspace(3);
         }
 
         if (GUILayout.Button("Delete Entry"))
@@ -671,6 +699,8 @@ public class TrickPoseProfileSOEditor : Editor
                Contains(entry.requiredPoseShape.ToString(), needle) ||
                Contains(entry.requiredVerticalOrientation.ToString(), needle) ||
                Contains(entry.requiredHorizontalOrientation.ToString(), needle) ||
+               Contains(entry.requiredTravelFacing.ToString(), needle) ||
+               
                Contains(entry.requiredMotionState.ToString(), needle) ||
                Contains(entry.isCoveragePlaceholder ? "placeholder" : "authored", needle) ||
                Contains(entry.enabled ? "enabled" : "disabled", needle) ||
@@ -1027,6 +1057,10 @@ public class TrickPoseProfileSOEditor : Editor
         DrawProperty(ref rect, entry.FindPropertyRelative("requiredHorizontalOrientation"), new GUIContent(
             TrickPoseOrientationUtility.HorizontalAxisLabel,
             "Roll-only side state. LeftSide/RightSide describe body roll, not heading or travel direction."));
+        DrawProperty(ref rect, entry.FindPropertyRelative("requiredTravelFacing"), new GUIContent(
+            TrickPoseOrientationUtility.TravelFacingAxisLabel,
+            "Facing relative to travel direction. Forward/Backward stay independent from inversion and roll."));
+        
         DrawProperty(ref rect, entry.FindPropertyRelative("requiredMotionState"), new GUIContent("Required Motion State"));
         DrawProperty(ref rect, entry.FindPropertyRelative("requireAirborne"), TrickPoseEditorHelp.Label("Require Airborne", "Profile.MatchAirborne"));
         DrawProperty(ref rect, entry.FindPropertyRelative("requirePoseButtonHeld"), TrickPoseEditorHelp.Label("Require Pose Button Held", "Profile.MatchPoseHeld"));
@@ -1248,6 +1282,8 @@ public class TrickPoseProfileSOEditor : Editor
             entry.FindPropertyRelative("requiredPoseShape"),
             entry.FindPropertyRelative("requiredVerticalOrientation"),
             entry.FindPropertyRelative("requiredHorizontalOrientation"),
+            entry.FindPropertyRelative("requiredTravelFacing"),
+            
             entry.FindPropertyRelative("requiredMotionState"),
             entry.FindPropertyRelative("requireAirborne"),
             entry.FindPropertyRelative("requirePoseButtonHeld"));
@@ -1425,6 +1461,7 @@ public class TrickPoseProfileSOEditor : Editor
         return $"{EnumPropertyName(entry, "requiredPoseFamily")} / {EnumPropertyName(entry, "requiredPoseShape")} | " +
                $"V: {EnumPropertyName(entry, "requiredVerticalOrientation")} | " +
                $"H: {EnumPropertyName(entry, "requiredHorizontalOrientation")} | " +
+               $"T: {EnumPropertyName(entry, "requiredTravelFacing")} | " +
                $"Motion: {EnumPropertyName(entry, "requiredMotionState")}";
     }
 
@@ -1500,6 +1537,8 @@ public class TrickPoseProfileSOEditor : Editor
             EnumValue(entry, "requiredPoseShape"),
             EnumValue(entry, "requiredVerticalOrientation"),
             EnumValue(entry, "requiredHorizontalOrientation"),
+            EnumValue(entry, "requiredTravelFacing"),
+            
             EnumValue(entry, "requiredMotionState"),
             StringValue(entry, "requiredPoseName"),
             EnumValue(entry, "requireAirborne"),
@@ -1746,13 +1785,31 @@ public class TrickPoseProfileSOEditor : Editor
 
         serializedObject.ApplyModifiedProperties();
         TrickPoseProfileSO profile = (TrickPoseProfileSO)target;
+        EnsureEntryIds(profile);
         TrickPoseEntry source = profile.entries[sourceIndex];
         TrickPoseEntry copy = JsonUtility.FromJson<TrickPoseEntry>(JsonUtility.ToJson(source));
-        copy.displayName = flipped ? $"{source.displayName} (Flipped)" : $"{source.displayName} Copy";
+        copy.displayName = flipped ? GetFlippedDisplayName(source.displayName) : $"{source.displayName} Copy";
         copy.isCoveragePlaceholder = false;
         copy.coverageSlotId = string.Empty;
+        copy.entryId = System.Guid.NewGuid().ToString("N");
+        copy.isMirrorGenerated = flipped;
         if (flipped)
+        {
             FlipEntry(copy);
+            string mirrorLinkId = System.Guid.NewGuid().ToString("N");
+            source.mirrorLinkId = mirrorLinkId;
+            source.mirrorLinkedEntryId = copy.entryId;
+            source.mirrorLinkEnabled = true;
+            copy.mirrorLinkId = mirrorLinkId;
+            copy.mirrorLinkedEntryId = source.entryId;
+            copy.mirrorLinkEnabled = true;
+        }
+        else
+        {
+            copy.mirrorLinkId = string.Empty;
+            copy.mirrorLinkedEntryId = string.Empty;
+            copy.mirrorLinkEnabled = false;
+        }
 
         Undo.RecordObject(target, "Duplicate Trick Pose");
         profile.entries.Insert(sourceIndex + 1, copy);
@@ -1760,6 +1817,7 @@ public class TrickPoseProfileSOEditor : Editor
         serializedObject.Update();
         TrickPoseEditorSession.SetSelectedEntry(profile, sourceIndex + 1);
         _entriesList.index = sourceIndex + 1;
+        TrickPoseEditorSession.RefreshCoverageWorkspace(3);
         TrickPoseEditorSession.RefreshPreview(true);
     }
 
@@ -1803,10 +1861,17 @@ public class TrickPoseProfileSOEditor : Editor
         entry.overridePoseLabel = string.Empty;
         entry.isCoveragePlaceholder = false;
         entry.coverageSlotId = string.Empty;
+        entry.entryId = string.Empty;
+        entry.mirrorLinkId = string.Empty;
+        entry.mirrorLinkedEntryId = string.Empty;
+        entry.mirrorLinkEnabled = false;
+        entry.isMirrorGenerated = false;
         entry.requiredPoseFamily = SkiController.AerialPoseFamily.None;
         entry.requiredPoseShape = SkiController.AerialPoseShape.None;
         entry.requiredVerticalOrientation = TrickPoseVerticalOrientationRequirement.Any;
         entry.requiredHorizontalOrientation = TrickPoseHorizontalOrientationRequirement.Any;
+        entry.requiredTravelFacing = TrickPoseTravelFacingRequirement.Any;
+
         entry.requiredMotionState = TrickPoseMotionStateRequirement.Any;
         entry.requiredOrientationModifier = SkiController.AerialOrientationModifier.None;
         entry.requiredPoseName = string.Empty;
@@ -1840,6 +1905,7 @@ public class TrickPoseProfileSOEditor : Editor
 
     private static void FlipEntry(TrickPoseEntry entry)
     {
+
         SwapAndFlip(ref entry.leftSkiPose, ref entry.rightSkiPose);
         SwapAndFlip(ref entry.leftPolePose, ref entry.rightPolePose);
         SwapAndFlip(ref entry.leftElbowPose, ref entry.rightElbowPose);
@@ -1851,6 +1917,57 @@ public class TrickPoseProfileSOEditor : Editor
             entry.requiredPoseFamily = SkiController.AerialPoseFamily.Right;
         else if (entry.requiredPoseFamily == SkiController.AerialPoseFamily.Right)
             entry.requiredPoseFamily = SkiController.AerialPoseFamily.Left;
+
+        if (entry.requiredHorizontalOrientation == TrickPoseHorizontalOrientationRequirement.LeftSide)
+            entry.requiredHorizontalOrientation = TrickPoseHorizontalOrientationRequirement.RightSide;
+        else if (entry.requiredHorizontalOrientation == TrickPoseHorizontalOrientationRequirement.RightSide)
+            entry.requiredHorizontalOrientation = TrickPoseHorizontalOrientationRequirement.LeftSide;
+
+        if (entry.requiredTravelFacing == TrickPoseTravelFacingRequirement.Left)
+            entry.requiredTravelFacing = TrickPoseTravelFacingRequirement.Right;
+        else if (entry.requiredTravelFacing == TrickPoseTravelFacingRequirement.Right)
+            entry.requiredTravelFacing = TrickPoseTravelFacingRequirement.Left;
+
+        
+    }
+
+    private static TrickPoseHorizontalOrientationRequirement GetMirroredHorizontalOrientation(TrickPoseHorizontalOrientationRequirement value)
+    {
+        switch (value)
+        {
+            case TrickPoseHorizontalOrientationRequirement.LeftSide:
+                return TrickPoseHorizontalOrientationRequirement.RightSide;
+            case TrickPoseHorizontalOrientationRequirement.RightSide:
+                return TrickPoseHorizontalOrientationRequirement.LeftSide;
+            default:
+                return value;
+        }
+    }
+
+    private static SkiController.AerialPoseFamily GetMirroredPoseFamily(SkiController.AerialPoseFamily value)
+    {
+        switch (value)
+        {
+            case SkiController.AerialPoseFamily.Left:
+                return SkiController.AerialPoseFamily.Right;
+            case SkiController.AerialPoseFamily.Right:
+                return SkiController.AerialPoseFamily.Left;
+            default:
+                return value;
+        }
+    }
+
+    private static TrickPoseTravelFacingRequirement GetMirroredTravelFacing(TrickPoseTravelFacingRequirement value)
+    {
+        switch (value)
+        {
+            case TrickPoseTravelFacingRequirement.Left:
+                return TrickPoseTravelFacingRequirement.Right;
+            case TrickPoseTravelFacingRequirement.Right:
+                return TrickPoseTravelFacingRequirement.Left;
+            default:
+                return value;
+        }
     }
 
     private void DrawCoverageActions(TrickPoseEntry entry)
@@ -2089,6 +2206,440 @@ public class TrickPoseProfileSOEditor : Editor
     private static string FormatRigAssistMessage(TrickPoseRigAssistValidationMessage message, TrickPoseRigAssistSettings settings)
     {
         return message.ToDisplayString(settings.segmentLengthTolerance);
+    }
+
+    private void DrawMirrorLinkPanel(TrickPoseEntry entry)
+    {
+        TrickPoseProfileSO profile = (TrickPoseProfileSO)target;
+        if (profile == null || entry == null)
+            return;
+
+        EnsureEntryIds(profile);
+
+        TrickPoseEntry counterpart = FindEntryById(profile, entry.mirrorLinkedEntryId);
+        bool hasValidLink = counterpart != null;
+        bool hasBrokenLink = !string.IsNullOrWhiteSpace(entry.mirrorLinkedEntryId) && counterpart == null;
+
+        using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+        {
+            if (hasValidLink)
+            {
+                EditorGUILayout.LabelField($"Mirror Linked: {counterpart.GetSummary()}", EditorStyles.miniBoldLabel);
+
+                EditorGUI.BeginChangeCheck();
+                bool syncEnabled = EditorGUILayout.Toggle("Sync mirrored pair", entry.mirrorLinkEnabled);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    Undo.RecordObject(profile, "Toggle Mirror Link Sync");
+                    entry.mirrorLinkEnabled = syncEnabled;
+                    counterpart.mirrorLinkEnabled = syncEnabled;
+                    EditorUtility.SetDirty(profile);
+                }
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Open Mirrored Pose"))
+                    {
+                        int counterpartIndex = profile.entries.IndexOf(counterpart);
+                        if (counterpartIndex >= 0)
+                        {
+                            TrickPoseEditorSession.SetSelectedEntry(profile, counterpartIndex);
+                            _entriesList.index = counterpartIndex;
+                            TrickPoseEditorSession.RefreshPreview(true);
+                        }
+                    }
+
+                    if (GUILayout.Button("Resync Mirror From This Pose"))
+                    {
+                        Undo.RecordObject(profile, "Resync Mirror From This Pose");
+                        CopyMirrorSyncedFields(entry, counterpart);
+                        EditorUtility.SetDirty(profile);
+                        TrickPoseEditorSession.RefreshCoverageWorkspace(3);
+                        TrickPoseEditorSession.RefreshPreview(true);
+                    }
+                }
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Resync This Pose From Mirror"))
+                    {
+                        Undo.RecordObject(profile, "Resync This Pose From Mirror");
+                        CopyMirrorSyncedFields(counterpart, entry);
+                        EditorUtility.SetDirty(profile);
+                        TrickPoseEditorSession.RefreshCoverageWorkspace(3);
+                        TrickPoseEditorSession.RefreshPreview(true);
+                    }
+
+                    if (GUILayout.Button("Unlink"))
+                    {
+                        UnlinkMirrorPair(profile, entry, counterpart);
+                    }
+                }
+
+                return;
+            }
+
+            if (hasBrokenLink)
+                EditorGUILayout.HelpBox("This pose has a broken mirror link. The linked entry no longer exists.", MessageType.Warning);
+            else
+                EditorGUILayout.LabelField("Mirror Linked: None", EditorStyles.miniBoldLabel);
+
+            DrawManualMirrorLinkControls(profile, entry);
+
+            if (hasBrokenLink)
+            {
+                if (GUILayout.Button("Clear Broken Mirror Link"))
+                {
+                    Undo.RecordObject(profile, "Clear Broken Mirror Link");
+                    entry.mirrorLinkEnabled = false;
+                    entry.mirrorLinkId = string.Empty;
+                    entry.mirrorLinkedEntryId = string.Empty;
+                    EditorUtility.SetDirty(profile);
+                    TrickPoseEditorSession.RefreshCoverageWorkspace(3);
+                }
+            }
+        }
+    }
+
+    private void DrawManualMirrorLinkControls(TrickPoseProfileSO profile, TrickPoseEntry entry)
+    {
+        List<TrickPoseEntry> candidates = BuildMirrorLinkCandidates(profile, entry);
+        if (candidates.Count == 0)
+        {
+            EditorGUILayout.HelpBox("No other poses are available to link as a mirror counterpart.", MessageType.Info);
+            return;
+        }
+
+        if (_mirrorLinkCandidateIndex < 0 || _mirrorLinkCandidateIndex >= candidates.Count)
+            _mirrorLinkCandidateIndex = 0;
+
+        string[] labels = BuildMirrorLinkCandidateLabels(candidates);
+        _mirrorLinkCandidateIndex = EditorGUILayout.Popup("Existing Mirror Pose", _mirrorLinkCandidateIndex, labels);
+
+        TrickPoseEntry selectedCounterpart = candidates[_mirrorLinkCandidateIndex];
+        bool counterpartAlreadyLinked = selectedCounterpart != null &&
+                                        !string.IsNullOrWhiteSpace(selectedCounterpart.mirrorLinkedEntryId) &&
+                                        !string.Equals(selectedCounterpart.mirrorLinkedEntryId, entry.entryId, StringComparison.Ordinal);
+
+        if (counterpartAlreadyLinked)
+        {
+            EditorGUILayout.HelpBox(
+                "The selected pose is already linked to another mirror pose. Linking it here will replace that previous link.",
+                MessageType.Warning);
+        }
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("Link Existing Mirror Pose"))
+            {
+                LinkExistingMirrorPose(profile, entry, selectedCounterpart, replaceExistingLinks: false);
+            }
+
+            if (counterpartAlreadyLinked && GUILayout.Button("Force Replace Link"))
+            {
+                LinkExistingMirrorPose(profile, entry, selectedCounterpart, replaceExistingLinks: true);
+            }
+        }
+
+        EditorGUILayout.HelpBox(
+            "Linking existing poses does not overwrite either pose. Use the resync buttons after linking if you want one pose to mirror-copy from the other.",
+            MessageType.None);
+    }
+
+    private static List<TrickPoseEntry> BuildMirrorLinkCandidates(TrickPoseProfileSO profile, TrickPoseEntry selected)
+    {
+        List<TrickPoseEntry> candidates = new List<TrickPoseEntry>();
+        if (profile == null || profile.entries == null || selected == null)
+            return candidates;
+
+        for (int i = 0; i < profile.entries.Count; i++)
+        {
+            TrickPoseEntry candidate = profile.entries[i];
+            if (candidate == null || ReferenceEquals(candidate, selected))
+                continue;
+
+            candidates.Add(candidate);
+        }
+
+        candidates.Sort((a, b) =>
+        {
+            int scoreA = GetMirrorCandidateScore(selected, a);
+            int scoreB = GetMirrorCandidateScore(selected, b);
+            int scoreCompare = scoreB.CompareTo(scoreA);
+            if (scoreCompare != 0)
+                return scoreCompare;
+
+            return string.Compare(GetEntryDisplayLabel(a), GetEntryDisplayLabel(b), StringComparison.OrdinalIgnoreCase);
+        });
+
+        return candidates;
+    }
+
+    private static string[] BuildMirrorLinkCandidateLabels(List<TrickPoseEntry> candidates)
+    {
+        string[] labels = new string[candidates.Count];
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            TrickPoseEntry candidate = candidates[i];
+            string label = GetEntryDisplayLabel(candidate);
+
+            if (candidate != null && candidate.mirrorLinkEnabled && !string.IsNullOrWhiteSpace(candidate.mirrorLinkedEntryId))
+                label += "  [already linked]";
+
+            labels[i] = label;
+        }
+
+        return labels;
+    }
+
+    private static int GetMirrorCandidateScore(TrickPoseEntry source, TrickPoseEntry candidate)
+    {
+        if (source == null || candidate == null)
+            return 0;
+
+        int score = 0;
+
+        if (!candidate.mirrorLinkEnabled && string.IsNullOrWhiteSpace(candidate.mirrorLinkedEntryId))
+            score += 25;
+
+        if (NamesLookLikeMirrors(source.displayName, candidate.displayName))
+            score += 100;
+
+        if (candidate.requiredHorizontalOrientation == GetMirroredHorizontalOrientation(source.requiredHorizontalOrientation))
+            score += 20;
+
+        if (candidate.requiredTravelFacing == GetMirroredTravelFacing(source.requiredTravelFacing))
+            score += 20;
+
+        if (candidate.GetEffectiveRequiredPoseFamily() == GetMirroredPoseFamily(source.GetEffectiveRequiredPoseFamily()))
+            score += 20;
+
+        if (candidate.GetEffectiveRequiredPoseShape() == source.GetEffectiveRequiredPoseShape())
+            score += 8;
+
+        if (candidate.requiredMotionState == source.requiredMotionState)
+            score += 4;
+
+        return score;
+    }
+
+    private static bool NamesLookLikeMirrors(string a, string b)
+    {
+        if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b))
+            return false;
+
+        string flippedA = GetFlippedDisplayName(a);
+        return string.Equals(flippedA, b, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetEntryDisplayLabel(TrickPoseEntry entry)
+    {
+        if (entry == null)
+            return "Missing Entry";
+
+        if (!string.IsNullOrWhiteSpace(entry.displayName))
+            return entry.displayName;
+
+        return entry.GetSummary();
+    }
+
+    private void LinkExistingMirrorPose(
+        TrickPoseProfileSO profile,
+        TrickPoseEntry entry,
+        TrickPoseEntry counterpart,
+        bool replaceExistingLinks)
+    {
+        if (profile == null || entry == null || counterpart == null || ReferenceEquals(entry, counterpart))
+            return;
+
+        EnsureEntryIds(profile);
+
+        bool counterpartAlreadyLinked = !string.IsNullOrWhiteSpace(counterpart.mirrorLinkedEntryId) &&
+                                        !string.Equals(counterpart.mirrorLinkedEntryId, entry.entryId, StringComparison.Ordinal);
+
+        if (counterpartAlreadyLinked && !replaceExistingLinks)
+        {
+            EditorUtility.DisplayDialog(
+                "Mirror Pose Already Linked",
+                "The selected counterpart is already linked to another pose. Use Force Replace Link if you want to replace that existing link.",
+                "OK");
+            return;
+        }
+
+        Undo.RecordObject(profile, "Link Existing Mirror Pose");
+
+        TrickPoseEntry oldEntryCounterpart = FindEntryById(profile, entry.mirrorLinkedEntryId);
+        if (oldEntryCounterpart != null && !ReferenceEquals(oldEntryCounterpart, counterpart))
+            ClearMirrorLinkFields(oldEntryCounterpart);
+
+        TrickPoseEntry oldCounterpartCounterpart = FindEntryById(profile, counterpart.mirrorLinkedEntryId);
+        if (oldCounterpartCounterpart != null && !ReferenceEquals(oldCounterpartCounterpart, entry))
+            ClearMirrorLinkFields(oldCounterpartCounterpart);
+
+        string mirrorLinkId = Guid.NewGuid().ToString("N");
+
+        entry.mirrorLinkId = mirrorLinkId;
+        entry.mirrorLinkedEntryId = counterpart.entryId;
+        entry.mirrorLinkEnabled = true;
+
+        counterpart.mirrorLinkId = mirrorLinkId;
+        counterpart.mirrorLinkedEntryId = entry.entryId;
+        counterpart.mirrorLinkEnabled = true;
+
+        EditorUtility.SetDirty(profile);
+        TrickPoseEditorSession.RefreshCoverageWorkspace(3);
+        TrickPoseEditorSession.RefreshPreview(true);
+    }
+
+    private void UnlinkMirrorPair(TrickPoseProfileSO profile, TrickPoseEntry entry, TrickPoseEntry counterpart)
+    {
+        if (profile == null || entry == null)
+            return;
+
+        Undo.RecordObject(profile, "Unlink Mirror Pose Pair");
+
+        if (counterpart != null)
+            ClearMirrorLinkFields(counterpart);
+
+        ClearMirrorLinkFields(entry);
+
+        EditorUtility.SetDirty(profile);
+        TrickPoseEditorSession.RefreshCoverageWorkspace(3);
+        TrickPoseEditorSession.RefreshPreview(true);
+    }
+
+    private static void ClearMirrorLinkFields(TrickPoseEntry entry)
+    {
+        if (entry == null)
+            return;
+
+        entry.mirrorLinkEnabled = false;
+        entry.mirrorLinkId = string.Empty;
+        entry.mirrorLinkedEntryId = string.Empty;
+    }
+
+    private void SyncSelectedMirrorIfNeeded()
+    {
+        TrickPoseProfileSO profile = (TrickPoseProfileSO)target;
+        TrickPoseEntry source = TrickPoseEditorSession.SelectedEntry;
+        if (profile == null || source == null || !source.mirrorLinkEnabled || string.IsNullOrWhiteSpace(source.mirrorLinkedEntryId))
+            return;
+
+        EnsureEntryIds(profile);
+        TrickPoseEntry counterpart = FindEntryById(profile, source.mirrorLinkedEntryId);
+        if (counterpart == null || !counterpart.mirrorLinkEnabled)
+            return;
+
+        EditorUtility.SetDirty(profile);
+        CopyMirrorSyncedFields(source, counterpart);
+        TrickPoseEditorSession.RefreshCoverageWorkspace(3);
+    }
+
+    private static void EnsureEntryIds(TrickPoseProfileSO profile)
+    {
+        if (profile == null || profile.entries == null)
+            return;
+
+        HashSet<string> usedIds = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < profile.entries.Count; i++)
+        {
+            TrickPoseEntry entry = profile.entries[i];
+            if (entry == null)
+                continue;
+
+            if (string.IsNullOrWhiteSpace(entry.entryId) || !usedIds.Add(entry.entryId))
+            {
+                entry.entryId = System.Guid.NewGuid().ToString("N");
+                usedIds.Add(entry.entryId);
+            }
+        }
+    }
+
+    private static TrickPoseEntry FindEntryById(TrickPoseProfileSO profile, string entryId)
+    {
+        if (profile == null || profile.entries == null || string.IsNullOrWhiteSpace(entryId))
+            return null;
+
+        for (int i = 0; i < profile.entries.Count; i++)
+        {
+            TrickPoseEntry entry = profile.entries[i];
+            if (entry != null && string.Equals(entry.entryId, entryId, StringComparison.Ordinal))
+                return entry;
+        }
+
+        return null;
+    }
+
+    private static void CopyMirrorSyncedFields(TrickPoseEntry source, TrickPoseEntry counterpart)
+    {
+        if (source == null || counterpart == null)
+            return;
+
+        counterpart.enabled = source.enabled;
+        counterpart.priority = source.priority;
+        counterpart.overallWeight = source.overallWeight;
+        counterpart.overridePoseLabel = source.overridePoseLabel;
+        counterpart.requiredPoseFamily = source.GetEffectiveRequiredPoseFamily();
+        counterpart.requiredPoseShape = source.GetEffectiveRequiredPoseShape();
+        counterpart.requiredVerticalOrientation = source.requiredVerticalOrientation;
+        counterpart.requiredHorizontalOrientation = source.requiredHorizontalOrientation;
+        counterpart.requiredTravelFacing = source.requiredTravelFacing;
+        
+        counterpart.requiredMotionState = source.requiredMotionState;
+        counterpart.requiredOrientationModifier = source.requiredOrientationModifier;
+        counterpart.requiredPoseName = source.requiredPoseName;
+        counterpart.requireAirborne = source.requireAirborne;
+        counterpart.requirePoseButtonHeld = source.requirePoseButtonHeld;
+        counterpart.useAdvancedModifierConditions = source.useAdvancedModifierConditions;
+        counterpart.requiredSpinDirection = source.requiredSpinDirection;
+        counterpart.requiredFlipDirection = source.requiredFlipDirection;
+        counterpart.yawAngularVelocityRange = source.yawAngularVelocityRange;
+        counterpart.pitchAngularVelocityRange = source.pitchAngularVelocityRange;
+        counterpart.rollAngularVelocityRange = source.rollAngularVelocityRange;
+        counterpart.totalAngularSpeedRange = source.totalAngularSpeedRange;
+        counterpart.entryPitchAngleRange = source.entryPitchAngleRange;
+        counterpart.entryYawAngleRange = source.entryYawAngleRange;
+        counterpart.entryRollAngleRange = source.entryRollAngleRange;
+        counterpart.blendInSpeed = source.blendInSpeed;
+        counterpart.blendOutSpeed = source.blendOutSpeed;
+        counterpart.snapOnPreview = source.snapOnPreview;
+        counterpart.allowBlendWithOthers = source.allowBlendWithOthers;
+        counterpart.bodyPose = JsonUtility.FromJson<PosePartTransformData>(JsonUtility.ToJson(source.bodyPose));
+        counterpart.headPose = JsonUtility.FromJson<PosePartTransformData>(JsonUtility.ToJson(source.headPose));
+        counterpart.leftSkiPose = JsonUtility.FromJson<PosePartTransformData>(JsonUtility.ToJson(source.leftSkiPose));
+        counterpart.rightSkiPose = JsonUtility.FromJson<PosePartTransformData>(JsonUtility.ToJson(source.rightSkiPose));
+        counterpart.leftPolePose = JsonUtility.FromJson<PosePartTransformData>(JsonUtility.ToJson(source.leftPolePose));
+        counterpart.rightPolePose = JsonUtility.FromJson<PosePartTransformData>(JsonUtility.ToJson(source.rightPolePose));
+        counterpart.leftElbowPose = JsonUtility.FromJson<PosePartTransformData>(JsonUtility.ToJson(source.leftElbowPose));
+        counterpart.rightElbowPose = JsonUtility.FromJson<PosePartTransformData>(JsonUtility.ToJson(source.rightElbowPose));
+        counterpart.leftKneePose = JsonUtility.FromJson<PosePartTransformData>(JsonUtility.ToJson(source.leftKneePose));
+        counterpart.rightKneePose = JsonUtility.FromJson<PosePartTransformData>(JsonUtility.ToJson(source.rightKneePose));
+        FlipEntry(counterpart);
+    }
+
+    private static string GetFlippedDisplayName(string sourceName)
+    {
+        if (string.IsNullOrWhiteSpace(sourceName))
+            return "Flipped Pose";
+
+        bool replaced = false;
+        string swapped = System.Text.RegularExpressions.Regex.Replace(
+            sourceName,
+            "\\b(left|right)\\b",
+            match =>
+            {
+                replaced = true;
+                return match.Value switch
+                {
+                    "Left" => "Right",
+                    "Right" => "Left",
+                    "left" => "right",
+                    "right" => "left",
+                    _ => match.Value
+                };
+            });
+
+        return replaced ? swapped : $"{sourceName} (Flipped)";
     }
 
     private static void SwapAndFlip(ref PosePartTransformData a, ref PosePartTransformData b)

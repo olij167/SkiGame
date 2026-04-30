@@ -41,6 +41,15 @@ public class SkiContact : MonoBehaviour
     [Tooltip("Max additional distance (beyond probeUpOffset) that still counts as true contact. Lower = stricter grounding.")]
     [SerializeField] private float probeContactDistance = 0.12f;
 
+    [Tooltip("Extra probe/contact distance granted when the ski is in a rolled or pitched authored pose.")]
+    [SerializeField] private float posedProbeExtraContactDistance = 0.3f;
+
+    [Tooltip("When enabled, also probes from left/right ski edges so edge-touching poses still register snow contact.")]
+    [SerializeField] private bool useEdgeCompensationProbes = true;
+
+    [Tooltip("Half-width offset used for left/right edge compensation probes.")]
+    [SerializeField] private float edgeProbeHalfWidth = 0.08f;
+
     [Tooltip("SphereCast radius used for probing. SphereCasts reduce triangle-to-triangle normal jitter compared to rays.")]
     [SerializeField] private float probeSphereRadius = 0.04f;
 
@@ -53,6 +62,20 @@ public class SkiContact : MonoBehaviour
 
     [Tooltip("Small grace period where, if rays miss for a frame or two, we keep the last contact instead of dropping to 'air'.")]
     [SerializeField] private float contactCoyoteTime = 0.05f;
+
+    [Header("Trick Pose Probe Recovery")]
+    [Tooltip("When enabled, adds front-mid and rear-mid probes so partial ski-length contact can still reacquire snow when the main base probe misses.")]
+    [SerializeField] private bool useIntermediateLengthProbes = true;
+
+    [Tooltip("How far from the ski midpoint the intermediate recovery probes sit along the ski length. Higher values push them closer to the tip/tail.")]
+    [SerializeField, Range(0.15f, 0.85f)]
+    private float intermediateProbeFraction = 0.55f;
+
+    [Tooltip("When enabled, retries probes from a higher origin so trick poses can reacquire terrain even when the normal probe starts too close to or slightly inside the snow.")]
+    [SerializeField] private bool useHighOriginRecoveryProbe = true;
+
+    [Tooltip("Extra upward start offset used by the high-origin recovery probe. Higher values help fix false-airborne cases but can feel stickier if overused.")]
+    [SerializeField] private float recoveryProbeExtraUpOffset = 0.35f;
 
     /// <summary>True if this ski currently has any ground contact this frame.</summary>
     public bool IsGrounded { get; private set; }
@@ -168,6 +191,10 @@ public class SkiContact : MonoBehaviour
     private Vector3 _probeTailPoint;
     private Vector3 _probeTailNormal;
 
+    private Collider _probeBaseCollider;
+    private Collider _probeTipCollider;
+    private Collider _probeTailCollider;
+
     // NOTE: Do not sample in this script's FixedUpdate.
     // SkiController will call this deterministically at the start of its FixedUpdate.
     public void ManualSampleGround()
@@ -238,9 +265,9 @@ public class SkiContact : MonoBehaviour
 
         Vector3 worldUp = Vector3.up;
         Vector3 worldDown = Vector3.down;
-
-        float maxDist = probeDistance + probeUpOffset;
-        float contactMaxDist = Mathf.Max(0.001f, probeUpOffset + probeContactDistance);
+        float poseContactExtra = ComputePoseProbeExtraDistance();
+        float maxDist = probeDistance + probeUpOffset + poseContactExtra;
+        float contactMaxDist = Mathf.Max(0.001f, probeUpOffset + probeContactDistance + poseContactExtra);
 
         // Base / under-foot
         Vector3 baseOrigin = transform.position + worldUp * probeUpOffset;
@@ -255,43 +282,121 @@ public class SkiContact : MonoBehaviour
             tailOrigin = transform.TransformPoint(new Vector3(0f, 0f, _localTailZ)) + worldUp * probeUpOffset;
         }
 
-        bool SphereDown(Vector3 origin, out RaycastHit hit)
+        bool IsProbeRideable(RaycastHit h)
+        {
+            Vector3 n = GetUpwardNormal(h.normal);
+            return Vector3.Dot(n, Vector3.up) >= minProbeUpDot;
+        }
+
+        bool TrySphereDown(Vector3 origin, float extraMaxDistance, out RaycastHit hit)
         {
             return Physics.SphereCast(
                 origin,
                 probeSphereRadius,
                 worldDown,
                 out hit,
-                maxDist,
+                maxDist + extraMaxDistance,
                 groundLayers,
                 QueryTriggerInteraction.Ignore);
+        }
+
+        bool TryProbeBest(Vector3 origin, out RaycastHit bestHit)
+        {
+            bool found = false;
+            bestHit = default;
+
+            bool ConsiderProbeFromOrigin(Vector3 probeOrigin, float extraMaxDistance, ref RaycastHit currentBest, ref bool hasBest)
+            {
+                if (!TrySphereDown(probeOrigin, extraMaxDistance, out RaycastHit hit))
+                    return false;
+
+                float allowedContactDistance = contactMaxDist + Mathf.Max(0f, extraMaxDistance);
+                if (hit.distance > allowedContactDistance || !IsProbeRideable(hit))
+                    return false;
+
+                hit.normal = GetUpwardNormal(hit.normal);
+
+                if (!hasBest || hit.distance < currentBest.distance)
+                {
+                    currentBest = hit;
+                    hasBest = true;
+                }
+
+                return true;
+            }
+
+            bool foundPrimary = ConsiderProbeFromOrigin(origin, 0f, ref bestHit, ref found);
+
+            if (!foundPrimary && useHighOriginRecoveryProbe && recoveryProbeExtraUpOffset > 0.0001f)
+            {
+                ConsiderProbeFromOrigin(
+                    origin + worldUp * recoveryProbeExtraUpOffset,
+                    recoveryProbeExtraUpOffset,
+                    ref bestHit,
+                    ref found);
+            }
+
+            if (useEdgeCompensationProbes && edgeProbeHalfWidth > 0.0001f)
+            {
+                Vector3 edgeOffset = transform.right * edgeProbeHalfWidth;
+                ConsiderProbeFromOrigin(origin + edgeOffset, 0f, ref bestHit, ref found);
+                ConsiderProbeFromOrigin(origin - edgeOffset, 0f, ref bestHit, ref found);
+
+                if (!found && useHighOriginRecoveryProbe && recoveryProbeExtraUpOffset > 0.0001f)
+                {
+                    ConsiderProbeFromOrigin(origin + edgeOffset + worldUp * recoveryProbeExtraUpOffset, recoveryProbeExtraUpOffset, ref bestHit, ref found);
+                    ConsiderProbeFromOrigin(origin - edgeOffset + worldUp * recoveryProbeExtraUpOffset, recoveryProbeExtraUpOffset, ref bestHit, ref found);
+                }
+            }
+
+            return found;
         }
 
         // Reset probe hits each sample
         _probeBaseHit = false;
         _probeTipHit = false;
         _probeTailHit = false;
+        _probeBaseCollider = null;
+        _probeTipCollider = null;
+        _probeTailCollider = null;
 
         // Probe hits
-        bool gotBase = SphereDown(baseOrigin, out RaycastHit baseHit) && baseHit.distance <= contactMaxDist;
-        bool gotTip = SphereDown(tipOrigin, out RaycastHit tipHit) && tipHit.distance <= contactMaxDist;
-        bool gotTail = SphereDown(tailOrigin, out RaycastHit tailHit) && tailHit.distance <= contactMaxDist;
+        bool gotBase = TryProbeBest(baseOrigin, out RaycastHit baseHit);
+        bool gotTip = TryProbeBest(tipOrigin, out RaycastHit tipHit);
+        bool gotTail = TryProbeBest(tailOrigin, out RaycastHit tailHit);
+        bool gotFrontMid = false;
+        bool gotRearMid = false;
+        RaycastHit frontMidHit = default;
+        RaycastHit rearMidHit = default;
 
-        bool IsProbeRideable(RaycastHit h)
+        if (!gotBase && useIntermediateLengthProbes)
         {
-            Vector3 n = (h.normal.sqrMagnitude > 0.0001f) ? h.normal.normalized : Vector3.up;
-            return Vector3.Dot(n, Vector3.up) >= minProbeUpDot;
-        }
+            float probeFraction = Mathf.Clamp(intermediateProbeFraction, 0.15f, 0.85f);
+            Vector3 frontMidOrigin = Vector3.Lerp(baseOrigin, tipOrigin, probeFraction);
+            Vector3 rearMidOrigin = Vector3.Lerp(baseOrigin, tailOrigin, probeFraction);
 
-        if (gotBase && !IsProbeRideable(baseHit)) gotBase = false;
-        if (gotTip && !IsProbeRideable(tipHit)) gotTip = false;
-        if (gotTail && !IsProbeRideable(tailHit)) gotTail = false;
+            gotFrontMid = TryProbeBest(frontMidOrigin, out frontMidHit);
+            gotRearMid = TryProbeBest(rearMidOrigin, out rearMidHit);
+
+            if (!gotTip && gotFrontMid)
+            {
+                gotTip = true;
+                tipHit = frontMidHit;
+            }
+
+            if (!gotTail && gotRearMid)
+            {
+                gotTail = true;
+                tailHit = rearMidHit;
+            }
+        }
 
         if (gotBase)
         {
             _probeBaseHit = true;
             _probeBasePoint = baseHit.point;
             _probeBaseNormal = (baseHit.normal.sqrMagnitude > 0.0001f) ? baseHit.normal.normalized : Vector3.up;
+            _probeBaseCollider = baseHit.collider;
         }
 
         if (gotTip)
@@ -299,6 +404,7 @@ public class SkiContact : MonoBehaviour
             _probeTipHit = true;
             _probeTipPoint = tipHit.point;
             _probeTipNormal = (tipHit.normal.sqrMagnitude > 0.0001f) ? tipHit.normal.normalized : Vector3.up;
+            _probeTipCollider = tipHit.collider;
         }
 
         if (gotTail)
@@ -306,6 +412,7 @@ public class SkiContact : MonoBehaviour
             _probeTailHit = true;
             _probeTailPoint = tailHit.point;
             _probeTailNormal = (tailHit.normal.sqrMagnitude > 0.0001f) ? tailHit.normal.normalized : Vector3.up;
+            _probeTailCollider = tailHit.collider;
         }
 
         bool anyProbeHit = gotBase || gotTip || gotTail;
@@ -345,12 +452,12 @@ public class SkiContact : MonoBehaviour
         if (_hasCollisionContact)
         {
             targetPoint = _collisionContactPoint;
-            targetNormal = (_collisionContactNormal.sqrMagnitude > 0.0001f) ? _collisionContactNormal.normalized : Vector3.up;
+            targetNormal = GetUpwardNormal(_collisionContactNormal);
         }
         else if (gotBase)
         {
             targetPoint = baseHit.point;
-            targetNormal = (baseHit.normal.sqrMagnitude > 0.0001f) ? baseHit.normal.normalized : Vector3.up;
+            targetNormal = GetUpwardNormal(baseHit.normal);
         }
         else
         {
@@ -359,7 +466,7 @@ public class SkiContact : MonoBehaviour
             RaycastHit h = useTip ? tipHit : tailHit;
 
             targetPoint = h.point;
-            targetNormal = (h.normal.sqrMagnitude > 0.0001f) ? h.normal.normalized : Vector3.up;
+            targetNormal = GetUpwardNormal(h.normal);
         }
 
         float timeSinceLast = (LastContactTime > 0f) ? (Time.time - LastContactTime) : float.MaxValue;
@@ -436,6 +543,21 @@ public class SkiContact : MonoBehaviour
         EndContactSign = endish ? bestEndSign : 0;
     }
 
+    private float ComputePoseProbeExtraDistance()
+    {
+        if (posedProbeExtraContactDistance <= 0f)
+            return 0f;
+
+        Vector3 worldUp = Vector3.up;
+        float upDeviation = 1f - Mathf.Clamp01(Mathf.Abs(Vector3.Dot(transform.up, worldUp)));
+        float pitchOrRoll = Mathf.Max(
+            Mathf.Abs(Vector3.Dot(transform.forward, worldUp)),
+            Mathf.Abs(Vector3.Dot(transform.right, worldUp)));
+
+        float poseFactor = Mathf.Clamp01(Mathf.Max(upDeviation, pitchOrRoll));
+        return posedProbeExtraContactDistance * poseFactor;
+    }
+
     private void EnsureGeometry()
     {
         if (_geometryInitialized)
@@ -493,7 +615,17 @@ public class SkiContact : MonoBehaviour
         }
     }
 
+    private void OnCollisionEnter(Collision collision)
+    {
+        CacheCollisionContact(collision);
+    }
+
     void OnCollisionStay(Collision collision)
+    {
+        CacheCollisionContact(collision);
+    }
+
+    private void CacheCollisionContact(Collision collision)
     {
         if (collision == null || collision.contactCount <= 0)
             return;
@@ -519,7 +651,7 @@ public class SkiContact : MonoBehaviour
         for (int i = 0; i < collision.contactCount; i++)
         {
             ContactPoint cp = collision.GetContact(i);
-            Vector3 n = cp.normal.sqrMagnitude > 0.0001f ? cp.normal.normalized : Vector3.up;
+            Vector3 n = GetUpwardNormal(cp.normal);
 
             float upDot = Vector3.Dot(n, Vector3.up);
             if (upDot > bestUpDot)
@@ -615,6 +747,45 @@ public class SkiContact : MonoBehaviour
         return f.normalized;
     }
 
+    public Collider PrimaryContactCollider
+    {
+        get
+        {
+            if (_collisionOtherCollider != null)
+                return _collisionOtherCollider;
+
+            if (_probeBaseCollider != null)
+                return _probeBaseCollider;
+
+            if (_probeTipCollider != null)
+                return _probeTipCollider;
+
+            if (_probeTailCollider != null)
+                return _probeTailCollider;
+
+            return null;
+        }
+    }
+
+    public bool HasCurrentContactWith(Collider candidate)
+    {
+        if (candidate == null)
+            return false;
+
+        if (_collisionOtherCollider == candidate)
+            return true;
+
+        if (_probeBaseCollider == candidate || _probeTipCollider == candidate || _probeTailCollider == candidate)
+            return true;
+
+        return _anyCollisionOtherColliders.Contains(candidate);
+    }
+
+    public bool HasContactWith(Collider candidate)
+    {
+        return HasCurrentContactWith(candidate);
+    }
+
     /// <summary>
     /// Clears cached contact state. Can be called by the controller if needed.
     /// </summary>
@@ -634,6 +805,11 @@ public class SkiContact : MonoBehaviour
         _probeBaseHit = false;
         _probeTipHit = false;
         _probeTailHit = false;
+
+        _probeBaseCollider = null;
+        _probeTipCollider = null;
+        _probeTailCollider = null;
+
         _probeBasePoint = default;
         _probeTipPoint = default;
         _probeTailPoint = default;
@@ -671,6 +847,14 @@ public class SkiContact : MonoBehaviour
 
         if (_anyCollisionOtherCollider == null)
             _anyCollisionOtherCollider = other;
+    }
+
+    private static Vector3 GetUpwardNormal(Vector3 normal)
+    {
+        Vector3 n = normal.sqrMagnitude > 0.0001f ? normal.normalized : Vector3.up;
+        if (Vector3.Dot(n, Vector3.up) < 0f)
+            n = -n;
+        return n;
     }
 
     private void RemoveAnyCollisionOtherCollider(Collider other)

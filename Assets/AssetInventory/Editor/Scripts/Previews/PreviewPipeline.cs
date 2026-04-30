@@ -385,13 +385,12 @@ namespace AssetInventory
                     files, depCache, true, onMatProgress, isMatCancelled);
             }
 
-            // Run Unity's URP converter once after bulk materialization when convertToPipeline is enabled.
+            // Run Unity's URP converter once after bulk materialization when enabled.
             // This persistently converts materialized assets in the preview work area for maximum fidelity.
-            // When the flag is off, the preview-instance converter handles it non-destructively at render time.
-            if (AI.Config.convertToPipeline && srpSupportPackage == null && (matMode == MaterializationMode.Full || matMode == MaterializationMode.Selective))
+            if (AI.Config.convertToPipeline && AI.Config.useUnityPipelineConverter && srpSupportPackage == null && (matMode == MaterializationMode.Full || matMode == MaterializationMode.Selective))
             {
                 CurrentSub = "Converting materials to current render pipeline...";
-                await Assets.RunURPConverterAsync();
+                await PipelineConverter.RunUnityConverterAsync();
             }
 
             // Reset sub-progress for the preview generation phase

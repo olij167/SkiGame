@@ -1,18 +1,21 @@
 .trick-overlay-root {
     position: absolute;
     left: 18px;
-    right: 18px;
+    right: 450px;
     bottom: 18px;
     align-items: flex-start;
     justify-content: flex-end;
     pointer-events: none;
+    overflow: hidden;
 }
 
 .trick-list {
     width: 100%;
+    max-width: 100%;
     align-items: flex-start;
     flex-direction: column;
     gap: 8px;
+    overflow: hidden;
 }
 
 .trick-entry {
@@ -25,6 +28,7 @@
     padding-bottom: 4px;
     background-color: rgba(0, 0, 0, 0);
     opacity: 0;
+    overflow: hidden;
 }
 
 .trick-score-row {
@@ -32,6 +36,9 @@
     align-items: flex-end;
     gap: 10px;
     margin-bottom: 2px;
+    max-width: 100%;
+    flex-wrap: wrap;
+    overflow: hidden;
 }
 
 .trick-combo-score {
@@ -40,6 +47,7 @@
     -unity-text-outline-color: rgba(24, 18, 4, 1);
     -unity-text-outline-width: 4px;
     letter-spacing: 1px;
+    max-width: 100%;
 }
 
 .trick-combo-increment {
@@ -48,17 +56,19 @@
     -unity-text-outline-color: rgba(52, 22, 0, 1);
     -unity-text-outline-width: 3px;
     letter-spacing: 1px;
+    max-width: 100%;
 }
 
 .trick-adjective {
     unity-text-align: middle-left;
-    white-space: nowrap;
-    flex-shrink: 0;
-    max-width: none;
+    white-space: normal;
+    flex-shrink: 1;
+    max-width: 100%;
     margin-bottom: 2px;
     -unity-text-outline-color: rgba(8, 14, 26, 1);
     -unity-text-outline-width: 3px;
     letter-spacing: 1px;
+    overflow: hidden;
 }
 
 .trick-combo-row {
@@ -66,7 +76,9 @@
     flex-wrap: wrap;
     align-items: center;
     width: 100%;
+    max-width: 100%;
     gap: 3px;
+    overflow: hidden;
 }
 
 .trick-segment {
@@ -74,6 +86,8 @@
     white-space: normal;
     -unity-text-outline-color: rgba(8, 14, 26, 1);
     -unity-text-outline-width: 3px;
+    max-width: 100%;
+    flex-shrink: 1;
 }
 
 .trick-plus {
@@ -83,6 +97,7 @@
     -unity-text-outline-width: 2px;
     margin-left: 2px;
     margin-right: 2px;
+    flex-shrink: 0;
 }
 
 .trick-strike {
@@ -107,4 +122,6 @@
     -unity-text-outline-width: 3px;
     letter-spacing: 1px;
     display: none;
+    max-width: 100%;
+    overflow: hidden;
 }

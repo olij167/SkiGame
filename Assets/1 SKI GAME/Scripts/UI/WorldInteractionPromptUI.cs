@@ -6,6 +6,13 @@ using SkiGame.Progression;
 
 namespace SkiGame.UI
 {
+    public enum PromptSourceCollectionMode
+    {
+        RegistryOnly,
+        RegistryThenSceneScan,
+        SceneScanDebugOnly
+    }
+
     [RequireComponent(typeof(UIDocument))]
     public sealed class WorldInteractionPromptUI : MonoBehaviour
     {
@@ -14,6 +21,7 @@ namespace SkiGame.UI
         [SerializeField] private InputPromptIconLibrary iconLibrary;
         [SerializeField] private string interactActionName = "Interact";
         [SerializeField] private float refreshInterval = 0.1f;
+        [SerializeField] private PromptSourceCollectionMode sourceCollectionMode = PromptSourceCollectionMode.RegistryOnly;
 
         private VisualElement _root;
         private VisualElement _panel;
@@ -126,6 +134,20 @@ namespace SkiGame.UI
         {
             _sources.Clear();
 
+            bool includeRegistry =
+                sourceCollectionMode == PromptSourceCollectionMode.RegistryOnly ||
+                sourceCollectionMode == PromptSourceCollectionMode.RegistryThenSceneScan;
+
+            bool includeSceneScan =
+                sourceCollectionMode == PromptSourceCollectionMode.RegistryThenSceneScan ||
+                sourceCollectionMode == PromptSourceCollectionMode.SceneScanDebugOnly;
+
+            if (includeRegistry && WorldInteractionPromptRegistry.HasRegisteredSources)
+                WorldInteractionPromptRegistry.GetSources(_sources);
+
+            if (!includeSceneScan)
+                return;
+
 #if UNITY_2023_1_OR_NEWER
             var monoBehaviours = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
 #else
@@ -134,7 +156,7 @@ namespace SkiGame.UI
 
             for (int i = 0; i < monoBehaviours.Length; i++)
             {
-                if (monoBehaviours[i] is IWorldInteractionPromptSource src)
+                if (monoBehaviours[i] is IWorldInteractionPromptSource src && !_sources.Contains(src))
                     _sources.Add(src);
             }
         }

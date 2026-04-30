@@ -146,6 +146,7 @@ Transform:
   m_LocalScale: {x: 0.2, y: 0.2, z: 0.2}
   m_ConstrainProportionsScale: 1
   m_Children:
+  - {fileID: 6808212103610349073}
   - {fileID: 1166032349535246063}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -368,6 +369,12 @@ MonoBehaviour:
   entryTilt: 0
   dragTilt: -15
   followTilt: -15
+  styleYaw: 18
+  styleOutwardOffset: 0.09
+  styleUpOffset: 0.05
+  styleBackOffset: 0.06
+  tweakedPitchOpen: -8
+  stretchedPitchOpen: -14
   carveMinSpeed: 3
   carveMaxSpeed: 20
   insideCarvePitchDelta: -12
@@ -382,6 +389,46 @@ MonoBehaviour:
   dragDownOffset: 0.6
   followBackOffset: 0.4
   followUpOffset: 0.2
+  tuckPitchDelta: 24
+  tuckTiltReduction: 10
+  tuckInwardOffset: 0.08
+  tuckUpOffset: 0.04
+  tuckBackOffset: 0.1
+  enablePassiveAirDrift: 1
+  passiveDriftMaxPosition: 0.04
+  passiveDriftMaxRotation: 8
+  passiveDriftVelocityInfluence: 0.06
+--- !u!1 &8018838276702134657
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6808212103610349073}
+  m_Layer: 3
+  m_Name: GripAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6808212103610349073
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8018838276702134657}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4523742726443538813}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &2056884934185038383
 PrefabInstance:
   m_ObjectHideFlags: 0

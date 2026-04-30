@@ -79,6 +79,18 @@ public class SkiController : MonoBehaviour
         Tail = -1
     }
 
+    public enum SkiEndSlideState
+    {
+        None,
+        LeftNose,
+        RightNose,
+        BothNose,
+        LeftTail,
+        RightTail,
+        BothTail,
+        Mixed
+    }
+
     public readonly struct GrindStateInfo
     {
         public readonly bool active;
@@ -141,6 +153,8 @@ public class SkiController : MonoBehaviour
         public AerialOrientationModifier orientation;
         public TrickPoseVerticalOrientationRequirement verticalOrientation;
         public TrickPoseHorizontalOrientationRequirement horizontalOrientation;
+        public TrickPoseTravelFacingRequirement travelFacing;
+
         public TrickPoseMotionStateRequirement motionState;
         public string poseName;
         public int spinDirectionSign;
@@ -346,8 +360,30 @@ public class SkiController : MonoBehaviour
     private float _leftSkiYawCurrent;
     private float _rightSkiYawCurrent;
 
+    // Visual-only stack overrides pushed by SkierLimbLineVisual so the skis
+    // can loosely follow the simulated feet while stacked without affecting
+    // core locomotion or recovery physics.
+    private bool _leftStackSkiVisualOverrideActive;
+    private bool _rightStackSkiVisualOverrideActive;
+    private Vector3 _leftStackSkiVisualOverrideWorldPos;
+    private Vector3 _rightStackSkiVisualOverrideWorldPos;
+    private Quaternion _leftStackSkiVisualOverrideWorldRot = Quaternion.identity;
+    private Quaternion _rightStackSkiVisualOverrideWorldRot = Quaternion.identity;
+    private float _leftStackSkiVisualOverrideWeight;
+    private float _rightStackSkiVisualOverrideWeight;
+
     // Stack state
     private bool _stacked;
+    private bool _stackRecoveryExternallyLocked;
+    private float _stackedAtTime = -999f;
+    private bool _hasPendingStackImpact;
+    private Vector3 _pendingStackImpactNormal;
+    private Vector3 _pendingStackImpactVelocity;
+    private Vector3 _pendingStackImpactPoint;
+    private SkiEndSlideState _skiEndSlideState = SkiEndSlideState.None;
+    private float _skiEndSlide01;
+    private float _lastSkiEndSlideTime = -999f;
+    private float _lastStackedSecondaryImpactTime = -999f;
     // ------------------------------------------------------------------
     // Non-ski body collisions (anti "slide on head")
     //
@@ -399,6 +435,7 @@ public class SkiController : MonoBehaviour
     private float _lastGroundedTime;
     private float _lastJumpTime;
     private float _lastJumpReleasedTime;
+    private float _lastSkiJumpCharge01;
 
     private float _airborneStartTime;
     private float _airbornePeakY;
@@ -437,7 +474,6 @@ public class SkiController : MonoBehaviour
     private float _grindTime;
     private float _grindDistance;
     private float _grindStrengthSmoothed;
-    private float _grindReattachCooldownUntil;
     private int _grindDominantEndSign;
     private int _grindRawEndSign;
     private float _grindStanceTimer;
@@ -452,6 +488,7 @@ public class SkiController : MonoBehaviour
     private Vector3 _grindDeltaToRail;
     private string _dbgGrindSource;
     private Vector3 _grindNormal = Vector3.up;
+    private Vector3 _grindHybridAngularVelocity;
 
     // Per-frame cache to avoid repeated GetComponentInParent calls during probe evaluation.
     private int _grindProviderCacheFrame = -1;
@@ -756,25 +793,55 @@ public class SkiController : MonoBehaviour
     [SerializeField, Range(0.25f, 2f)] private float poleUphillEffectiveness = 1.25f;
 
 
-    // Tip-contact stability tuning (kept as code constants to avoid more inspector clutter).
-    // If you want to expose these in the inspector later, just turn them into [SerializeField] fields.
-    private const float TipContactStackFraction = 0.7f;  // fraction of grounded skis whose last contact is in the tip region
-    private const float TipContactMinSpeed = 2.5f;       // planar m/s before tip checks matter
-    private const float TipContactStackTime = 0.18f;     // seconds of tip-heavy contact before we stack
-    private const float MinBaseAlignForGroundNormal = 0.25f;
+    [Header("Tip / End Contact Stability")]
+    [Tooltip("Fraction of grounded skis that must be end-weighted before tip/tail instability can start building toward a stack. Higher values make accidental tip digs more forgiving.")]
+    [SerializeField, Range(0f, 1f)]
+    private float tipContactStackFraction = 0.8f;
 
-    [Header("Tip Balance")]
-    [Tooltip("Minimum matched lean input needed before forward/back balance starts helping hold a nose/tail slide.")]
-    [SerializeField, Range(0f, 1f)] private float tipBalanceLeanThreshold = 0.35f;
+    [Tooltip("Minimum planar speed before prolonged nose/tail-heavy contact starts counting as a true instability instead of a harmless slow-speed wobble.")]
+    [SerializeField]
+    private float tipContactMinSpeed = 3.5f;
 
-    [Tooltip("Minimum planar speed required before intentional nose/tail balances are allowed.")]
-    [SerializeField] private float tipBalanceMinSpeed = 3.0f;
+    [Tooltip("How long sustained end-weighted contact can persist before it becomes a stack when the skis are not recovering back onto their bases.")]
+    [SerializeField]
+    private float tipContactStackTime = 0.38f;
 
-    [Tooltip("Planar speed where intentional tip balance reaches full support.")]
-    [SerializeField] private float tipBalanceFullSpeed = 8.0f;
+    [Tooltip("Minimum ski base alignment required before a ski contact is trusted to refresh the shared ground normal. Lower values make edge-heavy contacts influence grounding more strongly.")]
+    [SerializeField, Range(0f, 1f)]
+    private float minBaseAlignForGroundNormal = 0.18f;
 
-    [Tooltip("Lowest base-contact alignment that can still be saved by a strong intentional tip balance. Lower values remain an immediate wipeout.")]
-    [SerializeField, Range(0f, 0.4f)] private float tipBalanceEmergencyMinBaseAlignment = 0.08f;
+    [Tooltip("If a ski's base alignment falls below this while grounded, it is treated as an immediate severe edge/tip failure unless a stronger recovery rule saves it.")]
+    [SerializeField, Range(0f, 1f)]
+    private float severeEdgeAlignment = 0.02f;
+
+    [Tooltip("Low-speed base-alignment threshold used before stacking unstable edge/tip contact. Higher values make slow-speed end digs fail sooner instead of flattening out.")]
+    [SerializeField, Range(0f, 1f)]
+    private float lowSpeedEdgeStackAlignment = 0.28f;
+
+    [Header("Nose / Tail Slide")]
+    [Tooltip("Enables explicit high-speed nose/tail slide qualification so valid presses can be ridden without immediately flattening back to the snow.")]
+    [SerializeField] private bool enableNoseTailSlides = true;
+
+    [Tooltip("Minimum planar speed required to intentionally remain balanced on ski tips/tails without flattening immediately.")]
+    [SerializeField] private float noseTailSlideMinSpeed = 4.0f;
+
+    [Tooltip("Speed where nose/tail slide support is strongest.")]
+    [SerializeField] private float noseTailSlideFullSpeed = 9.0f;
+
+    [Tooltip("Below this speed, nose/tail slides are forced to flatten back toward normal skiing.")]
+    [SerializeField] private float noseTailSlideFlattenBelowSpeed = 3.0f;
+
+    [Tooltip("Minimum lean match required to hold a nose/tail slide. Forward lean holds nose slides, backward lean holds tail slides.")]
+    [SerializeField, Range(0f, 1f)] private float noseTailSlideLeanThreshold = 0.25f;
+
+    [Tooltip("Minimum base alignment allowed during a nose/tail slide before it becomes too unstable and stacks.")]
+    [SerializeField, Range(-0.1f, 0.4f)] private float noseTailSlideMinBaseAlignment = 0.02f;
+
+    [Tooltip("How much to reduce pitch/roll flattening while a valid nose/tail slide is active.")]
+    [SerializeField, Range(0f, 1f)] private float noseTailSlideAlignmentSuppression = 0.7f;
+
+    [Tooltip("How quickly the tracked nose/tail slide state fades after the contact no longer qualifies.")]
+    [SerializeField] private float noseTailSlideStateGrace = 0.16f;
 
     [Tooltip("Extra grace time multiplier applied to tip-heavy contact when the lean matches the active nose/tail balance.")]
     [SerializeField] private float tipBalanceGraceMultiplier = 1.8f;
@@ -887,131 +954,105 @@ public class SkiController : MonoBehaviour
     [SerializeField] private float airStyleHeadUp = 0.03f;
 
     [Header("Authored Trick Poses")]
+    [Tooltip("Authored trick-pose profile used for snapshot application, recognition, and trick-pose rig assist data.")]
     [SerializeField] private TrickPoseProfileSO trickPoseProfile;
+    [Tooltip("Prints authored trick-pose matching, switching, and retention decisions so pose-recognition tuning is easier in Play Mode.")]
     [SerializeField] private bool debugAuthoredTrickPose;
 
     [Header("Authored Trick Recognition")]
+    [Tooltip("Minimum time a recognized authored pose must remain valid before the runtime treats it as committed. Higher values reduce pose switching noise.")]
     [SerializeField] private float trickPoseCommitMinHoldTime = 0.22f;
+    [Tooltip("How much better a competing pose score must be before the runtime switches away from the current authored pose. Higher values make pose selection more stable.")]
     [SerializeField] private float trickPoseSwitchScoreMargin = 2f;
+    [Tooltip("Grace window that keeps the current authored pose alive after it briefly stops matching. Higher values smooth recognition through noisy transitions.")]
     [SerializeField] private float trickPoseRetentionGraceTime = 0.18f;
+    [Tooltip("How long after takeoff we preserve a snapshot of the rider's intent for authored pose matching. Larger values make takeoff input matter longer.")]
     [SerializeField] private float trickPoseIntentSnapshotWindow = 0.2f;
+    [Tooltip("Strength of the intent-bias bonus applied when a candidate authored pose matches the rider's captured takeoff intent.")]
     [SerializeField, Range(0f, 3f)] private float trickPoseIntentBiasStrength = 1f;
+    [Tooltip("Shows authored trick recognition decisions and score comparisons in debug output.")]
     [SerializeField] private bool debugTrickPoseRecognition;
 
     [Header("Passive Air Drift")]
+    [Tooltip("Adds subtle velocity-driven ski drift while airborne so skis feel lighter and less rigid in the air.")]
     [SerializeField] private bool enablePassiveAirDrift = true;
+    [Tooltip("Maximum visual ski position offset added by passive air drift. Higher values make skis float farther from their anchors.")]
     [SerializeField] private float passiveAirDriftMaxPosition = 0.05f;
+    [Tooltip("Maximum visual ski rotation added by passive air drift. Higher values make airborne skis flutter more.")]
     [SerializeField] private float passiveAirDriftMaxRotation = 7f;
+    [Tooltip("How strongly local air velocity drives passive ski drift. Higher values respond more aggressively to airspeed.")]
     [SerializeField] private float passiveAirDriftVelocityInfluence = 0.06f;
+    [Tooltip("How quickly passive air drift reacts to velocity changes. Higher values are snappier, lower values feel floatier.")]
     [SerializeField] private float passiveAirDriftLerpSpeed = 6f;
+    [Tooltip("Multiplier applied to passive air drift while an authored pose is active. Lower values keep posed skis cleaner and less windblown.")]
     [SerializeField, Range(0f, 1f)] private float passiveAirDriftWhilePoseMultiplier = 0.2f;
 
     [Header("Grinding")]
+    [Tooltip("When enabled, grinding is tracked from ski contact with grindable layers. Grinding is a slick movement modifier, not a sticky rail/path constraint.")]
+    [SerializeField] private bool useSimpleContactGrinding = true;
 
-    [SerializeField, Tooltip("How long we keep grinding after losing contact (prevents 1-frame drops).")]
-    private float grindCoyoteTime = 0.06f;
-
-    private float _grindLastTouchTime;
-
-    [Tooltip("Maximum distance (m) from the ski reference point to a contacted grind surface/path before the grind breaks.")]
-    [SerializeField] private float grindCaptureRadius = 0.45f;
-
-    [Tooltip("Small proactive acquisition radius around ski probe zones for colliders on grindable layers. Helps bridge visual contact and physics callback timing.")]
-    [SerializeField] private float grindAcquireRadius = 0.18f;
-
-    [Tooltip("Layers searched for nearby grindables (LiftLine/FencePath) when airborne.\n" +
-         "For best performance, restrict this to only your rail/cable/fence layers.\n" +
-         "Use Collide triggers if your grind colliders are triggers.")]
+    [Tooltip("Layers that count as grindable when touched by either ski. These can also be ground layers if large grindable objects should be rideable.")]
     [SerializeField] private LayerMask grindableLayers = ~0;
 
-    private readonly Collider[] _grindOverlap = new Collider[32];
+    [Tooltip("Minimum planar speed required before grind contact is tracked as an active grind.")]
+    [SerializeField] private float grindMinPlanarSpeed = 0.5f;
 
-    [Tooltip("Minimum planar speed required before contact-driven grinding will engage.")]
-    [SerializeField] private float grindMinPlanarSpeed = 2.0f;
+    [Tooltip("How quickly the grind movement modifier ramps while contact is present or absent.")]
+    [SerializeField] private float grindStrengthResponse = 20f;
 
-    [Tooltip("How aligned the skier's travel must be with the inferred grind direction before grinding engages.")]
-    [Range(0.0f, 0.99f)]
-    [SerializeField] private float grindSidewaysDotBegin = 0.65f;
+    [Header("Grinding - Movement Modifier")]
+    [Tooltip("Multiplier applied to ski friction while grinding. Lower values retain more speed and create a slicker surface.")]
+    [SerializeField, Range(0f, 1f)] private float grindFrictionMultiplier = 0.55f;
 
-    // Derived from grindSidewaysDotBegin to avoid a second serialized threshold.
-    private const float GRIND_ALIGN_FULL_FRAC = 0.65f; // fullDot = Lerp(beginDot, 1, frac)
+    [Tooltip("Multiplier applied to carve steering while grinding. Lower values make velocity direction follow momentum/gravity more than facing direction.")]
+    [SerializeField, Range(0f, 1f)] private float grindCarveSteerMultiplier = 0.65f;
 
-    [Tooltip("Spring strength keeping the skier close to the contacted grind support (m/s^2 per metre).")]
-    [SerializeField] private float grindSpring = 55f;
+    [Tooltip("Multiplier applied to quick-stop braking while grinding.")]
+    [SerializeField, Range(0f, 1f)] private float grindQuickStopMultiplier = 0.45f;
 
-    [Tooltip("How strongly lateral drift back toward the contacted line/face is corrected relative to the support spring.")]
-    [SerializeField, Range(0f, 1f)] private float grindLateralCorrection = 0.35f;
+    [Tooltip("Multiplier applied to wedge braking while grinding.")]
+    [SerializeField, Range(0f, 1f)] private float grindWedgeBrakeMultiplier = 0.55f;
 
-    [Tooltip("Damping applied to velocity that drifts sideways across the grind direction. Higher values make grinding feel more like a committed rail slide than loose skiing.")]
-    [SerializeField] private float grindSideSlipDamping = 12f;
+    [Tooltip("Multiplier applied to slope-parallel gravity while grinding. Slightly above 1 makes grindable surfaces feel slicker without forcing a path.")]
+    [SerializeField, Range(0f, 2f)] private float grindSlopeGravityMultiplier = 1.05f;
 
-    [Tooltip("Minimum upward component required for implicit face grinding. Lower values allow steeper props to become grindable.")]
-    [SerializeField, Range(0f, 1f)] private float grindImplicitMinUpDot = 0.2f;
+    [Header("Grinding - Hybrid Orientation Control")]
+    [Tooltip("Extra yaw/orientation authority while grinding. Higher values let the player spin/turn the body more easily while sliding.")]
+    [SerializeField, Range(0f, 40f)] private float grindYawTorque = 18f;
 
-    [Tooltip("Difference in surface normals required before a dual-ski contact is treated like an edge grind.")]
-    [SerializeField] private float grindEdgeNormalDeltaDegrees = 18f;
+    [Tooltip("Extra pitch authority while grinding. Higher values make nose/tail balancing and presses more responsive.")]
+    [SerializeField, Range(0f, 40f)] private float grindPitchTorque = 16f;
+
+    [Tooltip("Extra roll authority while grinding. Higher values make edge/side lean more responsive.")]
+    [SerializeField, Range(0f, 40f)] private float grindRollTorque = 12f;
+
+    [Tooltip("Additional multiplier applied to grind orientation control while tucked.")]
+    [SerializeField, Range(0f, 3f)] private float grindTuckControlBonus = 0.9f;
+
+    [Tooltip("Maximum angular velocity contribution from grind hybrid control.")]
+    [SerializeField, Range(0f, 25f)] private float grindMaxHybridAngularSpeed = 10f;
+
+    [Header("Grinding - Nose / Tail Support")]
+    [Tooltip("Multiplier applied to nose/tail slide minimum speed while grinding. Lower values make presses easier to hold.")]
+    [SerializeField, Range(0.1f, 1f)] private float grindNoseTailMinSpeedMultiplier = 0.5f;
+
+    [Tooltip("Multiplier applied to nose/tail slide lean threshold while grinding. Lower values require less lean to hold a press.")]
+    [SerializeField, Range(0.1f, 1f)] private float grindNoseTailLeanThresholdMultiplier = 0.55f;
+
+    [Tooltip("Extra alignment suppression added to valid nose/tail slides while grinding.")]
+    [SerializeField, Range(0f, 0.5f)] private float grindNoseTailAlignmentSuppressionBonus = 0.25f;
 
     [Tooltip("Minimum front/rear probe distance advantage used to classify a grind as nose or tail weighted.")]
     [SerializeField] private float grindEndProbeBias = 0.035f;
 
-    [Tooltip("How strongly collider orientation is allowed to influence the inferred grind direction for generic layer-based grindables.")]
-    [SerializeField, Range(0f, 1f)] private float grindOrientationBias = 0.55f;
-
-    [Tooltip("How strongly the grind support up vector is biased toward world/gravity up. Higher values make generic props feel more stable and roof-edge style rather than wall-ride style.")]
-    [SerializeField, Range(0f, 1f)] private float grindGravityUpBias = 0.7f;
-
     [Tooltip("Forward/back lean threshold required to commit from a centered grind into a nose or tail press.")]
-    [SerializeField, Range(0f, 1f)] private float grindStanceLeanThreshold = 0.3f;
+    [SerializeField, Range(0f, 1f)] private float grindStanceLeanThreshold = 0.25f;
 
-    [Tooltip("How long the rider must hold a valid nose/tail press before the grind stance commits.")]
-    [SerializeField] private float grindStanceHoldTime = 0.08f;
+    [Tooltip("How long a valid nose/tail press must be held before the grind stance commits.")]
+    [SerializeField] private float grindStanceHoldTime = 0.06f;
 
-    [Tooltip("How quickly an active nose/tail grind returns to centered when the press conditions are lost.")]
-    [SerializeField] private float grindStanceReleaseTime = 0.06f;
-
-    [Header("Grinding - Surface Support (Simple)")]
-    [Tooltip("Vertical offset (m) above the grind path centerline that we try to keep the rider's reference point at while grinding. Helps 'sit' on cables/fences instead of falling through.")]
-    [SerializeField] private float grindSupportOffset = 0.07f;
-
-    [Tooltip("Extra damping applied to velocity along the grind support normal while grinding (m/s^2 per m/s). Reduces pogo / launchiness when landing on rails.")]
-    [SerializeField] private float grindNormalDamping = 14f;
-
-    [Tooltip("Multiplier for slope-parallel gravity while grinding (relative to grounded slope gravity). Higher = faster acceleration on rails/fences.")]
-    [SerializeField, Range(0f, 3f)] private float grindSlopeGravityScale = 1.6f;
-
-    [Tooltip("Multiplier applied to air-control yaw/pitch while grinding. 0 = no aerial control, 1 = same as air.")]
-    [SerializeField, Range(0f, 1.5f)] private float grindAirControlMultiplier = 0.65f;
-
-    [Header("Grinding - Alignment")]
-
-    [Tooltip("How quickly grind strength ramps in/out (per second). Higher = snappier engagement.")]
-    [SerializeField] private float grindStrengthResponse = 10f;
-
-    [Tooltip("Cooldown (seconds) after detaching before grind assist can reattach.")]
-    [SerializeField] private float grindReattachCooldown = 0.25f;
-    // Grinding alignment is always active while grinding.
-    // Reuse the main ground alignment rate (alignMaxDegreesPerSec) with a small multiplier.
-    private const float GRIND_ALIGN_UP_BIAS = 0.15f;
-    private const float GRIND_ALIGN_RATE_MULT = 1.25f;
-
-    [Header("Grinding - Drive & Balance")]
-    [Tooltip("Overall scale for along-rail gravity drive while grinding. 0 disables drive, 1 = physical gravity component.")]
-    [SerializeField, Range(0f, 2f)] private float grindDriveScale = 1.0f;
-
-    [Tooltip("Extra along-grind drive gained while tucked. Lets the player crouch for more speed on rails, edges, and cables.")]
-    [SerializeField, Range(0f, 1.5f)] private float grindTuckDriveBoost = 0.4f;
-
-    // Fixed boost fraction to reduce tuning params (was time-boost max).
-    private const float GRIND_DRIVE_TIME_BOOST_FRAC = 0.35f;
-
-    // Kept constant to reduce tuning params (was grindTimeToMaxBoost).
-    private const float GRIND_TIME_TO_MAX_BOOST = 1.5f;
-
-    [Tooltip("Balance gating using dot(rbUp, supportUp). Below this, grinding rapidly weakens.")]
-    [SerializeField, Range(0f, 1f)] private float grindBalanceUpDotBegin = 0.55f;
-
-    // Derived from grindBalanceUpDotBegin to avoid a second serialized threshold (was grindBalanceUpDotFull).
-    private const float GRIND_BALANCE_DOT_WINDOW = 0.30f;
+    [Tooltip("How quickly a nose/tail grind returns to centered when press conditions are lost.")]
+    [SerializeField] private float grindStanceReleaseTime = 0.05f;
 
     [Header("Landing: Stabilization & Projection")]
     [Tooltip("Slope angle (deg) where landing steepness adjustments begin.")]
@@ -1031,6 +1072,28 @@ public class SkiController : MonoBehaviour
 
     [Tooltip("Fraction of planar speed retained when projecting velocity onto the slope at landing.")]
     [SerializeField, Range(0f, 1f)] private float landingVelocityRetention = 0.9f;
+
+    [Header("Landing: Visual Response")]
+    [Tooltip("How long the procedural ski landing crouch pose lasts.")]
+    [SerializeField] private float skiLandingVisualDuration = 0.22f;
+
+    [Tooltip("Fall height where ski landing visual response starts.")]
+    [SerializeField] private float skiLandingVisualMinFallHeight = 0.35f;
+
+    [Tooltip("Fall height where ski landing visual response reaches full intensity.")]
+    [SerializeField] private float skiLandingVisualMaxFallHeight = 6f;
+
+    [Tooltip("Downward speed where ski landing visual response starts.")]
+    [SerializeField] private float skiLandingVisualMinDownwardSpeed = 1.75f;
+
+    [Tooltip("Downward speed where ski landing visual response reaches full intensity.")]
+    [SerializeField] private float skiLandingVisualMaxDownwardSpeed = 15f;
+
+    [Tooltip("Minimum intensity before a ski landing visual response is shown.")]
+    [SerializeField, Range(0f, 1f)] private float skiLandingVisualMinVisibleIntensity = 0.05f;
+
+    [Tooltip("Logs ski landing visual trigger diagnostics.")]
+    [SerializeField] private bool logSkiLandingVisualDebug = false;
 
     // Internal: short window after landing where alignment is boosted.
     private float _landingAssistUntil = 0f;
@@ -1076,6 +1139,100 @@ public class SkiController : MonoBehaviour
              "Lower values feel 'stickier' (more abrupt wipeouts).")]
     [SerializeField, Range(0f, 1f)] private float stackPlanarVelocityRetention = 0.25f;
 
+    [Header("Stack Recovery")]
+    [Tooltip("Minimum time the skier must remain stacked before auto-recovery can begin.")]
+    [SerializeField] private float stackMinimumRecoveryDelay = 0.65f;
+
+    [Tooltip("If enabled, both skis must be grounded/aligned before recovering from a stack.")]
+    [SerializeField] private bool requireBothSkisForStackRecovery = true;
+
+    [Tooltip("Minimum ski base-alignment required before that ski can contribute to stack recovery.")]
+    [SerializeField] private float stackRecoveryMinSkiBaseAlignment = 0.35f;
+
+    [Header("Stack Impact")]
+    [Tooltip("Non-ground obstacle layers that can trigger an impact stack/wipeout.")]
+    [SerializeField] private LayerMask stackImpactLayers = ~0;
+
+    [Tooltip("If enabled, obstacle-impact stacking ignores colliders that are also in groundLayers.")]
+    [SerializeField] private bool ignoreGroundLayerForImpactStack = true;
+
+    [Tooltip("Minimum planar speed required before obstacle collisions can trigger a stack.")]
+    [SerializeField] private float obstacleImpactMinPlanarSpeed = 4.5f;
+
+    [Tooltip("Minimum speed into the obstacle normal required before obstacle collisions trigger a stack.")]
+    [SerializeField] private float obstacleImpactMinIntoSpeed = 2.75f;
+
+    [Tooltip("Into-obstacle speed that maps to full stack severity.")]
+    [SerializeField] private float obstacleImpactFullSpeed = 13f;
+
+    [Tooltip("Fraction of tangential slide retained after an obstacle-triggered stack.")]
+    [SerializeField, Range(0f, 1f)] private float stackImpactSlideRetention = 0.35f;
+
+    [Tooltip("Low bounce applied away from the obstacle during an impact-triggered stack.")]
+    [SerializeField, Range(0f, 0.5f)] private float stackImpactBounce = 0.08f;
+
+    [Tooltip("Maximum allowed upward velocity after an impact-triggered stack.")]
+    [SerializeField] private float stackImpactMaxUpwardVelocity = 1.25f;
+
+    [Header("Stacked Impact Response")]
+    [Tooltip("Minimum collision relative speed while already stacked before a secondary flail/impact event is fired.")]
+    [SerializeField] private float stackedSecondaryImpactMinSpeed = 3.0f;
+
+    [Tooltip("Cooldown between secondary stacked impact events.")]
+    [SerializeField] private float stackedSecondaryImpactCooldown = 0.12f;
+
+    [Tooltip("Angular damping applied while stacked to reduce ski-wheel pinwheeling down slopes.")]
+    [SerializeField] private float stackedAngularDamping = 1.8f;
+
+    [Tooltip("Extra damping applied to sideways spin while stacked and skis are contacting snow.")]
+    [SerializeField] private float stackedSkiWheelDamping = 3.0f;
+
+    [Tooltip("Gravity multiplier while stacked. Keep at 1 for physically normal gravity.")]
+    [SerializeField] private float stackedGravityScale = 1.0f;
+
+    [Tooltip("Linear damping while stacked and grounded. This helps stacked players settle instead of sliding/bouncing forever.")]
+    [SerializeField] private float stackedGroundLinearDamping = 0.85f;
+
+    [Tooltip("Linear damping while stacked and airborne. Keep low so the player still falls naturally.")]
+    [SerializeField] private float stackedAirLinearDamping = 0.02f;
+
+    [Tooltip("Damps upward bounce along the current ground normal while stacked and grounded.")]
+    [SerializeField] private float stackedGroundNormalBounceDamping = 8.0f;
+
+    [Tooltip("Maximum upward speed allowed along the ground normal while stacked and grounded.")]
+    [SerializeField] private float stackedMaxGroundUpwardSpeed = 0.45f;
+
+    private enum StackEquipmentColliderMode
+    {
+        None,
+        MakeTrigger,
+        Disable
+    }
+
+    [Header("Stack Equipment Collision")]
+    [Tooltip("How ski/pole equipment colliders behave while stacked. Use MakeTrigger first. Disable is safer for problematic mesh colliders.")]
+    [SerializeField] private StackEquipmentColliderMode stackEquipmentColliderMode = StackEquipmentColliderMode.MakeTrigger;
+
+    [Tooltip("If enabled, pole colliders are also suppressed while stacked. This prevents pole tips from injecting bounce into the player Rigidbody.")]
+    [SerializeField] private bool includePoleCollidersInStackCollisionSuppression = true;
+
+    [Tooltip("Non-convex MeshColliders cannot reliably become triggers. If enabled, those colliders are disabled while stacked instead.")]
+    [SerializeField] private bool disableNonConvexMeshCollidersInsteadOfTrigger = true;
+
+    private struct StackEquipmentColliderState
+    {
+        public bool enabled;
+        public bool isTrigger;
+
+        public StackEquipmentColliderState(Collider collider)
+        {
+            enabled = collider != null && collider.enabled;
+            isTrigger = collider != null && collider.isTrigger;
+        }
+    }
+
+    private readonly Dictionary<Collider, StackEquipmentColliderState> _stackEquipmentColliderStates = new Dictionary<Collider, StackEquipmentColliderState>();
+    private bool _stackEquipmentCollidersSuppressed;
 
     [Header("Debug")]
     [Tooltip("If enabled, draws an on-screen debug panel (IMGUI) with key skiing state values.")]
@@ -1098,6 +1255,19 @@ public class SkiController : MonoBehaviour
 
     [Tooltip("If enabled, draws gizmos when this object is selected (contact normals, directions, etc.).")]
     [SerializeField] private bool debugDrawGizmosSelected = true;
+
+    [Header("Stack Recovery Gizmo")]
+    [Tooltip("Draws a red/green local-down landing line while selected. Green means the current stack recovery conditions would pass.")]
+    [SerializeField] private bool drawStackRecoveryGizmo = true;
+
+    [Tooltip("Length of the stack recovery local-down gizmo ray.")]
+    [SerializeField] private float stackRecoveryGizmoLength = 1.35f;
+
+    [Tooltip("Extra ground probe distance used by the recovery gizmo when the player is not currently grounded.")]
+    [SerializeField] private float stackRecoveryGizmoGroundProbeDistance = 2.5f;
+
+    [SerializeField] private Color stackRecoveryGizmoRecoverColor = new Color(0.1f, 1f, 0.25f, 1f);
+    [SerializeField] private Color stackRecoveryGizmoContinueColor = new Color(1f, 0.1f, 0.05f, 1f);
 
     [Tooltip("Scale multiplier for the debug HUD text size.")]
     [SerializeField, Range(0.5f, 2f)]
@@ -1133,6 +1303,9 @@ public class SkiController : MonoBehaviour
     private float _dbgLandingMisalignAngle;
     private bool _dbgLandingIsTiny;
     private bool _dbgLandingIsHardSlam;
+
+    private float _lastSkiLandingVisualTime = -999f;
+    private float _lastSkiLandingVisualIntensity01;
 
     private string _dbgLastStackReason = "";
 
@@ -1179,6 +1352,7 @@ public class SkiController : MonoBehaviour
     }
 
     public event System.Action<StackEventInfo> OnStacked;
+    public event System.Action<StackEventInfo> OnStackImpact;
 
     public readonly struct StackRecoveryEventInfo
     {
@@ -1210,6 +1384,8 @@ public class SkiController : MonoBehaviour
     public Vector3 SkiForwardOnPlane => _skiForward;
     public bool IsRiderGrounded => IsGroundedForControls;
     public bool IsPhysicsGrounded => _isGrounded;
+    public SkiEndSlideState CurrentSkiEndSlideState => _skiEndSlideState;
+    public float CurrentSkiEndSlide01 => _skiEndSlide01;
 
     public float RawLeanInput => _rawLeanInput;
     public float ForwardLeanInput => _forwardLean;
@@ -1240,6 +1416,52 @@ public class SkiController : MonoBehaviour
     public bool IsTucking => _tuck01 > 0.5f;
     public float Tuck01 => _tuck01;
 
+    public bool IsSkiJumpCharging => _jumpQueued && _jumpHeld && !_jumpReleaseQueued && !_stacked;
+
+    public float SkiJumpCharge01
+    {
+        get
+        {
+            if (!IsSkiJumpCharging)
+                return 0f;
+
+            return maxJumpChargeTime > 0f
+                ? Mathf.Clamp01((Time.time - _lastJumpPressedTime) / maxJumpChargeTime)
+                : 1f;
+        }
+    }
+
+    public float SkiJumpReleaseVisual01
+    {
+        get
+        {
+            const float visualDuration = 0.18f;
+            float age = Time.time - _lastJumpTime;
+            if (age < 0f || age > visualDuration)
+                return 0f;
+
+            return Mathf.Clamp01(1f - age / visualDuration) * Mathf.Clamp01(_lastSkiJumpCharge01);
+        }
+    }
+
+    public float SkiLandingVisualIntensity01 => _lastSkiLandingVisualIntensity01;
+
+    public float SkiLandingPose01
+    {
+        get
+        {
+            float duration = Mathf.Max(0.01f, skiLandingVisualDuration);
+            float age = Time.time - _lastSkiLandingVisualTime;
+
+            if (age < 0f || age > duration)
+                return 0f;
+
+            float t = Mathf.Clamp01(age / duration);
+            float decay = 1f - Mathf.SmoothStep(0f, 1f, t);
+
+            return Mathf.Clamp01(_lastSkiLandingVisualIntensity01 * decay);
+        }
+    }
     public bool IsAirStyleActive => _airStyle01 > 0.5f;
 
     public AerialStyleMode CurrentAerialStyleMode => ResolveAerialStyleMode();
@@ -1257,6 +1479,8 @@ public class SkiController : MonoBehaviour
     public AerialOrientationModifier CurrentPoseOrientationModifier => ResolvePoseOrientationModifier();
     public TrickPoseVerticalOrientationRequirement CurrentPoseVerticalOrientation => ResolvePoseVerticalOrientation();
     public TrickPoseHorizontalOrientationRequirement CurrentPoseHorizontalOrientation => ResolvePoseHorizontalOrientation();
+    public TrickPoseTravelFacingRequirement CurrentPoseTravelFacing => ResolvePoseTravelFacing();
+
     public TrickPoseMotionStateRequirement CurrentPoseMotionState => ResolvePoseMotionState();
 
     public string CurrentPoseName => ResolvePoseName();
@@ -1276,6 +1500,8 @@ public class SkiController : MonoBehaviour
     public AerialOrientationModifier EntryPoseOrientationModifier => _trickPoseIntentSnapshot.valid ? _trickPoseIntentSnapshot.orientation : AerialOrientationModifier.None;
     public TrickPoseVerticalOrientationRequirement EntryPoseVerticalOrientation => _trickPoseIntentSnapshot.valid ? _trickPoseIntentSnapshot.verticalOrientation : TrickPoseVerticalOrientationRequirement.Any;
     public TrickPoseHorizontalOrientationRequirement EntryPoseHorizontalOrientation => _trickPoseIntentSnapshot.valid ? _trickPoseIntentSnapshot.horizontalOrientation : TrickPoseHorizontalOrientationRequirement.Any;
+    public TrickPoseTravelFacingRequirement EntryPoseTravelFacing => _trickPoseIntentSnapshot.valid ? _trickPoseIntentSnapshot.travelFacing : TrickPoseTravelFacingRequirement.Any;
+
     public TrickPoseMotionStateRequirement EntryPoseMotionState => _trickPoseIntentSnapshot.valid ? _trickPoseIntentSnapshot.motionState : TrickPoseMotionStateRequirement.Any;
     public string EntryPoseName => _trickPoseIntentSnapshot.valid ? _trickPoseIntentSnapshot.poseName : string.Empty;
     public Vector3 EntryEulerAngles => _trickPoseIntentSnapshot.valid ? _trickPoseIntentSnapshot.entryEulerAngles : CurrentSignedEulerAngles;
@@ -1288,6 +1514,44 @@ public class SkiController : MonoBehaviour
     public Transform HeadPoseTransform => headAnchorTransform;
     public Transform LeftSkiTransform => leftSki;
     public Transform RightSkiTransform => rightSki;
+
+    /// <summary>
+    /// Current runtime left ski visual. This follows gear swaps, so stack visuals do not keep targeting
+    /// the destroyed/default ski model.
+    /// </summary>
+    public Transform LeftSkiVisualTransform => GetCurrentSkiVisualTransform(true);
+
+    /// <summary>
+    /// Current runtime right ski visual. This follows gear swaps, so stack visuals do not keep targeting
+    /// the destroyed/default ski model.
+    /// </summary>
+    public Transform RightSkiVisualTransform => GetCurrentSkiVisualTransform(false);
+
+    private Transform GetCurrentSkiVisualTransform(bool left)
+    {
+        Transform runtimeVisual = left ? _leftSkiVisual : _rightSkiVisual;
+        if (runtimeVisual != null)
+            return runtimeVisual;
+
+        Transform assignedDefaultVisual = left ? leftSkiVisual : rightSkiVisual;
+        if (assignedDefaultVisual != null)
+            return assignedDefaultVisual;
+
+        Transform skiRoot = left ? leftSki : rightSki;
+        if (skiRoot == null)
+            return null;
+
+        // Conservative fallback: only used if inspector/runtime refs are missing.
+        // Prefer the first child with renderers, rather than the logical ski root itself.
+        for (int i = 0; i < skiRoot.childCount; i++)
+        {
+            Transform child = skiRoot.GetChild(i);
+            if (child != null && child.GetComponentInChildren<Renderer>(true) != null)
+                return child;
+        }
+
+        return null;
+    }
 
     private Vector3 CurrentSignedEulerAngles => NormalizeEulerAngles(transform.rotation.eulerAngles);
 
@@ -1305,8 +1569,8 @@ public class SkiController : MonoBehaviour
     {
         get
         {
-            //if (_stacked)
-            //    return false;
+            if (_stacked)
+                return false;
 
             // If we are actively grinding, we want the same control path as grounded skiing.
             if (_grindActive)
@@ -1333,6 +1597,218 @@ public class SkiController : MonoBehaviour
     // Expose pole contacts for audio / VFX.
     public PoleContact LeftPoleContact => leftPoleContact;
     public PoleContact RightPoleContact => rightPoleContact;
+
+    public void SetStackSkiVisualOverride(bool left, Vector3 worldPosition, Quaternion worldRotation, float weight)
+    {
+        weight = Mathf.Clamp01(weight);
+
+        // Stack ski overrides are transform-driven visual motion.
+        // If the ski/pole colliders are still solid, these visual transforms can inject physics impulses
+        // into the player Rigidbody. Suppress them defensively any time a stack override becomes active.
+        if (weight > 0.001f && _stacked && !_stackEquipmentCollidersSuppressed)
+            SetStackEquipmentCollidersSuppressed(true);
+
+        if (left)
+        {
+            _leftStackSkiVisualOverrideActive = weight > 0.001f;
+            _leftStackSkiVisualOverrideWorldPos = worldPosition;
+            _leftStackSkiVisualOverrideWorldRot = worldRotation;
+            _leftStackSkiVisualOverrideWeight = weight;
+        }
+        else
+        {
+            _rightStackSkiVisualOverrideActive = weight > 0.001f;
+            _rightStackSkiVisualOverrideWorldPos = worldPosition;
+            _rightStackSkiVisualOverrideWorldRot = worldRotation;
+            _rightStackSkiVisualOverrideWeight = weight;
+        }
+    }
+
+    public void ClearStackSkiVisualOverride(bool left)
+    {
+        if (left)
+        {
+            _leftStackSkiVisualOverrideActive = false;
+            _leftStackSkiVisualOverrideWeight = 0f;
+        }
+        else
+        {
+            _rightStackSkiVisualOverrideActive = false;
+            _rightStackSkiVisualOverrideWeight = 0f;
+        }
+    }
+
+    public void ClearAllStackSkiVisualOverrides()
+    {
+        ClearStackSkiVisualOverride(true);
+        ClearStackSkiVisualOverride(false);
+    }
+
+    public void ResetVisualPoseForWalkModeHandoff()
+    {
+        // Clear visual-only state that can leave the body compressed when the SkiController
+        // is disabled immediately after a stack.
+        _forwardLean = 0f;
+        _sideLean = 0f;
+        _leftOut = 0f;
+        _rightOut = 0f;
+        _tuck01 = 0f;
+        _airStyle01 = 0f;
+
+        _activeTrickPoseEntry = null;
+        _activeTrickPoseBlend = 0f;
+        _activeTrickPoseScore = 0f;
+        _activeTrickPoseCommittedAt = -999f;
+        _activeTrickPoseLastValidTime = -999f;
+
+        ClearAllStackSkiVisualOverrides();
+
+        Transform bodyPoseTransform = GetBodyPoseTransform();
+        if (bodyPoseTransform != null)
+        {
+            bool usesBodyMotion = bodyPoseTransform == bodyMotionTransform;
+
+            bodyPoseTransform.localPosition = usesBodyMotion
+                ? _bodyMotionBaseLocalPos
+                : _bodyBaseLocalPos;
+
+            bodyPoseTransform.localRotation = usesBodyMotion
+                ? _bodyMotionBaseLocalRot
+                : _bodyBaseLocalRot;
+        }
+
+        // If both bodyTransform and bodyMotionTransform exist, reset both. The active pose transform
+        // may be one of them, but stale compression on the other can still affect child anchors.
+        if (bodyTransform != null && bodyTransform != transform && bodyTransform != bodyPoseTransform)
+        {
+            bodyTransform.localPosition = _bodyBaseLocalPos;
+            bodyTransform.localRotation = _bodyBaseLocalRot;
+            bodyTransform.localScale = _bodyBaseLocalScale;
+        }
+
+        if (bodyMotionTransform != null && bodyMotionTransform != transform && bodyMotionTransform != bodyPoseTransform)
+        {
+            bodyMotionTransform.localPosition = _bodyMotionBaseLocalPos;
+            bodyMotionTransform.localRotation = _bodyMotionBaseLocalRot;
+        }
+
+        if (bodyScaleTransform != null)
+            bodyScaleTransform.localScale = _bodyScaleBaseLocalScale;
+
+        if (headAnchorTransform != null)
+        {
+            headAnchorTransform.localPosition = _headAnchorBaseLocalPos;
+            headAnchorTransform.localRotation = _headAnchorBaseLocalRot;
+        }
+
+        if (leftPoleContact != null)
+        {
+            leftPoleContact.ClearAuthoredPoseOverride();
+            leftPoleContact.ClearStackVisualOverride();
+        }
+
+        if (rightPoleContact != null)
+        {
+            rightPoleContact.ClearAuthoredPoseOverride();
+            rightPoleContact.ClearStackVisualOverride();
+        }
+
+        SkierLimbLineVisual limbVisual = GetSkierLimbLineVisual();
+        if (limbVisual != null)
+            limbVisual.SetRuntimeJointPoseEntry(null, 0f);
+
+        Physics.SyncTransforms();
+    }
+
+    public void ReleaseStackSkiVisualOverridesAndSnap(bool snapToNeutralPose)
+    {
+        ClearAllStackSkiVisualOverrides();
+
+        if (!snapToNeutralPose)
+            return;
+
+        _leftSkiOffsetCurrent = Vector3.zero;
+        _rightSkiOffsetCurrent = Vector3.zero;
+        _leftSkiYawCurrent = 0f;
+        _rightSkiYawCurrent = 0f;
+
+        if (leftSki != null)
+        {
+            leftSki.localPosition = _leftSkiLocalBasePos;
+            leftSki.localRotation = _leftSkiLocalBaseRot;
+        }
+
+        if (rightSki != null)
+        {
+            rightSki.localPosition = _rightSkiLocalBasePos;
+            rightSki.localRotation = _rightSkiLocalBaseRot;
+        }
+
+        if (leftSkiContact != null)
+        {
+            leftSkiContact.ResetContactState();
+            leftSkiContact.ManualSampleGround();
+        }
+
+        if (rightSkiContact != null)
+        {
+            rightSkiContact.ResetContactState();
+            rightSkiContact.ManualSampleGround();
+        }
+    }
+
+    public void ApplyStackSkiVisualOverrideWorldImmediate(
+        bool left,
+        Vector3 worldPosition,
+        Quaternion worldRotation,
+        float weight)
+    {
+        weight = Mathf.Clamp01(weight);
+        SetStackSkiVisualOverride(left, worldPosition, worldRotation, weight);
+
+        Transform skiTransform = left ? leftSki : rightSki;
+        if (skiTransform == null || weight <= 0.001f)
+            return;
+
+        if (weight >= 0.999f)
+        {
+            skiTransform.SetPositionAndRotation(worldPosition, worldRotation);
+            return;
+        }
+
+        skiTransform.SetPositionAndRotation(
+            Vector3.Lerp(skiTransform.position, worldPosition, weight),
+            Quaternion.Slerp(skiTransform.rotation, worldRotation, weight));
+    }
+
+    private static void ApplyStackSkiVisualOverride(
+     Transform skiTransform,
+     ref Vector3 targetLocalPos,
+     ref Quaternion targetLocalRot,
+     bool active,
+     Vector3 worldPosition,
+     Quaternion worldRotation,
+     float weight)
+    {
+        if (!active || skiTransform == null || weight <= 0.001f)
+            return;
+
+        Transform parent = skiTransform.parent;
+
+        Vector3 overrideLocalPos = parent != null
+            ? parent.InverseTransformPoint(worldPosition)
+            : worldPosition;
+
+        Quaternion overrideLocalRot = parent != null
+            ? Quaternion.Inverse(parent.rotation) * worldRotation
+            : worldRotation;
+
+        // The caller now pre-blends the anchor target. Do not double-soften the override here,
+        // otherwise skis can visibly separate from the simulated foot endpoint.
+        weight = Mathf.Clamp01(weight);
+        targetLocalPos = Vector3.Lerp(targetLocalPos, overrideLocalPos, weight);
+        targetLocalRot = Quaternion.Slerp(targetLocalRot, overrideLocalRot, weight);
+    }
 
     public void EnsurePoseRigDefaultsCaptured()
     {
@@ -1708,11 +2184,10 @@ public class SkiController : MonoBehaviour
 
         // Clear transient movement / grounding state.
         _stacked = false;
+        _stackRecoveryExternallyLocked = false;
         _grindActive = false;
         _grindTime = 0f;
         _grindStrengthSmoothed = 0f;
-        _grindReattachCooldownUntil = 0f;
-
         _isGrounded = false;
         _wasGrounded = false;
         _wasControlsGrounded = false;
@@ -1728,6 +2203,7 @@ public class SkiController : MonoBehaviour
             _skiForward = Vector3.forward;
 
         _airAngularVelocity = Vector3.zero;
+        _grindHybridAngularVelocity = Vector3.zero;
         _movementMode = MovementMode.Airborne;
 
         _antiClipStableFrames = 0;
@@ -1768,6 +2244,79 @@ public class SkiController : MonoBehaviour
         _wasControlsGrounded = IsGroundedForControls;
     }
 
+    /// <summary>
+    /// Forces this skier into the same stacked/ragdoll-like state used by crashes,
+    /// without requiring an impact. Intended for rescue casualties, staged NPCs,
+    /// and other authored non-recovery ragdoll presentations.
+    /// </summary>
+    public void ForceStackedRagdollState(
+        bool lockRecovery = true,
+        bool refreshVisualState = true,
+        Vector3? inheritedVelocityWorld = null,
+        Vector3? torqueAxisWorld = null,
+        float severity01 = 0.35f,
+        string reason = "ForcedStackedRagdoll")
+    {
+        if (_rb == null)
+            _rb = GetComponent<Rigidbody>();
+
+        if (_rb == null)
+            return;
+
+        severity01 = Mathf.Clamp01(severity01);
+
+        bool wasStacked = _stacked;
+
+        _dbgLastStackReason = string.IsNullOrWhiteSpace(reason)
+            ? "ForcedStackedRagdoll"
+            : reason;
+
+        _stacked = true;
+        _stackRecoveryExternallyLocked = lockRecovery;
+        _stackedAtTime = Time.time;
+        _hasPendingStackImpact = false;
+        _movementMode = MovementMode.Stacked;
+
+        _grindActive = false;
+        _grindTime = 0f;
+        _grindStrengthSmoothed = 0f;
+        _tipContactAccumTime = 0f;
+
+        _rb.freezeRotation = false;
+        _rb.useGravity = false;
+
+        if (!_rb.isKinematic)
+        {
+            if (inheritedVelocityWorld.HasValue)
+                _rb.linearVelocity = inheritedVelocityWorld.Value;
+
+            if (torqueAxisWorld.HasValue && torqueAxisWorld.Value.sqrMagnitude > 0.0001f)
+            {
+                _rb.angularVelocity = Vector3.zero;
+                _rb.AddTorque(
+                    torqueAxisWorld.Value.normalized * (stackTorqueImpulse * Mathf.Lerp(0.35f, 0.8f, severity01)),
+                    ForceMode.Impulse);
+            }
+        }
+
+        SetStackEquipmentCollidersSuppressed(true);
+
+        if (refreshVisualState || !wasStacked)
+        {
+            Vector3 eventVelocity = inheritedVelocityWorld ?? _rb.linearVelocity;
+            OnStacked?.Invoke(new StackEventInfo(
+                transform.position,
+                eventVelocity,
+                severity01,
+                _dbgLastStackReason));
+        }
+    }
+
+    public void SetStackRecoveryExternallyLocked(bool locked)
+    {
+        _stackRecoveryExternallyLocked = locked;
+    }
+
     public void TriggerImpactStack(Vector3 impactDirectionWorld, float severity01 = 1f, string reason = "SkierCollision")
     {
         if (_stacked)
@@ -1775,14 +2324,18 @@ public class SkiController : MonoBehaviour
 
         _dbgLastStackReason = string.IsNullOrWhiteSpace(reason) ? "SkierCollision" : reason;
 
-        Vector3 torqueAxis = Vector3.Cross(Vector3.up, impactDirectionWorld);
-        if (torqueAxis.sqrMagnitude < 0.0001f)
-            torqueAxis = ComputeStackTorqueAxisFromContacts();
+        Vector3 impactNormal = Vector3.ProjectOnPlane(impactDirectionWorld, Vector3.up);
+        if (impactNormal.sqrMagnitude < 0.0001f)
+            impactNormal = -Vector3.ProjectOnPlane(_rb.linearVelocity, Vector3.up);
+        if (impactNormal.sqrMagnitude < 0.0001f)
+            impactNormal = transform.forward;
 
-        if (torqueAxis.sqrMagnitude < 0.0001f)
-            torqueAxis = transform.right;
-
-        TriggerStack(Mathf.Clamp01(severity01), torqueAxis.normalized);
+        TriggerImpactStackFromPointAndNormal(
+            transform.position,
+            impactNormal.normalized,
+            _rb.linearVelocity,
+            severity01,
+            reason);
     }
 
     public void TriggerImpactStackFromPoint(Vector3 impactPointWorld, Vector3 incomingVelocityWorld, float severity01 = 1f, string reason = "SkierCollision")
@@ -1799,7 +2352,32 @@ public class SkiController : MonoBehaviour
         if (away.sqrMagnitude < 0.0001f)
             away = transform.forward;
 
-        TriggerImpactStack(away.normalized, severity01, reason);
+        TriggerImpactStackFromPointAndNormal(impactPointWorld, away.normalized, incomingVelocityWorld, severity01, reason);
+    }
+
+    public void TriggerImpactStackFromPointAndNormal(Vector3 impactPointWorld, Vector3 impactNormalWorld, Vector3 incomingVelocityWorld, float severity01 = 1f, string reason = "SkierCollision")
+    {
+        if (_stacked)
+            return;
+
+        _dbgLastStackReason = string.IsNullOrWhiteSpace(reason) ? "SkierCollision" : reason;
+
+        Vector3 impactNormal = Vector3.ProjectOnPlane(impactNormalWorld, Vector3.up);
+        if (impactNormal.sqrMagnitude < 0.0001f)
+            impactNormal = transform.position - impactPointWorld;
+        if (impactNormal.sqrMagnitude < 0.0001f)
+            impactNormal = -Vector3.ProjectOnPlane(incomingVelocityWorld, Vector3.up);
+        if (impactNormal.sqrMagnitude < 0.0001f)
+            impactNormal = transform.forward;
+        impactNormal.Normalize();
+
+        _hasPendingStackImpact = true;
+        _pendingStackImpactNormal = impactNormal;
+        _pendingStackImpactVelocity = incomingVelocityWorld;
+        _pendingStackImpactPoint = impactPointWorld;
+
+        Vector3 torqueAxis = ComputeImpactStackTorqueAxis(impactPointWorld, impactNormal, incomingVelocityWorld);
+        TriggerStack(Mathf.Clamp01(severity01), torqueAxis.normalized);
     }
 
     public void RecoverFromStack(Vector3 forwardHint)
@@ -1807,8 +2385,12 @@ public class SkiController : MonoBehaviour
         if (!_stacked) return;
 
         _stacked = false;
+        _stackRecoveryExternallyLocked = false;
+        _hasPendingStackImpact = false;
         _rb.freezeRotation = true;
         _rb.angularVelocity = Vector3.zero;
+
+        SetStackEquipmentCollidersSuppressed(false);
 
         Vector3 up = Vector3.up;
         Vector3 f = Vector3.ProjectOnPlane(forwardHint, up);
@@ -1826,12 +2408,19 @@ public class SkiController : MonoBehaviour
     public void ResetStackStateSilently(bool snapUpright = true, Vector3? forwardHint = null)
     {
         if (!_stacked)
+        {
+            _stackRecoveryExternallyLocked = false;
             return;
+        }
 
         _stacked = false;
+        _stackRecoveryExternallyLocked = false;
+        _hasPendingStackImpact = false;
         _rb.freezeRotation = true;
         _rb.angularVelocity = Vector3.zero;
         _tipContactAccumTime = 0f;
+
+        SetStackEquipmentCollidersSuppressed(false);
 
         if (snapUpright)
         {
@@ -2248,6 +2837,8 @@ public class SkiController : MonoBehaviour
 
     private void OnDisable()
     {
+        SetStackEquipmentCollidersSuppressed(false);
+
         if (leftSkiAction != null && leftSkiAction.action != null)
             leftSkiAction.action.Disable();
 
@@ -2272,6 +2863,7 @@ public class SkiController : MonoBehaviour
 
     private void OnDestroy()
     {
+        SetStackEquipmentCollidersSuppressed(false);
         UnbindGearLoadout();
     }
 
@@ -2281,8 +2873,25 @@ public class SkiController : MonoBehaviour
     // Unity will send collision callbacks to the Rigidbody's GameObject even
     // for child colliders. We filter out ski colliders so only "body" impacts
     // (head/torso/arms/etc) can trigger a stack.
+    private void OnCollisionEnter(Collision collision)
+    {
+        EvaluateStackedSecondaryImpactCollision(collision);
+        EvaluateBodyGroundCollision(collision);
+        EvaluateObstacleImpactCollision(collision);
+    }
+
     private void OnCollisionStay(Collision collision)
     {
+        EvaluateStackedSecondaryImpactCollision(collision);
+        EvaluateBodyGroundCollision(collision);
+        EvaluateObstacleImpactCollision(collision);
+    }
+
+    private void EvaluateBodyGroundCollision(Collision collision)
+    {
+        if (collision == null)
+            return;
+
         // Only consider collisions with ground layers.
         int otherLayer = collision.gameObject.layer;
         if ((groundLayers.value & (1 << otherLayer)) == 0)
@@ -2330,6 +2939,104 @@ public class SkiController : MonoBehaviour
         _nonSkiGroundContactNormal = bestNormal;
     }
 
+    private void EvaluateObstacleImpactCollision(Collision collision)
+    {
+        if (collision == null || _stacked || _rb == null || collision.contactCount <= 0)
+            return;
+
+        Collider otherCollider = collision.collider;
+        if (otherCollider == null)
+            return;
+
+        int otherLayer = otherCollider.gameObject.layer;
+        if ((stackImpactLayers.value & (1 << otherLayer)) == 0)
+            return;
+
+        if (ignoreGroundLayerForImpactStack && (groundLayers.value & (1 << otherLayer)) != 0)
+            return;
+
+        SkiController otherSkier = otherCollider.GetComponentInParent<SkiController>();
+        if (otherSkier != null && otherSkier != this)
+            return;
+
+        Vector3 selfVelocity = _rb.linearVelocity;
+        float planarSpeed = Vector3.ProjectOnPlane(selfVelocity, Vector3.up).magnitude;
+        if (planarSpeed < obstacleImpactMinPlanarSpeed)
+            return;
+
+        bool foundImpact = false;
+        float bestIntoSpeed = 0f;
+        Vector3 bestPoint = default;
+        Vector3 bestNormal = Vector3.zero;
+
+        for (int i = 0; i < collision.contactCount; i++)
+        {
+            ContactPoint cp = collision.GetContact(i);
+            if (cp.thisCollider != null && cp.thisCollider.isTrigger)
+                continue;
+
+            Vector3 normal = cp.normal.sqrMagnitude > 0.0001f ? cp.normal.normalized : Vector3.up;
+            float intoSpeed = Mathf.Max(0f, -Vector3.Dot(selfVelocity, normal));
+            if (intoSpeed <= bestIntoSpeed)
+                continue;
+
+            foundImpact = true;
+            bestIntoSpeed = intoSpeed;
+            bestPoint = cp.point;
+            bestNormal = normal;
+        }
+
+        if (!foundImpact || bestIntoSpeed < obstacleImpactMinIntoSpeed)
+            return;
+
+        float severity = Mathf.InverseLerp(
+            obstacleImpactMinIntoSpeed,
+            Mathf.Max(obstacleImpactMinIntoSpeed + 0.01f, obstacleImpactFullSpeed),
+            bestIntoSpeed);
+
+        TriggerImpactStackFromPointAndNormal(bestPoint, bestNormal, selfVelocity, severity, "ObstacleImpact");
+    }
+
+    private void EvaluateStackedSecondaryImpactCollision(Collision collision)
+    {
+        if (!_stacked || collision == null || collision.contactCount <= 0 || _rb == null)
+            return;
+
+        if (Time.time < _lastStackedSecondaryImpactTime + stackedSecondaryImpactCooldown)
+            return;
+
+        int otherLayer = collision.gameObject.layer;
+        bool groundCollision = (groundLayers.value & (1 << otherLayer)) != 0;
+        bool hasNonSkiContact = false;
+        Vector3 bestPoint = transform.position;
+
+        for (int i = 0; i < collision.contactCount; i++)
+        {
+            ContactPoint cp = collision.GetContact(i);
+            if (cp.thisCollider == null || !_skiColliders.Contains(cp.thisCollider))
+                hasNonSkiContact = true;
+
+            bestPoint = cp.point;
+            if (hasNonSkiContact)
+                break;
+        }
+
+        if (groundCollision && !hasNonSkiContact)
+            return;
+
+        float relativeSpeed = collision.relativeVelocity.magnitude;
+        if (relativeSpeed < stackedSecondaryImpactMinSpeed)
+            return;
+
+        float severity = Mathf.InverseLerp(
+            stackedSecondaryImpactMinSpeed,
+            stackedSecondaryImpactMinSpeed * 3f,
+            relativeSpeed);
+
+        OnStackImpact?.Invoke(new StackEventInfo(bestPoint, collision.relativeVelocity, severity, "StackImpact"));
+        _lastStackedSecondaryImpactTime = Time.time;
+    }
+
     private void OnCollisionExit(Collision collision)
     {
         int otherLayer = collision.gameObject.layer;
@@ -2361,10 +3068,24 @@ public class SkiController : MonoBehaviour
 
         CheckGround();
 
+        if (_stacked)
+        {
+            ResetGrindingState();
+
+            UpdateStackedPhysics(Time.fixedDeltaTime);
+            TryAutoRecoverFromStack();
+
+            _movementMode = MovementMode.Stacked;
+            _wasControlsGrounded = false;
+
+            return;
+        }
+
         UpdateWallScrapeSuppressionAndResponse();
 
         UpdateSlopeCache();
         _skiForward = GetCombinedSkiForwardOnPlane();
+        TryUpdateNoseTailSlideState();
 
         if (!IsGroundedForControls)
         {
@@ -2373,7 +3094,7 @@ public class SkiController : MonoBehaviour
 
         UpdateGrinding(Time.fixedDeltaTime);
 
-        bool grindingSurface = _grindActive && !HasAnySkiContact && !_isGrounded;
+        bool grindingSurface = _grindActive;
 
         if (!_isGrounded && !HasAnySkiContact && !_grindActive)
         {
@@ -2390,96 +3111,90 @@ public class SkiController : MonoBehaviour
         // This prevents "stalling mid-slope" and removes double-gravity ambiguity.
         if (IsGroundedForControls)
         {
-            if (grindingSurface)
+            Vector3 gPlane = Vector3.ProjectOnPlane(Physics.gravity, _groundNormal);
+
+            float gScale = Mathf.Lerp(
+                1f,
+                groundedSlopeGravityScale * _gearTuning.downhillAccelMul,
+                _slopeT35);
+
+            float grindGravityMul = _grindActive
+                ? Mathf.Lerp(1f, grindSlopeGravityMultiplier, Mathf.Clamp01(_grindStrengthSmoothed))
+                : 1f;
+
+            gPlane *= gScale * grindGravityMul;
+
+            // Always apply slope-parallel gravity, but optionally reduce + damp fall-line drift
+            // when the player is strongly traversing and edging at low fall-line speed.
+            if (enableTraverseHold && !_grindActive && gPlane.sqrMagnitude > 0.0001f)
             {
-                // While grinding we treat gravity like grounded skiing, but on the grind support normal
-                // and with a stronger scale so rails/fences accelerate faster than terrain.
-                Vector3 n = (_groundNormal.sqrMagnitude > 0.0001f) ? _groundNormal.normalized : Vector3.up;
-                Vector3 gPlane = Vector3.ProjectOnPlane(Physics.gravity, n);
 
-                float gScale = Mathf.Max(0f, grindSlopeGravityScale) * groundedSlopeGravityScale * _gearTuning.downhillAccelMul;
-                gPlane *= gScale;
+                float slopeAngle = _slopeAngleDeg;
+                _dbgSlopeAngle = slopeAngle;
+                _dbgTraverseGPlane = gPlane;
+                _dbgTraverseHold = 0f; // will be overwritten if we engage
 
-                _rb.AddForce(gPlane, ForceMode.Acceleration);
-            }
-            else
-            {
-                Vector3 gPlane = Vector3.ProjectOnPlane(Physics.gravity, _groundNormal);
-
-                float gScale = Mathf.Lerp(1f, groundedSlopeGravityScale * _gearTuning.downhillAccelMul, _slopeT35);
-                gPlane *= gScale;
-
-                // Always apply slope-parallel gravity, but optionally reduce + damp fall-line drift
-                // when the player is strongly traversing and edging at low fall-line speed.
-                if (enableTraverseHold && !_grindActive && gPlane.sqrMagnitude > 0.0001f)
+                if (slopeAngle >= traverseHoldMinSlopeAngle)
                 {
+                    Vector3 fallDir = gPlane.normalized;
+                    _dbgFallDir = fallDir;
 
-                    float slopeAngle = _slopeAngleDeg;
-                    _dbgSlopeAngle = slopeAngle;
-                    _dbgTraverseGPlane = gPlane;
-                    _dbgTraverseHold = 0f; // will be overwritten if we engage
+                    // IMPORTANT: do not rely on _skiForward being updated later in the frame
+                    Vector3 skiDir = GetCombinedSkiForwardOnPlane();
+                    if (skiDir.sqrMagnitude > 0.0001f) skiDir.Normalize();
 
-                    if (slopeAngle >= traverseHoldMinSlopeAngle)
+                    // 1 when perfectly across slope, 0 when pointing up/down the fall line
+                    float across = (skiDir.sqrMagnitude > 0.0001f)
+                        ? (1f - Mathf.Abs(Vector3.Dot(skiDir, fallDir)))
+                        : 0f;
+                    _dbgTraverseAcross = across;
+
+                    // Fall-line speed we want to resist (unwanted sideways slide down the hill)
+                    Vector3 planeVel = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal);
+                    float vFall = Vector3.Dot(planeVel, fallDir);
+                    _dbgTraversePlaneVel = planeVel;
+                    _dbgTraverseVFall = vFall;
+
+                    // Engage only when:
+                    //  - we're sufficiently across the fall line
+                    //  - and fall-line speed is low (standing / slow traverse)
+                    // Strength rises as we get more across + more under the speed limit.
+                    float acrossGate = Mathf.InverseLerp(traverseHoldAcrossThreshold, 1f, across);
+                    float speedGate = 1f - Mathf.Clamp01(Mathf.Abs(vFall) / Mathf.Max(0.01f, traverseHoldSpeed));
+                    float hold = Mathf.Clamp01(acrossGate * speedGate) * Mathf.Clamp01(traverseHoldStrength * _gearTuning.traverseHoldMul);
+                    _dbgTraverseAcrossGate = acrossGate;
+                    _dbgTraverseSpeedGate = speedGate;
+                    _dbgTraverseHold = hold;
+
+                    // Optional: forward lean reduces holding (keeps downhill skiing lively)
+                    hold *= 1f - Mathf.Clamp01(_forwardLean);
+
+                    // 1) Apply tangential gravity, reduced while holding (but never removed entirely)
+                    _rb.AddForce(gPlane * (1f - hold), ForceMode.Acceleration);
+
+                    // 2) Extra damping along the fall line to kill slow drift down the hill
+                    if (hold > 0f)
                     {
-                        Vector3 fallDir = gPlane.normalized;
-                        _dbgFallDir = fallDir;
-
-                        // IMPORTANT: do not rely on _skiForward being updated later in the frame
-                        Vector3 skiDir = GetCombinedSkiForwardOnPlane();
-                        if (skiDir.sqrMagnitude > 0.0001f) skiDir.Normalize();
-
-                        // 1 when perfectly across slope, 0 when pointing up/down the fall line
-                        float across = (skiDir.sqrMagnitude > 0.0001f)
-                            ? (1f - Mathf.Abs(Vector3.Dot(skiDir, fallDir)))
-                            : 0f;
-                        _dbgTraverseAcross = across;
-
-                        // Fall-line speed we want to resist (unwanted sideways slide down the hill)
-                        Vector3 planeVel = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal);
-                        float vFall = Vector3.Dot(planeVel, fallDir);
-                        _dbgTraversePlaneVel = planeVel;
-                        _dbgTraverseVFall = vFall;
-
-                        // Engage only when:
-                        //  - we're sufficiently across the fall line
-                        //  - and fall-line speed is low (standing / slow traverse)
-                        // Strength rises as we get more across + more under the speed limit.
-                        float acrossGate = Mathf.InverseLerp(traverseHoldAcrossThreshold, 1f, across);
-                        float speedGate = 1f - Mathf.Clamp01(Mathf.Abs(vFall) / Mathf.Max(0.01f, traverseHoldSpeed));
-                        float hold = Mathf.Clamp01(acrossGate * speedGate) * Mathf.Clamp01(traverseHoldStrength * _gearTuning.traverseHoldMul);
-                        _dbgTraverseAcrossGate = acrossGate;
-                        _dbgTraverseSpeedGate = speedGate;
-                        _dbgTraverseHold = hold;
-
-                        // Optional: forward lean reduces holding (keeps downhill skiing lively)
-                        hold *= 1f - Mathf.Clamp01(_forwardLean);
-
-                        // 1) Apply tangential gravity, reduced while holding (but never removed entirely)
-                        _rb.AddForce(gPlane * (1f - hold), ForceMode.Acceleration);
-
-                        // 2) Extra damping along the fall line to kill slow drift down the hill
-                        if (hold > 0f)
-                        {
-                            float damp = traverseHoldDamp * hold;
-                            _rb.AddForce(-fallDir * vFall * damp, ForceMode.Acceleration);
-                        }
-                    }
-                    else
-                    {
-                        // Too flat for traverse hold to matter
-                        _rb.AddForce(gPlane, ForceMode.Acceleration);
-                        _dbgTraverseHold = 0f;
-
+                        float damp = traverseHoldDamp * hold;
+                        _rb.AddForce(-fallDir * vFall * damp, ForceMode.Acceleration);
                     }
                 }
                 else
                 {
-                    // Traverse hold disabled or no tangential component
+                    // Too flat for traverse hold to matter
                     _rb.AddForce(gPlane, ForceMode.Acceleration);
                     _dbgTraverseHold = 0f;
 
                 }
             }
+            else
+            {
+                // Traverse hold disabled or no tangential component
+                _rb.AddForce(gPlane, ForceMode.Acceleration);
+                _dbgTraverseHold = 0f;
+
+            }
+
         }
         else
         {
@@ -2507,6 +3222,7 @@ public class SkiController : MonoBehaviour
 
         UpdateBodyCollisionStability();
         UpdateTipContactStability();
+        ApplyStackedTumbleDamping(Time.fixedDeltaTime);
 
         // Track when we leave the ground for jump/landing severity.
         if (_wasGrounded && !_isGrounded)
@@ -2521,16 +3237,6 @@ public class SkiController : MonoBehaviour
         if (!_isGrounded)
             _airbornePeakY = Mathf.Max(_airbornePeakY, transform.position.y);
 
-        if (_stacked)
-        {
-            TryAutoRecoverFromStack();
-            if (_stacked)
-            {
-                _movementMode = MovementMode.Stacked;
-                return;
-            }
-        }
-
         TryConsumeQueuedJump();
 
         // Decide what mode we're in this frame (Skiing, Airborne, Landing, etc),
@@ -2540,19 +3246,12 @@ public class SkiController : MonoBehaviour
         // Ground modes: normal skiing and the first landing frame share the
         // same core force application. The *difference* is how we treat
         // stickiness inside ApplyGroundForces (see below).
-        //
-        // While grinding-in-air we intentionally skip ski steering / skate / poles / slope alignment.
-        // The rail constraint (UpdateGrinding) + gravity should dominate.
-        if (grindingSurface)
-        {
-            // No snow friction/steering, but allow hybrid yaw/pitch control.
-            ApplyGroundForces(); // early-outs while grinding so no snow friction is applied
-            ApplyGrindControl();
-        }
-        else if (_movementMode == MovementMode.Skiing ||
+
+        if (_movementMode == MovementMode.Skiing ||
                  _movementMode == MovementMode.Landing)
         {
             ApplyGroundForces();
+            ApplyGrindHybridOrientationControl(Time.fixedDeltaTime);
             DetectAndApplySkatePushes();
             ApplyPoleForces();
             AlignToSkisAndSlope();
@@ -2763,6 +3462,8 @@ public class SkiController : MonoBehaviour
         if (releasedThisFrame)
         {
             _jumpHeld = false;
+            _lastJumpReleasedTime = Time.time;
+            _lastSkiJumpCharge01 = SkiJumpCharge01;
 
             if (_jumpQueued)
                 _jumpReleaseQueued = true;
@@ -2807,14 +3508,6 @@ public class SkiController : MonoBehaviour
             return;
         }
 
-        // Grinding-in-air is a separate constraint system (rail spring/damp + alignment + rail gravity).
-        // Do not treat it as grounded locomotion or we will run ground forces/alignment that fight the rail.
-        if (_grindActive && !HasAnySkiContact && !_isGrounded)
-        {
-            _movementMode = MovementMode.Airborne;
-            return;
-        }
-
         bool groundedForControls = IsGroundedForControls;
 
         if (groundedForControls)
@@ -2856,6 +3549,13 @@ public class SkiController : MonoBehaviour
     {
         bool haveSkiContact = HasAnySkiContact;
         bool haveSkiHardContact = HasAnySkiCollisionContact;
+        bool haveRideableSkiContact = TryGetRideableSkiLandingNormal(out Vector3 skiLandingNormal);
+
+        if (_stacked)
+        {
+            UpdateStackedGroundingOnly(haveSkiContact, haveRideableSkiContact, skiLandingNormal);
+            return;
+        }
 
         // If we've just jumped, enforce a short ungrounded window so the jump
         // can actually leave the surface instead of instantly re-sticking.
@@ -2942,6 +3642,41 @@ public class SkiController : MonoBehaviour
                 }
             }
         }
+        else if (!wasGroundedBefore && haveRideableSkiContact)
+        {
+            float airTime = Time.time - _airborneStartTime;
+            if (airTime > minLandingAirTime * 0.5f)
+            {
+                _groundNormal = skiLandingNormal;
+                _airAngularVelocity = Vector3.zero;
+
+                if (TryUpdateNoseTailSlideState())
+                {
+                    PreserveLandingVelocityOnSlope(Mathf.Clamp01(landingProjectionStrength * 0.75f));
+                    _landingAssistUntil = Time.time + landingAlignBoostDuration;
+                    _lastGroundedTime = Time.time;
+                    _dbgLastStackReason = "Nose/Tail Slide Landing";
+                    _movementMode = MovementMode.Landing;
+
+                    float slideFallHeight = Mathf.Max(0f, _airbornePeakY - _rb.position.y);
+                    float slideDownwardSpeed = Mathf.Max(
+                        0f,
+                        -Vector3.Dot(_rb.linearVelocity, skiLandingNormal.sqrMagnitude > 0.0001f ? skiLandingNormal.normalized : Vector3.up));
+
+                    TriggerSkiLandingVisual(airTime, slideFallHeight, slideDownwardSpeed);
+                }
+                else
+                {
+                    EvaluateLanding();
+                }
+            }
+            else
+            {
+                _groundNormal = skiLandingNormal;
+                _lastGroundedTime = Time.time;
+                _movementMode = MovementMode.Skiing;
+            }
+        }
 
         // If the body cast is not near ground but skis ARE contacting, keep the physics plane fresh
         // from the ski contacts. This prevents "stale ground normal" -> tangential gravity misprojection
@@ -2950,17 +3685,8 @@ public class SkiController : MonoBehaviour
         {
             Vector3 n = Vector3.zero;
 
-            if (leftSkiContact != null &&
-                leftSkiContact.IsGrounded &&
-                leftSkiContact.BaseContactAlignment >= MinBaseAlignForGroundNormal &&
-                IsRideable(leftSkiContact.ContactNormal))
-                n += leftSkiContact.ContactNormal;
-
-            if (rightSkiContact != null &&
-                rightSkiContact.IsGrounded &&
-                rightSkiContact.BaseContactAlignment >= MinBaseAlignForGroundNormal &&
-                IsRideable(rightSkiContact.ContactNormal))
-                n += rightSkiContact.ContactNormal;
+            if (haveRideableSkiContact)
+                n = skiLandingNormal;
 
             if (n.sqrMagnitude > 0.0001f)
             {
@@ -2972,6 +3698,93 @@ public class SkiController : MonoBehaviour
             _lastGroundedTime = Time.time;
         }
 
+    }
+
+    private void UpdateStackedGroundingOnly(
+    bool haveSkiContact,
+    bool haveRideableSkiContact,
+    Vector3 skiLandingNormal)
+    {
+        bool nearGround = false;
+        Vector3 rawNormal = _groundNormal.sqrMagnitude > 0.0001f
+            ? _groundNormal.normalized
+            : Vector3.up;
+
+        Vector3 centerOrigin = transform.position + Vector3.up * groundCheckHeight;
+        float maxDist = groundCheckHeight + groundCheckDistance;
+
+        if (Physics.SphereCast(
+                centerOrigin,
+                groundCheckRadius,
+                Vector3.down,
+                out RaycastHit centerHit,
+                maxDist,
+                groundLayers,
+                QueryTriggerInteraction.Ignore))
+        {
+            float contactGap = Mathf.Max(0f, centerHit.distance - groundCheckHeight);
+            float allowedGap = haveSkiContact
+                ? groundContactDistanceWhenSkiContact
+                : groundContactDistance;
+
+            if (contactGap <= allowedGap && IsRideableNormal(centerHit.normal))
+            {
+                nearGround = true;
+                rawNormal = centerHit.normal.normalized;
+                _lastGroundedTime = Time.time;
+            }
+        }
+
+        _nearGroundForJump = nearGround;
+        _isGrounded = nearGround || haveSkiContact;
+
+        if (nearGround)
+        {
+            if (_groundNormal.sqrMagnitude < 0.0001f)
+            {
+                _groundNormal = rawNormal;
+            }
+            else
+            {
+                float lerp = 1f - Mathf.Exp(-groundNormalSmoothSpeed * Time.fixedDeltaTime);
+                _groundNormal = Vector3.Slerp(_groundNormal, rawNormal, lerp);
+            }
+        }
+        else if (haveRideableSkiContact && skiLandingNormal.sqrMagnitude > 0.0001f)
+        {
+            float lerp = 1f - Mathf.Exp(-alignNormalSmoothSpeed * Time.fixedDeltaTime);
+            _groundNormal = Vector3.Slerp(_groundNormal, skiLandingNormal.normalized, lerp);
+            _lastGroundedTime = Time.time;
+        }
+    }
+
+    private bool TryGetRideableSkiLandingNormal(out Vector3 normal)
+    {
+        normal = Vector3.zero;
+
+        if (leftSkiContact != null &&
+            leftSkiContact.IsGrounded &&
+            IsRideableNormal(leftSkiContact.ContactNormal) &&
+            (leftSkiContact.BaseContactAlignment >= minBaseAlignForGroundNormal ||
+             TryGetSkiEndSlide(leftSkiContact, out _, out _)))
+        {
+            normal += leftSkiContact.ContactNormal;
+        }
+
+        if (rightSkiContact != null &&
+            rightSkiContact.IsGrounded &&
+            IsRideableNormal(rightSkiContact.ContactNormal) &&
+            (rightSkiContact.BaseContactAlignment >= minBaseAlignForGroundNormal ||
+             TryGetSkiEndSlide(rightSkiContact, out _, out _)))
+        {
+            normal += rightSkiContact.ContactNormal;
+        }
+
+        if (normal.sqrMagnitude <= 0.0001f)
+            return false;
+
+        normal.Normalize();
+        return true;
     }
 
     private void UpdateSlopeCache()
@@ -3439,6 +4252,8 @@ public class SkiController : MonoBehaviour
         // Use RB position for physics consistency.
         float fallHeight = Mathf.Max(0f, _airbornePeakY - _rb.position.y);
 
+        TriggerSkiLandingVisual(airTime, fallHeight, downwardSpeed);
+
         // Facing / travel misalignment on the slope plane.
         float misalignAngle = 0f;
         if (planarSpeed > 0.1f)
@@ -3617,6 +4432,46 @@ public class SkiController : MonoBehaviour
         _dbgLastStackReason = "Landed";
     }
 
+    private void TriggerSkiLandingVisual(float airTime, float fallHeight, float downwardSpeed)
+    {
+        float fall01 = Mathf.InverseLerp(
+            skiLandingVisualMinFallHeight,
+            Mathf.Max(skiLandingVisualMinFallHeight + 0.01f, skiLandingVisualMaxFallHeight),
+            fallHeight);
+
+        float speed01 = Mathf.InverseLerp(
+            skiLandingVisualMinDownwardSpeed,
+            Mathf.Max(skiLandingVisualMinDownwardSpeed + 0.01f, skiLandingVisualMaxDownwardSpeed),
+            downwardSpeed);
+
+        float intensity01 = Mathf.Clamp01(Mathf.Max(fall01, speed01));
+
+        if (intensity01 < skiLandingVisualMinVisibleIntensity)
+        {
+            if (logSkiLandingVisualDebug)
+            {
+                Debug.Log(
+                    $"[{nameof(SkiController)}] Ski landing visual ignored. " +
+                    $"airTime={airTime:0.00}, fallHeight={fallHeight:0.00}, " +
+                    $"downSpeed={downwardSpeed:0.00}, intensity={intensity01:0.00}",
+                    this);
+            }
+
+            return;
+        }
+
+        _lastSkiLandingVisualIntensity01 = intensity01;
+        _lastSkiLandingVisualTime = Time.time;
+
+        if (logSkiLandingVisualDebug)
+        {
+            Debug.Log(
+                $"[{nameof(SkiController)}] Ski landing visual fired. " +
+                $"airTime={airTime:0.00}, fallHeight={fallHeight:0.00}, " +
+                $"downSpeed={downwardSpeed:0.00}, intensity={intensity01:0.00}",
+                this);
+        }
+    }
     private void UpdateAirborneLandingDebug()
     {
         Vector3 groundNormal = _groundNormal.sqrMagnitude > 0.0001f
@@ -3729,13 +4584,20 @@ public class SkiController : MonoBehaviour
         if (_stacked) return;
 
         severity01 = Mathf.Clamp01(severity01);
+        Vector3 preStackVelocity = _hasPendingStackImpact && _pendingStackImpactVelocity.sqrMagnitude > 0.0001f
+            ? _pendingStackImpactVelocity
+            : _rb.linearVelocity;
 
         // Apply soreness impact before we freeze state.
         if (sorenessMeter != null)
             sorenessMeter.AddImpact(severity01);
 
         _stacked = true;
+        _stackRecoveryExternallyLocked = false;
+        _stackedAtTime = Time.time;
         _rb.freezeRotation = false;
+
+        SetStackEquipmentCollidersSuppressed(true);
 
         // When we stack, we want a decisive fall rather than lingering in a half-rotated state.
         _rb.angularVelocity = Vector3.zero;
@@ -3745,29 +4607,53 @@ public class SkiController : MonoBehaviour
         {
             Vector3 n = _groundNormal.sqrMagnitude > 0.0001f ? _groundNormal.normalized : Vector3.up;
             Vector3 v = _rb.linearVelocity;
-            Vector3 p0 = _hasNonSkiGroundContact ? _nonSkiGroundContactPoint : transform.position;
-            OnStacked?.Invoke(new StackEventInfo(p0, n, severity01, _dbgLastStackReason));
+            Vector3 p0 = _hasPendingStackImpact
+                ? _pendingStackImpactPoint
+                : (_hasNonSkiGroundContact ? _nonSkiGroundContactPoint : transform.position);
 
-            float into = Vector3.Dot(v, n);
-            if (into < 0f)
-                v -= n * into; // cancel into-ground
+            if (_hasPendingStackImpact && _pendingStackImpactNormal.sqrMagnitude > 0.0001f)
+            {
+                Vector3 impactNormal = _pendingStackImpactNormal.normalized;
+                float intoObstacle = Vector3.Dot(v, impactNormal);
+                if (intoObstacle < 0f)
+                    v -= impactNormal * intoObstacle;
 
-            float retain = Mathf.Clamp01(stackPlanarVelocityRetention);
+                Vector3 slide = Vector3.ProjectOnPlane(v, impactNormal);
+                float retain = Mathf.Clamp01(stackImpactSlideRetention);
+                float minRetain = slide.magnitude > 2f ? 0.18f : 0f;
+                v = slide * Mathf.Max(retain, minRetain);
+                v += impactNormal * (Mathf.Abs(intoObstacle) * Mathf.Clamp01(stackImpactBounce));
+                v = ClampUpwardVelocity(v, stackImpactMaxUpwardVelocity);
+            }
+            else
+            {
+                float into = Vector3.Dot(v, n);
+                if (into < 0f)
+                    v -= n * into; // cancel into-ground
 
-            // Safety: never fully zero planar velocity at meaningful speeds.
-            // (Prevents "random full stop" feel even if a stack triggers.)
-            float planarSpeed = Vector3.ProjectOnPlane(v, n).magnitude;
-            if (planarSpeed > 2.0f)
-                retain = Mathf.Max(retain, 0.15f);
+                float retain = Mathf.Clamp01(stackPlanarVelocityRetention);
 
-            v = Vector3.ProjectOnPlane(v, n) * retain;
+                // Safety: never fully zero planar velocity at meaningful speeds.
+                // (Prevents "random full stop" feel even if a stack triggers.)
+                float planarSpeed = Vector3.ProjectOnPlane(v, n).magnitude;
+                if (planarSpeed > 2.0f)
+                    retain = Mathf.Max(retain, 0.15f);
+
+                v = Vector3.ProjectOnPlane(v, n) * retain;
+            }
+
             _rb.linearVelocity = v;
+            OnStacked?.Invoke(new StackEventInfo(p0, preStackVelocity, severity01, _dbgLastStackReason));
         }
 
         if (torqueAxisWorld.sqrMagnitude < 0.0001f)
             torqueAxisWorld = Random.onUnitSphere;
 
-        _rb.AddTorque(torqueAxisWorld.normalized * stackTorqueImpulse, ForceMode.Impulse);
+        _rb.AddTorque(torqueAxisWorld.normalized * (stackTorqueImpulse * Mathf.Lerp(0.75f, 1.2f, severity01)), ForceMode.Impulse);
+        _hasPendingStackImpact = false;
+        _pendingStackImpactNormal = Vector3.zero;
+        _pendingStackImpactVelocity = Vector3.zero;
+        _pendingStackImpactPoint = Vector3.zero;
     }
 
     /// <summary>
@@ -3836,6 +4722,25 @@ public class SkiController : MonoBehaviour
         }
     }
 
+    private Vector3 ComputeImpactStackTorqueAxis(Vector3 impactPointWorld, Vector3 impactNormalWorld, Vector3 incomingVelocityWorld)
+    {
+        Vector3 pointAxis = ComputeStackTorqueAxisFromPoint(impactPointWorld);
+        Vector3 impactNormal = impactNormalWorld.sqrMagnitude > 0.0001f ? impactNormalWorld.normalized : Vector3.zero;
+        Vector3 velocityAxis = Vector3.Cross(Vector3.up, -incomingVelocityWorld);
+        Vector3 normalAxis = Vector3.Cross(Vector3.up, impactNormal);
+
+        Vector3 axis = pointAxis;
+        if (normalAxis.sqrMagnitude > 0.0001f)
+            axis += normalAxis.normalized * 0.6f;
+        if (velocityAxis.sqrMagnitude > 0.0001f)
+            axis += velocityAxis.normalized * 0.4f;
+
+        if (axis.sqrMagnitude < 0.0001f)
+            axis = pointAxis.sqrMagnitude > 0.0001f ? pointAxis : transform.right;
+
+        return axis.normalized;
+    }
+
     /// <summary>
     /// Picks a deterministic fall axis based on the worst current ski contact.
     /// Tip/tail stands should pitch you forward/back; edge stands should roll you.
@@ -3885,25 +4790,412 @@ public class SkiController : MonoBehaviour
 
     private void TryAutoRecoverFromStack()
     {
-        if (!_stacked || !_isGrounded)
+        if (_stackRecoveryExternallyLocked)
             return;
 
-        float tiltAngle = Vector3.Angle(transform.up, _groundNormal);
-
-        // Once we're within the normal landing tilt limit again, treat this as
-        // having "gotten back onto our feet" and recover.
-        float recoverThreshold = maxLandingTiltAngle;
-
-        if (tiltAngle <= recoverThreshold)
+        if (!EvaluateStackRecoveryNow(
+                requireMinimumDelay: true,
+                out Vector3 forwardHint,
+                out _,
+                out _,
+                out _))
         {
-            Vector3 forwardHint = GetCombinedSkiForwardOnPlane();
-            if (forwardHint.sqrMagnitude < 0.0001f)
+            return;
+        }
+
+        RecoverFromStack(forwardHint);
+    }
+
+    private bool EvaluateStackRecoveryNow(
+        bool requireMinimumDelay,
+        out Vector3 forwardHint,
+        out float tiltAngle,
+        out bool skisReady,
+        out bool delayReady)
+    {
+        forwardHint = Vector3.zero;
+        tiltAngle = 180f;
+        skisReady = false;
+        delayReady = true;
+
+        if (!_stacked || !_isGrounded)
+            return false;
+
+        delayReady = !requireMinimumDelay || Time.time >= _stackedAtTime + stackMinimumRecoveryDelay;
+        if (!delayReady)
+            return false;
+
+        skisReady = AreSkisReadyForStackRecovery();
+        if (!skisReady)
+            return false;
+
+        Vector3 recoveryNormal = _groundNormal.sqrMagnitude > 0.0001f
+            ? _groundNormal.normalized
+            : Vector3.up;
+
+        tiltAngle = Vector3.Angle(transform.up, recoveryNormal);
+
+        if (tiltAngle > maxLandingTiltAngle)
+            return false;
+
+        forwardHint = GetCombinedSkiForwardOnPlane();
+        if (forwardHint.sqrMagnitude < 0.0001f)
+            forwardHint = Vector3.ProjectOnPlane(transform.forward, recoveryNormal);
+
+        if (forwardHint.sqrMagnitude < 0.0001f)
+            forwardHint = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+
+        if (forwardHint.sqrMagnitude < 0.0001f)
+            forwardHint = transform.forward;
+
+        forwardHint.Normalize();
+        return true;
+    }
+
+    private bool EvaluateStackRecoveryOrientationAgainstNormal(Vector3 normal, out float tiltAngle)
+    {
+        normal = normal.sqrMagnitude > 0.0001f ? normal.normalized : Vector3.up;
+        tiltAngle = Vector3.Angle(transform.up, normal);
+        return tiltAngle <= maxLandingTiltAngle;
+    }
+
+    private bool AreSkisReadyForStackRecovery()
+    {
+        bool leftReady = IsSkiReadyForStackRecovery(leftSkiContact);
+        bool rightReady = IsSkiReadyForStackRecovery(rightSkiContact);
+
+        return requireBothSkisForStackRecovery
+            ? leftReady && rightReady
+            : leftReady || rightReady;
+    }
+
+    private bool IsSkiReadyForStackRecovery(SkiContact skiContact)
+    {
+        if (skiContact == null)
+            return false;
+
+        if (!skiContact.IsGrounded)
+            return false;
+
+        return skiContact.BaseContactAlignment >= stackRecoveryMinSkiBaseAlignment;
+    }
+
+    private static Vector3 ClampUpwardVelocity(Vector3 velocity, float maxUpwardVelocity)
+    {
+        if (velocity.y > maxUpwardVelocity)
+            velocity.y = maxUpwardVelocity;
+        return velocity;
+    }
+
+    private void ApplyStackedTumbleDamping(float dt)
+    {
+        if (!_stacked || _rb == null || dt <= 0f)
+            return;
+
+        float baseDamp = Mathf.Max(0f, stackedAngularDamping);
+        if (baseDamp > 0f)
+        {
+            _rb.angularVelocity = Vector3.Lerp(
+                _rb.angularVelocity,
+                Vector3.zero,
+                1f - Mathf.Exp(-baseDamp * dt));
+        }
+
+        bool skiTouching = HasAnySkiContact || _isGrounded;
+        if (!skiTouching)
+            return;
+
+        Vector3 n = _groundNormal.sqrMagnitude > 0.0001f ? _groundNormal.normalized : Vector3.up;
+        Vector3 angular = _rb.angularVelocity;
+        Vector3 spinAroundNormal = Vector3.Project(angular, n);
+        Vector3 tumblingInPlane = angular - spinAroundNormal;
+
+        float skiWheelDamp = Mathf.Max(0f, stackedSkiWheelDamping);
+        tumblingInPlane = Vector3.Lerp(
+            tumblingInPlane,
+            Vector3.zero,
+            1f - Mathf.Exp(-skiWheelDamp * dt));
+
+        _rb.angularVelocity = spinAroundNormal + tumblingInPlane;
+    }
+
+    private void UpdateStackedPhysics(float dt)
+    {
+        if (!_stacked || _rb == null || dt <= 0f)
+            return;
+
+        // Because Rigidbody.useGravity is false, stacked gravity must be explicit.
+        // This should be the only continuous acceleration applied while stacked.
+        _rb.AddForce(Physics.gravity * Mathf.Max(0f, stackedGravityScale), ForceMode.Acceleration);
+
+        ApplyStackedLinearDamping(dt);
+        ApplyStackedTumbleDamping(dt);
+    }
+
+    private void ApplyStackedLinearDamping(float dt)
+    {
+        if (_rb == null || dt <= 0f)
+            return;
+
+        Vector3 velocity = _rb.linearVelocity;
+
+        bool grounded = _isGrounded || HasAnySkiContact || _hasNonSkiGroundContact;
+        Vector3 normal = _groundNormal.sqrMagnitude > 0.0001f
+            ? _groundNormal.normalized
+            : Vector3.up;
+
+        if (grounded)
+        {
+            Vector3 planar = Vector3.ProjectOnPlane(velocity, normal);
+            Vector3 normalVelocity = Vector3.Project(velocity, normal);
+
+            float planarDamp = 1f - Mathf.Exp(-Mathf.Max(0f, stackedGroundLinearDamping) * dt);
+            planar = Vector3.Lerp(planar, Vector3.zero, planarDamp);
+
+            float outwardSpeed = Vector3.Dot(normalVelocity, normal);
+
+            if (outwardSpeed > 0f)
             {
-                forwardHint = Vector3.ProjectOnPlane(transform.forward, _groundNormal);
+                float bounceDamp = 1f - Mathf.Exp(-Mathf.Max(0f, stackedGroundNormalBounceDamping) * dt);
+                normalVelocity = Vector3.Lerp(normalVelocity, Vector3.zero, bounceDamp);
+
+                float maxUp = Mathf.Max(0f, stackedMaxGroundUpwardSpeed);
+                float clampedOutwardSpeed = Mathf.Min(Vector3.Dot(normalVelocity, normal), maxUp);
+                normalVelocity = normal * clampedOutwardSpeed;
             }
 
-            RecoverFromStack(forwardHint);
+            _rb.linearVelocity = planar + normalVelocity;
         }
+        else
+        {
+            float airDamp = 1f - Mathf.Exp(-Mathf.Max(0f, stackedAirLinearDamping) * dt);
+            _rb.linearVelocity = Vector3.Lerp(velocity, Vector3.zero, airDamp);
+        }
+    }
+
+    private void SetStackEquipmentCollidersSuppressed(bool suppressed)
+    {
+        if (stackEquipmentColliderMode == StackEquipmentColliderMode.None)
+        {
+            if (_stackEquipmentCollidersSuppressed)
+                RestoreStackEquipmentColliders();
+
+            return;
+        }
+
+        if (suppressed == _stackEquipmentCollidersSuppressed)
+            return;
+
+        if (suppressed)
+            SuppressStackEquipmentColliders();
+        else
+            RestoreStackEquipmentColliders();
+    }
+
+    private void SuppressStackEquipmentColliders()
+    {
+        _stackEquipmentColliderStates.Clear();
+
+        foreach (Collider collider in EnumerateStackEquipmentColliders())
+        {
+            if (collider == null)
+                continue;
+
+            if (_stackEquipmentColliderStates.ContainsKey(collider))
+                continue;
+
+            _stackEquipmentColliderStates.Add(collider, new StackEquipmentColliderState(collider));
+
+            if (stackEquipmentColliderMode == StackEquipmentColliderMode.Disable)
+            {
+                collider.enabled = false;
+                continue;
+            }
+
+            if (stackEquipmentColliderMode == StackEquipmentColliderMode.MakeTrigger)
+            {
+                MeshCollider meshCollider = collider as MeshCollider;
+                bool mustDisable =
+                    disableNonConvexMeshCollidersInsteadOfTrigger &&
+                    meshCollider != null &&
+                    !meshCollider.convex;
+
+                if (mustDisable)
+                    collider.enabled = false;
+                else
+                    collider.isTrigger = true;
+            }
+        }
+
+        _stackEquipmentCollidersSuppressed = true;
+
+        if (leftSkiContact != null)
+            leftSkiContact.ResetContactState();
+
+        if (rightSkiContact != null)
+            rightSkiContact.ResetContactState();
+
+        Physics.SyncTransforms();
+    }
+
+    private void RestoreStackEquipmentColliders()
+    {
+        foreach (KeyValuePair<Collider, StackEquipmentColliderState> pair in _stackEquipmentColliderStates)
+        {
+            Collider collider = pair.Key;
+            if (collider == null)
+                continue;
+
+            collider.enabled = pair.Value.enabled;
+            collider.isTrigger = pair.Value.isTrigger;
+        }
+
+        _stackEquipmentColliderStates.Clear();
+        _stackEquipmentCollidersSuppressed = false;
+
+        Physics.SyncTransforms();
+
+        if (leftSkiContact != null)
+        {
+            leftSkiContact.ResetContactState();
+            leftSkiContact.ManualSampleGround();
+        }
+
+        if (rightSkiContact != null)
+        {
+            rightSkiContact.ResetContactState();
+            rightSkiContact.ManualSampleGround();
+        }
+    }
+
+    private IEnumerable<Collider> EnumerateStackEquipmentColliders()
+    {
+        if (leftSki != null)
+        {
+            Collider[] colliders = leftSki.GetComponentsInChildren<Collider>(true);
+            for (int i = 0; i < colliders.Length; i++)
+                yield return colliders[i];
+        }
+
+        if (rightSki != null)
+        {
+            Collider[] colliders = rightSki.GetComponentsInChildren<Collider>(true);
+            for (int i = 0; i < colliders.Length; i++)
+                yield return colliders[i];
+        }
+
+        if (!includePoleCollidersInStackCollisionSuppression)
+            yield break;
+
+        Transform leftPoleRoot = leftPoleContact != null ? leftPoleContact.PoleRoot : null;
+        if (leftPoleRoot != null)
+        {
+            Collider[] colliders = leftPoleRoot.GetComponentsInChildren<Collider>(true);
+            for (int i = 0; i < colliders.Length; i++)
+                yield return colliders[i];
+        }
+
+        Transform rightPoleRoot = rightPoleContact != null ? rightPoleContact.PoleRoot : null;
+        if (rightPoleRoot != null)
+        {
+            Collider[] colliders = rightPoleRoot.GetComponentsInChildren<Collider>(true);
+            for (int i = 0; i < colliders.Length; i++)
+                yield return colliders[i];
+        }
+    }
+
+    private bool TryUpdateNoseTailSlideState()
+    {
+        SkiEndSlideState previousState = _skiEndSlideState;
+        float previousStrength = _skiEndSlide01;
+
+        void DecayPreviousState()
+        {
+            if (previousState != SkiEndSlideState.None && Time.time <= _lastSkiEndSlideTime + noseTailSlideStateGrace)
+            {
+                _skiEndSlideState = previousState;
+                _skiEndSlide01 = Mathf.MoveTowards(previousStrength, 0f, Time.fixedDeltaTime / Mathf.Max(0.01f, noseTailSlideStateGrace));
+            }
+            else
+            {
+                _skiEndSlideState = SkiEndSlideState.None;
+                _skiEndSlide01 = 0f;
+            }
+        }
+
+        if (!enableNoseTailSlides || _stacked || !IsGroundedForControls)
+        {
+            DecayPreviousState();
+            return false;
+        }
+
+        Vector3 groundNormal = (_groundNormal.sqrMagnitude > 0.0001f) ? _groundNormal.normalized : Vector3.up;
+        float planarSpeed = Vector3.ProjectOnPlane(_rb.linearVelocity, groundNormal).magnitude;
+        float grind01 = _grindActive ? Mathf.Clamp01(_grindStrengthSmoothed) : 0f;
+
+        float effectiveMinSpeed = Mathf.Lerp(
+            noseTailSlideMinSpeed,
+            noseTailSlideMinSpeed * grindNoseTailMinSpeedMultiplier,
+            grind01);
+
+        float effectiveFullSpeed = Mathf.Lerp(
+            noseTailSlideFullSpeed,
+            Mathf.Max(effectiveMinSpeed + 0.01f, noseTailSlideFullSpeed * grindNoseTailMinSpeedMultiplier),
+            grind01);
+
+        float speed01 = Mathf.InverseLerp(
+            effectiveMinSpeed,
+            Mathf.Max(effectiveMinSpeed + 0.01f, effectiveFullSpeed),
+            planarSpeed);
+        if (speed01 <= 0f)
+        {
+            DecayPreviousState();
+            return false;
+        }
+
+        bool leftValid = TryGetSkiEndSlide(leftSkiContact, out int leftEndSign, out float leftBaseAlignment);
+        bool rightValid = TryGetSkiEndSlide(rightSkiContact, out int rightEndSign, out float rightBaseAlignment);
+        if (!leftValid && !rightValid)
+        {
+            DecayPreviousState();
+            return false;
+        }
+
+        int signSum = (leftValid ? leftEndSign : 0) + (rightValid ? rightEndSign : 0);
+        if (leftValid && rightValid && signSum == 0)
+        {
+            _skiEndSlideState = SkiEndSlideState.Mixed;
+            _skiEndSlide01 = 0f;
+            return false;
+        }
+
+        int dominantEndSign = signSum > 0 ? 1 : -1;
+        float weakestBase = Mathf.Min(
+            leftValid ? leftBaseAlignment : float.MaxValue,
+            rightValid ? rightBaseAlignment : float.MaxValue);
+        if (weakestBase == float.MaxValue || weakestBase < noseTailSlideMinBaseAlignment)
+        {
+            DecayPreviousState();
+            return false;
+        }
+
+        float effectiveLeanThreshold = Mathf.Lerp(
+            noseTailSlideLeanThreshold,
+            noseTailSlideLeanThreshold * grindNoseTailLeanThresholdMultiplier,
+            grind01);
+
+        float leanMatch = Mathf.Clamp01(
+            Mathf.InverseLerp(effectiveLeanThreshold, 1f, _forwardLean * dominantEndSign));
+        if (leanMatch <= 0f)
+        {
+            DecayPreviousState();
+            return false;
+        }
+
+        _skiEndSlideState = ResolveSkiEndSlideState(leftValid, rightValid, leftEndSign, rightEndSign);
+        _skiEndSlide01 = speed01 * leanMatch;
+        _lastSkiEndSlideTime = Time.time;
+        return _skiEndSlide01 > 0f && _skiEndSlideState != SkiEndSlideState.Mixed;
     }
 
     private bool TryGetIntentionalTipBalance(out int dominantEndSign, out float balance01, out float weakestEndBaseAlignment)
@@ -3912,54 +5204,70 @@ public class SkiController : MonoBehaviour
         balance01 = 0f;
         weakestEndBaseAlignment = 1f;
 
-        if (!IsGroundedForControls)
+        bool validSlide = TryUpdateNoseTailSlideState();
+        if (!validSlide)
             return false;
 
-        Vector3 groundNormal = (_groundNormal.sqrMagnitude > 0.0001f) ? _groundNormal.normalized : Vector3.up;
-        float planarSpeed = Vector3.ProjectOnPlane(_rb.linearVelocity, groundNormal).magnitude;
-        float speed01 = Mathf.InverseLerp(tipBalanceMinSpeed, Mathf.Max(tipBalanceMinSpeed + 0.01f, tipBalanceFullSpeed), planarSpeed);
-        if (speed01 <= 0f)
-            return false;
-
-        int signSum = 0;
-        int endCount = 0;
-        float weakestBase = 1f;
-
-        void Consider(SkiContact contact)
+        switch (_skiEndSlideState)
         {
-            if (contact == null ||
-                !contact.IsGrounded ||
-                !contact.HasTipContact ||
-                contact.EndContactSign == 0 ||
-                !IsRideableNormal(contact.ContactNormal))
-                return;
+            case SkiEndSlideState.LeftNose:
+            case SkiEndSlideState.RightNose:
+            case SkiEndSlideState.BothNose:
+                dominantEndSign = 1;
+                break;
 
-            signSum += contact.EndContactSign;
-            endCount++;
-            weakestBase = Mathf.Min(weakestBase, contact.BaseContactAlignment);
+            case SkiEndSlideState.LeftTail:
+            case SkiEndSlideState.RightTail:
+            case SkiEndSlideState.BothTail:
+                dominantEndSign = -1;
+                break;
+
+            default:
+                return false;
         }
 
-        Consider(leftSkiContact);
-        Consider(rightSkiContact);
+        if (leftSkiContact != null && TryGetSkiEndSlide(leftSkiContact, out _, out float leftBase))
+            weakestEndBaseAlignment = Mathf.Min(weakestEndBaseAlignment, leftBase);
+        if (rightSkiContact != null && TryGetSkiEndSlide(rightSkiContact, out _, out float rightBase))
+            weakestEndBaseAlignment = Mathf.Min(weakestEndBaseAlignment, rightBase);
 
-        if (endCount == 0)
+        balance01 = _skiEndSlide01;
+        return true;
+    }
+
+    private bool TryGetSkiEndSlide(SkiContact contact, out int endSign, out float baseAlignment)
+    {
+        endSign = 0;
+        baseAlignment = 0f;
+
+        if (contact == null ||
+            !contact.IsGrounded ||
+            !contact.HasTipContact ||
+            contact.EndContactSign == 0 ||
+            !IsRideableNormal(contact.ContactNormal))
             return false;
 
-        if (Mathf.Abs(signSum) != endCount)
-            return false;
+        endSign = contact.EndContactSign;
+        baseAlignment = contact.BaseContactAlignment;
+        return true;
+    }
 
-        dominantEndSign = (signSum > 0) ? 1 : -1;
+    private static SkiEndSlideState ResolveSkiEndSlideState(bool leftValid, bool rightValid, int leftEndSign, int rightEndSign)
+    {
+        if (leftValid && rightValid)
+        {
+            if (leftEndSign > 0 && rightEndSign > 0) return SkiEndSlideState.BothNose;
+            if (leftEndSign < 0 && rightEndSign < 0) return SkiEndSlideState.BothTail;
+            return SkiEndSlideState.Mixed;
+        }
 
-        float leanMatch = Mathf.Clamp01(Mathf.InverseLerp(tipBalanceLeanThreshold, 1f, _forwardLean * dominantEndSign));
-        if (leanMatch <= 0f)
-            return false;
+        if (leftValid)
+            return leftEndSign > 0 ? SkiEndSlideState.LeftNose : SkiEndSlideState.LeftTail;
 
-        if (weakestBase < tipBalanceEmergencyMinBaseAlignment)
-            return false;
+        if (rightValid)
+            return rightEndSign > 0 ? SkiEndSlideState.RightNose : SkiEndSlideState.RightTail;
 
-        weakestEndBaseAlignment = weakestBase;
-        balance01 = leanMatch * speed01;
-        return balance01 > 0f;
+        return SkiEndSlideState.None;
     }
 
     /// <summary>
@@ -3975,6 +5283,21 @@ public class SkiController : MonoBehaviour
         {
             _tipContactAccumTime = 0f;
             return;
+        }
+
+        bool hasIntentionalTipBalance = TryUpdateNoseTailSlideState();
+        if (hasIntentionalTipBalance)
+        {
+            Vector3 desiredUp = (_alignNormal.sqrMagnitude > 0.0001f) ? _alignNormal.normalized : _groundNormal.normalized;
+            float planarSpeedForFlatten = Vector3.ProjectOnPlane(_rb.linearVelocity, desiredUp).magnitude;
+            if (planarSpeedForFlatten > noseTailSlideFlattenBelowSpeed)
+            {
+                _tipContactAccumTime = 0f;
+                return;
+            }
+
+            _skiEndSlideState = SkiEndSlideState.None;
+            _skiEndSlide01 = 0f;
         }
 
         // We need at least one SkiContact to reason about tips.
@@ -4032,10 +5355,7 @@ public class SkiController : MonoBehaviour
         float speedT = Mathf.InverseLerp(0.5f, 12f, planarSpeed);
         float minBaseAlignmentForStableStance = Mathf.Lerp(0.65f, 0.35f, speedT);
 
-        bool hasIntentionalTipBalance = TryGetIntentionalTipBalance(out int intentionalEndSign, out float intentionalTipBalance01, out float weakestIntentionalEndBase);
-
-        // If a ski is this low, it is essentially on its side/top. Treat as immediate fall.
-        const float SevereEdgeAlignment = 0.12f;
+        bool hasLegacyTipBalance = TryGetIntentionalTipBalance(out int intentionalEndSign, out float intentionalTipBalance01, out float weakestIntentionalEndBase);
 
         bool leftBaseStable = leftGrounded && leftBaseAlign >= minBaseAlignmentForStableStance;
         bool rightBaseStable = rightGrounded && rightBaseAlign >= minBaseAlignmentForStableStance;
@@ -4047,13 +5367,13 @@ public class SkiController : MonoBehaviour
         if (!anyStableBase)
         {
             bool canSaveWithIntentionalBalance =
-                hasIntentionalTipBalance &&
-                weakestIntentionalEndBase >= tipBalanceEmergencyMinBaseAlignment;
+                hasLegacyTipBalance &&
+                weakestIntentionalEndBase >= noseTailSlideMinBaseAlignment;
 
             if (canSaveWithIntentionalBalance)
             {
                 _tipContactAccumTime += Time.fixedDeltaTime;
-                float savedTime = TipContactStackTime * Mathf.Lerp(1.25f, 1f + Mathf.Max(0f, tipBalanceGraceMultiplier), intentionalTipBalance01);
+                float savedTime = tipContactStackTime * Mathf.Lerp(1.25f, 1f + Mathf.Max(0f, tipBalanceGraceMultiplier), intentionalTipBalance01);
                 if (_tipContactAccumTime >= savedTime)
                 {
                     TriggerStack(ComputeStackTorqueAxisFromContacts());
@@ -4066,7 +5386,7 @@ public class SkiController : MonoBehaviour
                 {
                     _tipContactAccumTime += Time.fixedDeltaTime;
 
-                    float npcGrace = TipContactStackTime * 1.75f;
+                    float npcGrace = tipContactStackTime * 1.75f;
                     if (_tipContactAccumTime >= npcGrace)
                     {
                         TriggerStack(ComputeStackTorqueAxisFromContacts());
@@ -4075,8 +5395,14 @@ public class SkiController : MonoBehaviour
                 }
                 else
                 {
-                    TriggerStack(ComputeStackTorqueAxisFromContacts());
-                    _tipContactAccumTime = 0f;
+                    _tipContactAccumTime += Time.fixedDeltaTime;
+
+                    float grace = Mathf.Max(0.22f, tipContactStackTime);
+                    if (_tipContactAccumTime >= grace)
+                    {
+                        TriggerStack(ComputeStackTorqueAxisFromContacts());
+                        _tipContactAccumTime = 0f;
+                    }
                 }
             }
 
@@ -4090,7 +5416,9 @@ public class SkiController : MonoBehaviour
             if (leftGrounded) worstBase = Mathf.Min(worstBase, leftBaseAlign);
             if (rightGrounded) worstBase = Mathf.Min(worstBase, rightBaseAlign);
 
-            float lowSpeedThreshold = HasExternalInputSource ? 0.28f : 0.5f;
+            float lowSpeedThreshold = HasExternalInputSource
+    ? Mathf.Min(0.22f, lowSpeedEdgeStackAlignment)
+    : lowSpeedEdgeStackAlignment;
 
             if (worstBase < lowSpeedThreshold)
             {
@@ -4101,18 +5429,24 @@ public class SkiController : MonoBehaviour
         }
 
         // If any grounded ski is essentially sideways/upside-down, fall immediately.
-        bool severeLeft = leftGrounded && leftBaseAlign < SevereEdgeAlignment;
-        bool severeRight = rightGrounded && rightBaseAlign < SevereEdgeAlignment;
-        if ((severeLeft || severeRight) && !hasIntentionalTipBalance)
+        bool severeLeft = leftGrounded && leftBaseAlign < severeEdgeAlignment;
+        bool severeRight = rightGrounded && rightBaseAlign < severeEdgeAlignment;
+        if ((severeLeft || severeRight) && !hasLegacyTipBalance)
         {
-            TriggerStack(ComputeStackTorqueAxisFromContacts());
-            _tipContactAccumTime = 0f;
+            _tipContactAccumTime += Time.fixedDeltaTime;
+
+            if (_tipContactAccumTime >= Mathf.Max(0.18f, tipContactStackTime * 0.5f))
+            {
+                TriggerStack(ComputeStackTorqueAxisFromContacts());
+                _tipContactAccumTime = 0f;
+            }
+
             return;
         }
 
         // At least one ski has a decent base contact. Now check whether we're
         // "riding on the tips" on the dominant contacts.
-        if (tipFraction >= TipContactStackFraction)
+        if (tipFraction >= tipContactStackFraction && planarSpeed >= tipContactMinSpeed)
         {
             // Heavily tip/tail-weighted contact: accumulate time.
             _tipContactAccumTime += Time.fixedDeltaTime;
@@ -4121,9 +5455,9 @@ public class SkiController : MonoBehaviour
             // over steepening terrain doesn't instantly become a "tip-stand" failure.
             float slopeAngle = Vector3.Angle((_alignNormal.sqrMagnitude > 0.0001f ? _alignNormal : _groundNormal), Vector3.up);
             float slopeT = Mathf.InverseLerp(25f, 65f, slopeAngle);
-            float allowedTime = Mathf.Lerp(TipContactStackTime, TipContactStackTime * 1.6f, slopeT);
+            float allowedTime = Mathf.Lerp(tipContactStackTime, tipContactStackTime * 1.6f, slopeT);
 
-            if (hasIntentionalTipBalance)
+            if (hasLegacyTipBalance)
             {
                 float leanBias = Mathf.Clamp(_forwardLean * intentionalEndSign, -1f, 1f);
                 if (leanBias > 0f)
@@ -4143,7 +5477,7 @@ public class SkiController : MonoBehaviour
             if (leftGrounded) worstBaseAlign = Mathf.Min(worstBaseAlign, leftBaseAlign);
             if (rightGrounded) worstBaseAlign = Mathf.Min(worstBaseAlign, rightBaseAlign);
 
-            float unstableThreshold = minBaseAlignmentForStableStance * (hasIntentionalTipBalance ? 0.70f : 0.85f);
+            float unstableThreshold = minBaseAlignmentForStableStance * (hasLegacyTipBalance ? 0.70f : 0.85f);
             bool trulyUnstable = worstBaseAlign < unstableThreshold;
 
             if (trulyUnstable && _tipContactAccumTime >= allowedTime)
@@ -4235,8 +5569,7 @@ public class SkiController : MonoBehaviour
         bool poseStyleAllowed =
             !_stacked &&
             _rawPosePressed &&
-            ((_grindActive && !HasAnySkiContact && !_isGrounded) ||
-             (!IsGroundedForControls && !HasAnySkiContact));
+            (_grindActive || (!IsGroundedForControls && !HasAnySkiContact));
 
         float targetAirStyle = poseStyleAllowed ? 1f : 0f;
         _airStyle01 = Mathf.MoveTowards(_airStyle01, targetAirStyle, airStyleBlendSpeed * Time.deltaTime);
@@ -4428,6 +5761,8 @@ public class SkiController : MonoBehaviour
         _trickPoseIntentSnapshot.orientation = IsPoseButtonHeld ? ResolvePoseOrientationModifierFromState() : ResolvePoseOrientationModifier();
         _trickPoseIntentSnapshot.verticalOrientation = ResolvePoseVerticalOrientation();
         _trickPoseIntentSnapshot.horizontalOrientation = ResolvePoseHorizontalOrientation();
+        _trickPoseIntentSnapshot.travelFacing = ResolvePoseTravelFacing();
+
         _trickPoseIntentSnapshot.motionState = ResolvePoseMotionState();
         _trickPoseIntentSnapshot.poseName = ResolvePoseName(_trickPoseIntentSnapshot.family, _trickPoseIntentSnapshot.shape);
         _trickPoseIntentSnapshot.spinDirectionSign = CurrentSpinDirectionSign;
@@ -4729,15 +6064,18 @@ public class SkiController : MonoBehaviour
     {
         if (entry != null)
         {
+            // Explicit label always wins.
             if (!string.IsNullOrWhiteSpace(entry.overridePoseLabel))
                 return entry.overridePoseLabel.Trim();
 
-            if (!string.IsNullOrWhiteSpace(entry.requiredPoseName))
-                return entry.requiredPoseName.Trim();
-
+            // Display name should act as the default authored label.
             if (!string.IsNullOrWhiteSpace(entry.displayName) &&
                 !string.Equals(entry.displayName, "New Trick Pose", System.StringComparison.OrdinalIgnoreCase))
                 return entry.displayName.Trim();
+
+            // Required pose name is now only a technical fallback, not the preferred display label.
+            if (!string.IsNullOrWhiteSpace(entry.requiredPoseName))
+                return entry.requiredPoseName.Trim();
         }
 
         return string.IsNullOrWhiteSpace(fallbackPoseName) ? string.Empty : fallbackPoseName.Trim();
@@ -5106,16 +6444,44 @@ public class SkiController : MonoBehaviour
 
         ApplyPassiveAirDriftToSkis(ref targetLeftSkiPos, ref targetLeftSkiRot, ref targetRightSkiPos, ref targetRightSkiRot, authoredPoseWeight);
 
+        ApplyStackSkiVisualOverride(
+            leftSki,
+            ref targetLeftSkiPos,
+            ref targetLeftSkiRot,
+            _leftStackSkiVisualOverrideActive,
+            _leftStackSkiVisualOverrideWorldPos,
+            _leftStackSkiVisualOverrideWorldRot,
+            _leftStackSkiVisualOverrideWeight);
+
+        ApplyStackSkiVisualOverride(
+            rightSki,
+            ref targetRightSkiPos,
+            ref targetRightSkiRot,
+            _rightStackSkiVisualOverrideActive,
+            _rightStackSkiVisualOverrideWorldPos,
+            _rightStackSkiVisualOverrideWorldRot,
+            _rightStackSkiVisualOverrideWeight);
+
         if (leftSki != null)
         {
-            float lerpT = 1f - Mathf.Exp(-Mathf.Max(0.01f, skiVisualLerpSpeed) * Time.deltaTime);
+            float effectiveSkiLerpSpeed = Mathf.Max(0.01f, skiVisualLerpSpeed);
+
+            if (_leftStackSkiVisualOverrideActive)
+                effectiveSkiLerpSpeed = Mathf.Max(effectiveSkiLerpSpeed, skiVisualLerpSpeed * 2.5f);
+
+            float lerpT = 1f - Mathf.Exp(effectiveSkiLerpSpeed * -Time.deltaTime);
             leftSki.localPosition = Vector3.Lerp(leftSki.localPosition, targetLeftSkiPos, lerpT);
             leftSki.localRotation = Quaternion.Slerp(leftSki.localRotation, targetLeftSkiRot, lerpT);
         }
 
         if (rightSki != null)
         {
-            float lerpT = 1f - Mathf.Exp(-Mathf.Max(0.01f, skiVisualLerpSpeed) * Time.deltaTime);
+            float effectiveSkiLerpSpeed = Mathf.Max(0.01f, skiVisualLerpSpeed);
+
+            if (_rightStackSkiVisualOverrideActive)
+                effectiveSkiLerpSpeed = Mathf.Max(effectiveSkiLerpSpeed, skiVisualLerpSpeed * 2.5f);
+
+            float lerpT = 1f - Mathf.Exp(effectiveSkiLerpSpeed * -Time.deltaTime);
             rightSki.localPosition = Vector3.Lerp(rightSki.localPosition, targetRightSkiPos, lerpT);
             rightSki.localRotation = Quaternion.Slerp(rightSki.localRotation, targetRightSkiRot, lerpT);
         }
@@ -5245,11 +6611,6 @@ public class SkiController : MonoBehaviour
     {
         Vector3 velocity = _rb.linearVelocity;
 
-        // While grinding (and not actually on snow), let the grind constraint + gravity drive motion.
-        // This avoids snow friction / carve steering fighting a rail slide.
-        if (_grindActive && !HasAnySkiContact && !_isGrounded)
-            return;
-
         // ------------------------------------------------------------------
         // Normal-axis velocity management (ground stickiness)
         //
@@ -5294,6 +6655,8 @@ public class SkiController : MonoBehaviour
         // Planar velocity on slope
         Vector3 velOnPlane = Vector3.ProjectOnPlane(velocity, _groundNormal);
 
+        float grind01 = _grindActive ? Mathf.Clamp01(_grindStrengthSmoothed) : 0f;
+
         // --- Per-ski anisotropic friction ---
         Vector3 friction = Vector3.zero;
         int skiCount = 0;
@@ -5304,6 +6667,13 @@ public class SkiController : MonoBehaviour
         if (skiCount > 0)
         {
             friction /= skiCount;
+
+            if (grind01 > 0f)
+            {
+                float frictionMul = Mathf.Lerp(1f, grindFrictionMultiplier, grind01);
+                friction *= frictionMul;
+            }
+
             _rb.AddForce(friction, ForceMode.Acceleration);
         }
 
@@ -5359,7 +6729,8 @@ public class SkiController : MonoBehaviour
                 // Normal carve steering (existing behaviour).
                 float dt = Time.fixedDeltaTime;
                 float tuckTurnMul = 1f - (_tuck01 * tuckTurnReduction);
-                float steerAmount = carveFactor * (carveSteerStrength * _gearTuning.carveSteerMul) * tuckTurnMul * dt;
+                float grindSteerMul = Mathf.Lerp(1f, grindCarveSteerMultiplier, grind01);
+                float steerAmount = carveFactor * (carveSteerStrength * _gearTuning.carveSteerMul) * tuckTurnMul * grindSteerMul * dt;
                 Vector3 steeredDir = Vector3.Slerp(planeDir, skiDirN, steerAmount).normalized;
 
                 // Apply steering while preserving speed (for now).
@@ -5368,7 +6739,11 @@ public class SkiController : MonoBehaviour
 
                 // --- Quick Stop: extra planar damping when turning sharply at speed ---
                 // Avoid Angle/acos unless the dot test says we are past the minimum angle.
-                float quickStopEff = quickStopStrength * _gearTuning.quickStopMul * (1f - (_tuck01 * tuckQuickStopReduction));
+                float quickStopEff =
+                    quickStopStrength *
+                    _gearTuning.quickStopMul *
+                    (1f - (_tuck01 * tuckQuickStopReduction)) *
+                    Mathf.Lerp(1f, grindQuickStopMultiplier, grind01);
                 if (_forwardLean < 0f && quickStopEff > 0f && planeSpeed >= quickStopMinSpeed)
                 {
                     float dot = Mathf.Clamp(Vector3.Dot(planeDir, skiDirN), -1f, 1f);
@@ -5398,7 +6773,10 @@ public class SkiController : MonoBehaviour
                 float dt = Time.fixedDeltaTime;
 
                 // Tuning: keep this conservative; scale by existing friction tuning.
-                float brakeStrength = 6f * _gearTuning.sideFrictionMul;
+                float brakeStrength =
+                    6f *
+                    _gearTuning.sideFrictionMul *
+                    Mathf.Lerp(1f, grindWedgeBrakeMultiplier, grind01);
 
                 // Oppose planar movement.
                 Vector3 brakeAccel = -planeVel * brakeStrength;
@@ -5472,16 +6850,16 @@ public class SkiController : MonoBehaviour
 
         // If we are grinding, capture rail frame data, then detach right before applying the impulse
         // so assist forces do not dampen it.
-        bool jumpedFromGrind = _grindActive;
-        Vector3 grindTan = _grindTangent;
-        Vector3 grindUp = _grindNormal;
-        Vector3 grindDeltaToRail = _grindDeltaToRail; // closestPoint - referencePoint (points FROM rider TO rail)
+        bool jumpedFromGrind = false;
+        Vector3 grindTan = Vector3.zero;
+        Vector3 grindUp = Vector3.up;
+        Vector3 grindDeltaToRail = Vector3.zero;
 
         if (_grindActive)
         {
             _grindActive = false;
             _grindStrengthSmoothed = 0f;
-            _grindReattachCooldownUntil = Time.time + Mathf.Max(0f, grindReattachCooldown);
+            ResetGrindingState();
         }
 
         // ------------------------------------------------------------------
@@ -5492,7 +6870,7 @@ public class SkiController : MonoBehaviour
             ? Mathf.Clamp01(holdDuration / maxJumpChargeTime)
             : 1f;
 
-        _dbgJumpChargeT = chargeT;
+        _lastSkiJumpCharge01 = chargeT;
 
         float minForce = Mathf.Min(jumpForceRange.x, jumpForceRange.y);
         float maxForce = Mathf.Max(jumpForceRange.x, jumpForceRange.y);
@@ -5906,10 +7284,6 @@ public class SkiController : MonoBehaviour
 
     private void AlignToSkisAndSlope()
     {
-        // Grinding owns alignment via UpdateGrinding() -> ApplyGrindAlignment().
-        // Prevent slope alignment from overriding rail/cable alignment in the same tick.
-        if (_grindActive)
-            return;
 
         // Desired forward comes from skis (already projected on the physics plane).
         Vector3 skiDir = _skiForward;
@@ -5947,8 +7321,28 @@ public class SkiController : MonoBehaviour
         // Always correct pitch/roll at a consistent rate.
         // Noise is handled by ground-normal smoothing/rate limiting, not by weakening correction on tip frames.
         float landingBoost = (Time.time <= _landingAssistUntil) ? landingAlignBoostMultiplier : 1f;
+        float grind01 = _grindActive ? Mathf.Clamp01(_grindStrengthSmoothed) : 0f;
+        float endSlideSuppress = 0f;
 
-        float maxUpStep = (alignMaxDegreesPerSec * landingBoost) * Time.fixedDeltaTime;
+        if (enableNoseTailSlides && Time.time <= _lastSkiEndSlideTime + noseTailSlideStateGrace)
+        {
+            float effectiveSuppression = Mathf.Clamp01(
+                noseTailSlideAlignmentSuppression +
+                (grindNoseTailAlignmentSuppressionBonus * grind01));
+
+            endSlideSuppress = Mathf.Clamp01(_skiEndSlide01 * effectiveSuppression);
+        }
+
+        float alignmentMul = 1f - endSlideSuppress;
+        float planarSpeedForFlatten = Vector3.ProjectOnPlane(_rb.linearVelocity, desiredUp).magnitude;
+        if (planarSpeedForFlatten <= noseTailSlideFlattenBelowSpeed)
+        {
+            alignmentMul = 1f;
+            _skiEndSlideState = SkiEndSlideState.None;
+            _skiEndSlide01 = 0f;
+        }
+
+        float maxUpStep = (alignMaxDegreesPerSec * landingBoost * Mathf.Max(0.05f, alignmentMul)) * Time.fixedDeltaTime;
         current = Quaternion.RotateTowards(current, upAligned, maxUpStep);
 
 
@@ -5961,6 +7355,7 @@ public class SkiController : MonoBehaviour
 
         float stability = Mathf.Clamp01((baseAlign - 0.15f) / (0.6f - 0.15f));
         float yawSpeed = ((groundTurnSpeed * _gearTuning.turnSpeedMul) * stability) * landingBoost;
+        yawSpeed *= Mathf.Lerp(1f, 0.35f, grind01);
 
         Quaternion yawTarget = Quaternion.LookRotation(desiredForward, desiredUp);
 
@@ -5973,7 +7368,57 @@ public class SkiController : MonoBehaviour
         float yawT = 1f - Mathf.Exp(-yawSpeed * Time.fixedDeltaTime);
         current = Quaternion.Slerp(current, yawTarget, yawT);
 
+        if (_grindHybridAngularVelocity.sqrMagnitude > 0.0001f)
+        {
+            Quaternion yawRot = Quaternion.AngleAxis(_grindHybridAngularVelocity.y * Time.fixedDeltaTime, desiredUp);
+            Quaternion pitchRot = Quaternion.AngleAxis(_grindHybridAngularVelocity.x * Time.fixedDeltaTime, current * Vector3.right);
+            Quaternion rollRot = Quaternion.AngleAxis(_grindHybridAngularVelocity.z * Time.fixedDeltaTime, current * Vector3.forward);
+            current = yawRot * pitchRot * rollRot * current;
+        }
+
         _rb.MoveRotation(current);
+    }
+
+    private void ApplyGrindHybridOrientationControl(float dt)
+    {
+        if (_rb == null || dt <= 0f)
+            return;
+
+        if (!_grindActive || _stacked)
+        {
+            _grindHybridAngularVelocity = Vector3.MoveTowards(
+                _grindHybridAngularVelocity,
+                Vector3.zero,
+                grindMaxHybridAngularSpeed * 4f * dt);
+            return;
+        }
+
+        float grind01 = Mathf.Clamp01(_grindStrengthSmoothed);
+        if (grind01 <= 0f)
+            return;
+
+        float tuckMul = 1f + (_tuck01 * grindTuckControlBonus);
+
+        float yawInput = Mathf.Clamp(_rawRightLegInput - _rawLeftLegInput, -1f, 1f);
+        float pitchInput = Mathf.Clamp(_forwardLean, -1f, 1f);
+        float rollInput = Mathf.Clamp(_sideLean, -1f, 1f);
+
+        Vector3 targetAngularVelocity = new Vector3(
+            -pitchInput * grindPitchTorque,
+            yawInput * grindYawTorque,
+            -rollInput * grindRollTorque) * (grind01 * tuckMul);
+
+        float response = Mathf.Max(grindYawTorque, Mathf.Max(grindPitchTorque, grindRollTorque));
+        _grindHybridAngularVelocity = Vector3.MoveTowards(
+            _grindHybridAngularVelocity,
+            targetAngularVelocity,
+            response * dt);
+
+        if (_grindHybridAngularVelocity.magnitude > grindMaxHybridAngularSpeed)
+            _grindHybridAngularVelocity = _grindHybridAngularVelocity.normalized * grindMaxHybridAngularSpeed;
+
+        // The final rotation application happens inside AlignToSkisAndSlope so
+        // grind control layers onto grounded alignment instead of fighting it.
     }
 
     // ----------------------------------------------------------------------
@@ -6073,6 +7518,15 @@ public class SkiController : MonoBehaviour
     private TrickPoseHorizontalOrientationRequirement ResolvePoseHorizontalOrientation()
     {
         return TrickPoseOrientationUtility.DeriveHorizontal(transform.rotation, IsAirPoseActive);
+    }
+
+    private TrickPoseTravelFacingRequirement ResolvePoseTravelFacing()
+    {
+        return TrickPoseOrientationUtility.DeriveTravelFacing(
+            transform.rotation,
+            _rb != null ? _rb.linearVelocity : Vector3.zero,
+            _groundNormal,
+            IsAirPoseActive);
     }
 
     private TrickPoseMotionStateRequirement ResolvePoseMotionState()
@@ -6178,22 +7632,6 @@ public class SkiController : MonoBehaviour
             TrickPoseEulerAngleRange.NormalizeSignedAngle(eulerAngles.z));
     }
 
-    // ----------------------------------------------------------------------
-    // GRINDING (candidate selection)
-    // ----------------------------------------------------------------------
-
-    private struct GrindCandidate
-    {
-        public Collider collider;
-        public Vector3 closestPoint;
-        public Vector3 tangent;
-        public Vector3 supportUp;
-        public string sourceName;
-        public Vector3 delta; // closestPoint - referencePoint
-        public float sqDist;
-        public GrindSurfaceKind surfaceKind;
-    }
-
     private Vector3 GetGrindReferencePoint()
     {
         // Prefer ski mid probes if available (stable near bindings).
@@ -6221,75 +7659,6 @@ public class SkiController : MonoBehaviour
 
         // Final fallback to rigidbody position (COM-ish).
         return _rb != null ? _rb.position : transform.position;
-    }
-
-    private bool TryFindBestGrindCandidate(Vector3 referencePoint, float maxDist, out GrindCandidate best)
-    {
-        GrindCandidate bestLocal = default;
-
-        float maxSq = maxDist * maxDist;
-        float bestSq = maxSq;
-
-        bool found = false;
-
-        // Contact-first: only surfaces we are actively touching are eligible.
-        if (TryResolveBestFromAnyCollisionContacts(leftSkiContact, referencePoint, ref bestSq, ref bestLocal))
-            found = true;
-
-        if (TryResolveBestFromAnyCollisionContacts(rightSkiContact, referencePoint, ref bestSq, ref bestLocal))
-            found = true;
-
-        if (TryResolveBestFromAcquisitionZones(referencePoint, maxDist, ref bestSq, ref bestLocal))
-            found = true;
-
-        best = bestLocal;
-        return found;
-    }
-
-    private bool TryResolveBestFromAcquisitionZones(Vector3 referencePoint, float maxDist, ref float bestSq, ref GrindCandidate best)
-    {
-        float radius = Mathf.Min(maxDist, Mathf.Max(0.01f, grindAcquireRadius));
-        bool found = false;
-
-        if (leftSkiContact != null)
-        {
-            found |= TryResolveBestFromAcquisitionPoint(leftSkiContact.GetProbeWorldPosition(SkiContact.SkiProbeRegion.Front), radius, referencePoint, ref bestSq, ref best);
-            found |= TryResolveBestFromAcquisitionPoint(leftSkiContact.GetProbeWorldPosition(SkiContact.SkiProbeRegion.Mid), radius, referencePoint, ref bestSq, ref best);
-            found |= TryResolveBestFromAcquisitionPoint(leftSkiContact.GetProbeWorldPosition(SkiContact.SkiProbeRegion.Rear), radius, referencePoint, ref bestSq, ref best);
-        }
-
-        if (rightSkiContact != null)
-        {
-            found |= TryResolveBestFromAcquisitionPoint(rightSkiContact.GetProbeWorldPosition(SkiContact.SkiProbeRegion.Front), radius, referencePoint, ref bestSq, ref best);
-            found |= TryResolveBestFromAcquisitionPoint(rightSkiContact.GetProbeWorldPosition(SkiContact.SkiProbeRegion.Mid), radius, referencePoint, ref bestSq, ref best);
-            found |= TryResolveBestFromAcquisitionPoint(rightSkiContact.GetProbeWorldPosition(SkiContact.SkiProbeRegion.Rear), radius, referencePoint, ref bestSq, ref best);
-        }
-
-        found |= TryResolveBestFromAcquisitionPoint(referencePoint, radius, referencePoint, ref bestSq, ref best);
-        return found;
-    }
-
-    private bool TryResolveBestFromAcquisitionPoint(Vector3 point, float radius, Vector3 referencePoint, ref float bestSq, ref GrindCandidate best)
-    {
-        int count = Physics.OverlapSphereNonAlloc(
-            point,
-            radius,
-            _grindOverlap,
-            grindableLayers,
-            QueryTriggerInteraction.Collide);
-
-        bool found = false;
-        for (int i = 0; i < count; i++)
-        {
-            Collider col = _grindOverlap[i];
-            if (col == null)
-                continue;
-
-            if (TryResolveBestFromCollider(col, referencePoint, ref bestSq, ref best))
-                found = true;
-        }
-
-        return found;
     }
 
     private void ResolveGrindProviders(Collider other, out LiftLine ll, out FencePath fp)
@@ -6342,271 +7711,6 @@ public class SkiController : MonoBehaviour
             _grindProviderCacheLiftB = ll;
             _grindProviderCacheFenceB = fp;
         }
-    }
-    private bool TryResolveBestFromCollider(Collider other, Vector3 referencePoint, ref float bestSq, ref GrindCandidate best)
-    {
-        if (other == null)
-            return false;
-
-        // NOTE:
-        // Many grind sources (eg. pooled rope proxy colliders) may NOT be on the grindable layer,
-        // even though they belong to a LiftLine/FencePath that is considered grindable.
-        // So we accept a collider if:
-        //  - it is on grindableLayers, OR
-        //  - it resolves to a LiftLine / FencePath provider in its parent chain.
-        bool layerOk = (grindableLayers.value & (1 << other.gameObject.layer)) != 0;
-
-        ResolveGrindProviders(other, out LiftLine ll, out FencePath fp);
-
-        if (!layerOk && ll == null && fp == null)
-            return false;
-
-        if (ll != null)
-        {
-            if (ll.BandLength <= 0.0001f)
-                ll.RebuildAnalyticLoop();
-
-            if (ll.TryGetClosestPointOnBand(referencePoint, out _, out Vector3 cp, out Vector3 tan))
-            {
-                Vector3 d = cp - referencePoint;
-                float sq = d.sqrMagnitude;
-                if (sq < bestSq)
-                {
-                    bestSq = sq;
-                    best.collider = other;
-                    best.closestPoint = cp;
-                    best.tangent = tan;
-                    best.supportUp = ComputeGrindSupportUp(tan);
-                    best.delta = d;
-                    best.sqDist = sq;
-                    best.sourceName = ll.name;
-                    best.surfaceKind = GrindSurfaceKind.LiftLine;
-                }
-                return true;
-            }
-        }
-
-        if (fp != null)
-        {
-            if (fp.TryGetClosestPointOnPath(referencePoint, out _, out Vector3 cp, out Vector3 tan))
-            {
-                Vector3 d = cp - referencePoint;
-                float sq = d.sqrMagnitude;
-                if (sq < bestSq)
-                {
-                    bestSq = sq;
-                    best.collider = other;
-                    best.closestPoint = cp;
-                    best.tangent = tan;
-                    best.supportUp = ComputeGrindSupportUp(tan);
-                    best.delta = d;
-                    best.sqDist = sq;
-                    best.sourceName = fp.name;
-                    best.surfaceKind = GrindSurfaceKind.FencePath;
-                }
-                return true;
-            }
-        }
-
-        if (!layerOk)
-            return false;
-
-        return TryResolveImplicitSurfaceFromCollider(other, referencePoint, ref bestSq, ref best);
-    }
-
-    private bool TryResolveBestFromAnyCollisionContacts(SkiContact contact, Vector3 referencePoint, ref float bestSq, ref GrindCandidate best)
-    {
-        if (contact == null || !contact.HasAnyCollisionContact)
-            return false;
-
-        bool found = false;
-
-        foreach (Collider other in contact.AnyCollisionOtherColliders)
-        {
-            if (TryResolveBestFromCollider(other, referencePoint, ref bestSq, ref best))
-                found = true;
-        }
-
-        return found;
-    }
-
-    private bool TryResolveImplicitSurfaceFromCollider(Collider other, Vector3 referencePoint, ref float bestSq, ref GrindCandidate best)
-    {
-        if (other == null)
-            return false;
-
-        bool leftTouch = IsContactTouchingCollider(leftSkiContact, other);
-        bool rightTouch = IsContactTouchingCollider(rightSkiContact, other);
-        if (!leftTouch && !rightTouch)
-            return false;
-
-        bool gotLeft = TryGetImplicitSurfaceSample(other, leftTouch && leftSkiContact != null ? leftSkiContact.transform.position : referencePoint, out Vector3 leftPoint, out Vector3 leftNormal);
-        bool gotRight = TryGetImplicitSurfaceSample(other, rightTouch && rightSkiContact != null ? rightSkiContact.transform.position : referencePoint, out Vector3 rightPoint, out Vector3 rightNormal);
-
-        if (!gotLeft && !gotRight)
-            return false;
-
-        Vector3 tangent = Vector3.zero;
-        Vector3 supportUp = Vector3.up;
-        Vector3 closestPoint = gotLeft && gotRight ? (leftPoint + rightPoint) * 0.5f : (gotLeft ? leftPoint : rightPoint);
-
-        if (gotLeft && gotRight)
-        {
-            float normalDelta = Vector3.Angle(leftNormal, rightNormal);
-            if (normalDelta >= grindEdgeNormalDeltaDegrees)
-                tangent = Vector3.Cross(leftNormal, rightNormal);
-
-            Vector3 avgNormal = leftNormal + rightNormal;
-            if (avgNormal.sqrMagnitude > 0.0001f)
-                supportUp = avgNormal.normalized;
-        }
-        else
-        {
-            supportUp = gotLeft ? leftNormal : rightNormal;
-        }
-
-        Vector3 preferredDir = GetPreferredGrindDirection();
-
-        if (tangent.sqrMagnitude < 0.0001f)
-        {
-            if (!TryResolveImplicitOrientationTangent(other, supportUp, preferredDir, out tangent))
-            {
-                Vector3 alongSurfaceHint = Vector3.ProjectOnPlane(preferredDir, supportUp);
-                if (alongSurfaceHint.sqrMagnitude < 0.0001f)
-                    return false;
-
-                tangent = alongSurfaceHint.normalized;
-            }
-        }
-        else
-        {
-            tangent.Normalize();
-            if (TryResolveImplicitOrientationTangent(other, supportUp, preferredDir, out Vector3 orientedTan))
-            {
-                tangent = Vector3.Slerp(tangent, orientedTan, grindOrientationBias).normalized;
-            }
-        }
-
-        supportUp = ResolveImplicitSupportUp(other, supportUp, tangent);
-        if (supportUp.y < grindImplicitMinUpDot && other != _grindActiveCollider)
-            return false;
-
-        if (Vector3.Dot(tangent, preferredDir) < 0f)
-        {
-            tangent = -tangent;
-        }
-
-        Vector3 d = closestPoint - referencePoint;
-        float sq = d.sqrMagnitude;
-        if (sq >= bestSq)
-            return false;
-
-        bestSq = sq;
-        best.collider = other;
-        best.closestPoint = closestPoint;
-        best.tangent = tangent;
-        best.supportUp = supportUp;
-        best.delta = d;
-        best.sqDist = sq;
-        best.sourceName = other.name;
-        best.surfaceKind = GrindSurfaceKind.ImplicitSurface;
-        return true;
-    }
-
-    private bool TryResolveImplicitOrientationTangent(Collider other, Vector3 supportUp, Vector3 preferredDir, out Vector3 tangent)
-    {
-        tangent = Vector3.zero;
-        if (other == null)
-            return false;
-
-        Transform tr = other.transform;
-        Vector3[] axes = { tr.right, tr.forward, tr.up };
-        float bestDot = 0f;
-
-        for (int i = 0; i < axes.Length; i++)
-        {
-            Vector3 axis = Vector3.ProjectOnPlane(axes[i], supportUp);
-            if (axis.sqrMagnitude < 0.0001f)
-                continue;
-
-            axis.Normalize();
-            float dot = Mathf.Abs(Vector3.Dot(axis, preferredDir));
-            if (dot > bestDot)
-            {
-                bestDot = dot;
-                tangent = axis;
-            }
-        }
-
-        if (bestDot <= 0.15f || tangent.sqrMagnitude < 0.0001f)
-            return false;
-
-        return true;
-    }
-
-    private Vector3 ResolveImplicitSupportUp(Collider other, Vector3 surfaceUp, Vector3 tangent)
-    {
-        Vector3 gravityUp = -Physics.gravity.normalized;
-        Vector3 gravityProjected = Vector3.ProjectOnPlane(gravityUp, tangent);
-        if (gravityProjected.sqrMagnitude < 0.0001f)
-            gravityProjected = gravityUp;
-        gravityProjected.Normalize();
-
-        Vector3 orientedUp = surfaceUp.sqrMagnitude > 0.0001f ? surfaceUp.normalized : gravityProjected;
-
-        if (other != null)
-        {
-            Vector3 trUp = Vector3.ProjectOnPlane(other.transform.up, tangent);
-            if (trUp.sqrMagnitude > 0.0001f)
-            {
-                trUp.Normalize();
-                if (Vector3.Dot(trUp, gravityUp) < 0f)
-                    trUp = -trUp;
-
-                orientedUp = Vector3.Slerp(orientedUp, trUp, grindOrientationBias * 0.5f).normalized;
-            }
-        }
-
-        return Vector3.Slerp(orientedUp, gravityProjected, grindGravityUpBias).normalized;
-    }
-
-    private bool TryGetImplicitSurfaceSample(Collider other, Vector3 referencePoint, out Vector3 closestPoint, out Vector3 surfaceNormal)
-    {
-        closestPoint = other != null ? other.ClosestPoint(referencePoint) : referencePoint;
-        surfaceNormal = Vector3.up;
-
-        if (other == null)
-            return false;
-
-        Vector3 delta = referencePoint - closestPoint;
-        if (delta.sqrMagnitude > 0.000001f)
-        {
-            surfaceNormal = delta.normalized;
-            return true;
-        }
-
-        Vector3 centerDelta = referencePoint - other.bounds.center;
-        if (centerDelta.sqrMagnitude > 0.000001f)
-        {
-            surfaceNormal = centerDelta.normalized;
-            return true;
-        }
-
-        return false;
-    }
-
-    private bool IsContactTouchingCollider(SkiContact contact, Collider target)
-    {
-        if (contact == null || target == null || !contact.HasAnyCollisionContact)
-            return false;
-
-        foreach (Collider other in contact.AnyCollisionOtherColliders)
-        {
-            if (other == target)
-                return true;
-        }
-
-        return false;
     }
 
     private Vector3 GetPreferredGrindDirection()
@@ -6689,299 +7793,273 @@ public class SkiController : MonoBehaviour
         _rb.MoveRotation(yawRot * pitchRot * _rb.rotation);
     }
 
-    private void ApplyGrindAirControl()
-    {
-        float dt = Time.fixedDeltaTime;
-
-        // Small, forgiving air-like control while grinding.
-        // This bypasses ApplyAirControl()’s grounded check.
-        float yawInput = HasLegInputs
-            ? Mathf.Clamp(_rawRightLegInput - _rawLeftLegInput, -1f, 1f)
-            : 0f;
-
-        float pitchInput = HasLeanInput ? Mathf.Clamp(_rawLeanInput, -1f, 1f) : 0f;
-
-        // Keep it looser than air to avoid fighting the rail constraint.
-        float yawSpeed = airYawTurnSpeed * 0.45f;
-        float pitchSpeed = airPitchTurnSpeed * 0.35f;
-
-        Quaternion yawRot = Quaternion.AngleAxis(yawInput * yawSpeed * dt, Vector3.up);
-        Quaternion pitchRot = Quaternion.AngleAxis(pitchInput * pitchSpeed * dt, transform.right);
-
-        _rb.MoveRotation(yawRot * pitchRot * _rb.rotation);
-    }
-
-    private void ApplyGrindAlignment(float dt, Vector3 railTangent, Vector3 targetUp, float strength01)
-    {
-        if (dt <= 0f) return;
-        if (targetUp.sqrMagnitude < 0.0001f) return;
-
-        targetUp.Normalize();
-
-        Quaternion current = _rb.rotation;
-        Vector3 currentUp = current * Vector3.up;
-
-        // Only correct up vector; preserve yaw freedom.
-        Quaternion toUp = Quaternion.FromToRotation(currentUp, targetUp);
-        Quaternion desired = toUp * current;
-
-        float s = Mathf.Clamp01(strength01);
-        float maxDeg = (alignMaxDegreesPerSec * GRIND_ALIGN_RATE_MULT) * dt * s;
-
-        if (maxDeg > 0.0001f)
-            _rb.MoveRotation(Quaternion.RotateTowards(current, desired, maxDeg));
-    }
-
-    // Align only the rider's "up" axis to the grind support normal.
-    // This avoids the aggressive forward-to-tangent lock that caused flips and ejections on shallow mounts.
-    private void ApplyGrindUpAlignment(float dt, Vector3 targetUp, float strength01)
-    {
-        if (dt <= 0f) return;
-        if (targetUp.sqrMagnitude < 0.0001f) return;
-
-        targetUp.Normalize();
-
-        Quaternion current = _rb.rotation;
-
-        Vector3 curUp = current * Vector3.up;
-        Quaternion upFix = Quaternion.FromToRotation(curUp, targetUp);
-        Quaternion desired = upFix * current;
-
-        float s = Mathf.Clamp01(strength01);
-        float maxDeg = (alignMaxDegreesPerSec * GRIND_ALIGN_RATE_MULT) * dt * s;
-
-        if (maxDeg > 0.0001f)
-            _rb.MoveRotation(Quaternion.RotateTowards(current, desired, maxDeg));
-    }
-
-    // Air-style yaw/pitch control while grinding (scaled), so the player can do emergent tricks
-    // without the full "airborne" physics path taking over.
-    private void ApplyGrindControl()
-    {
-        float dt = Time.fixedDeltaTime;
-
-        if (dt <= 0f) return;
-        if (!_grindActive) return;
-
-        // Only apply this hybrid control when we are grinding and NOT on snow.
-        if (HasAnySkiContact || _isGrounded) return;
-
-        float mul = Mathf.Max(0f, grindAirControlMultiplier);
-
-        float yawInput = HasLegInputs
-            ? Mathf.Clamp(_rawRightLegInput - _rawLeftLegInput, -1f, 1f)
-            : 0f;
-
-        float pitchAbs = HasLeanInput ? _rawLeanInput : 0f;
-        float pitchDelta = HasLeanInput ? (_rawLeanInput - _airLeanBaseline) : 0f;
-
-        float pitchInput = Mathf.Lerp(pitchAbs, pitchDelta, Mathf.Clamp01(airPitchUseDeltaFromTakeoff));
-
-        if (Mathf.Abs(pitchInput) < airPitchDeadzone)
-            pitchInput = 0f;
-
-        if (pitchInput < 0f && pitchAbs > -airPitchDeadzone)
-            pitchInput = 0f;
-
-        float spinMultiplier = Mathf.Lerp(1f, airTuckSpinMultiplier, _tuck01);
-        if (HasPolesInput && _rawPolesPressed)
-            spinMultiplier *= 1.08f;
-
-        float accel = Mathf.Max(0f, airAngularAcceleration) * mul;
-        float dampingAir = Mathf.Max(0f, airAngularDamping);
-
-        float targetYawSpeed = yawInput * airYawTurnSpeed * spinMultiplier * mul;
-        float targetPitchSpeed = pitchInput * airPitchTurnSpeed * spinMultiplier * mul;
-
-        _airAngularVelocity.y = Mathf.MoveTowards(_airAngularVelocity.y, targetYawSpeed, accel * dt);
-        _airAngularVelocity.x = Mathf.MoveTowards(_airAngularVelocity.x, targetPitchSpeed, accel * dt);
-
-        if (Mathf.Abs(yawInput) < 0.01f)
-            _airAngularVelocity.y = Mathf.MoveTowards(_airAngularVelocity.y, 0f, dampingAir * dt);
-
-        if (Mathf.Abs(pitchInput) < 0.01f)
-            _airAngularVelocity.x = Mathf.MoveTowards(_airAngularVelocity.x, 0f, dampingAir * dt);
-
-        Vector3 upAxis = (_groundNormal.sqrMagnitude > 0.0001f) ? _groundNormal.normalized : Vector3.up;
-        Quaternion yawRot = Quaternion.AngleAxis(_airAngularVelocity.y * dt, upAxis);
-
-        // Pitch around the rider's right axis projected onto the grind plane.
-        Vector3 rightAxis = Vector3.Cross(upAxis, transform.forward);
-        if (rightAxis.sqrMagnitude < 0.0001f)
-            rightAxis = transform.right;
-
-        rightAxis.Normalize();
-        Quaternion pitchRot = Quaternion.AngleAxis(_airAngularVelocity.x * dt, rightAxis);
-
-        _rb.MoveRotation(yawRot * pitchRot * _rb.rotation);
-    }
 
     private void UpdateGrinding(float dt)
     {
-        if (dt <= 0f) return;
+        if (dt <= 0f)
+            return;
 
-        // If stacked, immediately disengage.
+        UpdateSimpleContactGrinding(dt);
+    }
+
+    private void UpdateSimpleContactGrinding(float dt)
+    {
+        if (dt <= 0f)
+            return;
+
         if (_stacked)
         {
-            _grindStrengthSmoothed = Mathf.MoveTowards(_grindStrengthSmoothed, 0f, grindStrengthResponse * dt);
-            _grindActive = _grindStrengthSmoothed > 0.01f;
-            if (!_grindActive)
-                ResetGrindingState();
+            ResetGrindingState();
             return;
         }
 
-        bool wasActive = _grindActive;
-        bool canAttach = Time.time >= _grindReattachCooldownUntil;
-        bool onSnow = HasAnySkiContact || _isGrounded;
-        GrindCandidate best = default;
-        bool hasCandidate = false;
-        Vector3 planarVelWorldUp = Vector3.ProjectOnPlane(_rb.linearVelocity, Vector3.up);
-        float planarSpeedWorldUp = planarVelWorldUp.magnitude;
-        float targetStrength = 0f;
+        Vector3 groundUp = _groundNormal.sqrMagnitude > 0.0001f
+            ? _groundNormal.normalized
+            : Vector3.up;
 
-        if (!onSnow && canAttach)
+        Vector3 planarVelocity = Vector3.ProjectOnPlane(_rb.linearVelocity, groundUp);
+        float planarSpeed = planarVelocity.magnitude;
+
+        bool hasContact = TryGetSimpleGrindSurface(
+            out Collider grindCollider,
+            out Vector3 closestPoint,
+            out Vector3 tangent,
+            out GrindSurfaceKind surfaceKind,
+            out string sourceName);
+
+        if (!hasContact)
         {
-            if (!_grindActive && planarSpeedWorldUp < grindMinPlanarSpeed)
-            {
-                _grindStrengthSmoothed = Mathf.MoveTowards(_grindStrengthSmoothed, 0f, grindStrengthResponse * dt);
-                _grindActive = _grindStrengthSmoothed > 0.01f;
-                if (!_grindActive)
-                    ResetGrindingState();
-                return;
-            }
-
-            Vector3 referencePoint = GetGrindReferencePoint();
-            float grindRadiusEff = grindCaptureRadius * _gearTuning.grindCaptureRadiusMul;
-            if (TryFindBestGrindCandidate(referencePoint, grindRadiusEff, out best))
-            {
-                Vector3 tan = best.tangent;
-                float tanSq = tan.sqrMagnitude;
-                if (tanSq > 0.0001f)
-                {
-                    if (Mathf.Abs(tanSq - 1f) > 0.001f)
-                        tan /= Mathf.Sqrt(tanSq);
-
-                    Vector3 moveDir = planarSpeedWorldUp > 0.0001f ? planarVelWorldUp.normalized : GetPreferredGrindDirection();
-                    float alignDot = Mathf.Abs(Vector3.Dot(moveDir, tan));
-                    float alignment01 = ComputeGrindSideways01(alignDot);
-
-                    float balanceDot = Vector3.Dot(transform.up, best.supportUp.sqrMagnitude > 0.0001f ? best.supportUp.normalized : Vector3.up);
-                    float balance01 = ComputeGrindBalance01(balanceDot);
-
-                    if (_grindActive || (alignDot >= grindSidewaysDotBegin && balance01 > 0f))
-                    {
-                        hasCandidate = true;
-                        targetStrength = Mathf.Clamp01(Mathf.Max(0.2f, alignment01) * Mathf.Max(0.35f, balance01));
-                        _grindClosestPoint = best.closestPoint;
-                        _grindTangent = tan;
-                        _grindNormal = best.supportUp.sqrMagnitude > 0.0001f ? best.supportUp.normalized : Vector3.up;
-                        _dbgGrindSource = best.sourceName;
-                        _grindSurfaceKind = best.surfaceKind;
-                        _grindActiveCollider = best.collider;
-                    }
-                }
-            }
+            ResetGrindingState();
+            return;
         }
 
-        // Smooth in/out.
-        float grindResponseEff = grindStrengthResponse * _gearTuning.grindResponseMul;
-        _grindStrengthSmoothed = Mathf.MoveTowards(_grindStrengthSmoothed, targetStrength, grindResponseEff * dt);
-        _grindActive = _grindStrengthSmoothed > 0.01f;
-
-        if (_grindActive && hasCandidate && !onSnow)
+        if (planarSpeed < Mathf.Max(0f, grindMinPlanarSpeed))
         {
-            if (!wasActive)
-                _lastGrindClosestPoint = _grindClosestPoint;
+            ResetGrindingState();
+            return;
+        }
 
-            _grindLastTouchTime = Time.time;
-            _grindTime += dt;
-            _lastGroundedTime = Time.time;
-            if (_grindNormal.sqrMagnitude > 0.0001f)
-                _groundNormal = _grindNormal.normalized;
+        bool newSurface = !_grindActive || _grindActiveCollider != grindCollider;
+        if (newSurface)
+        {
+            _grindTime = 0f;
+            _grindDistance = 0f;
+            _lastGrindClosestPoint = closestPoint;
+            _grindStance = GrindStance.Centered;
+            _grindStanceTimer = 0f;
+        }
 
-            Vector3 referencePoint = GetGrindReferencePoint();
-            Vector3 up = (_groundNormal.sqrMagnitude > 0.0001f) ? _groundNormal : Vector3.up;
-            Vector3 desired = _grindClosestPoint + up * Mathf.Max(0f, grindSupportOffset);
+        _grindActive = true;
+        _grindStrengthSmoothed = Mathf.MoveTowards(
+            _grindStrengthSmoothed,
+            1f,
+            grindStrengthResponse * dt);
 
-            Vector3 toDesired = desired - referencePoint;
-            _grindDeltaToRail = toDesired; // cache for debug/jump logic
-            float grindSpringEff = grindSpring * _gearTuning.grindSpringMul;
-            float c = ComputeGrindCriticalDamping(grindSpringEff, _grindStrengthSmoothed);
+        _grindTime += dt;
 
-            Vector3 vel = _rb.linearVelocity;
-            float normalDist = Vector3.Dot(toDesired, up);
-            float velNormal = Vector3.Dot(vel, up);
-            Vector3 lateral = Vector3.ProjectOnPlane(toDesired, up);
-            Vector3 lateralVel = Vector3.ProjectOnPlane(vel, up) - Vector3.Project(vel, _grindTangent);
+        _grindActiveCollider = grindCollider;
+        _grindClosestPoint = closestPoint;
+        _grindSurfaceKind = surfaceKind;
+        _dbgGrindSource = sourceName;
 
-            Vector3 accel =
-                up * (normalDist * grindSpringEff * _grindStrengthSmoothed)
-                - up * (velNormal * c)
-                + lateral * (grindSpringEff * grindLateralCorrection * _grindStrengthSmoothed)
-                - lateralVel * (c * 0.25f);
+        if (tangent.sqrMagnitude > 0.0001f)
+            _grindTangent = tangent.normalized;
+        else
+            _grindTangent = GetPreferredGrindDirection();
 
-            float grindRadiusEff = grindCaptureRadius * _gearTuning.grindCaptureRadiusMul;
-            float maxAccel = grindSpringEff * grindRadiusEff * 1.5f;
+        _grindNormal = groundUp;
+        _grindDeltaToRail = closestPoint - GetGrindReferencePoint();
 
-            if (maxAccel > 0f && accel.sqrMagnitude > (maxAccel * maxAccel))
-                accel = accel.normalized * maxAccel;
+        UpdateSimpleGrindDistance(dt, closestPoint);
+        UpdateGrindStance(dt);
+        _grindDominantEndSign = (int)_grindStance;
+    }
 
-            _rb.AddForce(accel, ForceMode.Acceleration);
+    private void UpdateSimpleGrindDistance(float dt, Vector3 closestPoint)
+    {
+        if (_grindTime <= Mathf.Epsilon)
+        {
+            _lastGrindClosestPoint = closestPoint;
+            return;
+        }
 
-            float nDamp = Mathf.Max(0f, grindNormalDamping);
-            if (nDamp > 0f)
-            {
-                float vN = Vector3.Dot(_rb.linearVelocity, up);
-                _rb.AddForce(-up * (vN * nDamp), ForceMode.Acceleration);
-            }
+        Vector3 delta = closestPoint - _lastGrindClosestPoint;
 
+        if (delta.sqrMagnitude > 0.000001f)
+        {
             if (_grindTangent.sqrMagnitude > 0.0001f)
-            {
-                Vector3 tangent = _grindTangent.normalized;
-                Vector3 sideAxis = Vector3.Cross(up, tangent);
-                if (sideAxis.sqrMagnitude > 0.0001f)
-                {
-                    sideAxis.Normalize();
-                    float sideSpeed = Vector3.Dot(_rb.linearVelocity, sideAxis);
-                    _rb.AddForce(-sideAxis * (sideSpeed * grindSideSlipDamping), ForceMode.Acceleration);
-                }
-            }
-
-            _rb.angularVelocity = Vector3.MoveTowards(_rb.angularVelocity, Vector3.zero, 25f * dt);
-            ApplyGrindUpAlignment(dt, up, _grindStrengthSmoothed);
-            ApplyGrindGravity(dt);
-            UpdateGrindDistanceAndModifiers(dt);
+                _grindDistance += Mathf.Abs(Vector3.Dot(delta, _grindTangent.normalized));
+            else
+                _grindDistance += delta.magnitude;
         }
         else
         {
-            bool withinCoyote = wasActive && (Time.time - _grindLastTouchTime) <= grindCoyoteTime;
+            Vector3 n = _groundNormal.sqrMagnitude > 0.0001f ? _groundNormal.normalized : Vector3.up;
+            _grindDistance += Vector3.ProjectOnPlane(_rb.linearVelocity, n).magnitude * dt;
+        }
 
-            if (withinCoyote && !onSnow)
+        _lastGrindClosestPoint = closestPoint;
+        _grindRawEndSign = ResolveCurrentGrindEndSign();
+    }
+
+    private bool TryGetSimpleGrindSurface(
+    out Collider activeCollider,
+    out Vector3 closestPoint,
+    out Vector3 tangent,
+    out GrindSurfaceKind surfaceKind,
+    out string sourceName)
+    {
+        activeCollider = null;
+        closestPoint = GetGrindReferencePoint();
+        tangent = Vector3.zero;
+        surfaceKind = GrindSurfaceKind.None;
+        sourceName = string.Empty;
+
+        Transform leftRef = leftSkiContact != null ? leftSkiContact.transform : leftSki;
+        Transform rightRef = rightSkiContact != null ? rightSkiContact.transform : rightSki;
+
+        Vector3 leftReference = leftRef != null ? leftRef.position : transform.position;
+        Vector3 rightReference = rightRef != null ? rightRef.position : transform.position;
+        Vector3 combinedReference = (leftReference + rightReference) * 0.5f;
+
+        Collider leftCollider = GetBestGrindableColliderFromSki(leftSkiContact, leftReference);
+        Collider rightCollider = GetBestGrindableColliderFromSki(rightSkiContact, rightReference);
+
+        Collider best = null;
+
+        if (leftCollider != null && rightCollider != null)
+        {
+            if (leftCollider == rightCollider)
             {
-                _grindActive = true;
-                _grindStrengthSmoothed = Mathf.Max(_grindStrengthSmoothed, 0.02f);
+                best = leftCollider;
             }
             else
             {
-                _grindActive = false;
-                ResetGrindingState();
+                float leftScore =
+                    Vector3.Distance(leftCollider.ClosestPoint(leftReference), leftReference) +
+                    Vector3.Distance(leftCollider.ClosestPoint(combinedReference), combinedReference);
+
+                float rightScore =
+                    Vector3.Distance(rightCollider.ClosestPoint(rightReference), rightReference) +
+                    Vector3.Distance(rightCollider.ClosestPoint(combinedReference), combinedReference);
+
+                best = leftScore <= rightScore ? leftCollider : rightCollider;
             }
         }
+        else
+        {
+            best = leftCollider != null ? leftCollider : rightCollider;
+        }
+
+        if (best == null)
+            return false;
+
+        activeCollider = best;
+        ResolveSimpleGrindContactData(best, combinedReference, out closestPoint, out tangent, out surfaceKind, out sourceName);
+        return true;
     }
 
-    private void UpdateGrindDistanceAndModifiers(float dt)
+    private Collider GetBestGrindableColliderFromSki(SkiContact contact, Vector3 reference)
     {
-        if (_grindTime <= Mathf.Epsilon)
-            _lastGrindClosestPoint = _grindClosestPoint;
+        if (contact == null)
+            return null;
 
-        Vector3 alongDelta = _grindClosestPoint - _lastGrindClosestPoint;
-        if (_grindTangent.sqrMagnitude > 0.0001f)
-            _grindDistance += Mathf.Abs(Vector3.Dot(alongDelta, _grindTangent.normalized));
+        Collider best = null;
+        float bestScore = float.PositiveInfinity;
 
-        _lastGrindClosestPoint = _grindClosestPoint;
-        _grindRawEndSign = ResolveCurrentGrindEndSign();
-        UpdateGrindStance(dt);
-        _grindDominantEndSign = (int)_grindStance;
+        void Consider(Collider c, float priorityBonus)
+        {
+            if (c == null || !IsColliderSimpleGrindable(c))
+                return;
+
+            float score = Vector3.Distance(c.ClosestPoint(reference), reference) - priorityBonus;
+
+            if (score < bestScore)
+            {
+                bestScore = score;
+                best = c;
+            }
+        }
+
+        // 1. This is the important new path:
+        // if the ski is grounded on a collider that is also grindable, count it.
+        Consider(contact.PrimaryContactCollider, 0.35f);
+
+        // 2. Existing non-ground collision/trigger contacts still count.
+        foreach (Collider c in contact.AnyCollisionOtherColliders)
+        {
+            if (contact.HasCurrentContactWith(c))
+                Consider(c, 0f);
+        }
+
+        return best;
+    }
+
+    private bool IsColliderSimpleGrindable(Collider c)
+    {
+        if (c == null)
+            return false;
+
+        bool layerOk = (grindableLayers.value & (1 << c.gameObject.layer)) != 0;
+        if (layerOk)
+            return true;
+
+        ResolveGrindProviders(c, out LiftLine ll, out FencePath fp);
+        return ll != null || fp != null;
+    }
+
+    private void ResolveSimpleGrindContactData(
+        Collider c,
+        Vector3 referencePoint,
+        out Vector3 closestPoint,
+        out Vector3 tangent,
+        out GrindSurfaceKind surfaceKind,
+        out string sourceName)
+    {
+        closestPoint = referencePoint;
+        tangent = Vector3.zero;
+        surfaceKind = GrindSurfaceKind.ImplicitSurface;
+        sourceName = c != null ? c.name : string.Empty;
+
+        if (c == null)
+            return;
+
+        ResolveGrindProviders(c, out LiftLine ll, out FencePath fp);
+
+        if (ll != null)
+        {
+            if (ll.TryGetClosestPointOnBand(referencePoint, out _, out Vector3 cp, out Vector3 tan))
+            {
+                closestPoint = cp;
+                tangent = tan.sqrMagnitude > 0.0001f ? tan.normalized : GetPreferredGrindDirection();
+                surfaceKind = GrindSurfaceKind.LiftLine;
+                sourceName = ll.name;
+                return;
+            }
+        }
+
+        if (fp != null)
+        {
+            if (fp.TryGetClosestPointOnPath(referencePoint, out _, out Vector3 cp, out Vector3 tan))
+            {
+                closestPoint = cp;
+                tangent = tan.sqrMagnitude > 0.0001f ? tan.normalized : GetPreferredGrindDirection();
+                surfaceKind = GrindSurfaceKind.FencePath;
+                sourceName = fp.name;
+                return;
+            }
+        }
+
+        closestPoint = c.ClosestPoint(referencePoint);
+
+        Vector3 planarVelocity = Vector3.ProjectOnPlane(_rb.linearVelocity, Vector3.up);
+        if (planarVelocity.sqrMagnitude > 0.0001f)
+        {
+            tangent = planarVelocity.normalized;
+            return;
+        }
+
+        tangent = GetPreferredGrindDirection();
     }
 
     private void UpdateGrindStance(float dt)
@@ -7098,131 +8176,52 @@ public class SkiController : MonoBehaviour
 
     private void ResetGrindingState()
     {
+        _grindActive = false;
+        _grindStrengthSmoothed = 0f;
         _grindTime = 0f;
         _grindDistance = 0f;
-        _grindDominantEndSign = 0;
+        _grindActiveCollider = null;
+        _grindClosestPoint = Vector3.zero;
+        _lastGrindClosestPoint = Vector3.zero;
+        _grindTangent = Vector3.zero;
+        _grindNormal = Vector3.up;
+        _grindDeltaToRail = Vector3.zero;
+        _grindSurfaceKind = GrindSurfaceKind.None;
+        _dbgGrindSource = string.Empty;
         _grindRawEndSign = 0;
+        _grindDominantEndSign = 0;
         _grindStance = GrindStance.Centered;
         _grindStanceTimer = 0f;
-        _grindActiveCollider = null;
-        _grindSurfaceKind = GrindSurfaceKind.None;
-        _dbgGrindSource = null;
-        _grindDeltaToRail = Vector3.zero;
-        _lastGrindClosestPoint = _grindClosestPoint;
+        _grindHybridAngularVelocity = Vector3.zero;
     }
-
-    private Vector3 ComputeGrindSupportUp(Vector3 tanN)
-    {
-        // Project world-up onto plane perpendicular to tangent.
-        Vector3 up = Vector3.up;
-        Vector3 supportUp = Vector3.ProjectOnPlane(up, tanN);
-
-        if (supportUp.sqrMagnitude < 0.0001f)
-            supportUp = Vector3.up;
-
-        return supportUp.normalized;
-    }
-
-    // ---------------------------
-    // Grinding helpers (reduced tuning params)
-    // ---------------------------
 
     private bool IsTouchingGrindable(out Collider touchCollider)
     {
         touchCollider = null;
 
-        if (TryGetTouchingGrindable(leftSkiContact, out touchCollider))
-            return true;
+        Vector3 leftRef = leftSkiContact != null ? leftSkiContact.transform.position : transform.position;
+        Vector3 rightRef = rightSkiContact != null ? rightSkiContact.transform.position : transform.position;
 
-        if (TryGetTouchingGrindable(rightSkiContact, out touchCollider))
-            return true;
+        Collider left = GetBestGrindableColliderFromSki(leftSkiContact, leftRef);
+        Collider right = GetBestGrindableColliderFromSki(rightSkiContact, rightRef);
 
-        return false;
+        if (left != null && right != null)
+        {
+            touchCollider = left;
+            return true;
+        }
+
+        touchCollider = left != null ? left : right;
+        return touchCollider != null;
     }
 
     private bool TryGetTouchingGrindable(SkiContact contact, out Collider touchCollider)
     {
         touchCollider = null;
 
-        if (contact == null || !contact.HasAnyCollisionContact)
-            return false;
-
-        foreach (Collider c in contact.AnyCollisionOtherColliders)
-        {
-            if (c == null)
-                continue;
-
-            bool layerOk = (grindableLayers.value & (1 << c.gameObject.layer)) != 0;
-            ResolveGrindProviders(c, out LiftLine ll, out FencePath fp);
-
-            if (layerOk || ll != null || fp != null)
-            {
-                touchCollider = c;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private float ComputeGrindSideways01(float absDotDirToRail)
-    {
-        // Now treated as "alignment": 0 when not aligned enough, 1 when tightly aligned.
-        float begin = Mathf.Clamp(grindSidewaysDotBegin, 0.0f, 0.999f);
-        float full = Mathf.Lerp(begin, 1f, GRIND_ALIGN_FULL_FRAC);
-        return Mathf.InverseLerp(begin, full, absDotDirToRail);
-    }
-
-    private float ComputeGrindBalance01(float upDot)
-    {
-        // Derive the "full balance" threshold from the begin value to avoid a second serialized parameter.
-        float begin = Mathf.Clamp01(grindBalanceUpDotBegin);
-        float full = Mathf.Clamp01(begin + GRIND_BALANCE_DOT_WINDOW);
-
-        if (full <= begin + 0.0001f)
-            return (upDot >= full) ? 1f : 0f;
-
-        return Mathf.InverseLerp(begin, full, upDot);
-    }
-
-    private float ComputeGrindCriticalDamping(float spring, float strength01)
-    {
-        // We operate in "acceleration spring" units: x'' + c x' + k x = 0, where k = spring * strength.
-        // Critical damping: c = 2*sqrt(k). This matches the previous default tuning closely.
-        float k = Mathf.Max(0f, spring) * Mathf.Clamp01(strength01);
-        if (k <= 0f) return 0f;
-        return 2f * Mathf.Sqrt(k);
-    }
-
-    private void ApplyGrindGravity(float dt)
-    {
-        if (dt <= 0f) return;
-
-        float baseScale = Mathf.Max(0f, grindDriveScale * _gearTuning.grindDriveMul);
-        if (baseScale <= 0f) return;
-
-        baseScale *= 1f + (_tuck01 * Mathf.Max(0f, grindTuckDriveBoost));
-
-        // If we don't have a valid tangent, don't try to drive along the rail.
-        Vector3 tan = _grindTangent;
-        float tanSq = tan.sqrMagnitude;
-        if (tanSq < 0.0001f)
-            return;
-
-        // _grindTangent is expected to be normalized already, but avoid an unconditional Normalize()
-        // every physics step.
-        if (Mathf.Abs(tanSq - 1f) > 0.001f)
-            tan /= Mathf.Sqrt(tanSq);
-
-        // Gravity component along the rail tangent (correct regardless of what's under the rail).
-        Vector3 gAlong = Vector3.Project(Physics.gravity, tan);
-
-        // Time-based boost is now a fixed fraction to reduce tuning parameters.
-        float t01 = (GRIND_TIME_TO_MAX_BOOST <= 0f) ? 1f : Mathf.Clamp01(_grindTime / GRIND_TIME_TO_MAX_BOOST);
-        t01 = t01 * t01 * (3f - 2f * t01); // smoothstep
-        float boost = 1f + (GRIND_DRIVE_TIME_BOOST_FRAC * t01);
-
-        _rb.AddForce(gAlong * (baseScale * boost), ForceMode.Acceleration);
+        Vector3 reference = contact != null ? contact.transform.position : transform.position;
+        touchCollider = GetBestGrindableColliderFromSki(contact, reference);
+        return touchCollider != null;
     }
 
     // ----------------------------------------------------------------------
@@ -7294,6 +8293,7 @@ public class SkiController : MonoBehaviour
 
         Vector3 velPlane = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal);
         GUILayout.Label($"PlanarSpeed: {velPlane.magnitude:F2} m/s    ForwardLean: {_forwardLean:F2}");
+        GUILayout.Label($"EndSlide: {_skiEndSlideState}    EndSlide01: {_skiEndSlide01:F2}");
         GUILayout.Label($"AirTime: {(Time.time - _airborneStartTime):F2}s    PeakY: {_airbornePeakY:F2}    LastStackReason: {_dbgLastStackReason}");
 
         if (debugShowTraverseHold)
@@ -7311,57 +8311,15 @@ public class SkiController : MonoBehaviour
             GUILayout.Space(6);
             GUILayout.Label("=== Grinding ===");
 
-            bool grindingSurface = _grindActive && !HasAnySkiContact && !_isGrounded;
-            bool onSnow = HasAnySkiContact || _isGrounded;
-
-            float cdLeft = Mathf.Max(0f, _grindReattachCooldownUntil - Time.time);
-            float sinceTouch = Time.time - _grindLastTouchTime;
-
-            float distToSupport = _grindDeltaToRail.magnitude;
-            Vector3 tan = (_grindTangent.sqrMagnitude > 0.0001f) ? _grindTangent.normalized : Vector3.zero;
-            Vector3 up = (_groundNormal.sqrMagnitude > 0.0001f) ? _groundNormal.normalized : Vector3.up;
-
             bool touchingGrindableHud = IsTouchingGrindable(out Collider touchColHud);
-            string touchName = (touchColHud != null) ? touchColHud.name : "(none)";
-            int touchLayer = (touchColHud != null) ? touchColHud.gameObject.layer : -1;
-
-            float upDot = Vector3.Dot(transform.up, up);
-            float vAlongTan = (tan != Vector3.zero) ? Vector3.Dot(_rb.linearVelocity, tan) : 0f;
-            float vUp = Vector3.Dot(_rb.linearVelocity, up);
-
-            GUILayout.Label($"Active: {_grindActive}    GrindingSurface: {grindingSurface}    OnSnow: {onSnow}");
-            GUILayout.Label($"Strength: {_grindStrengthSmoothed:F2}    Time: {_grindTime:F2}s    SinceTouch: {sinceTouch:F2}s    ReattachCD: {cdLeft:F2}s");
-            GUILayout.Label($"Source: {(_dbgGrindSource ?? "(none)")}    DistToSupport: {distToSupport:F2} m");
-            GUILayout.Label($"Touching: {touchingGrindableHud}    Touch: {touchName}    Layer: {touchLayer}");
-            GUILayout.Label($"UpDot(rbUp,up): {upDot:F2}    vAlongTan: {vAlongTan:F2} m/s    vUp: {vUp:F2} m/s");
-
-            // ---- HUD-only candidate probe (helps diagnose 'never grinds') ----
-            Vector3 refPt = GetGrindReferencePoint();
-            float grindRadiusEff = grindCaptureRadius * _gearTuning.grindCaptureRadiusMul;
-
-            GrindCandidate cand;
-            bool candFound = TryFindBestGrindCandidate(refPt, grindRadiusEff, out cand);
-
-            GUILayout.Space(4);
-            GUILayout.Label("--- Candidate Probe ---");
-            GUILayout.Label($"RefPt: {refPt}    Radius: {grindRadiusEff:F2} m");
-
-            if (!candFound)
-            {
-                GUILayout.Label("Candidate: (none within radius)");
-            }
-            else
-            {
-                float dist = Mathf.Sqrt(cand.sqDist);
-                float prox01 = 1f - Mathf.Clamp01(dist / Mathf.Max(0.0001f, grindRadiusEff));
-                float target = touchingGrindableHud ? 1f : prox01;
-
-                Vector3 tanC = cand.tangent;
-                if (tanC.sqrMagnitude > 0.0001f) tanC.Normalize();
-
-                GUILayout.Label($"Candidate: {cand.sourceName}    Dist: {dist:F2} m    Prox01: {prox01:F2}    TargetStrength: {target:F2}");
-                GUILayout.Label($"CandPoint: {cand.closestPoint}    CandTan: {tanC}");
-            }
+            string touchName = touchColHud != null ? touchColHud.name : "(none)";
+            string activeName = _grindActiveCollider != null ? _grindActiveCollider.name : "(none)";
+            GUILayout.Label($"TouchingGrindable: {touchingGrindableHud}    IsGrinding: {_grindActive}    GroundedForControls: {IsGroundedForControls}");
+            GUILayout.Label($"ActiveCollider: {activeName}    TouchCollider: {touchName}");
+            GUILayout.Label($"Source: {(_dbgGrindSource ?? "(none)")}    Distance: {_grindDistance:F2} m    Strength: {_grindStrengthSmoothed:F2}");
+            GUILayout.Label($"Stance: {_grindStance}    Time: {_grindTime:F2}s    SurfaceKind: {_grindSurfaceKind}");
+            GUILayout.Label($"ClosestPoint: {_grindClosestPoint}    Tangent: {_grindTangent}");
+            GUILayout.Label($"Distance: {_grindDistance:F2} m    RawEndSign: {_grindRawEndSign}    DominantEndSign: {_grindDominantEndSign}");
         }
 
         if (debugShowJumpLanding)
@@ -7416,6 +8374,85 @@ public class SkiController : MonoBehaviour
         GUI.matrix = old;
     }
 
+    private void DrawStackRecoveryGizmo()
+    {
+        if (!drawStackRecoveryGizmo)
+            return;
+
+        Vector3 origin = _rb != null
+            ? _rb.worldCenterOfMass
+            : transform.position;
+
+        Vector3 localDown = -transform.up;
+        if (localDown.sqrMagnitude < 0.0001f)
+            localDown = Vector3.down;
+
+        localDown.Normalize();
+
+        float rayLength = Mathf.Max(0.05f, stackRecoveryGizmoLength);
+        float probeDistance = Mathf.Max(rayLength, stackRecoveryGizmoGroundProbeDistance);
+
+        Vector3 lineEnd = origin + localDown * rayLength;
+
+        Vector3 evaluationNormal = _groundNormal.sqrMagnitude > 0.0001f
+            ? _groundNormal.normalized
+            : Vector3.up;
+
+        bool hasProbeHit = Physics.Raycast(
+            origin,
+            localDown,
+            out RaycastHit hit,
+            probeDistance,
+            groundLayers,
+            QueryTriggerInteraction.Ignore);
+
+        if (hasProbeHit)
+        {
+            evaluationNormal = hit.normal.sqrMagnitude > 0.0001f
+                ? hit.normal.normalized
+                : evaluationNormal;
+
+            lineEnd = hit.point;
+        }
+
+        bool wouldRecover;
+
+        if (_stacked && _isGrounded)
+        {
+            // Exact current recovery state. Ignores only the minimum delay so the gizmo communicates
+            // whether the landing/orientation/ski contact are good, not whether the timer has elapsed.
+            wouldRecover = EvaluateStackRecoveryNow(
+                requireMinimumDelay: false,
+                out _,
+                out _,
+                out _,
+                out _);
+        }
+        else
+        {
+            // Projected orientation-only state for airborne/pre-stack visualization.
+            wouldRecover = EvaluateStackRecoveryOrientationAgainstNormal(evaluationNormal, out _);
+        }
+
+        Gizmos.color = wouldRecover
+            ? stackRecoveryGizmoRecoverColor
+            : stackRecoveryGizmoContinueColor;
+
+        Gizmos.DrawLine(origin, lineEnd);
+        Gizmos.DrawWireSphere(lineEnd, 0.08f);
+
+        // Draw the evaluated surface normal at the end of the ray.
+        Gizmos.DrawRay(lineEnd, evaluationNormal * 0.35f);
+
+        // Draw a small cross marker at the origin so the local-down ray is easy to read.
+        Vector3 right = transform.right.sqrMagnitude > 0.0001f ? transform.right.normalized : Vector3.right;
+        Vector3 forward = transform.forward.sqrMagnitude > 0.0001f ? transform.forward.normalized : Vector3.forward;
+        float crossSize = 0.08f;
+
+        Gizmos.DrawLine(origin - right * crossSize, origin + right * crossSize);
+        Gizmos.DrawLine(origin - forward * crossSize, origin + forward * crossSize);
+    }
+
     private void OnDrawGizmosSelected()
     {
         if (!debugDrawGizmosSelected)
@@ -7442,6 +8479,8 @@ public class SkiController : MonoBehaviour
             Vector3 vPlane = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal);
             Gizmos.DrawRay(p, vPlane * 0.1f);
         }
+
+        DrawStackRecoveryGizmo();
 
         // Ski contact points / normals
         if (leftSkiContact != null && leftSkiContact.IsGrounded)

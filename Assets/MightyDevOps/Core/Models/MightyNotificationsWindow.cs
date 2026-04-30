@@ -32,6 +32,7 @@ namespace Mighty
         }
 
 
+
         public static MightyNotifications Load()
         {
             string path = $"{corePath}/Core/Data/MightyNotificationsData.asset";
@@ -68,8 +69,6 @@ namespace Mighty
         [SerializeField]
         public State state;
         public VisualElement view;
-
-        private bool mainView = true;
 
         public void ShowLoadingState()
         {
@@ -167,7 +166,7 @@ namespace Mighty
                 flexShrink = 0,
                 height = 56,
                 width = Length.Percent(100),
-                justifyContent = Justify.SpaceBetween,
+                justifyContent = Justify.FlexStart,
                 alignItems = Align.Center,
                 backgroundColor = new StyleColor(new Color(0.13f, 0.13f, 0.13f, 1f)), // Deep dark header
                 paddingLeft = 20,
@@ -186,20 +185,19 @@ namespace Mighty
                 }
             };
 
-            // Header icon
             VisualElement headerIcon = new VisualElement
             {
                 style = {
                     width = 20,
                     height = 20,
-                    backgroundImage = mainView ? icons.newsIcon : icons.archiveIcon,
+                    backgroundImage = icons.newsIcon,
                     marginRight = 8,
                 }
             };
 
             Label topTitle = new Label("NotificationsTitle")
             {
-                text = mainView ? "Latest News" : "Archives",
+                text = "Latest News",
                 style = {
                 fontSize = 18,
                 color = new StyleColor(Color.white),
@@ -215,44 +213,6 @@ namespace Mighty
             titleContainer.Add(headerIcon);
             titleContainer.Add(topTitle);
             top.Add(titleContainer);
-
-            var viewInstance = view;
-            Button button = new Button(() =>
-            {
-                mainView = !mainView;
-                BuildView();
-            })
-            {
-                text = mainView ? "View Archives" : "Back to News",
-                style = {
-                width = 120,
-                height = 32,
-                backgroundColor = new Color(0.2f, 0.4f, 0.8f, 1f), // Modern blue
-                color = Color.white,
-                borderTopLeftRadius = 16,
-                borderTopRightRadius = 16,
-                borderBottomLeftRadius = 16,
-                borderBottomRightRadius = 16,
-                borderTopWidth = 0,
-                borderBottomWidth = 0,
-                borderLeftWidth = 0,
-                borderRightWidth = 0,
-                fontSize = 12,
-                unityFontStyleAndWeight = FontStyle.Bold,
-            }
-            };
-
-            // Add hover effect for button
-            button.RegisterCallback<MouseEnterEvent>(evt =>
-            {
-                button.style.backgroundColor = new Color(0.15f, 0.35f, 0.75f, 1f);
-            });
-            button.RegisterCallback<MouseLeaveEvent>(evt =>
-            {
-                button.style.backgroundColor = new Color(0.2f, 0.4f, 0.8f, 1f);
-            });
-
-            top.Add(button);
 
             ScrollView mid = new()
             {
@@ -285,14 +245,6 @@ namespace Mighty
             foreach (var item in dataCore.newsItems)
             {
                 item.isRead = true;
-                if (mainView)
-                {
-                    if (item.archived) continue;
-                }
-                else
-                {
-                    if (!item.archived) continue;
-                }
 
                 // Modern card design
                 VisualElement newsCard = new VisualElement
@@ -342,12 +294,11 @@ namespace Mighty
                     newsCard.style.borderTopColor = new StyleColor(new Color(0.9f, 0.9f, 0.9f, 1f));
                 });
 
-                // Header container with date and archive button
                 VisualElement headerContainer = new VisualElement
                 {
                     style = {
                         flexDirection = FlexDirection.Row,
-                        justifyContent = Justify.SpaceBetween,
+                        justifyContent = Justify.FlexStart,
                         alignItems = Align.Center,
                         marginBottom = 12,
                         width = Length.Percent(100),
@@ -375,46 +326,7 @@ namespace Mighty
                     }
                 };
 
-                // Modern archive button
-                Button archive = new(() =>
-                {
-                    item.archived = !item.archived;
-                    newsCard.RemoveFromHierarchy();
-                    ShowToast(item.archived ? $"Archived {item.title}" : $"Unarchived {item.title}");
-                })
-                {
-                    name = "archive",
-                    text = "",
-                    style ={
-                        width = 28,
-                        height = 28,
-                        backgroundColor = new Color(0.95f, 0.95f, 0.95f, 1f),
-                        backgroundImage = item.archived ? icons.archiveIcon : icons.trashcanIcon,
-                        borderTopLeftRadius = 14,
-                        borderTopRightRadius = 14,
-                        borderBottomLeftRadius = 14,
-                        borderBottomRightRadius = 14,
-                        borderTopWidth = 0,
-                        borderBottomWidth = 0,
-                        borderLeftWidth = 0,
-                        borderRightWidth = 0,
-                    }
-                };
-
-                // Archive button hover effect
-                archive.RegisterCallback<MouseEnterEvent>(evt =>
-                {
-                    archive.style.backgroundColor = new Color(0.9f, 0.9f, 0.9f, 1f);
-                    archive.style.color = new Color(0.3f, 0.3f, 0.3f, 1f);
-                });
-                archive.RegisterCallback<MouseLeaveEvent>(evt =>
-                {
-                    archive.style.backgroundColor = new Color(0.95f, 0.95f, 0.95f, 1f);
-                    archive.style.color = new Color(0.6f, 0.6f, 0.6f, 1f);
-                });
-
                 headerContainer.Add(datePosted);
-                headerContainer.Add(archive);
 
                 // Modern title
                 Label title = new Label(item.title)

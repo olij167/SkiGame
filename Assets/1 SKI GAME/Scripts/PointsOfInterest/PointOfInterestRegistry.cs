@@ -77,6 +77,7 @@ namespace SkiGame.POI
        
         // Cached, rebuilt on Refresh()
         [NonSerialized] private readonly List<POIInfo> _cache = new();
+        [NonSerialized] private readonly HashSet<int> _anchoredInstanceIds = new();
         public IReadOnlyList<POIInfo> Current => _cache;
 
         [Header("Editor Refresh (Performance)")]
@@ -547,7 +548,7 @@ namespace SkiGame.POI
 
         private HashSet<int> AppendWorldPOIs(List<POIInfo> dst)
         {
-            HashSet<int> anchoredInstanceIds = new HashSet<int>();
+            _anchoredInstanceIds.Clear();
 
 #if UNITY_2023_1_OR_NEWER
             var anchors = UnityEngine.Object.FindObjectsByType<MapPOIAnchor>(FindObjectsSortMode.None);
@@ -569,7 +570,7 @@ namespace SkiGame.POI
                 if (anchor == null || !anchor.IncludeInMapBake)
                     continue;
 
-                anchoredInstanceIds.Add(anchor.gameObject.GetInstanceID());
+                _anchoredInstanceIds.Add(anchor.gameObject.GetInstanceID());
 
                 string id = !string.IsNullOrWhiteSpace(anchor.CustomId)
                     ? anchor.CustomId.Trim()
@@ -599,7 +600,7 @@ namespace SkiGame.POI
 
             AppendAutoWorldPOIs(
                 resorts,
-                anchoredInstanceIds,
+                _anchoredInstanceIds,
                 dst,
                 POICategory.Resort,
                 new Color(0.25f, 0.75f, 1f, 1f),
@@ -608,7 +609,7 @@ namespace SkiGame.POI
 
             AppendAutoWorldPOIs(
                 portals,
-                anchoredInstanceIds,
+                _anchoredInstanceIds,
                 dst,
                 POICategory.Shop,
                 new Color(1f, 0.45f, 0.75f, 1f),
@@ -617,7 +618,7 @@ namespace SkiGame.POI
 
             AppendAutoWorldPOIs(
                 kiosks,
-                anchoredInstanceIds,
+                _anchoredInstanceIds,
                 dst,
                 POICategory.Kiosk,
                 new Color(1f, 0.75f, 0.2f, 1f),
@@ -626,14 +627,14 @@ namespace SkiGame.POI
 
             AppendAutoWorldPOIs(
                 raceKiosks,
-                anchoredInstanceIds,
+                _anchoredInstanceIds,
                 dst,
                 POICategory.Kiosk,
                 new Color(0.86f, 0.35f, 1.00f, 1f),
                 "Race Kiosk",
                 c => c != null ? c.transform.position : Vector3.zero);
 
-            return anchoredInstanceIds;
+            return _anchoredInstanceIds;
         }
 
         private void AppendActivityPOIs(List<POIInfo> dst, HashSet<int> anchoredInstanceIds)
@@ -910,17 +911,7 @@ namespace SkiGame.POI
             if (!drawGizmosWhenNotSelected) return;
 
 #if UNITY_EDITOR
-            // Keep cache reasonably fresh in the editor for correct gizmos without manual refresh spam.
-
-            if (!Application.isPlaying && autoRefreshInEditor)
-            {
-                double now = UnityEditor.EditorApplication.timeSinceStartup;
-                if (now >= _nextEditorRefreshTime)
-                {
-                    _nextEditorRefreshTime = now + editorAutoRefreshIntervalSeconds;
-                    Refresh();
-                }
-            }
+            TryRefreshInEditorForGizmos();
 #endif
 
             DrawPOIGizmos(selected: false);
@@ -931,28 +922,30 @@ namespace SkiGame.POI
             if (!drawGizmos) return;
 
 #if UNITY_EDITOR
-            if (!Application.isPlaying && autoRefreshInEditor)
-            {
-                double now = UnityEditor.EditorApplication.timeSinceStartup;
-                if (now >= _nextEditorRefreshTime)
-                {
-                    _nextEditorRefreshTime = now + editorAutoRefreshIntervalSeconds;
-                    Refresh();
-                }
-            }
+            TryRefreshInEditorForGizmos();
 #endif
 
             DrawPOIGizmos(selected: true);
         }
 
+#if UNITY_EDITOR
+        private void TryRefreshInEditorForGizmos()
+        {
+            if (Application.isPlaying || !autoRefreshInEditor)
+                return;
+
+            double now = UnityEditor.EditorApplication.timeSinceStartup;
+            if (now < _nextEditorRefreshTime)
+                return;
+
+            _nextEditorRefreshTime = now + editorAutoRefreshIntervalSeconds;
+            Refresh();
+        }
+#endif
+
         private void DrawPOIGizmos(bool selected)
         {
             Gizmos.matrix = Matrix4x4.identity;
-
-            // Draw all POIs from cache (runs, lifts, custom).
-            // If cache is empty (e.g., newly added component), try to draw after a refresh.
-            if (_cache.Count == 0)
-                Refresh();
 
             float solid = Mathf.Max(0.05f, gizmoSize * 0.15f);
             float wire = Mathf.Max(0.1f, gizmoSize * 0.25f);

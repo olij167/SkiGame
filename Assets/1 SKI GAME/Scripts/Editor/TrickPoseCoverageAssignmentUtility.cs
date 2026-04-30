@@ -30,6 +30,7 @@ public static class TrickPoseCoverageAssignmentUtility
         entry.requiredPoseShape = slot.poseShape;
         entry.requiredVerticalOrientation = slot.verticalOrientation;
         entry.requiredHorizontalOrientation = slot.horizontalOrientation;
+        entry.requiredTravelFacing = slot.travelFacing;
         entry.requiredMotionState = slot.motionState;
         entry.requiredOrientationModifier = SkiController.AerialOrientationModifier.None;
         entry.useAdvancedModifierConditions = false;

@@ -259,10 +259,13 @@ public class NpcSkierBrain : MonoBehaviour
 
         locomotion?.ConfigureRuns(availableRuns);
 
-        if (randomizeProfileOnStart && profile != null)
+        bool preserveAuthoredProfile = TryGetComponent(out NpcIdentity identity) && identity.IsAuthored && identity.PreserveAuthoredProfile;
+        bool preserveAuthoredAppearance = identity != null && identity.IsAuthored && identity.PreserveAuthoredAppearance;
+
+        if (randomizeProfileOnStart && profile != null && !preserveAuthoredProfile)
             profile.RandomizeProfile();
 
-        if (randomizeAppearanceOnStart && appearanceGenerator != null)
+        if (randomizeAppearanceOnStart && appearanceGenerator != null && !preserveAuthoredAppearance)
             appearanceGenerator.ApplyRandomAppearance(profile);
 
         if (skiController != null && locomotion != null)

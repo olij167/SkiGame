@@ -104,6 +104,15 @@ public sealed class TrickOverlayUI : MonoBehaviour
     [SerializeField] private float adjectivePopScale = 1.22f;
     [SerializeField] private float trickAnimDuration = 0.14f;
     [SerializeField] private float trickPopScale = 1.12f;
+    [Tooltip("When enabled, trick pulse animation avoids horizontal root scaling so long labels do not overflow off the side of the screen.")]
+    [SerializeField] private bool preventHorizontalPulseOverflow = true;
+
+    [Tooltip("Horizontal scale used during trick pulses when overflow prevention is enabled. Keep at 1 to avoid labels growing off-screen.")]
+    [SerializeField, Range(1f, 1.2f)] private float safePulseHorizontalScale = 1f;
+
+    [Tooltip("Vertical scale used during trick pulses when overflow prevention is enabled. This preserves the punchy pulse without widening the label.")]
+    [SerializeField, Range(1f, 1.35f)] private float safePulseVerticalScaleMultiplier = 1f;
+
     [SerializeField] private float wiggleSpeed = 10f;
     [SerializeField] private float wigglePixels = 3f;
     [SerializeField] private float landedFlashDuration = 0.32f;
@@ -319,9 +328,19 @@ public sealed class TrickOverlayUI : MonoBehaviour
         entry.root.name = "TrickEntry";
         entry.root.AddToClassList("trick-entry");
 
+        entry.root.style.transformOrigin = new TransformOrigin(
+    new Length(0f, LengthUnit.Percent),
+    new Length(100f, LengthUnit.Percent),
+    0f);
+
         entry.adjectiveLabel = new Label();
         entry.adjectiveLabel.name = "Lbl_TrickAdjective";
         entry.adjectiveLabel.AddToClassList("trick-adjective");
+
+        entry.adjectiveLabel.style.transformOrigin = new TransformOrigin(
+    new Length(0f, LengthUnit.Percent),
+    new Length(100f, LengthUnit.Percent),
+    0f);
 
         entry.scoreRow = new VisualElement();
         entry.scoreRow.name = "ScoreRow";
@@ -342,6 +361,11 @@ public sealed class TrickOverlayUI : MonoBehaviour
         entry.comboRow.name = "ComboRow";
         entry.comboRow.AddToClassList("trick-combo-row");
 
+        entry.comboRow.style.transformOrigin = new TransformOrigin(
+    new Length(0f, LengthUnit.Percent),
+    new Length(100f, LengthUnit.Percent),
+    0f);
+
         entry.strikeLine = new VisualElement();
         entry.strikeLine.name = "StrikeLine";
         entry.strikeLine.AddToClassList("trick-strike");
@@ -349,6 +373,11 @@ public sealed class TrickOverlayUI : MonoBehaviour
         entry.failedOverlayLabel = new Label();
         entry.failedOverlayLabel.name = "Lbl_FailedOverlay";
         entry.failedOverlayLabel.AddToClassList("trick-failed");
+
+        entry.failedOverlayLabel.style.transformOrigin = new TransformOrigin(
+    new Length(0f, LengthUnit.Percent),
+    new Length(100f, LengthUnit.Percent),
+    0f);
 
         entry.root.Add(entry.scoreRow);
         entry.root.Add(entry.adjectiveLabel);
@@ -422,6 +451,11 @@ public sealed class TrickOverlayUI : MonoBehaviour
             Label segLabel = new Label(seg.text);
             segLabel.AddToClassList("trick-segment");
 
+            segLabel.style.whiteSpace = WhiteSpace.Normal;
+            segLabel.style.maxWidth = Length.Percent(100f);
+            segLabel.style.flexShrink = 1f;
+            segLabel.style.overflow = Overflow.Hidden;
+
             ApplyFontToLabel(segLabel, style.mainFont);
             segLabel.style.fontSize = style.mainFontSize;
 
@@ -455,6 +489,9 @@ public sealed class TrickOverlayUI : MonoBehaviour
                 Label plus = new Label("+");
                 plus.AddToClassList("trick-plus");
 
+                plus.style.whiteSpace = WhiteSpace.NoWrap;
+                plus.style.flexShrink = 0f;
+
                 SegmentStyle plusStyle = plusSignsUseFocusedSegmentStyle && foundFocus ? focusedStyle : style;
                 ApplyFontToLabel(plus, plusStyle.mainFont);
                 plus.style.fontSize = Mathf.Max(plusStyle.mainFontSize * 0.58f, 16f);
@@ -481,6 +518,12 @@ public sealed class TrickOverlayUI : MonoBehaviour
 
                 entry.adjectiveLabel.text = entry.adjective.ToUpperInvariant();
                 entry.adjectiveLabel.style.display = DisplayStyle.Flex;
+
+                entry.adjectiveLabel.style.whiteSpace = WhiteSpace.Normal;
+                entry.adjectiveLabel.style.maxWidth = Length.Percent(100f);
+                entry.adjectiveLabel.style.flexShrink = 1f;
+                entry.adjectiveLabel.style.overflow = Overflow.Hidden;
+
                 ApplyFontToLabel(
                     entry.adjectiveLabel,
                     shareFocusedTrickFontWithAdjective && focusedStyle.mainFont != null
@@ -687,6 +730,7 @@ public sealed class TrickOverlayUI : MonoBehaviour
                     hash = hash * 31 + segments[i].id;
                     hash = hash * 31 + (segments[i].text?.GetHashCode() ?? 0);
                     hash = hash * 31 + segments[i].progressionTier;
+                    hash = hash * 31 + Mathf.RoundToInt(segments[i].severity01 * 1000f);
                     hash = hash * 31 + (int)segments[i].state;
                 }
             }
@@ -704,6 +748,13 @@ public sealed class TrickOverlayUI : MonoBehaviour
         {
             entry.root.style.translate = new Translate(0f, 0f);
             entry.root.style.scale = new Scale(Vector3.one);
+
+            if (entry.comboRow != null)
+                entry.comboRow.style.scale = new Scale(Vector3.one);
+
+            if (entry.adjectiveLabel != null)
+                entry.adjectiveLabel.style.scale = new Scale(Vector3.one);
+
             return;
         }
 
@@ -830,10 +881,19 @@ public sealed class TrickOverlayUI : MonoBehaviour
         }
 
         entry.root.style.translate = new Translate(
-            new Length(0f, LengthUnit.Pixel),
-            new Length(rootLift, LengthUnit.Pixel));
+    new Length(0f, LengthUnit.Pixel),
+    new Length(rootLift, LengthUnit.Pixel));
 
-        entry.root.style.scale = new Scale(new Vector3(rootScale, rootScale, 1f));
+        if (preventHorizontalPulseOverflow)
+        {
+            float xScale = Mathf.Max(1f, safePulseHorizontalScale);
+            float yScale = Mathf.Max(1f, rootScale * safePulseVerticalScaleMultiplier);
+            entry.root.style.scale = new Scale(new Vector3(xScale, yScale, 1f));
+        }
+        else
+        {
+            entry.root.style.scale = new Scale(new Vector3(rootScale, rootScale, 1f));
+        }
     }
 
     private void TrimOldestEntries()

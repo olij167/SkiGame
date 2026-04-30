@@ -50,7 +50,7 @@ namespace AssetInventory
             Dictionary<string, string> variables = new Dictionary<string, string>();
 
             // Lookup AssetFile in database and populate variables
-            AssetFile assetInfo = assetFileId > 0 ? DBAdapter.DB.Find<AssetFile>(assetFileId) : new AssetFile();
+            AssetFile assetInfo = (assetFileId > 0 ? DBAdapter.DB.Find<AssetFile>(assetFileId) : null) ?? new AssetFile();
             PopulateVariables(variables, assetInfo);
 
             string prompt = VariableResolver.ReplaceVariables(basePrompt, variables);

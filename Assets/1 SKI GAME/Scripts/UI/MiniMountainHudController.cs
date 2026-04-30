@@ -961,8 +961,8 @@ namespace SkiGame.Progression
             if (card == null || definition == null || objectiveDefinition == null || objectiveState == null)
                 return;
 
-            SetLabelText(card, "PrimaryKicker", string.IsNullOrWhiteSpace(definition.title) ? definition.SafeId : definition.title.Trim());
-            SetLabelText(card, "PrimaryTitle", string.IsNullOrWhiteSpace(objectiveDefinition.title) ? objectiveDefinition.BuildAuthoringSummary() : objectiveDefinition.title.Trim());
+            SetLabelText(card, "PrimaryKicker", QuestTextFormatter.FormatQuestTitle(definition, inputActions));
+            SetLabelText(card, "PrimaryTitle", QuestTextFormatter.FormatObjectiveTitle(definition, null, objectiveDefinition, inputActions));
             SetLabelText(card, "PrimaryGlyph", "◎");
 
             string promptText = BuildDetailedPrompt(objectiveDefinition);
@@ -1054,7 +1054,7 @@ namespace SkiGame.Progression
             if (card == null || definition == null || state == null)
                 return;
 
-            SetLabelText(card, "QuestSecondaryTitle", string.IsNullOrWhiteSpace(definition.title) ? definition.SafeId : definition.title);
+            SetLabelText(card, "QuestSecondaryTitle", QuestTextFormatter.FormatQuestTitle(definition, inputActions));
 
             string objectiveTitle = string.Empty;
             QuestObjectiveRuntimeState nextObjective = null;
@@ -1080,9 +1080,7 @@ namespace SkiGame.Progression
                     var candidate = stage.objectives[i];
                     if (candidate != null && string.Equals(candidate.id, nextObjective.objectiveId, StringComparison.OrdinalIgnoreCase))
                     {
-                        objectiveTitle = !string.IsNullOrWhiteSpace(candidate.title)
-                            ? candidate.title
-                            : candidate.BuildAuthoringSummary();
+                        objectiveTitle = QuestTextFormatter.FormatObjectiveTitle(definition, stage, candidate, inputActions);
                         break;
                     }
                 }
@@ -2078,7 +2076,7 @@ namespace SkiGame.Progression
                 var textBlock = new VisualElement();
                 textBlock.AddToClassList("quest-secondary-text-block");
 
-                var title = new Label(string.IsNullOrWhiteSpace(definition.title) ? definition.SafeId : definition.title);
+                var title = new Label(QuestTextFormatter.FormatQuestTitle(definition, inputActions));
                 title.name = "QuestSecondaryTitle";
                 title.AddToClassList("quest-tracker-card-title");
                 title.AddToClassList("quest-secondary-title");
@@ -2099,7 +2097,7 @@ namespace SkiGame.Progression
             }
             else
             {
-                var title = new Label(string.IsNullOrWhiteSpace(definition.title) ? definition.SafeId : definition.title);
+                var title = new Label(QuestTextFormatter.FormatQuestTitle(definition, inputActions));
                 title.AddToClassList("quest-tracker-card-title");
                 card.Add(title);
 
@@ -2131,11 +2129,7 @@ namespace SkiGame.Progression
                         }
                     }
 
-                    string objectiveTitle = objectiveDefinition != null && !string.IsNullOrWhiteSpace(objectiveDefinition.title)
-                        ? objectiveDefinition.title
-                        : objectiveDefinition != null
-                            ? objectiveDefinition.BuildAuthoringSummary()
-                            : string.Empty;
+                    string objectiveTitle = QuestTextFormatter.FormatObjectiveTitle(definition, stage, objectiveDefinition, inputActions);
 
                     if (!string.IsNullOrWhiteSpace(objectiveTitle))
                     {

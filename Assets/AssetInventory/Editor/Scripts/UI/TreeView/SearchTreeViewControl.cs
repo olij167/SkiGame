@@ -4,6 +4,13 @@ using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
 #pragma warning disable CS0618 // Type or member is obsolete
+#if UNITY_6000_2_OR_NEWER
+using BaseTreeViewItem = UnityEditor.IMGUI.Controls.TreeViewItem<int>;
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState<int>;
+#else
+using BaseTreeViewItem = UnityEditor.IMGUI.Controls.TreeViewItem;
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState;
+#endif
 
 namespace AssetInventory
 {
@@ -22,7 +29,7 @@ namespace AssetInventory
 
         private readonly List<int> _previousSelection = new List<int>();
 
-        public SearchTreeViewControl(TreeViewState state, MultiColumnHeader multiColumnHeader, TreeModel<AssetInfo> model, IndexUI indexUI) : base(state, multiColumnHeader, model)
+        public SearchTreeViewControl(BaseTreeViewState state, MultiColumnHeader multiColumnHeader, TreeModel<AssetInfo> model, IndexUI indexUI) : base(state, multiColumnHeader, model)
         {
             _indexUI = indexUI;
             showAlternatingRowBackgrounds = true;
@@ -52,9 +59,9 @@ namespace AssetInventory
             }
         }
 
-        protected override IList<TreeViewItem> BuildRows(TreeViewItem root)
+        protected override IList<BaseTreeViewItem> BuildRows(BaseTreeViewItem root)
         {
-            IList<TreeViewItem> rows = base.BuildRows(root);
+            IList<BaseTreeViewItem> rows = base.BuildRows(root);
             return rows;
         }
 
@@ -124,7 +131,7 @@ namespace AssetInventory
             }
         }
 
-        protected override bool CanMultiSelect(TreeViewItem item)
+        protected override bool CanMultiSelect(BaseTreeViewItem item)
         {
             return true;
         }

@@ -1,0 +1,84 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 301e6494375742f4b98ef78f27b43667, type: 3}
+  m_Name: Quest_Tutorial_Lesson_Expert
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.QuestDefinitionSO
+  id: tutorial.lesson.expert
+  title: Expert Ski Lesson
+  description: Work through races, rescue activities, and the mountain HUD tools
+    that support higher-level runs.
+  autoAccept: 0
+  tutorialQuest: 1
+  stages:
+  - id: tutorial.lesson.expert.stage1
+    title: Activity Readiness
+    description: Open the race kiosk and start a race to show you can work with
+      mountain activity systems.
+    objectives:
+    - id: tutorial.lesson.expert.race_kiosk
+      title: Open the race kiosk
+      description: Visit the race signup kiosk.
+      template: 80
+      uiTarget: 80
+    - id: tutorial.lesson.expert.race_started
+      title: Start a race
+      description: Begin a race from the kiosk flow.
+      template: 50
+      activityTarget: 0
+  - id: tutorial.lesson.expert.stage2
+    title: Race Completion
+    description: Finish the race cleanly before moving into rescue work.
+    objectives:
+    - id: tutorial.lesson.expert.race_completed
+      title: Complete a race
+      description: Cross the finish line on an active race.
+      template: 50
+      activityTarget: 10
+  - id: tutorial.lesson.expert.stage3
+    title: Rescue Basics
+    description: Take a rescue dispatch and complete it successfully.
+    objectives:
+    - id: tutorial.lesson.expert.rescue_started
+      title: Start a rescue
+      description: Accept a rescue activity.
+      template: 50
+      activityTarget: 20
+    - id: tutorial.lesson.expert.rescue_completed
+      title: Complete a rescue
+      description: Finish the rescue activity.
+      template: 50
+      activityTarget: 30
+  - id: tutorial.lesson.expert.stage4
+    title: HUD Utilities
+    description: Use the overlay tools that help you track work across the mountain.
+    objectives:
+    - id: tutorial.lesson.expert.overlay_opened
+      title: Open the overlay
+      description: Open the mountain HUD.
+      template: 80
+      uiTarget: 0
+    - id: tutorial.lesson.expert.progress_tabs
+      title: Check your progress tabs
+      description: Review either the Tasks or Quests tab while the overlay is open.
+      template: 90
+      compoundMode: 50
+      compoundObjectives:
+      - id: tutorial.lesson.expert.tasks_viewed
+        title: View Tasks
+        description: Open the Tasks tab.
+        template: 80
+        uiTarget: 30
+      - id: tutorial.lesson.expert.quests_viewed
+        title: View Quests
+        description: Open the Quests tab.
+        template: 80
+        uiTarget: 40

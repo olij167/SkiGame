@@ -18,6 +18,7 @@ namespace AssetInventory
             string fullLocation = spec.GetLocation(true);
             bool treatAsUnityProject = spec.detectUnityProjects && AssetUtils.IsUnityProject(fullLocation);
             string[] files = IOUtils.GetFiles(treatAsUnityProject ? Path.Combine(fullLocation, "Assets") : fullLocation, new[] {"package.json"}, SearchOption.AllDirectories).ToArray();
+            string[] excludedDirectories = StringUtils.Split(spec.excludedDirectories, new[] {';', ','});
 
             MainCount = files.Length;
             MainProgress = 1; // small hack to trigger UI update in the end
@@ -29,6 +30,7 @@ namespace AssetInventory
                 await AI.Cooldown.Do();
 
                 string package = files[i];
+                if (IsExcludedDirectory(package, excludedDirectories)) continue;
                 Asset asset = await HandlePackage(package);
                 if (asset == null) continue;
 

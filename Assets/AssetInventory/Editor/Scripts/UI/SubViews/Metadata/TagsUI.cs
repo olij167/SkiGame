@@ -5,6 +5,11 @@ using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 #pragma warning disable CS0618 // Type or member is obsolete
+#if UNITY_6000_2_OR_NEWER
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState<int>;
+#else
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState;
+#endif
 
 namespace AssetInventory
 {
@@ -16,7 +21,7 @@ namespace AssetInventory
         private SearchField _searchField;
 
         private TagTreeViewControl _treeView;
-        private TreeViewState _treeViewState;
+        private BaseTreeViewState _treeViewState;
         private TreeModel<TagTreeElement> _treeModel;
 
         public static TagsUI ShowWindow()
@@ -39,7 +44,7 @@ namespace AssetInventory
 
             if (_treeViewState == null)
             {
-                _treeViewState = new TreeViewState();
+                _treeViewState = new BaseTreeViewState();
             }
 
             _treeModel = new TreeModel<TagTreeElement>(treeData);

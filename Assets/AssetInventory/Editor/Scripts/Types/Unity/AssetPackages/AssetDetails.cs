@@ -17,7 +17,7 @@ namespace AssetInventory
         public string packageName;
         public string ownerId;
         public string ownerType;
-        public Dictionary<string, string> properties;
+        [NonSerialized] public Dictionary<string, string> properties;
         public string name;
         public string displayName;
         public string description;
@@ -40,7 +40,7 @@ namespace AssetInventory
         public string publishNotes;
         public string[] requirements;
         public string state;
-        public Dictionary<string, UploadInfo> uploads;
+        [NonSerialized] public Dictionary<string, UploadInfo> uploads;
         public string[] supportLinks;
 
         // runtime

@@ -12,6 +12,9 @@ public class InteractionAreaHeightNormalizer : MonoBehaviour
 
     private Renderer _renderer;
     private MaterialPropertyBlock _mpb;
+    private Mesh _lastAppliedMesh;
+    private Vector2 _lastAppliedHeightRange;
+    private bool _hasAppliedHeightRange;
 
     private void OnEnable()
     {
@@ -29,6 +32,12 @@ public class InteractionAreaHeightNormalizer : MonoBehaviour
             ApplyBounds();
     }
 
+    public void SetContinuousUpdates(bool enabled)
+    {
+        updateContinuously = enabled;
+        ApplyBounds();
+    }
+
     private void ApplyBounds()
     {
         if (_renderer == null)
@@ -43,11 +52,20 @@ public class InteractionAreaHeightNormalizer : MonoBehaviour
         if (meshFilter == null || meshFilter.sharedMesh == null || _renderer == null)
             return;
 
-        Bounds localBounds = meshFilter.sharedMesh.bounds;
+        Mesh sharedMesh = meshFilter.sharedMesh;
+        Bounds localBounds = sharedMesh.bounds;
+        Vector2 heightRange = new Vector2(localBounds.min.y, localBounds.max.y);
+
+        if (_hasAppliedHeightRange && _lastAppliedMesh == sharedMesh && _lastAppliedHeightRange == heightRange)
+            return;
 
         _renderer.GetPropertyBlock(_mpb);
-        _mpb.SetFloat(HeightMinID, localBounds.min.y);
-        _mpb.SetFloat(HeightMaxID, localBounds.max.y);
+        _mpb.SetFloat(HeightMinID, heightRange.x);
+        _mpb.SetFloat(HeightMaxID, heightRange.y);
         _renderer.SetPropertyBlock(_mpb);
+
+        _lastAppliedMesh = sharedMesh;
+        _lastAppliedHeightRange = heightRange;
+        _hasAppliedHeightRange = true;
     }
 }

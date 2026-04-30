@@ -5,9 +5,10 @@ public static class TrickPoseAuthoredStateFormatter
         SkiController.AerialPoseShape shape,
         TrickPoseVerticalOrientationRequirement vertical,
         TrickPoseHorizontalOrientationRequirement horizontal,
+        TrickPoseTravelFacingRequirement travelFacing,
         TrickPoseMotionStateRequirement motion)
     {
-        return $"{family} / {shape} | Pitch/Chest: {vertical} | Roll/Side: {horizontal} | Motion: {motion}";
+        return $"{family} / {shape} | Pitch/Chest: {vertical} | Roll/Side: {horizontal} | Travel: {travelFacing} | Motion: {motion}";
     }
 
     public static string Format(TrickPoseEntry entry)
@@ -16,10 +17,11 @@ public static class TrickPoseAuthoredStateFormatter
             return "(no entry)";
 
         return Format(
-            entry.requiredPoseFamily,
-            entry.requiredPoseShape,
+            entry.GetEffectiveRequiredPoseFamily(),
+            entry.GetEffectiveRequiredPoseShape(),
             entry.requiredVerticalOrientation,
             entry.requiredHorizontalOrientation,
+            entry.requiredTravelFacing,
             entry.requiredMotionState);
     }
 
@@ -33,6 +35,7 @@ public static class TrickPoseAuthoredStateFormatter
             slot.poseShape,
             slot.verticalOrientation,
             slot.horizontalOrientation,
+            slot.travelFacing,
             slot.motionState);
     }
 
@@ -46,6 +49,7 @@ public static class TrickPoseAuthoredStateFormatter
             context.poseShape,
             context.verticalOrientation,
             context.horizontalOrientation,
+            context.travelFacing,
             context.motionState);
     }
 }

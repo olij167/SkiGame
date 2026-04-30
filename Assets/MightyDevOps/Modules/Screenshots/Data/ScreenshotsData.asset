@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: df42ff21bbb2f314483c043bed230536, type: 3}
   m_Name: ScreenshotsData
-  m_EditorClassIdentifier: Assembly-CSharp::MightyScreenshots.ScreenshotsData
+  m_EditorClassIdentifier: 
   settings:
     borderColor: {r: 0, g: 0, b: 0, a: 0}
     hotkey1: 304

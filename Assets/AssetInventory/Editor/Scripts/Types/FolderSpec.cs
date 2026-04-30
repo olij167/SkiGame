@@ -15,6 +15,7 @@ namespace AssetInventory
         public string location;
         public string pattern;
         public string excludedExtensions;
+        public string excludedDirectories;
         public bool createPreviews = true;
         public bool removeOrphans = true;
         public bool attachToPackage = true;
@@ -45,6 +46,7 @@ namespace AssetInventory
             location = other.location;
             pattern = other.pattern;
             excludedExtensions = other.excludedExtensions;
+            excludedDirectories = other.excludedDirectories;
             createPreviews = other.createPreviews;
             removeOrphans = other.removeOrphans;
             attachToPackage = other.attachToPackage;

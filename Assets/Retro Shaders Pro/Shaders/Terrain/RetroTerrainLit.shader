@@ -299,7 +299,7 @@ Shader "Retro Shaders Pro/Terrain/Lit"
     Dependency "BaseMapShader" = "Hidden/Retro Shaders Pro/Terrain/Lit (Base Pass)"
     Dependency "BaseMapGenShader" = "Hidden/Retro Shaders Pro/Terrain/Lit (Basemap Gen)"
 
-    CustomEditor "RetroShadersPro.URP.RetroTerrainLitShaderGUI"
+    CustomEditor "RetroShadersPro.URP.Editor.RetroTerrainLitShaderGUI"
 
     Fallback "Hidden/Universal Render Pipeline/FallbackError"
 }

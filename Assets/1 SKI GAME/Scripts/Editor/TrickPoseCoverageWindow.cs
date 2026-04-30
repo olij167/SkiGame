@@ -205,6 +205,7 @@ public sealed class TrickPoseCoverageWindow : EditorWindow
             {
                 _atlasState.verticalFilter = (TrickPoseVerticalOrientationRequirement)EditorGUILayout.EnumPopup("Vertical", _atlasState.verticalFilter, GUILayout.Width(240f));
                 _atlasState.horizontalFilter = (TrickPoseHorizontalOrientationRequirement)EditorGUILayout.EnumPopup("Horizontal", _atlasState.horizontalFilter, GUILayout.Width(240f));
+                _atlasState.travelFacingFilter = (TrickPoseTravelFacingRequirement)EditorGUILayout.EnumPopup("Travel", _atlasState.travelFacingFilter, GUILayout.Width(220f));
                 _atlasState.motionFilter = (TrickPoseMotionStateRequirement)EditorGUILayout.EnumPopup("Motion", _atlasState.motionFilter, GUILayout.Width(220f));
             }
 
@@ -692,6 +693,9 @@ public sealed class TrickPoseCoverageWindow : EditorWindow
         }
 
         EditorGUILayout.LabelField("Intended Slots", (total - excluded).ToString());
+        EditorGUILayout.LabelField("Core Concrete Slots", CountConcreteCoreSlots().ToString());
+        EditorGUILayout.LabelField("Canonical Unique Slots", CountCanonicalCoreSlots().ToString());
+        EditorGUILayout.LabelField("Mirrored Duplicate Slots", CountMirroredDuplicateCoreSlots().ToString());
         EditorGUILayout.LabelField("Covered Cleanly", covered.ToString());
         EditorGUILayout.LabelField("Ambiguous", ambiguous.ToString());
         EditorGUILayout.LabelField("Suppressed", suppressed.ToString());
@@ -981,6 +985,13 @@ public sealed class TrickPoseCoverageWindow : EditorWindow
             return false;
         }
 
+        if (_atlasState.travelFacingFilter != TrickPoseTravelFacingRequirement.Any &&
+            entry.requiredTravelFacing != TrickPoseTravelFacingRequirement.Any &&
+            entry.requiredTravelFacing != _atlasState.travelFacingFilter)
+        {
+            return false;
+        }
+
         if (_atlasState.motionFilter != TrickPoseMotionStateRequirement.Any &&
             entry.requiredMotionState != TrickPoseMotionStateRequirement.Any &&
             entry.requiredMotionState != _atlasState.motionFilter)
@@ -1024,7 +1035,10 @@ public sealed class TrickPoseCoverageWindow : EditorWindow
 
     private static string DescribeEntryOrientation(TrickPoseEntry entry)
     {
-        return $"{DescribeEnum(entry.requiredVerticalOrientation, TrickPoseVerticalOrientationRequirement.Any)} / {DescribeEnum(entry.requiredHorizontalOrientation, TrickPoseHorizontalOrientationRequirement.Any)} / {DescribeEnum(entry.requiredMotionState, TrickPoseMotionStateRequirement.Any)}";
+        return $"{DescribeEnum(entry.requiredVerticalOrientation, TrickPoseVerticalOrientationRequirement.Any)} / " +
+               $"{DescribeEnum(entry.requiredHorizontalOrientation, TrickPoseHorizontalOrientationRequirement.Any)} / " +
+               $"{DescribeEnum(entry.requiredTravelFacing, TrickPoseTravelFacingRequirement.Any)} / " +
+               $"{DescribeEnum(entry.requiredMotionState, TrickPoseMotionStateRequirement.Any)}";
     }
 
     private static string DescribeBoolRequirement(TrickPoseBoolRequirement requirement)
@@ -1056,6 +1070,9 @@ public sealed class TrickPoseCoverageWindow : EditorWindow
             labels.Add("Vertical=Any");
         if (entry.requiredHorizontalOrientation == TrickPoseHorizontalOrientationRequirement.Any)
             labels.Add("Horizontal=Any");
+        if (entry.requiredTravelFacing == TrickPoseTravelFacingRequirement.Any)
+            labels.Add("Travel=Any");
+        
         if (entry.requiredMotionState == TrickPoseMotionStateRequirement.Any)
             labels.Add("Motion=Any");
         if (entry.requireAirborne == TrickPoseBoolRequirement.Ignore)
@@ -1334,6 +1351,80 @@ public sealed class TrickPoseCoverageWindow : EditorWindow
     private static float Percentage(int count, int total)
     {
         return total > 0 ? (float)count / total : 0f;
+    }
+
+    private int CountConcreteCoreSlots()
+    {
+        int count = 0;
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            TrickPoseCoverageSlot slot = _slots[i];
+            if (slot != null && !slot.excluded && slot.motionState == TrickPoseMotionStateRequirement.Any)
+                count++;
+        }
+
+        return count;
+    }
+
+    private int CountCanonicalCoreSlots()
+    {
+        HashSet<string> canonical = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            TrickPoseCoverageSlot slot = _slots[i];
+            if (slot == null || slot.excluded || slot.motionState != TrickPoseMotionStateRequirement.Any)
+                continue;
+
+            canonical.Add(BuildCanonicalCoreKey(slot));
+        }
+
+        return canonical.Count;
+    }
+
+    private int CountMirroredDuplicateCoreSlots()
+    {
+        return Mathf.Max(0, CountConcreteCoreSlots() - CountCanonicalCoreSlots());
+    }
+
+    private static string BuildCanonicalCoreKey(TrickPoseCoverageSlot slot)
+    {
+        TrickPoseHorizontalOrientationRequirement horizontal = slot.horizontalOrientation;
+        TrickPoseTravelFacingRequirement travelFacing = slot.travelFacing;
+        SkiController.AerialPoseFamily poseFamily = slot.poseFamily;
+
+        string direct = $"{slot.poseFamily}|{slot.poseShape}|{slot.verticalOrientation}|{horizontal}|{travelFacing}|{slot.motionState}";
+        string mirror = $"{Mirror(poseFamily)}|{slot.poseShape}|{slot.verticalOrientation}|{Mirror(horizontal)}|{Mirror(travelFacing)}|{slot.motionState}";
+        return string.CompareOrdinal(direct, mirror) <= 0 ? direct : mirror;
+    }
+
+    private static TrickPoseHorizontalOrientationRequirement Mirror(TrickPoseHorizontalOrientationRequirement requirement)
+    {
+        return requirement switch
+        {
+            TrickPoseHorizontalOrientationRequirement.LeftSide => TrickPoseHorizontalOrientationRequirement.RightSide,
+            TrickPoseHorizontalOrientationRequirement.RightSide => TrickPoseHorizontalOrientationRequirement.LeftSide,
+            _ => requirement
+        };
+    }
+
+    private static TrickPoseTravelFacingRequirement Mirror(TrickPoseTravelFacingRequirement requirement)
+    {
+        return requirement switch
+        {
+            TrickPoseTravelFacingRequirement.Left => TrickPoseTravelFacingRequirement.Right,
+            TrickPoseTravelFacingRequirement.Right => TrickPoseTravelFacingRequirement.Left,
+            _ => requirement
+        };
+    }
+
+    private static SkiController.AerialPoseFamily Mirror(SkiController.AerialPoseFamily family)
+    {
+        return family switch
+        {
+            SkiController.AerialPoseFamily.Left => SkiController.AerialPoseFamily.Right,
+            SkiController.AerialPoseFamily.Right => SkiController.AerialPoseFamily.Left,
+            _ => family
+        };
     }
 
     private static bool Contains(string haystack, string needle)

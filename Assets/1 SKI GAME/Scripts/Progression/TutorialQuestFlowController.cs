@@ -22,6 +22,7 @@ namespace SkiGame.Progression
         [SerializeField] private QuestDirector questDirector;
         [SerializeField] private QuestContextProvider questContext;
         [SerializeField] private QuestSignalBus signalBus;
+        [SerializeField] private bool autoAcceptTutorialQuests = false;
         [SerializeField] private bool requireLegacyLessonActive = false;
         [SerializeField, Range(0.1f, 2f)] private float evaluateIntervalSeconds = 0.25f;
 
@@ -57,6 +58,9 @@ namespace SkiGame.Progression
 
         private void EvaluateTutorialQuestAvailability()
         {
+            if (!autoAcceptTutorialQuests)
+                return;
+
             if (questDirector == null || questContext == null)
                 return;
 

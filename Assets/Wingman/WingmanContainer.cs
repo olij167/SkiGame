@@ -35,7 +35,7 @@ namespace WingmanInspector {
         private const float ToolBarButtonWidth = 30f;
 
         private const string InspectorListClassName = "unity-inspector-editors-list";
-        private const string InspectorScrolllassName = "unity-inspector-root-scrollview";
+        private const string InspectorScrollClassName = "unity-inspector-root-scrollview";
         private const string InspectorNoMultiEditClassName = "unity-inspector-no-multi-edit-warning";
         private const string MainWingmanName = "Wingman Main";
         private const string SearchResultsName = "SearchResults";
@@ -44,6 +44,10 @@ namespace WingmanInspector {
         private static Vector2 toolBarIconSize = new Vector2(12, 12);
         
         public readonly EditorWindow InspectorWindow;
+        public bool IsFocused;
+        
+        public enum ShortcutOperation { Nothing, ToggleComponent }
+        private ShortcutOperation activeShortcutToPerform;
         
         private Object inspectingObject;
         private VisualElement editorListVisual;
@@ -53,9 +57,9 @@ namespace WingmanInspector {
         private IMGUIContainer pinnedDividerContainer;
         private ScrollView inspectorScrollView;
 
-        private List<int> selectedCompIds;
-        private List<int> validCompIds = new List<int>();
-        private List<int> prevValidCompIds = new List<int>();
+        private List<long> selectedCompIds;
+        private List<long> validCompIds = new List<long>();
+        private List<long> prevValidCompIds = new List<long>();
         private Dictionary<int, Component> compFromIndex = new Dictionary<int, Component>();
         private HashSet<string> noMultiEditVisualElements = new HashSet<string>();
         
@@ -75,29 +79,29 @@ namespace WingmanInspector {
         private bool inspectorWasLocked;
         private PropertyInfo lockedPropertyInfo;
         
-        private bool multiSelectModifier;
-        private bool rangeSelectModifier;
         private int rangeModifierPivot;
 
         private const string DragAndDropKey = "WingmansDragAndDrop";
         private bool isDragging;
         private bool dragHandlerSet;
         private bool canStartDrag;
-        private int dragId;
+        private long dragId;
         private Vector2 initialDragMousePos;
-        
-        public WingmanContainer(EditorWindow window, Object obj) {
+
+        public WingmanContainer(EditorWindow window) {
             InspectorWindow = window;
             lockedPropertyInfo = window.GetType().GetProperty("isLocked", BindingFlags.Public | BindingFlags.Instance);
             inspectorWasLocked = InspectorIsLocked();
-            inspectorScrollView = (ScrollView)InspectorWindow.rootVisualElement.Q(null, InspectorScrolllassName);
-            SetContainerSelectionToObject(obj);
+            inspectorScrollView = (ScrollView)InspectorWindow.rootVisualElement.Q(null, InspectorScrollClassName);
+            SetContainerSelectionToObject(inspectorWasLocked ? PersistentData.GetRestoredObjectForInspectorWindow(window) : Selection.activeObject);
         }
-
-        public bool InspectorIsLocked() {
-            return (bool)lockedPropertyInfo.GetValue(InspectorWindow);
+        
+        public void PerformShortcutOperation(ShortcutOperation shortcut) {
+            activeShortcutToPerform = shortcut;
+            // Force update, otherwise we wait for mouse movement to trigger gui handler
+            miniMapGuiContainer?.MarkDirtyRepaint();
         }
-
+        
         public void RemoveGui() {
             if (!InspectingObjectIsValid()) return;
 
@@ -154,25 +158,20 @@ namespace WingmanInspector {
         }
 
         public void Update() {
+            CheckForLockStatusChange();
+            
             if (!InspectingObjectIsValid()) return;
-
             if (Settings.TransOnlyDisable && OnlyHasTransform()) return;
 
             editorListVisual ??= InspectorWindow.rootVisualElement.Q(null, InspectorListClassName);
-
             if (editorListVisual == null) return;
-
+            
             if (performSearchFlag && EditorApplication.timeSinceStartup - timeOfLastSearchUpdate > TimeAfterLastKeyPressToSearch) {
                 PerformSearch();
                 performSearchFlag = false;
                 searchResultsGuiContainer?.MarkDirtyRepaint();
             }
             
-            if (WasJustUnlocked() && Selection.activeObject != inspectingObject) {
-                SetContainerSelectionToObject(Selection.activeObject); 
-                UpdateComponentVisibility();
-            }
-
             if (!ShowingWingmanGui() && editorListVisual.childCount > MiniMapIndex()) {
                 float miniMapHeight = CalculateMiniMapHeight();
                 
@@ -183,11 +182,6 @@ namespace WingmanInspector {
                 miniMapGuiContainer.style.minHeight = miniMapHeight; 
                 miniMapGuiContainer.onGUIHandler = DrawWingmanGui;
                 Margin(miniMapGuiContainer.style, MiniMapMargin);
-
-                // In Unity 6.2 when double clicking to inspect a prefab, the inspector doesn't always redraw so there might be a leftover
-                // wingman container in the wrong position, so we just remove the prior existing one before inserting the new one if thats the case
-                VisualElement duplicateContainer = editorListVisual.hierarchy.Children().FirstOrDefault(child => child.name == MainWingmanName);
-                duplicateContainer?.RemoveFromHierarchy();
                 
                 editorListVisual.Insert(MiniMapIndex(), miniMapGuiContainer);
                 UpdateComponentVisibility();
@@ -213,13 +207,33 @@ namespace WingmanInspector {
             
             if (showingSearchResults && !HasSearchResults()) {
                 RemoveSearchGui();
-                ToggleAllComonentVisibility(true);
+                ToggleAllComponentVisibility(true);
             }
             
 #if UNITY_2021
             Fix2021EditorMargins();
 #endif
         }
+        
+#if UNITY_6000_4_OR_NEWER
+
+        public void OnHierarchyGUI() {
+            if (DragAndDrop.GetGenericData(DragAndDropKey) is not bool initiatedDrag || !initiatedDrag) return;
+
+            if (Event.current.type == EventType.DragUpdated && !dragHandlerSet) {
+                DragAndDrop.AddDropHandlerV2(HierarchyDropHandler);
+                dragHandlerSet = true;
+                Event.current.Use();
+            }
+
+            if (Event.current.type == EventType.DragExited && dragHandlerSet) {
+                DragAndDrop.RemoveDropHandlerV2(HierarchyDropHandler);
+                dragHandlerSet = false;
+                Event.current.Use();
+            }
+        }
+        
+#else
 
         public void OnHierarchyGUI() {
             if (DragAndDrop.GetGenericData(DragAndDropKey) is not bool initiatedDrag || !initiatedDrag) return;
@@ -236,12 +250,15 @@ namespace WingmanInspector {
                 Event.current.Use();
             }
         }
+        
+#endif
 
         private void DrawWingmanGui() {
+            Rect reservedRect = miniMapGuiContainer.contentRect;
+            IsFocused = reservedRect.Contains(Event.current.mousePosition);
+
             if (!InspectingObjectIsValid()) return;
             
-            Rect reservedRect = miniMapGuiContainer.contentRect;
-
             bool showCopyPasteOnly = Settings.TransOnlyKeepCopyPaste && OnlyHasTransform();
             if (!Settings.HideToolbar || showCopyPasteOnly) {
                 DrawToolBar(reservedRect, showCopyPasteOnly);
@@ -259,10 +276,9 @@ namespace WingmanInspector {
             validCompIds.Clear();
             for (int i = 0; i < comps.Count; i++) {
                 compFromIndex.Add(i, comps[i]);
-                validCompIds.Add(comps[i].GetInstanceID());
+                validCompIds.Add(comps[i].GetId());
             }
             
-
             // Check for resizing the container
             bool resizeRequired = newCompCount != lastCompCount || newRowCount != lastRowCount;
             if (resizeRequired) {
@@ -291,22 +307,16 @@ namespace WingmanInspector {
             GetScrollViewDimensions(reservedRect, newRowCount, out Rect innerScrollRect, out Rect outerScrollRect);
             List<Rect> buttonPlacements = GetButtonPlacements(innerScrollRect, comps, buttonWidths);
 
-            if (Event.current.type is EventType.MouseDown && Event.current.button is 1) {
-                ShowContextMenu(comps, buttonPlacements);
-                Event.current.Use(); // Eat event so right clicking doesn't toggle component
-            }
+            CheckToShowContextMenu(comps, buttonPlacements);
+            CheckForShortcutOperations(comps, buttonPlacements);
             
             if (showCopyPasteOnly) return;
-
-            // Update Modifiers
-            EventModifiers modifiers = Event.current.modifiers;
-            multiSelectModifier = modifiers.HasFlag(EventModifiers.Control);
-            rangeSelectModifier = modifiers.HasFlag(EventModifiers.Shift);
             
             UpdateDragAndDrop();
-
+            
             EditorGUI.BeginChangeCheck();
             DrawPreviewScrollView(buttonPlacements, comps, innerScrollRect, outerScrollRect);
+            
             if (EditorGUI.EndChangeCheck() || compsGotAdjusted) {
                 UpdateComponentVisibility();
             }
@@ -329,16 +339,20 @@ namespace WingmanInspector {
                 
                 bool draggingAll = dragId == allButtonId && !prevAllButtonToggle;
 
-                if (DrawToggleButton(allButtonRect, AllIcon, AllButtonName, prevAllButtonToggle, draggingAll)) {
+                if (DrawToggleButton(allButtonRect, AllIcon, AllButtonName, prevAllButtonToggle, true, draggingAll)) {
                     selectedCompIds.Clear();
                     rangeModifierPivot = 0;
                 }
             }
             
+            EventModifiers modifiers = Event.current.modifiers;
+            bool multiSelectModifier = modifiers.HasFlag(EventModifiers.Control);
+            bool rangeSelectModifier = modifiers.HasFlag(EventModifiers.Shift);
+            
             for (int i = 0; i < comps.Count; i++) {
                 Component comp = comps[i];
                 Rect buttonRect = placementRects[i + 1];
-                int compId = comp.GetInstanceID();
+                long compId = comp.GetId();
                 
                 if (buttonRect.Contains(Event.current.mousePosition)) {
                     if (Event.current.type == EventType.MouseDown && Event.current.button == 0) {
@@ -349,17 +363,23 @@ namespace WingmanInspector {
                 
                 string compName = comp.GetType().Name;
                 GUIContent content = EditorGUIUtility.ObjectContent(comp, comp.GetType());
+                
+                bool displayCompAsEnabled = true;
+                if (ComponentIsTogglable(comp)) {
+                    displayCompAsEnabled = GetComponentEnabledState(comp);
+                }
+                
                 bool prevToggle = selectedCompIds.Contains(compId);
                 bool draggingButton = compId == dragId && !prevToggle;
                 
-                bool toggled = DrawToggleButton(buttonRect, content.image, compName, prevToggle, draggingButton);
+                bool toggled = DrawToggleButton(buttonRect, content.image, compName, prevToggle, displayCompAsEnabled, draggingButton);
                 
                 if (toggled && !prevToggle) {
-                    OnButtonToggleOn(i);
+                    OnButtonToggleOn(i, multiSelectModifier, rangeSelectModifier);
                     ClearSearchOnComponentButtonPress();
                 }
                 else if (!toggled && prevToggle) {
-                    OnButtonToggleOff(i);
+                    OnButtonToggleOff(i, multiSelectModifier, rangeSelectModifier);
                     ClearSearchOnComponentButtonPress();
                 }
             }
@@ -413,11 +433,11 @@ namespace WingmanInspector {
                 searchResults.Clear();
                 GUI.changed = true;
                 RemoveSearchGui();
-                ToggleAllComonentVisibility(true);
+                ToggleAllComponentVisibility(true);
             }
         }
 
-        private bool DrawToggleButton(Rect placement, Texture icon, string label, bool toggled, bool beingDragged) {
+        private bool DrawToggleButton(Rect placement, Texture icon, string label, bool toggled, bool compEnabled, bool beingDragged) {
             if (!toggled && isDragging && beingDragged) {
                 toggled = true;
                 GUI.changed = true;
@@ -426,8 +446,18 @@ namespace WingmanInspector {
                 toggled = !toggled;
             }
 
+            GUIStyle style = GUI.skin.button;
+            Color restoreGuiColor = GUI.color;
+            
+            if (!compEnabled) {
+                Color dimColor = new Color(0.67f, 0.67f, 0.67f, 1f);
+                GUI.color = dimColor; // This tints everything drawn next 
+            }
+            
             int uniqueControlId = GUIUtility.GetControlID(FocusType.Passive);
-            GUI.Toggle(placement, uniqueControlId, toggled, GUIContent.none, GUI.skin.button);
+            GUI.Toggle(placement, uniqueControlId, toggled, GUIContent.none, style);
+            
+            GUI.color = restoreGuiColor;
             
             Vector2 iconPos = new Vector2(placement.position.x + BoldLabelStyle.margin.right, 0f);
             Rect iconRect = CenterRectVertically(placement, new(iconPos, iconSize));
@@ -442,8 +472,8 @@ namespace WingmanInspector {
             return toggled;
         }
         
-        private void OnButtonToggleOn(int compIndex) {
-            int compId = ComponentIdFromIndex(compIndex);
+        private void OnButtonToggleOn(int compIndex, bool multiSelectModifier, bool rangeSelectModifier) {
+            long compId = ComponentIdFromIndex(compIndex);
             
             if (multiSelectModifier && !rangeSelectModifier) {
                 rangeModifierPivot = compIndex;
@@ -467,8 +497,8 @@ namespace WingmanInspector {
             rangeModifierPivot = compIndex;
         }
         
-        private void OnButtonToggleOff(int compIndex) {
-            int compId = ComponentIdFromIndex(compIndex);
+        private void OnButtonToggleOff(int compIndex, bool multiSelectModifier, bool rangeSelectModifier) {
+            long compId = ComponentIdFromIndex(compIndex);
             
             if (rangeSelectModifier && selectedCompIds.Count <= 1) return;
             
@@ -518,7 +548,7 @@ namespace WingmanInspector {
         private void AddRangeToSelected(int compIndex) {
             (int min, int max) = rangeModifierPivot < compIndex ? (rangeModifierPivot, compIndex) : (compIndex, rangeModifierPivot);
             for (int i = min; i <= max; i++) {
-                int id = ComponentIdFromIndex(i);
+                long id = ComponentIdFromIndex(i);
                 if (!selectedCompIds.Contains(id)) {
                     selectedCompIds.Add(id);
                 }
@@ -607,7 +637,7 @@ namespace WingmanInspector {
             Rect iconRect = placement;
             iconRect.size = toolBarIconSize;
             iconRect = CenterRectVertically(placement, iconRect);
-            iconRect = CenterRectHorizonally(placement, iconRect);
+            iconRect = CenterRectHorizontally(placement, iconRect);
 
             if (EditorGUIUtility.isProSkin) {
                 Rect uvRect = copy ? new Rect(0f, 0.5f, 0.5f, 0.5f) : new Rect(0f, 0f, 0.5f, 0.5f);
@@ -619,12 +649,6 @@ namespace WingmanInspector {
             }
 
             return pressed;
-        }
-        
-        private void UpdateModifiers() {
-            EventModifiers modifiers = Event.current.modifiers;
-            multiSelectModifier = modifiers.HasFlag(EventModifiers.Control);
-            rangeSelectModifier = modifiers.HasFlag(EventModifiers.Shift);
         }
         
         private List<Component> GetComponentsFromSelection() {
@@ -639,7 +663,7 @@ namespace WingmanInspector {
             }
             
             List<Component> selComps = new List<Component>(selectedCompIds.Count);
-            foreach (int compId in selectedCompIds) {
+            foreach (long compId in selectedCompIds) {
                 selComps.Add(ComponentFromId(compId));
             }
             return selComps;
@@ -692,7 +716,7 @@ namespace WingmanInspector {
             const int separatorBonus = 10;      
             const int camelBonus = 10;           
 
-            const int leadingLetterPenalty = -3;  
+            const int leadingLetterPenalty = -5;  
             const int maxLeadingLetterPenalty = -9;
             const int unmatchedLetterPenalty = -1;
 
@@ -784,12 +808,22 @@ namespace WingmanInspector {
             return patternIdx == patternLength && score >= idealScore;
         }
 
+#if UNITY_6000_4_OR_NEWER
+        private DragAndDropVisualMode HierarchyDropHandler(EntityId dropTargetEntityId, HierarchyDropFlags dropMode, Transform parentForDraggedObjects, bool perform) {
+            Object dropTargetObject = EditorUtility.EntityIdToObject(dropTargetEntityId);
+            return SharedHierarchyDropHandler(dropTargetObject, dropMode, parentForDraggedObjects, perform);
+        }
+#else
         private DragAndDropVisualMode HierarchyDropHandler(int dropTargetInstanceID, HierarchyDropFlags dropMode, Transform parentForDraggedObjects, bool perform) {
-            const int hierarchyId = -1314;
-            
-            bool copying = dropMode == HierarchyDropFlags.DropUpon && dropTargetInstanceID != hierarchyId;
-            bool creating = dropTargetInstanceID == hierarchyId || dropMode == HierarchyDropFlags.DropBetween || dropMode == HierarchyDropFlags.None;
+            Object dropTargetObject = EditorUtility.InstanceIDToObject(dropTargetInstanceID);
+            return SharedHierarchyDropHandler(dropTargetObject, dropMode, parentForDraggedObjects, perform);
+        }
+#endif
 
+        private DragAndDropVisualMode SharedHierarchyDropHandler(Object dropTargetObject, HierarchyDropFlags dropMode, Transform parentForDraggedObjects, bool perform) {
+            bool copying = dropMode == HierarchyDropFlags.DropUpon;
+            bool creating = dropMode == HierarchyDropFlags.DropBetween || dropMode == HierarchyDropFlags.None;
+            
             DragAndDropVisualMode visualMode = DragAndDropVisualMode.None;
             if (copying) {
                 visualMode = DragAndDropVisualMode.Copy;
@@ -807,7 +841,7 @@ namespace WingmanInspector {
                 return visualMode;
             }
             
-            if (copying && EditorUtility.InstanceIDToObject(dropTargetInstanceID) is GameObject gameObject) {
+            if (copying && dropTargetObject is GameObject gameObject) {
                 GroupUndoAction("Copy Components", () => gameObject.PasteComponents(comps));
                 EditorApplication.delayCall += () => Selection.activeObject = gameObject;
                 return visualMode;
@@ -856,41 +890,7 @@ namespace WingmanInspector {
             }
         }
 
-        private void CheckForComponentListUpdate(out List<Component> comps, out bool orderOfCompsChanged) {
-            comps = GetAllVisibleComponents();
-            
-            compFromIndex.Clear();
-            validCompIds.Clear();
-            for (int i = 0; i < comps.Count; i++) {
-                compFromIndex.Add(i, comps[i]);
-                validCompIds.Add(comps[i].GetInstanceID());
-            }
-            
-            int newCompCount = comps.Count;
-            if (newCompCount != lastCompCount) {
-                ResizeGuiContainer();
-            }
-
-            orderOfCompsChanged = !CompareComponentIds(validCompIds, prevValidCompIds);
-            
-            if (newCompCount < lastCompCount) {
-                for (int i = selectedCompIds.Count - 1; i >= 0; i--) {
-                    if (!validCompIds.Contains(selectedCompIds[i])) {
-                        selectedCompIds.RemoveAt(i);
-                    }
-                }
-                orderOfCompsChanged = true;
-            }
-            
-            prevValidCompIds.Clear();
-            foreach (int validCompId in validCompIds) {
-                prevValidCompIds.Add(validCompId);
-            }
-            
-            lastCompCount = newCompCount;
-        }
-
-        private bool CompareComponentIds(List<int> list0, List<int> list1) {
+        private bool CompareComponentIds(List<long> list0, List<long> list1) {
             if (list0.Count != list1.Count) {
                 return false;
             }
@@ -914,7 +914,7 @@ namespace WingmanInspector {
         private void DrawSearchResultsGui() {
             if (!HasSearchResults() || SearchResultsAreStale() || !InspectingObjectIsValid()) return;
             
-            ToggleAllComonentVisibility(false);
+            ToggleAllComponentVisibility(false);
             
             foreach (ComponentSearchResults result in searchResults) {
                 EditorGUILayout.InspectorTitlebar(true, result.Comp, false);
@@ -935,23 +935,23 @@ namespace WingmanInspector {
         
         private void UpdateComponentVisibility() {
             int startIndex = ComponentStartIndex();
-            int skipedCount = 0;
+            int skippedCount = 0;
             
             for (int i = startIndex; i < editorListVisual.childCount; i++) {
                 if (noMultiEditVisualElements.Contains(editorListVisual[i].name)) {
-                    skipedCount++;
+                    skippedCount++;
                     continue;
                 }
                 
-                int compIndex = i - startIndex - skipedCount;
+                int compIndex = i - startIndex - skippedCount;
                 if (compFromIndex.TryGetValue(compIndex, out Component comp)) {
-                    bool showComp = selectedCompIds.Count <= 0 || selectedCompIds.Contains(comp.GetInstanceID());
+                    bool showComp = selectedCompIds.Count <= 0 || selectedCompIds.Contains(comp.GetId());
                     editorListVisual[i].style.display = showComp ? DisplayStyle.Flex : DisplayStyle.None;
                 }
             }
         }
 
-        private void ToggleAllComonentVisibility(bool show) {
+        private void ToggleAllComponentVisibility(bool show) {
             int startIndex = ShowingSearchResults() ? SearchResultsIndex() + 1 : MiniMapIndex() + 1;
             for (int i = startIndex; i < editorListVisual.childCount; i++) {
                 editorListVisual[i].style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
@@ -960,11 +960,21 @@ namespace WingmanInspector {
 
         private bool ShowingWingmanGui() {
             int insertIndex = MiniMapIndex();
-
+            
             if (insertIndex >= editorListVisual.childCount) {
                 return false;
             }
 
+            VisualElement duplicateContainer = editorListVisual.hierarchy.Children().FirstOrDefault(child => child.name == MainWingmanName);
+            if (duplicateContainer != null) {
+                bool inCorrectPosition = editorListVisual.hierarchy.IndexOf(duplicateContainer) == insertIndex;
+                if (inCorrectPosition) {
+                    return true;
+                }
+                duplicateContainer.RemoveFromHierarchy();
+                return false;
+            }
+            
             VisualElement potentialMiniMap = editorListVisual.hierarchy.ElementAt(insertIndex);
             return potentialMiniMap != null && potentialMiniMap.name == MainWingmanName;
         }
@@ -1054,7 +1064,7 @@ namespace WingmanInspector {
             return child;
         }
 
-        private Rect CenterRectHorizonally(Rect parent, Rect child) {
+        private Rect CenterRectHorizontally(Rect parent, Rect child) {
             float xDiff = parent.width - child.width;
             float xPos = parent.position.x + (xDiff / 2f);
             child.position = new Vector2(xPos, child.position.y);
@@ -1135,11 +1145,11 @@ namespace WingmanInspector {
             return comp is ParticleSystemRenderer;
         }
 
-        private int ComponentIdFromIndex(int index) {
-            return compFromIndex[index].GetInstanceID();
+        private long ComponentIdFromIndex(int index) {
+            return compFromIndex[index].GetId();
         }
 
-        private Component ComponentFromId(int compId) {
+        private Component ComponentFromId(long compId) {
             int index = 0;
             for (int i = 0; i < validCompIds.Count; i++) {
                 if (validCompIds[i] == compId) {
@@ -1152,12 +1162,25 @@ namespace WingmanInspector {
         private bool AllIsSelected() {
             return selectedCompIds.Count == 0;
         }
-        
-        private bool WasJustUnlocked() {
+
+        public bool InspectorIsLocked() {
+            return (bool)lockedPropertyInfo.GetValue(InspectorWindow);
+        }
+
+        private void CheckForLockStatusChange() {
             bool currentlyLocked = InspectorIsLocked();
-            bool res = inspectorWasLocked && !currentlyLocked;
+
+            bool wasJustLocked = currentlyLocked && !inspectorWasLocked;
+            if (wasJustLocked) {
+                PersistentData.SetDataForLockedInspector(InspectorWindow, inspectingObject);
+            }
+            
+            bool wasJustUnlocked = !currentlyLocked && inspectorWasLocked;
+            if (wasJustUnlocked && Selection.activeObject != inspectingObject) {
+                SetContainerSelectionToObject(Selection.activeObject); 
+            }
+            
             inspectorWasLocked = currentlyLocked;
-            return res;
         }
 
         private int MiniMapIndex() {
@@ -1231,19 +1254,19 @@ namespace WingmanInspector {
                 noMultiEditVisualElements.Add(editorListVisual[i].name);
             }
         }
-
-        private void ShowContextMenu(List<Component> comps, List<Rect> buttonRects) {
+        
+        private void CheckToShowContextMenu(List<Component> comps, List<Rect> buttonRects) {
+            bool mouseDown = Event.current.type is EventType.MouseDown;
+            bool rightClicking = Event.current.button == 1;
+            if (!mouseDown || !rightClicking) return;
+            
+            Event.current.Use(); // Eat event so right clicking doesn't toggle component
+            
             GenericMenu menu = new GenericMenu();
             menu.AddItem(new GUIContent("Copy Selection"), false, CopySelectedToClipboard);
             menu.AddItem(new GUIContent("Paste Clipboard"), false, PasteFromClipboard);
             
-            Component compUnderCursor = null;
-            for (int i = 1; i < buttonRects.Count; i++) {
-                if (buttonRects[i].Contains(Event.current.mousePosition + miniMapScrollPos)) {
-                    compUnderCursor = comps[i - 1];
-                    break;
-                }
-            }
+            Component compUnderCursor = GetComponentUnderCursor(comps, buttonRects);
 
             if (compUnderCursor) {
                 menu.AddSeparator("");
@@ -1274,6 +1297,15 @@ namespace WingmanInspector {
             menu.ShowAsContext();
         }
 
+        private Component GetComponentUnderCursor(List<Component> comps, List<Rect> buttonRects) {
+            for (int i = 1; i < buttonRects.Count; i++) {
+                if (buttonRects[i].Contains(Event.current.mousePosition + miniMapScrollPos)) {
+                    return comps[i - 1];
+                }
+            }
+            return null;
+        }
+
         private void RemoveComponentTypeFromSelection(Type compType) {
             GroupUndoAction("Remove Component", () => {
                 foreach (GameObject gameObject in Selection.gameObjects) {
@@ -1297,6 +1329,38 @@ namespace WingmanInspector {
             foreach (GameObject gameObject in Selection.gameObjects) {
                 gameObject.PasteComponents(PersistentData.Clipboard.Copies);
             }
+        }
+        
+        private void CheckForShortcutOperations(List<Component> comps, List<Rect> buttonRects) {
+            if (activeShortcutToPerform == ShortcutOperation.ToggleComponent) {
+                Component compUnderCursor = GetComponentUnderCursor(comps, buttonRects);
+                if (compUnderCursor && ComponentIsTogglable(compUnderCursor)) {
+                    ToggleComponent(compUnderCursor);
+                }
+            }
+            activeShortcutToPerform = ShortcutOperation.Nothing;
+        }
+        
+        private bool ComponentIsTogglable(Component comp) {
+            return comp is Behaviour or Renderer or Collider;
+        }
+        
+        private bool GetComponentEnabledState(Component comp) {
+            return comp switch {
+                Behaviour b => b.enabled,
+                Renderer r  => r.enabled,
+                Collider c  => c.enabled,
+                _           => true,
+            };
+        }
+        
+        private void ToggleComponent(Component comp) {
+            _ = comp switch {
+                Behaviour b => b.enabled = !b.enabled,
+                Renderer r  => r.enabled = !r.enabled,
+                Collider c  => c.enabled = !c.enabled,
+                _           => false,
+            };
         }
 
         private Rect ShiftRectStartVertically(Rect rect, float length) { 

@@ -6,6 +6,9 @@ namespace SkiGame.Runs
     [ExecuteAlways]
     public sealed class RunFlagClothTint : MonoBehaviour
     {
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int ColorId = Shader.PropertyToID("_Color");
+
         [SerializeField] private Color tint = Color.white;
 
         // Optional cache to avoid repeated GetComponent calls.
@@ -72,8 +75,8 @@ namespace SkiGame.Runs
             cachedRenderer.GetPropertyBlock(_mpb);
 
             // Support common shader property names.
-            _mpb.SetColor("_BaseColor", tint);
-            _mpb.SetColor("_Color", tint);
+            _mpb.SetColor(BaseColorId, tint);
+            _mpb.SetColor(ColorId, tint);
 
             cachedRenderer.SetPropertyBlock(_mpb);
         }

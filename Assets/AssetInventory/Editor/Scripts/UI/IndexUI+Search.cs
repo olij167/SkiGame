@@ -18,6 +18,11 @@ using UnityEditor.PackageManager;
 using UnityEngine;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
+#if UNITY_6000_2_OR_NEWER
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState<int>;
+#else
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState;
+#endif
 #pragma warning disable CS0618 // Type or member is obsolete
 
 namespace AssetInventory
@@ -106,7 +111,7 @@ namespace AssetInventory
                     mch.columnOrderChanged += OnSearchTreeColumnOrderChanged;
                     mch.ResizeToFit();
 
-                    _searchTreeView = new SearchTreeViewControl(new TreeViewState(), mch, _searchTreeModel, this);
+                    _searchTreeView = new SearchTreeViewControl(new BaseTreeViewState(), mch, _searchTreeModel, this);
                     _searchTreeView.OnSelectionChanged += OnSearchTreeSelectionChanged;
                     _searchTreeView.OnDoubleClickedItem += OnSearchTreeDoubleClick;
                     _searchTreeView.OnContextMenuPopulate += PopulateSearchTreeContextMenu;
@@ -3224,7 +3229,7 @@ namespace AssetInventory
         }
 #endif
 
-        private DragAndDropVisualMode DoOnHierarchyDrop(int dropTargetInstanceID, Transform parentForDraggedObjects, bool perform)
+        private DragAndDropVisualMode DoOnHierarchyDrop(Object dropTarget, Transform parentForDraggedObjects, bool perform)
         {
             List<AssetInfo> infos = (List<AssetInfo>)DragAndDrop.GetGenericData("AssetInfo");
             if (infos == null || infos.Count == 0)
@@ -3239,10 +3244,9 @@ namespace AssetInventory
 
                 // Use provided parent, or try to get GameObject from drop target
                 Transform finalParent = parentForDraggedObjects;
-                if (finalParent == null && dropTargetInstanceID != 0)
+                if (finalParent == null && dropTarget != null)
                 {
-                    Object targetObj = EditorUtility.InstanceIDToObject(dropTargetInstanceID);
-                    GameObject targetGameObject = targetObj as GameObject;
+                    GameObject targetGameObject = dropTarget as GameObject;
                     if (targetGameObject != null && targetGameObject.scene.IsValid())
                     {
                         finalParent = targetGameObject.transform;
@@ -3271,8 +3275,12 @@ namespace AssetInventory
 #if UNITY_6000_3_OR_NEWER
         private DragAndDropVisualMode OnHierarchyDrop(EntityId dropTargetEntityId, HierarchyDropFlags dropMode, Transform parentForDraggedObjects, bool perform)
         {
-            int instanceID = dropTargetEntityId.IsValid() ? dropTargetEntityId.GetHashCode() : 0;
-            return DoOnHierarchyDrop(instanceID, parentForDraggedObjects, perform);
+#if UNITY_6000_5_OR_NEWER
+            Object dropTarget = dropTargetEntityId.IsValid() ? EditorUtility.EntityIdToObject(dropTargetEntityId) : null;
+#else
+            Object dropTarget = dropTargetEntityId.IsValid() ? EditorUtility.InstanceIDToObject(dropTargetEntityId.GetHashCode()) : null;
+#endif
+            return DoOnHierarchyDrop(dropTarget, parentForDraggedObjects, perform);
         }
 
         private DragAndDropVisualMode OnProjectBrowserDrop(EntityId dragEntityId, string dropUponPath, bool perform)
@@ -3372,9 +3380,11 @@ namespace AssetInventory
             return DragAndDropVisualMode.Copy;
         }
 
+#if !UNITY_6000_3_OR_NEWER
         private DragAndDropVisualMode OnHierarchyDrop(int dropTargetInstanceID, HierarchyDropFlags dropMode, Transform parentForDraggedObjects, bool perform)
         {
-            return DoOnHierarchyDrop(dropTargetInstanceID, parentForDraggedObjects, perform);
+            Object dropTarget = dropTargetInstanceID != 0 ? EditorUtility.InstanceIDToObject(dropTargetInstanceID) : null;
+            return DoOnHierarchyDrop(dropTarget, parentForDraggedObjects, perform);
         }
 
         private DragAndDropVisualMode OnProjectBrowserDrop(int dragInstanceId, string dropUponPath, bool perform)
@@ -3382,6 +3392,7 @@ namespace AssetInventory
             if (perform) StopDragDrop();
             return DragAndDropVisualMode.None;
         }
+#endif
 
         private DragAndDropVisualMode OnInspectorDrop(Object[] targets, bool perform)
         {

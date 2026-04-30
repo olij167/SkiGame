@@ -11,7 +11,6 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 using static Mighty.MightyCoreData;
 using UnityEditor.Build;
-using Unity.VisualScripting;
 
 
 namespace Mighty
@@ -359,6 +358,7 @@ namespace Mighty
             isInit = false;
             Init();
         }
+
 
 
         private static SceneView cachedSceneView;

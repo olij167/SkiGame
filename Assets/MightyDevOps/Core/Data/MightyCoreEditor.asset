@@ -11,9 +11,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5370d308d4153494f98fc006d63673dc, type: 3}
   m_Name: MightyCoreEditor
-  m_EditorClassIdentifier: Assembly-CSharp::Mighty.MightyCoreData
+  m_EditorClassIdentifier: 
   mapRefreshSeconds: 5
-  newsRefreshSeconds: 300
+  newsRefreshSeconds: 3600
   lastNewsCheckTime: 0
   MappableTypesInfo:
   - TypeName: MightyLandmarks.LandmarksData+Landmark+Root
@@ -81,9 +81,9 @@ MonoBehaviour:
     CollectedData: []
     totalPolyCount: 0
     meshFilterCount: 0
-  svPos: {x: 0, y: 0, z: 0}
-  _svPos: {x: 0, y: 0, z: 0}
-  svRot: {x: 0, y: 0, z: 0, w: 1}
-  _svRot: {x: 0, y: 0, z: 0, w: 1}
+  svPos: {x: 1333.1957, y: 767.945, z: -1396.4528}
+  _svPos: {x: 1333.1957, y: 767.945, z: -1396.4528}
+  svRot: {x: -0.0883631, y: 0.904268, z: -0.22848962, w: -0.3496911}
+  _svRot: {x: -0.0883631, y: 0.904268, z: -0.22848962, w: -0.3496911}
   landmarkMaxId: 0
   selectedID: 0

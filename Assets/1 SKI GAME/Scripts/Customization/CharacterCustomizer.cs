@@ -448,11 +448,9 @@ public class CharacterCustomizer : MonoBehaviour
         ApplyCurrentSkinStateToAllRenderers();
     }
 
-    [ContextMenu("Set Skin Colour (during play only")]
+    [ContextMenu("Set Skin Colour")]
     public void SetSkinColor(Color color)
     {
-        if (!Application.isPlaying) return;
-
         skinColor = color;
         ApplyCurrentSkinStateToAllRenderers();
     }

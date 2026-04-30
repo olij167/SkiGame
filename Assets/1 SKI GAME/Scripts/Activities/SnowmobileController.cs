@@ -8,115 +8,286 @@ using SkiGame.UI;
 public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromptSource
 {
     [Header("Input")]
+    [Tooltip("Input action used to mount, dismount, and hold-start rescue missions while mounted.")]
     [SerializeField] private InputActionReference interactAction;
+
+    [Tooltip("2D movement input. X steers the snowmobile; Y controls throttle and reverse.")]
     [SerializeField] private InputActionReference moveAction;
 
     [Header("Seat")]
+    [Tooltip("Parent point used to attach and align the player while riding.")]
     [SerializeField] private Transform seatPoint;
+
+    [Tooltip("World position and rotation used when the player dismounts.")]
     [SerializeField] private Transform dismountPoint;
+
+    [Tooltip("Vertical local offset applied to the mounted rider on the seat point.")]
     [SerializeField] private float riderSeatYOffset = 0.35f;
+
+    [Tooltip("Player colliders disabled while mounted to prevent vehicle/self collision jitter.")]
     [SerializeField] private Collider[] playerCollidersToDisableWhileMounted;
+
+    [Tooltip("Optional passenger seat used for healthy rescue targets or NPC passengers.")]
     [SerializeField] private Transform npcPassengerSeat;
+
+    [Header("Snowmobile Rider Hand Targets")]
+    [Tooltip("Left hand target for the driver, usually placed on or near the left handlebar grip.")]
+    [SerializeField] private Transform driverLeftHandTarget;
+
+    [Tooltip("Right hand target for the driver, usually placed on or near the right handlebar grip.")]
+    [SerializeField] private Transform driverRightHandTarget;
+
+    [Tooltip("Optional left hand target for the passenger. If unset, a runtime waist target is generated.")]
+    [SerializeField] private Transform passengerLeftHandTarget;
+
+    [Tooltip("Optional right hand target for the passenger. If unset, a runtime waist target is generated.")]
+    [SerializeField] private Transform passengerRightHandTarget;
+
+    [Tooltip("Side offset for generated passenger hand targets relative to the driver seat.")]
+    [SerializeField] private float passengerHandSideOffset = 0.18f;
+
+    [Tooltip("Vertical offset for generated passenger hand targets above the driver seat.")]
+    [SerializeField] private float passengerHandsAboveDriverSeat = 0.32f;
+
+    [Tooltip("Forward/back offset for generated passenger hand targets from the driver seat.")]
+    [SerializeField] private float passengerHandForwardOffsetFromDriverSeat = -0.04f;
+
+    [Tooltip("Tow hitch used by the rescue stretcher. Falls back to this transform if unset.")]
     [SerializeField] private Transform towHitch;
 
     [Header("Driving")]
+    [Tooltip("Maximum forward speed while throttle is held.")]
     [SerializeField] private float maxForwardSpeed = 20f;
+
+    [Tooltip("Maximum reverse speed while reverse input is held.")]
     [SerializeField] private float maxReverseSpeed = 7f;
+
+    [Tooltip("Acceleration rate when driving forward on valid terrain.")]
     [SerializeField] private float forwardAcceleration = 18f;
+
+    [Tooltip("Acceleration rate when reversing.")]
     [SerializeField] private float reverseAcceleration = 12f;
+
+    [Tooltip("Deceleration rate when changing direction or actively braking.")]
     [SerializeField] private float brakingDeceleration = 20f;
+
+    [Tooltip("Deceleration rate when no throttle or reverse input is held.")]
     [SerializeField] private float coastingDeceleration = 8f;
+
+    [Tooltip("Base yaw turn rate in degrees per second before speed scaling.")]
     [SerializeField] private float steerDegreesPerSecond = 110f;
+
+    [Tooltip("Steering strength at very low speed. Higher values turn more sharply from standstill.")]
     [SerializeField] private float standstillSteerFactor = 0.65f;
+
+    [Tooltip("Extra forward speed assistance when climbing manageable slopes.")]
     [SerializeField] private float slopeClimbAssist = 3.5f;
+
+    [Tooltip("Reserved traction value. Currently not read by this controller's movement solver.")]
     [SerializeField] private float groundedTraction = 14f;
+
+    [Tooltip("Reserved lateral grip value. Currently not read by this controller's movement solver.")]
     [SerializeField] private float groundedLateralGrip = 10f;
+
+    [Tooltip("How quickly the snowmobile rotation aligns to steering and ground normal.")]
     [SerializeField] private float rotationSharpness = 14f;
+
+    [Tooltip("Extra acceleration applied in the uphill direction while throttling uphill.")]
     [SerializeField] private float uphillDriveForce = 12f;
+
+    [Tooltip("Scales uphill drive assistance from subtle to full strength.")]
     [SerializeField] private float uphillThrottleAssist = 0.65f;
+
+    [Tooltip("Lateral slide correction at low speed. Higher values reduce low-speed drifting.")]
     [SerializeField] private float lowSpeedLateralGrip = 11.5f;
+
+    [Tooltip("Lateral slide correction at high speed. Higher values reduce high-speed drifting.")]
     [SerializeField] private float highSpeedLateralGrip = 7.25f;
+
+    [Tooltip("Grip multiplier while accelerating. Lower values create more powered drift.")]
     [SerializeField] private float poweredDriftGripMultiplier = 0.82f;
 
     [Header("Grounding")]
+    [Tooltip("Layers considered valid ground for suspension, slope checks, and obstacle checks.")]
     [SerializeField] private LayerMask groundMask = ~0;
+
+    [Tooltip("Front-left suspension probe origin.")]
     [SerializeField] private Transform frontLeftProbe;
+
+    [Tooltip("Front-right suspension probe origin.")]
     [SerializeField] private Transform frontRightProbe;
+
+    [Tooltip("Rear-left suspension probe origin.")]
     [SerializeField] private Transform rearLeftProbe;
+
+    [Tooltip("Rear-right suspension probe origin.")]
     [SerializeField] private Transform rearRightProbe;
+
+    [Tooltip("Maximum distance each suspension probe searches downward for ground.")]
     [SerializeField] private float probeRayLength = 2.2f;
+
+    [Tooltip("Target height maintained above the averaged ground contact point.")]
     [SerializeField] private float rideHeight = 0.9f;
+
+    [Tooltip("Suspension lift strength used to maintain ride height.")]
     [SerializeField] private float rideSpringStrength = 85f;
+
+    [Tooltip("Suspension damping against vertical movement. Higher values reduce bouncing.")]
     [SerializeField] private float rideSpringDamping = 12f;
+
+    [Tooltip("Downward force applied while grounded to keep the treads planted.")]
     [SerializeField] private float groundedDownforce = 10f;
+
+    [Tooltip("Steepest surface angle accepted as ground by suspension probes.")]
     [SerializeField] private float maxGroundSampleAngle = 70f;
+
+    [Tooltip("Steepest uphill slope the snowmobile can actively drive up.")]
     [SerializeField] private float maxDriveSlopeAngle = 42f;
+
+    [Tooltip("Minimum number of probes that must hit ground before support is considered valid.")]
     [SerializeField] private int minGroundedProbes = 2;
+
+    [Tooltip("Vertical offset for forward obstacle checks above the front probes.")]
     [SerializeField] private float frontObstacleProbeExtraHeight = 0.35f;
+
+    [Tooltip("Distance to check ahead for steep faces that should slow or block driving.")]
     [SerializeField] private float frontObstacleCheckDistance = 0.9f;
+
+    [Tooltip("Deceleration applied when trying to drive up a slope beyond the drive limit.")]
     [SerializeField] private float steepSurfaceBrakeDeceleration = 28f;
 
+    [Tooltip("Radius used for suspension sphere casts and front obstacle checks.")]
     [SerializeField] private float probeRadius = 0.2f;
+
+    [Tooltip("Smoothing speed for changes in sampled ground normal.")]
     [SerializeField] private float groundNormalBlendSpeed = 10f;
+
+    [Tooltip("Smoothing speed for changes in averaged ground contact point.")]
     [SerializeField] private float groundPointBlendSpeed = 12f;
+
+    [Tooltip("Extra downward adhesion force while grounded. Higher values reduce small hops.")]
     [SerializeField] private float groundAdhesionForce = 8f;
+
+    [Tooltip("Obstacle height ignored as a minor bump instead of a blocking surface.")]
     [SerializeField] private float minorObstacleHeightTolerance = 0.28f;
+
+    [Tooltip("Lowest speed multiplier used when a front obstacle partially blocks movement.")]
     [SerializeField] private float obstacleSlowdownMinMultiplier = 0.45f;
+
+    [Tooltip("Extra angle margin before a detected front surface counts as blocking.")]
     [SerializeField] private float obstacleAngleBuffer = 8f;
 
+    [Tooltip("Increases suspension damping during hard downward compression or landings.")]
     [SerializeField] private float landingCompressionDampingMultiplier = 1.45f;
+
+    [Tooltip("Maximum acceleration the suspension spring can apply in either direction.")]
     [SerializeField] private float springMaxAccel = 60f;
 
     [Header("Airborne")]
+    [Tooltip("Gravity multiplier while airborne. Values above 1 make the snowmobile fall faster.")]
     [SerializeField] private float airborneGravityMultiplier = 1.4f;
+
+    [Tooltip("Horizontal velocity damping while airborne.")]
     [SerializeField] private float airbornePlanarDrag = 0.4f;
+
+    [Tooltip("Yaw torque applied from steering input while airborne.")]
     [SerializeField] private float airborneYawControl = 35f;
+
+    [Tooltip("Reserved pitch assist value for airborne tuning. Currently not read by this controller.")]
     [SerializeField] private float airbornePitchAssist = 3f;
 
+    [Tooltip("Upward vertical velocity damping while airborne to soften launches.")]
     [SerializeField] private float airborneVerticalDrag = 0.65f;
 
     [Header("Ground Transition")]
+    [Tooltip("Probe count required for stable grounded state transitions and ground snap.")]
     [SerializeField] private int stableGroundedProbes = 3;
+
+    [Tooltip("Delay before entering grounded state after stable probe contact is found.")]
     [SerializeField] private float groundedEnterDelay = 0.05f;
+
+    [Tooltip("Grace time before leaving grounded state after stable contact is lost.")]
     [SerializeField] private float groundedExitDelay = 0.08f;
+
+    [Tooltip("Time used to blend suspension support back in after landing.")]
     [SerializeField] private float landingSupportBlendTime = 0.18f;
+
+    [Tooltip("Maximum vertical speed allowed when snapping into grounded state.")]
     [SerializeField] private float maxVerticalSpeedForGroundSnap = 3.5f;
+
+    [Tooltip("Maximum angular speed allowed when snapping into grounded state.")]
     [SerializeField] private float maxAngularVelocityForGroundSnap = 2.75f;
 
     [Header("Air Stabilisation")]
+    [Tooltip("Torque strength used to rotate the snowmobile upright while airborne.")]
     [SerializeField] private float airborneUprightAssist = 4.5f;
+
+    [Tooltip("Damping applied to airborne roll angular velocity.")]
     [SerializeField] private float airborneRollDamping = 2.5f;
+
+    [Tooltip("Damping applied to airborne pitch angular velocity.")]
     [SerializeField] private float airbornePitchDamping = 2f;
 
     [Header("Unmounted")]
+    [Tooltip("Planar braking force applied when nobody is riding the snowmobile.")]
     [SerializeField] private float unmountedBrakeDrag = 6f;
 
     [Header("Rescue Pickup")]
+    [Tooltip("Trigger volume scanned for rescue targets while the snowmobile is mounted.")]
     [SerializeField] private Collider rescuePickupTrigger;
+
+    [Tooltip("If enabled, non-injured rescue targets can be collected directly by the snowmobile.")]
     [SerializeField] private bool autoPickupHealthyTargets = true;
 
+    [Tooltip("Seconds between pickup overlap scans. Lower values react faster but cost more CPU.")]
+    [SerializeField] private float pickupScanInterval = 0.05f;
+
     [Header("Tread Visuals")]
+    [Tooltip("Left tread root used for terrain-relative visual alignment.")]
     [SerializeField] private Transform leftTreadRoot;
+
+    [Tooltip("Right tread root used for terrain-relative visual alignment.")]
     [SerializeField] private Transform rightTreadRoot;
+
+    [Tooltip("Left tread visual rotated/spun to match movement and terrain.")]
     [SerializeField] private Transform leftTreadVisual;
+
+    [Tooltip("Right tread visual rotated/spun to match movement and terrain.")]
     [SerializeField] private Transform rightTreadVisual;
+
+    [Tooltip("How many degrees the tread visual spins per meter of forward travel.")]
     [SerializeField] private float treadSpinDegreesPerMeter = 360f;
+
+    [Tooltip("Visual yaw applied to treads while steering. Does not affect physics.")]
     [SerializeField] private float treadSteerVisualYaw = 10f;
+
+    [Tooltip("How quickly tread visuals align back to their terrain-relative target pose.")]
     [SerializeField] private float treadAlignLerpSpeed = 12f;
 
     [Header("Prompt")]
+    [Tooltip("Prompt text shown when the player can mount the snowmobile.")]
     [SerializeField] private string mountPrompt = "Ride Snowmobile";
+
+    [Tooltip("Prompt text shown when the mounted player can dismount.")]
     [SerializeField] private string dismountPrompt = "Dismount Snowmobile";
+
+    [Tooltip("Prompt priority used when multiple interaction prompts overlap.")]
     [SerializeField] private int promptPriority = 70;
+
+    [Tooltip("Trigger volume used to detect players who can mount the snowmobile.")]
     [SerializeField] private Collider interactionTrigger;
 
     private Rigidbody _rb;
+
 
     private GameObject _playerRootInTrigger;
     private GameObject _mountedPlayer;
     private SkiController _mountedSki;
     private WalkingController _mountedWalk;
     private Rigidbody _mountedPlayerRb;
+
+    private SkierLimbLineVisual _mountedPlayerLimbVisual;
+    private bool _mountedWalkControlsWereEnabled;
 
     private bool _wasPressed;
     private bool _enterArmed;
@@ -147,13 +318,17 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
     private WalkingController _mountedNpcPassengerWalk;
     private Rigidbody _mountedNpcPassengerRb;
 
+    private SkierLimbLineVisual _mountedNpcPassengerLimbVisual;
+    private bool _mountedNpcPassengerWalkControlsWereEnabled;
+
+    private Transform _runtimePassengerLeftWaistHandTarget;
+    private Transform _runtimePassengerRightWaistHandTarget;
+
     private RescueStretcherController _attachedStretcher;
     private Collider[] _selfColliders;
 
     private static readonly Collider[] _pickupResults = new Collider[24];
     private float _nextPickupScanTime;
-    [SerializeField] private float pickupScanInterval = 0.05f;
-
     private bool _rawGrounded;
     private bool _wasGroundedLastFrame;
     private float _groundedStateTimer;
@@ -215,11 +390,18 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
 
     private void OnEnable()
     {
+        WorldInteractionPromptRegistry.Register(this);
+
         if (interactAction != null && interactAction.action != null && !interactAction.action.enabled)
             interactAction.action.Enable();
 
         if (moveAction != null && moveAction.action != null && !moveAction.action.enabled)
             moveAction.action.Enable();
+    }
+
+    private void OnDisable()
+    {
+        WorldInteractionPromptRegistry.Unregister(this);
     }
 
     private void Update()
@@ -230,12 +412,26 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
         {
             _mountedPlayer.transform.localPosition = new Vector3(0f, riderSeatYOffset, 0f);
             _mountedPlayer.transform.localRotation = Quaternion.identity;
+
+            ApplySnowmobileRiderPose(
+                _mountedWalk,
+                _mountedPlayerLimbVisual,
+                SkierLimbLineVisual.RiderPoseMode.SnowmobileDriver,
+                driverLeftHandTarget,
+                driverRightHandTarget);
         }
 
         if (_mountedNpcPassenger != null && npcPassengerSeat != null)
         {
             _mountedNpcPassenger.transform.localPosition = Vector3.zero;
             _mountedNpcPassenger.transform.localRotation = Quaternion.identity;
+
+            ApplySnowmobileRiderPose(
+                _mountedNpcPassengerWalk,
+                _mountedNpcPassengerLimbVisual,
+                SkierLimbLineVisual.RiderPoseMode.SnowmobilePassenger,
+                GetPassengerHandTarget(true),
+                GetPassengerHandTarget(false));
         }
     }
 
@@ -768,10 +964,28 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
         _mountedWalk = playerRoot.GetComponentInParent<WalkingController>();
         _mountedPlayerRb = playerRoot.GetComponentInParent<Rigidbody>();
 
+        _mountedPlayerLimbVisual = playerRoot.GetComponentInChildren<SkierLimbLineVisual>(true);
+        _mountedWalkControlsWereEnabled = _mountedWalk == null || _mountedWalk.ControlsEnabled;
+
         if (_mountedWalk != null)
+        {
+            _mountedWalk.enabled = true;
             _mountedWalk.ForceEnterWalkMode();
+            _mountedWalk.ClearExternalMove();
+            _mountedWalk.ControlsEnabled = false;
+            _mountedWalk.SetRiderPoseActive(true);
+        }
         else if (_mountedSki != null)
+        {
             _mountedSki.enabled = false;
+        }
+
+        ApplySnowmobileRiderPose(
+            _mountedWalk,
+            _mountedPlayerLimbVisual,
+            SkierLimbLineVisual.RiderPoseMode.SnowmobileDriver,
+            driverLeftHandTarget,
+            driverRightHandTarget);
 
         if (_mountedPlayerRb != null)
         {
@@ -828,10 +1042,21 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
             }
         }
 
+        ClearSnowmobileRiderPose(_mountedPlayerLimbVisual);
+
         if (_mountedWalk != null)
+        {
+            _mountedWalk.enabled = true;
+            _mountedWalk.SetRiderPoseActive(false);
+            _mountedWalk.ControlsEnabled = _mountedWalkControlsWereEnabled;
             _mountedWalk.ForceEnterSkiMode();
+        }
         else if (_mountedSki != null)
+        {
             _mountedSki.enabled = true;
+        }
+
+        _mountedPlayerLimbVisual = null;
 
         _mountedPlayer = null;
         _mountedSki = null;
@@ -865,10 +1090,28 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
         _mountedNpcPassengerWalk = npcRoot.GetComponentInParent<WalkingController>();
         _mountedNpcPassengerRb = npcRoot.GetComponentInParent<Rigidbody>();
 
+        _mountedNpcPassengerLimbVisual = npcRoot.GetComponentInChildren<SkierLimbLineVisual>(true);
+        _mountedNpcPassengerWalkControlsWereEnabled = _mountedNpcPassengerWalk == null || _mountedNpcPassengerWalk.ControlsEnabled;
+
         if (_mountedNpcPassengerWalk != null)
+        {
+            _mountedNpcPassengerWalk.enabled = true;
             _mountedNpcPassengerWalk.ForceEnterWalkMode();
+            _mountedNpcPassengerWalk.ClearExternalMove();
+            _mountedNpcPassengerWalk.ControlsEnabled = false;
+            _mountedNpcPassengerWalk.SetRiderPoseActive(true);
+        }
         else if (_mountedNpcPassengerSki != null)
+        {
             _mountedNpcPassengerSki.enabled = false;
+        }
+
+        ApplySnowmobileRiderPose(
+            _mountedNpcPassengerWalk,
+            _mountedNpcPassengerLimbVisual,
+            SkierLimbLineVisual.RiderPoseMode.SnowmobilePassenger,
+            GetPassengerHandTarget(true),
+            GetPassengerHandTarget(false));
 
         if (_mountedNpcPassengerRb != null)
         {
@@ -903,15 +1146,95 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
             _mountedNpcPassengerRb.angularVelocity = Vector3.zero;
         }
 
+        ClearSnowmobileRiderPose(_mountedNpcPassengerLimbVisual);
+
         if (_mountedNpcPassengerWalk != null)
+        {
+            _mountedNpcPassengerWalk.enabled = true;
+            _mountedNpcPassengerWalk.SetRiderPoseActive(false);
+            _mountedNpcPassengerWalk.ControlsEnabled = _mountedNpcPassengerWalkControlsWereEnabled;
             _mountedNpcPassengerWalk.ForceEnterWalkMode();
+        }
         else if (_mountedNpcPassengerSki != null)
+        {
             _mountedNpcPassengerSki.enabled = false;
+        }
+
+        _mountedNpcPassengerLimbVisual = null;
 
         _mountedNpcPassenger = null;
         _mountedNpcPassengerSki = null;
         _mountedNpcPassengerWalk = null;
         _mountedNpcPassengerRb = null;
+    }
+
+    private void ApplySnowmobileRiderPose(
+    WalkingController walk,
+    SkierLimbLineVisual limbVisual,
+    SkierLimbLineVisual.RiderPoseMode poseMode,
+    Transform leftHandTarget,
+    Transform rightHandTarget)
+    {
+        if (walk != null)
+        {
+            walk.ClearExternalMove();
+            walk.ControlsEnabled = false;
+            walk.SetRiderPoseActive(true);
+        }
+
+        if (limbVisual != null)
+            limbVisual.SetRiderPoseOverride(poseMode, leftHandTarget, rightHandTarget);
+    }
+
+    private static void ClearSnowmobileRiderPose(SkierLimbLineVisual limbVisual)
+    {
+        if (limbVisual != null)
+            limbVisual.ClearRiderPoseOverride();
+    }
+
+    private Transform GetPassengerHandTarget(bool left)
+    {
+        Transform explicitTarget = left ? passengerLeftHandTarget : passengerRightHandTarget;
+        if (explicitTarget != null)
+            return explicitTarget;
+
+        return EnsureRuntimePassengerWaistHandTarget(left);
+    }
+
+    private Transform EnsureRuntimePassengerWaistHandTarget(bool left)
+    {
+        if (seatPoint == null)
+            return null;
+
+        Transform existing = left
+            ? _runtimePassengerLeftWaistHandTarget
+            : _runtimePassengerRightWaistHandTarget;
+
+        if (existing != null)
+            return existing;
+
+        GameObject go = new GameObject(left
+            ? "RuntimePassengerLeftWaistHandTarget"
+            : "RuntimePassengerRightWaistHandTarget");
+
+        Transform target = go.transform;
+        target.SetParent(seatPoint, false);
+
+        float side = Mathf.Abs(passengerHandSideOffset) * (left ? -1f : 1f);
+
+        target.localPosition = new Vector3(
+            side,
+            riderSeatYOffset + Mathf.Max(0f, passengerHandsAboveDriverSeat),
+            passengerHandForwardOffsetFromDriverSeat);
+
+        target.localRotation = Quaternion.identity;
+
+        if (left)
+            _runtimePassengerLeftWaistHandTarget = target;
+        else
+            _runtimePassengerRightWaistHandTarget = target;
+
+        return target;
     }
 
     public void RegisterStretcher(RescueStretcherController stretcher)
@@ -928,7 +1251,7 @@ public sealed class SnowmobileController : MonoBehaviour, IWorldInteractionPromp
             _attachedStretcher = null;
     }
 
-   
+
     private bool IsSelfOrAttachedCollider(Collider c)
     {
         if (c == null)

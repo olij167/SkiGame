@@ -19,7 +19,7 @@ namespace AssetInventory
         public string documentationUrl;
         public bool hideInEditor;
         public string[] keywords;
-        public Dictionary<string, string> dependencies;
+        [NonSerialized] public Dictionary<string, string> dependencies;
         public Sample[] samples;
         public string license;
         public string licensesUrl;

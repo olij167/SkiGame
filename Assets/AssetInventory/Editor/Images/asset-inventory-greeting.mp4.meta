@@ -4,9 +4,9 @@ AssetOrigin:
   serializedVersion: 1
   productId: 349582
   packageName: Asset Inventory 4
-  packageVersion: 4.1.1
+  packageVersion: 4.2.0
   assetPath: Assets/AssetInventory/Editor/Images/asset-inventory-greeting.mp4
-  uploadId: 888060
+  uploadId: 903406
 VideoClipImporter:
   externalObjects: {}
   serializedVersion: 3
@@ -19,7 +19,16 @@ VideoClipImporter:
   flipVertical: 0
   flipHorizontal: 0
   importAudio: 1
-  targetSettings: {}
+  targetSettings:
+    :
+      enableTranscoding: 0
+      codec: 0
+      resizeFormat: 0
+      aspectRatio: 0
+      customWidth: 1168
+      customHeight: 784
+      bitrateMode: 2
+      spatialQuality: 1
   userData: 
   assetBundleName: 
   assetBundleVariant: 

@@ -30,6 +30,7 @@ Material:
   - _LIGHTMODE_TEXELLIT
   - _RECEIVESHADOWSMODE_ON
   - _SNAPMODE_VIEW
+  - _WRAPMODE_REPEAT
   m_InvalidKeywords:
   - _USE_POINT_FILTER_ON
   - _USE_SPECULAR_ON
@@ -113,6 +114,7 @@ Material:
     - _ResolutionLimit: 64
     - _SnapMode: 2
     - _SnapsPerUnit: 128
+    - _WrapMode: 1
     m_Floats:
     - _AffineTextureStrength: 0
     - _AlphaClip: 0
@@ -150,6 +152,7 @@ Material:
     - _USE_AFFINE_TEXTURES: 0
     - _USE_AMBIENT_OVERRIDE: 0
     - _USE_DITHERING: 0
+    - _USE_FLAT_SHADING: 0
     - _USE_POINT_FILTER: 1
     - _USE_REFLECTION_CUBEMAP: 0
     - _USE_SPECULAR: 1

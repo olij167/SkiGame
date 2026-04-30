@@ -113,6 +113,6 @@ AssetOrigin:
   serializedVersion: 1
   productId: 349582
   packageName: Asset Inventory 4
-  packageVersion: 4.1.1
+  packageVersion: 4.2.0
   assetPath: Assets/AssetInventory/Editor/Images/asset-inventory-sample2.png
-  uploadId: 888060
+  uploadId: 903406

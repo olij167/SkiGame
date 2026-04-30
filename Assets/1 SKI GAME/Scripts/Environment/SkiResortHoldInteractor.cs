@@ -97,12 +97,16 @@ public class SkiResortHoldInteractor : MonoBehaviour, IWorldInteractionPromptSou
 
     private void OnEnable()
     {
+        WorldInteractionPromptRegistry.Register(this);
+
         if (resortAction?.action != null)
             resortAction.action.Enable();
     }
 
     private void OnDisable()
     {
+        WorldInteractionPromptRegistry.Unregister(this);
+
         if (resortAction?.action != null)
             resortAction.action.Disable();
     }

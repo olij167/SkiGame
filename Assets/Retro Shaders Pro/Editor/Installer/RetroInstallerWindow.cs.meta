@@ -9,3 +9,10 @@ MonoImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 287937
+  packageName: Retro Shaders Pro for URP
+  packageVersion: 1.5.3
+  assetPath: Assets/Retro Shaders Pro/Editor/Installer/RetroInstallerWindow.cs
+  uploadId: 907874

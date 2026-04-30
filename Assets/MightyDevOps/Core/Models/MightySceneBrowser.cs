@@ -930,9 +930,20 @@ namespace Mighty
         private Texture2D GetSceneImage(SceneData scene)
         {
             string mapPath = scene.MiniMap.MapPath;
-            if (mapPath != null)
+            if (!string.IsNullOrWhiteSpace(mapPath))
             {
-                return Resources.Load<Texture2D>(mapPath);
+                string resourcesCachePath = $"Cache/{mapPath}";
+                Texture2D cacheTexture = Resources.Load<Texture2D>(resourcesCachePath);
+                if (cacheTexture != null)
+                {
+                    return cacheTexture;
+                }
+
+                Texture2D legacyTexture = Resources.Load<Texture2D>(mapPath);
+                if (legacyTexture != null)
+                {
+                    return legacyTexture;
+                }
             }
 
             // // Ensure LandmarksCore data is loaded

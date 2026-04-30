@@ -237,7 +237,7 @@ namespace SkiGame.UI
             if (!TryGetFocusedQuestObjective(out var questDefinition, out var objectiveDefinition, out var objectiveState))
                 return false;
 
-            _resolvedTitle = string.IsNullOrWhiteSpace(questDefinition.title) ? "Tutorial Controls" : questDefinition.title.Trim();
+            _resolvedTitle = QuestTextFormatter.FormatQuestTitle(questDefinition, inputActions);
             AddRowsForObjective(objectiveDefinition, objectiveState);
             return _buffer.Count > 0;
         }
@@ -342,7 +342,7 @@ namespace SkiGame.UI
 
             AddRow(
                 "objective_primary",
-                string.IsNullOrWhiteSpace(objectiveDefinition.title) ? objectiveDefinition.BuildAuthoringSummary() : objectiveDefinition.title.Trim(),
+                QuestTextFormatter.FormatObjectiveTitle(null, null, objectiveDefinition, inputActions),
                 BuildDetailedPromptTokens(objectiveDefinition),
                 IsObjectiveHighlighted(objectiveDefinition),
                 isPrimary: true);
@@ -440,8 +440,9 @@ namespace SkiGame.UI
                     return;
             }
 
-            if (!string.IsNullOrWhiteSpace(objectiveDefinition.description))
-                AddRow("objective_hint", "Tip", objectiveDefinition.description.Trim(), false);
+            string objectiveHint = QuestTextFormatter.FormatObjectiveDescription(null, null, objectiveDefinition, inputActions);
+            if (!string.IsNullOrWhiteSpace(objectiveHint))
+                AddRow("objective_hint", "Tip", objectiveHint, false);
         }
 
         private void AddRow(string key, string label, string bindingText, bool isHighlighted, bool isPrimary = false)

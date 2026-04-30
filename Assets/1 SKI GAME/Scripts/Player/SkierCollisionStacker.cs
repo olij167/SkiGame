@@ -15,6 +15,8 @@ public sealed class SkierCollisionStacker : MonoBehaviour
     [SerializeField] private float maxSeverity = 1f;
     [SerializeField] private bool stackBothSkiersOnStrongImpact = true;
     [SerializeField] private float bothStackRelativeSpeed = 8.5f;
+    [SerializeField] private float maxUpwardVelocityAfterNpcImpact = 1f;
+    [SerializeField, Range(0f, 1f)] private float npcImpactSlideRetention = 0.35f;
 
     private float _lastImpactTime = -999f;
 
@@ -58,6 +60,9 @@ public sealed class SkierCollisionStacker : MonoBehaviour
         if (otherController == null || otherController == skiController)
             return;
 
+        if (otherController.IsStacked)
+            return;
+
 
         Vector3 selfVelocity = body != null ? body.linearVelocity : skiController.Velocity;
         Vector3 otherVelocity = otherController.Velocity;
@@ -73,17 +78,65 @@ public sealed class SkierCollisionStacker : MonoBehaviour
         if (selfPlanarSpeed < minimumSelfSpeed && otherPlanarSpeed < minimumSelfSpeed)
             return;
 
+        bool strongImpact = relativeSpeed >= bothStackRelativeSpeed;
+        if (!strongImpact && selfPlanarSpeed < otherPlanarSpeed)
+            return;
+
         ContactPoint cp = collision.GetContact(0);
+        Vector3 impactNormal = relativeSpeed > 0.0001f
+            ? -relativeVelocity / relativeSpeed
+            : cp.normal;
+        if (impactNormal.sqrMagnitude < 0.0001f)
+            impactNormal = transform.position - otherController.transform.position;
+        if (impactNormal.sqrMagnitude < 0.0001f)
+            impactNormal = transform.forward;
+        impactNormal.Normalize();
 
         float severityT = Mathf.InverseLerp(relativeSpeedToStack, bothStackRelativeSpeed, relativeSpeed);
         float severity = Mathf.Lerp(minSeverity, maxSeverity, severityT);
 
-        skiController.TriggerImpactStackFromPoint(cp.point, relativeVelocity, severity, "SkierCollision");
+        if (body != null)
+            body.linearVelocity = ClampNpcImpactVelocity(body.linearVelocity, impactNormal);
+
+        skiController.TriggerImpactStackFromPointAndNormal(cp.point, impactNormal, relativeVelocity, severity, "SkierCollision");
         _lastImpactTime = Time.time;
 
-        if (!stackBothSkiersOnStrongImpact || relativeSpeed < bothStackRelativeSpeed || otherController.IsStacked)
+        if (body != null)
+            body.linearVelocity = ClampNpcImpactVelocity(body.linearVelocity, impactNormal);
+
+        SkierCollisionStacker otherStacker = otherController.GetComponent<SkierCollisionStacker>();
+        if (otherStacker != null)
+            otherStacker.NotifyImpactCooldown(Time.time);
+
+        if (!stackBothSkiersOnStrongImpact || !strongImpact || otherController.IsStacked)
             return;
 
-        otherController.TriggerImpactStackFromPoint(cp.point, -relativeVelocity, severity, "SkierCollision");
+        Rigidbody otherBody = otherStacker != null ? otherStacker.body : otherController.GetComponent<Rigidbody>();
+        if (otherBody != null)
+            otherBody.linearVelocity = ClampNpcImpactVelocity(otherBody.linearVelocity, -impactNormal);
+
+        otherController.TriggerImpactStackFromPointAndNormal(cp.point, -impactNormal, -relativeVelocity, severity, "SkierCollision");
+
+        if (otherBody != null)
+            otherBody.linearVelocity = ClampNpcImpactVelocity(otherBody.linearVelocity, -impactNormal);
+
+        if (otherStacker != null)
+            otherStacker.NotifyImpactCooldown(Time.time);
+    }
+
+    private Vector3 ClampNpcImpactVelocity(Vector3 velocity, Vector3 impactNormal)
+    {
+        Vector3 slide = Vector3.ProjectOnPlane(velocity, impactNormal);
+        velocity = slide * Mathf.Clamp01(npcImpactSlideRetention);
+
+        if (velocity.y > maxUpwardVelocityAfterNpcImpact)
+            velocity.y = maxUpwardVelocityAfterNpcImpact;
+
+        return velocity;
+    }
+
+    private void NotifyImpactCooldown(float timeStamp)
+    {
+        _lastImpactTime = timeStamp;
     }
 }

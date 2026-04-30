@@ -17,6 +17,7 @@ namespace AssetInventory
             if (string.IsNullOrEmpty(spec.location)) return;
 
             string[] files = IOUtils.GetFiles(spec.GetLocation(true), new[] {"*.zip", "*.rar", "*.7z"}, SearchOption.AllDirectories).ToArray();
+            string[] excludedDirectories = StringUtils.Split(spec.excludedDirectories, new[] {';', ','});
 
             MainCount = files.Length;
             for (int i = 0; i < files.Length; i++)
@@ -27,6 +28,7 @@ namespace AssetInventory
 
                 string package = files[i];
                 if (IsIgnoredPath(package, true)) continue;
+                if (IsExcludedDirectory(package, excludedDirectories)) continue;
 
                 // check for multipart archives and skip if not the first part
                 // zip will have zip.001, rar will have .r00, .r01, .r02, etc. but can also have .part1.rar, .part2.rar, etc.
@@ -146,6 +148,7 @@ namespace AssetInventory
             importSpec.location = IOUtils.ToShortPath(tempPath);
             importSpec.createPreviews = spec.createPreviews;
             importSpec.excludedExtensions = spec.excludedExtensions;
+            importSpec.excludedDirectories = spec.excludedDirectories;
             importSpec.removeOrphans = spec.removeOrphans;
             importSpec.detectUnityProjects = spec.detectUnityProjects;
 

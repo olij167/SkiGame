@@ -143,4 +143,28 @@ public class CustomizationOptionSO : ScriptableObject
                rightLegLimbColourSource == LimbWearableColourSource.Secondary;
     }
 
+    public Texture2D ResolvePatternTexture(CharacterCustomizer customizer)
+    {
+        if (skinPatternTexture is Texture2D direct)
+            return direct;
+
+        if (customizer != null && customizerIndex >= 0)
+            return customizer.GetSkinPatternTexture2D(customizerIndex);
+
+        return null;
+    }
+
+    public GameObject ResolveWearablePrefab(CharacterCustomizer customizer)
+    {
+        return type switch
+        {
+            CustomizationOptionType.Hat => hatPrefab != null ? hatPrefab : customizer != null ? customizer.GetHatPrefabAtIndex(customizerIndex) : null,
+            CustomizationOptionType.Jacket => jacketPrefab != null ? jacketPrefab : customizer != null ? customizer.GetJacketPrefabAtIndex(customizerIndex) : null,
+            CustomizationOptionType.Gloves => glovePrefab != null ? glovePrefab : customizer != null ? customizer.GetGlovePrefabAtIndex(customizerIndex) : null,
+            CustomizationOptionType.Boots => bootPrefab != null ? bootPrefab : customizer != null ? customizer.GetBootPrefabAtIndex(customizerIndex) : null,
+            CustomizationOptionType.Accessory => accessoryPrefab != null ? accessoryPrefab : customizer != null ? customizer.GetAccessoryPrefabAtIndex(customizerIndex) : null,
+            _ => null
+        };
+    }
+
 }

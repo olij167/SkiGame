@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Unity.EditorCoroutines.Editor;
@@ -54,7 +55,6 @@ namespace Mighty
             if (DevLogs) Debug.LogError(message);
         }
 
-        [SerializeField]
         static public void Save()
         {
             string path = $"{corePath}/Core/Data/MightyCoreEditor.asset";
@@ -146,7 +146,9 @@ namespace Mighty
                 return true;
             }
 
-            if (sceneData.MiniMap.Position.x != sceneData.MiniMap.CachePos.x && sceneData.MiniMap.Position.z != sceneData.MiniMap.CachePos.z)
+            if (sceneData.MiniMap.Position.x != sceneData.MiniMap.CachePos.x ||
+                sceneData.MiniMap.Position.y != sceneData.MiniMap.CachePos.y ||
+                sceneData.MiniMap.Position.z != sceneData.MiniMap.CachePos.z)
             {
                 if (verbose) DevLog($"sceneData.miniMap.pos == sceneData.miniMap.cachePos: {sceneData.MiniMap.Position} == {sceneData.MiniMap.CachePos} = {sceneData.MiniMap.Position == sceneData.MiniMap.CachePos}");
                 return true;
@@ -193,7 +195,7 @@ namespace Mighty
         static public List<IMappable> mappables = new List<IMappable>();
         public static bool rebuildingView = false, updatingMappables = false, buildMappables = false, initializing = false, isPlaying = false;
         public float mapRefreshSeconds = 5f;
-        public float newsRefreshSeconds = 300f; // Check for news every 5 minutes
+        public float newsRefreshSeconds = 3600f;
         public double lastNewsCheckTime = 0; // Track last news check time
         public static TimestampedSlider timestampedSlider;
 
@@ -260,6 +262,8 @@ namespace Mighty
             [SerializeField]
             public int id;
             [SerializeField]
+            public string newsKey;
+            [SerializeField]
             public string title;
             [SerializeField]
             public string content;
@@ -280,10 +284,27 @@ namespace Mighty
         public List<NewsItem> newsItems;// = new List<NewsItem>();
 
         [Serializable]
-        public class NewsItemsResponse
+        public class NewsFeedRemote
         {
             [SerializeField]
-            public NewsItem[] items;
+            public string lastUpdated;
+            [SerializeField]
+            public NewsArticleRemote[] articles;
+        }
+
+        [Serializable]
+        public class NewsArticleRemote
+        {
+            [SerializeField]
+            public string id;
+            [SerializeField]
+            public string title;
+            [SerializeField]
+            public string content;
+            [SerializeField]
+            public string url;
+            [SerializeField]
+            public string date;
         }
 
         [Serializable]
@@ -516,7 +537,6 @@ namespace Mighty
 
             private VisualElement indexContainer;
 
-            [SerializeField]
             public List<PlayTracking> PlayTrackingList { get => playTrackingList; set => playTrackingList = value; }
             private bool playTrackingDirty = false;
 
@@ -1678,7 +1698,7 @@ namespace Mighty
             public Texture2D mmCamera, trackableIcon, blueGearIcon, screenshotIcon, trashcanIcon, recorderIcon, editPenIcon, notificationOnIcon, notificationOffIcon, upgradeIcon, bugIcon, featuresIcon, ratingsIcon,
             window_close, window_maximize, window_minimize, window_popout, window_resize,
             map_follow_sceneview_on, map_follow_sceneview_off, mightybot, mightyeye, quickActionsFade, previewTracking, previewLeap, previewHeatmaps,
-            newsIcon, archiveIcon,
+            newsIcon,
             prefabOn, prefabOff, activeOn, activeOff, staticOn, staticOff, polyIcon, gameObjectIcon, landmarkIcon;
 
             public Icons()
@@ -1711,7 +1731,6 @@ namespace Mighty
                 previewLeap = Resources.Load("ui/mighty_preview_portal") as Texture2D;
                 previewHeatmaps = Resources.Load("ui/mighty_preview_heatmaps") as Texture2D;
                 newsIcon = Resources.Load("ui/mighty_icon_news") as Texture2D;
-                archiveIcon = Resources.Load("ui/mighty_icon_archive") as Texture2D;
                 prefabOn = Resources.Load("ui/mighty_icon_prefab_on") as Texture2D;
                 prefabOff = Resources.Load("ui/mighty_icon_prefab_off") as Texture2D;
                 activeOn = Resources.Load("ui/mighty_icon_active_on") as Texture2D;
@@ -1786,43 +1805,16 @@ namespace Mighty
 
         static public Vector3 GetSVCameraPosition()
         {
-            var cameras = SceneView.GetAllSceneCameras();
-            Vector3 r = Vector3.zero;
-
-            for (int i = 0; i < cameras.Length; i++)
-            {
-                if (SceneView.currentDrawingSceneView != null)
-                {
-                    if (SceneView.currentDrawingSceneView.camera.transform.position == cameras[i].transform.position) r = cameras[i].transform.position;
-                    break;
-                }
-
-                if (SceneView.lastActiveSceneView != null)
-                    if (SceneView.lastActiveSceneView.camera.transform.position == cameras[i].transform.position) r = cameras[i].transform.position;
-
-            }
-
-            return r;
+            var sv = GetSceneView();
+            if (sv?.camera == null) return Vector3.zero;
+            return sv.camera.transform.position;
         }
 
         static public Quaternion GetSVCameraRotation()
         {
-            Quaternion r = Quaternion.identity;
-
-            var cameras = SceneView.GetAllSceneCameras();
-
-            for (int i = 0; i < cameras.Length; i++)
-            {
-                if (SceneView.currentDrawingSceneView != null)
-                {
-                    if (SceneView.currentDrawingSceneView.camera.transform.position == cameras[i].transform.position) r = cameras[i].transform.rotation;
-                    break;
-                }
-
-                if (SceneView.lastActiveSceneView != null)
-                    if (SceneView.lastActiveSceneView.camera.transform.position == cameras[i].transform.position) r = cameras[i].transform.rotation;
-            }
-            return r;
+            var sv = GetSceneView();
+            if (sv?.camera == null) return Quaternion.identity;
+            return sv.camera.transform.rotation;
         }
 
         static public float GetSVCOrthographicSize()
@@ -3095,39 +3087,66 @@ namespace Mighty
         }
 
         #region Notifications
-        private static string supabaseUrl = "https://nojjgqwmsfpalannmnun.supabase.co";
-        private static string apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5vampncXdtc2ZwYWxhbm5tbnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUxMjAzNzUsImV4cCI6MjAzMDY5NjM3NX0.-SQH01FO-BHdUIJ79LnmfUpGcRbt6rt4wBkJPVF9hyo";
+        private const string NewsFeedUrl = "https://raw.githubusercontent.com/ShrinkRayEntertainment/MightyNews/main/news.json";
+        private const string UpdatesFeedUrl = "https://raw.githubusercontent.com/ShrinkRayEntertainment/MightyNews/main/updates.json";
+        private const string NewsFeedLastUpdatedKey = "MightyDevOps.NewsFeedLastUpdated";
+
+        static string NewsStableKey(NewsItem item)
+        {
+            if (item == null) return "";
+            return !string.IsNullOrEmpty(item.newsKey) ? item.newsKey : item.id.ToString();
+        }
+
+        static string NormalizeNewsArticleDate(string articleDate, string feedLastUpdated)
+        {
+            if (!string.IsNullOrEmpty(articleDate) && DateTime.TryParse(articleDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+                return parsed.ToString("yyyy-MM-ddTHH:mm:ss.fffffff", CultureInfo.InvariantCulture);
+            if (!string.IsNullOrEmpty(feedLastUpdated) && DateTime.TryParse(feedLastUpdated, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var feedDt))
+                return feedDt.ToString("yyyy-MM-ddTHH:mm:ss.fffffff", CultureInfo.InvariantCulture);
+            return new DateTime(1990, 1, 1).ToString("yyyy-MM-ddTHH:mm:ss.fffffff", CultureInfo.InvariantCulture);
+        }
 
         public delegate void NewsFetchComplete();
 
         public static void HandleNewsResponse(string json)
         {
-            string jsonToParse = "{\"items\":" + json + "}";
-            NewsItemsResponse response = JsonUtility.FromJson<NewsItemsResponse>(jsonToParse);
-
+            if (dataCore == null || string.IsNullOrWhiteSpace(json)) return;
+            var feed = JsonUtility.FromJson<NewsFeedRemote>(json);
+            if (feed == null || string.IsNullOrEmpty(feed.lastUpdated)) return;
+            var stamp = feed.lastUpdated.Trim();
+            if (stamp == EditorPrefs.GetString(NewsFeedLastUpdatedKey, "") && dataCore.newsItems != null && dataCore.newsItems.Count > 0) return;
+            if (dataCore.newsItems == null) dataCore.newsItems = new List<NewsItem>();
             var previousItems = dataCore.newsItems.ToList();
-            var previousIds = previousItems.Select(item => item.id).ToHashSet();
-
+            var previousByKey = previousItems.GroupBy(NewsStableKey).ToDictionary(g => g.Key, g => g.First());
+            var articles = feed.articles;
+            if (articles == null) articles = Array.Empty<NewsArticleRemote>();
             dataCore.newsItems.Clear();
-            bool foundNewItems = false;
-
-            foreach (var newItem in response.items)
+            foreach (var article in articles)
             {
-                if (newItem.expired) continue;
-
-                newItem.isRead = false;
-                dataCore.newsItems.Add(newItem);
-
-                if (!previousIds.Contains(newItem.id))
+                if (article == null || string.IsNullOrWhiteSpace(article.id)) continue;
+                var key = article.id.Trim();
+                var ni = new NewsItem
                 {
-                    foundNewItems = true;
+                    newsKey = key,
+                    title = article.title ?? "",
+                    url = article.url ?? "",
+                    content = article.content ?? "",
+                    date_posted = NormalizeNewsArticleDate(article.date, stamp),
+                    expired = false
+                };
+                if (previousByKey.TryGetValue(key, out var existing))
+                {
+                    ni.isRead = existing.isRead;
                 }
+                else
+                {
+                    ni.isRead = false;
+                }
+                ni.archived = false;
+                dataCore.newsItems.Add(ni);
             }
-
-            if (foundNewItems)
-            {
-                dataCore.hasUnreadNews = true;
-            }
+            dataCore.hasUnreadNews = dataCore.newsItems.Any(x => !x.isRead && !x.expired);
+            EditorPrefs.SetString(NewsFeedLastUpdatedKey, stamp);
         }
 
         public static void GetLatestNews(NewsFetchComplete callback)
@@ -3138,130 +3157,55 @@ namespace Mighty
         static IEnumerator GetLatestNews_(NewsFetchComplete callback)
         {
             if (dataCore == null) { yield break; }
-            if (dataCore.newsItems == null)
-            {
-                dataCore.newsItems = new List<NewsItem>();
-            }
-
-            DateTime lastChecked = new DateTime(1990, 1, 1);
-            string formattedDate = lastChecked.ToString("yyyy-MM-ddTHH:mm:ss.fffffff");
-            string uri = $"{supabaseUrl}/rest/v1/rpc/news_update?date_threshold={Uri.EscapeDataString(formattedDate)}";
-
+            if (dataCore.newsItems == null) dataCore.newsItems = new List<NewsItem>();
             int retries = 0;
             int maxRetries = 3;
             while (retries < maxRetries)
             {
-                var www = new UnityWebRequest(uri, "GET");
-                www.downloadHandler = new DownloadHandlerBuffer();
-                www.SetRequestHeader("Content-Type", "application/json");
-                www.SetRequestHeader("apikey", apiKey);
-                www.SetRequestHeader("Authorization", "Bearer " + apiKey);
-                www.timeout = 10;
-
+                var www = UnityWebRequest.Get(NewsFeedUrl);
+                www.timeout = 15;
                 yield return www.SendWebRequest();
-
                 if (www.result == UnityWebRequest.Result.Success)
                 {
                     HandleNewsResponse(www.downloadHandler.text);
                     callback?.Invoke();
-                    break;
+                    yield break;
                 }
-                else
-                {
-                    retries++;
-                    yield return new WaitForSeconds(1);
-                }
-                if (retries >= maxRetries)
-                {
-                    callback?.Invoke();
-                }
+                retries++;
+                yield return new WaitForSeconds(1);
             }
+            callback?.Invoke();
         }
 
         public static void HandleUpdatesResponse(string json)
         {
-            string jsonToParse = "{\"items\":" + json + "}";
-            // Debug.Log(jsonToParse);
-            ModuleUpdateResponse response = JsonUtility.FromJson<ModuleUpdateResponse>(jsonToParse);
+            if (dataCore == null || string.IsNullOrWhiteSpace(json)) return;
+            ModuleUpdateResponse response = JsonUtility.FromJson<ModuleUpdateResponse>(json);
+            if (response == null || response.items == null) return;
+            if (dataCore.moduleUpdates == null) dataCore.moduleUpdates = new List<ModuleUpdate>();
             dataCore.moduleUpdates.Clear();
             dataCore.moduleUpdates.AddRange(response.items);
         }
 
         public static void CheckUpdates(NewsFetchComplete callback)
         {
-            // Debug.Log("Fetching updates...");
             EditorCoroutineUtility.StartCoroutine(CheckUpdates_(callback), window);
         }
 
         static IEnumerator CheckUpdates_(NewsFetchComplete callback)
         {
-            // string uri = $"{supabaseUrl}/rest/v1/getnews?select=*";
-            //uri += "&order=date_posted.desc&limit=1"; // Orders by date descending and limits to 1 item
-            // DateTime lastChecked = new DateTime(2024, 5, 3);
-            DateTime lastChecked;
             if (dataCore == null) yield break;
-            if (dataCore.newsItems == null) yield break;
-            if (dataCore.newsItems.Count == 0) yield break;
-
-            if (dataCore.newsItems.Any(item => !string.IsNullOrEmpty(item.date_posted)))
+            using (UnityWebRequest www = UnityWebRequest.Get(UpdatesFeedUrl))
             {
-                lastChecked = dataCore.newsItems
-                    .Where(item => !string.IsNullOrEmpty(item.date_posted))
-                    .Max(item => DateTime.Parse(item.date_posted));
-            }
-            else
-            {
-                lastChecked = new DateTime(1990, 1, 1); // Default to Jan 1, 1990, if no valid dates are found
-            }
-
-            string formattedDate = lastChecked.ToString("yyyy-MM-ddTHH:mm:ss.fffffff");
-            string uri = $"{supabaseUrl}/rest/v1/rpc/modules_update?date_threshold={Uri.EscapeDataString(formattedDate)}";
-            // Debug.Log($"uri: {uri}");
-
-
-            // var www = new UnityWebRequest(uri, "GET");
-            // www.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
-            // www.SetRequestHeader("Content-Type", "application/json");
-            // www.SetRequestHeader("apikey", apiKey);
-            // www.SetRequestHeader("Authorization", "Bearer " + apiKey);
-
-            // yield return www.SendWebRequest();
-            // Debug.Log(www.downloadHandler.text);
-            // Debug.Log($"Status code: {www.responseCode}");
-            // Debug.Log($"Error: {www.error}");
-
-
-
-            int retries = 0;
-            int maxRetries = 15;
-            while (retries < maxRetries)
-            {
-                var www = new UnityWebRequest(uri, "GET");
-                www.downloadHandler = new DownloadHandlerBuffer();
-                www.SetRequestHeader("Content-Type", "application/json");
-                www.SetRequestHeader("apikey", apiKey);
-                www.SetRequestHeader("Authorization", "Bearer " + apiKey);
-
                 yield return www.SendWebRequest();
-                // Debug.Log($"www.status: {www.result}");
-                //!(www.result == UnityWebRequest.Result.ConnectionError) && !(www.result == UnityWebRequest.Result.ProtocolError) && 
-                if (www.result == UnityWebRequest.Result.Success) // Success
+                if (www.result == UnityWebRequest.Result.Success)
                 {
-                    // Debug.Log(www.downloadHandler.text);
                     HandleUpdatesResponse(www.downloadHandler.text);
-
-                    break; // Exit the loop on success
+                    callback?.Invoke();
                 }
                 else
                 {
-                    // Debug.LogError($"Attempt {retries + 1}: Error fetching news: {www.error}");
-                    retries++;
-                    yield return new WaitForSeconds(Mathf.Pow(2, retries)); // Exponential backoff
-                }
-                if (retries >= maxRetries)
-                {
-                    // Debug.LogError("Max retries exceeded.");
-                    callback?.Invoke(); // Optionally invoke callback on failure too
+                    Debug.LogWarning($"[Mighty Core] Failed to fetch module updates: {www.error}");
                 }
             }
         }

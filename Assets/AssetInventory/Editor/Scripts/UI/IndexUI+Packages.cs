@@ -14,6 +14,11 @@ using UnityEngine;
 using static AssetInventory.AssetTreeViewControl;
 using Debug = UnityEngine.Debug;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
+#if UNITY_6000_2_OR_NEWER
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState<int>;
+#else
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState;
+#endif
 
 namespace AssetInventory
 {
@@ -99,7 +104,7 @@ namespace AssetInventory
             get
             {
 #pragma warning disable CS0618 // Type or member is obsolete
-                if (_assetTreeViewState == null) _assetTreeViewState = new TreeViewState();
+                if (_assetTreeViewState == null) _assetTreeViewState = new BaseTreeViewState();
 #pragma warning restore CS0618 // Type or member is obsolete
 
                 if (_assetTreeView == null)
@@ -175,7 +180,7 @@ namespace AssetInventory
 
         private AssetTreeViewControl _assetTreeView;
 #pragma warning disable CS0618 // Type or member is obsolete
-        private TreeViewState _assetTreeViewState;
+        private BaseTreeViewState _assetTreeViewState;
 #pragma warning restore CS0618 // Type or member is obsolete
 
         private TreeModel<AssetInfo> AssetTreeModel
@@ -2314,7 +2319,7 @@ namespace AssetInventory
                     if (_selectedPkgUpdateDateOption == 6) // Before Date
                     {
                         string dateStr = _pkgUpdateBeforeDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd");
-                        string newDateStr = EditorGUILayout.TextField(dateStr, GUILayout.Width(100));
+                        string newDateStr = EditorGUILayout.DelayedTextField(dateStr, GUILayout.Width(100));
                         if (DateTime.TryParse(newDateStr, out DateTime parsedDate))
                         {
                             _pkgUpdateBeforeDate = parsedDate;
@@ -2323,7 +2328,7 @@ namespace AssetInventory
                     else if (_selectedPkgUpdateDateOption == 7) // After Date
                     {
                         string dateStr = _pkgUpdateAfterDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd");
-                        string newDateStr = EditorGUILayout.TextField(dateStr, GUILayout.Width(100));
+                        string newDateStr = EditorGUILayout.DelayedTextField(dateStr, GUILayout.Width(100));
                         if (DateTime.TryParse(newDateStr, out DateTime parsedDate))
                         {
                             _pkgUpdateAfterDate = parsedDate;

@@ -39,12 +39,23 @@ public enum TrickPoseHorizontalOrientationRequirement
     RightSide = 3
 }
 
+public enum TrickPoseTravelFacingRequirement
+{
+    Any = 0,
+    Forward = 1,
+    Backward = 2,
+    Left = 3,
+    Right = 4
+}
+
 public enum TrickPoseMotionStateRequirement
 {
     Any = 0,
     Rising = 1,
     Diving = 2
 }
+
+
 
 [Serializable]
 public struct TrickPoseAngularVelocityRange
@@ -119,12 +130,19 @@ public class TrickPoseEntry
     public string overridePoseLabel;
     public bool isCoveragePlaceholder;
     public string coverageSlotId;
+    public string entryId;
+    public string mirrorLinkId;
+    public string mirrorLinkedEntryId;
+    public bool mirrorLinkEnabled;
+    public bool isMirrorGenerated;
 
     [Header("Match Conditions")]
     public SkiController.AerialPoseFamily requiredPoseFamily = SkiController.AerialPoseFamily.None;
     public SkiController.AerialPoseShape requiredPoseShape = SkiController.AerialPoseShape.None;
     public TrickPoseVerticalOrientationRequirement requiredVerticalOrientation = TrickPoseVerticalOrientationRequirement.Any;
     public TrickPoseHorizontalOrientationRequirement requiredHorizontalOrientation = TrickPoseHorizontalOrientationRequirement.Any;
+    public TrickPoseTravelFacingRequirement requiredTravelFacing = TrickPoseTravelFacingRequirement.Any;
+    
     public TrickPoseMotionStateRequirement requiredMotionState = TrickPoseMotionStateRequirement.Any;
     [Header("Legacy / Advanced Match Conditions")]
     public SkiController.AerialOrientationModifier requiredOrientationModifier = SkiController.AerialOrientationModifier.None;
@@ -179,6 +197,10 @@ public class TrickPoseEntry
         TrickPoseHorizontalOrientationRequirement matchHorizontalOrientation = controller.EntryPoseHorizontalOrientation != TrickPoseHorizontalOrientationRequirement.Any
             ? controller.EntryPoseHorizontalOrientation
             : controller.CurrentPoseHorizontalOrientation;
+        TrickPoseTravelFacingRequirement matchTravelFacing = controller.EntryPoseTravelFacing != TrickPoseTravelFacingRequirement.Any
+            ? controller.EntryPoseTravelFacing
+            : controller.CurrentPoseTravelFacing;
+       
         TrickPoseMotionStateRequirement matchMotionState = controller.EntryPoseMotionState != TrickPoseMotionStateRequirement.Any
             ? controller.EntryPoseMotionState
             : controller.CurrentPoseMotionState;
@@ -189,12 +211,15 @@ public class TrickPoseEntry
             ? controller.EntryPoseName
             : controller.CurrentPoseName;
 
-        if (requiredPoseFamily != SkiController.AerialPoseFamily.None &&
-            matchFamily != requiredPoseFamily)
+        SkiController.AerialPoseFamily effectiveRequiredFamily = GetEffectiveRequiredPoseFamily();
+        SkiController.AerialPoseShape effectiveRequiredShape = GetEffectiveRequiredPoseShape();
+
+        if (effectiveRequiredFamily != SkiController.AerialPoseFamily.None &&
+            matchFamily != effectiveRequiredFamily)
             return false;
 
-        if (requiredPoseShape != SkiController.AerialPoseShape.None &&
-            matchShape != requiredPoseShape)
+        if (effectiveRequiredShape != SkiController.AerialPoseShape.None &&
+            matchShape != effectiveRequiredShape)
             return false;
 
         if (requiredVerticalOrientation != TrickPoseVerticalOrientationRequirement.Any &&
@@ -203,6 +228,10 @@ public class TrickPoseEntry
 
         if (requiredHorizontalOrientation != TrickPoseHorizontalOrientationRequirement.Any &&
             matchHorizontalOrientation != requiredHorizontalOrientation)
+            return false;
+
+        if (requiredTravelFacing != TrickPoseTravelFacingRequirement.Any &&
+            matchTravelFacing != requiredTravelFacing)
             return false;
 
         if (requiredMotionState != TrickPoseMotionStateRequirement.Any &&
@@ -263,10 +292,11 @@ public class TrickPoseEntry
     {
         int score = 0;
 
-        if (requiredPoseFamily != SkiController.AerialPoseFamily.None) score++;
-        if (requiredPoseShape != SkiController.AerialPoseShape.None) score++;
+        if (GetEffectiveRequiredPoseFamily() != SkiController.AerialPoseFamily.None) score++;
+        if (GetEffectiveRequiredPoseShape() != SkiController.AerialPoseShape.None) score++;
         if (requiredVerticalOrientation != TrickPoseVerticalOrientationRequirement.Any) score++;
         if (requiredHorizontalOrientation != TrickPoseHorizontalOrientationRequirement.Any) score++;
+        if (requiredTravelFacing != TrickPoseTravelFacingRequirement.Any) score++;
         if (requiredMotionState != TrickPoseMotionStateRequirement.Any) score++;
         if (UsesLegacyOrientationModifier()) score++;
         if (!string.IsNullOrWhiteSpace(requiredPoseName)) score++;
@@ -298,6 +328,16 @@ public class TrickPoseEntry
 
         return "Unnamed Pose";
     }
+    
+    public SkiController.AerialPoseFamily GetEffectiveRequiredPoseFamily()
+    {
+        return requiredPoseFamily;
+    }
+
+    public SkiController.AerialPoseShape GetEffectiveRequiredPoseShape()
+    {
+        return requiredPoseShape;
+    }
 
     private static bool MatchesOptionalBool(TrickPoseBoolRequirement requirement, bool value)
     {
@@ -314,6 +354,7 @@ public class TrickPoseEntry
         return requiredOrientationModifier != SkiController.AerialOrientationModifier.None &&
                requiredVerticalOrientation == TrickPoseVerticalOrientationRequirement.Any &&
                requiredHorizontalOrientation == TrickPoseHorizontalOrientationRequirement.Any &&
+               requiredTravelFacing == TrickPoseTravelFacingRequirement.Any &&
                requiredMotionState == TrickPoseMotionStateRequirement.Any;
     }
 }

@@ -8,6 +8,7 @@ public sealed class TrickPoseCoverageMatrixState
 {
     public TrickPoseVerticalOrientationRequirement verticalOrientation = TrickPoseVerticalOrientationRequirement.Upright;
     public TrickPoseHorizontalOrientationRequirement horizontalOrientation = TrickPoseHorizontalOrientationRequirement.Upright;
+    public TrickPoseTravelFacingRequirement travelFacing = TrickPoseTravelFacingRequirement.Forward;
     public TrickPoseMotionStateRequirement motionState = TrickPoseMotionStateRequirement.Any;
 }
 
@@ -16,6 +17,7 @@ public sealed class TrickPoseCoverageAtlasState
 {
     public TrickPoseVerticalOrientationRequirement verticalFilter = TrickPoseVerticalOrientationRequirement.Any;
     public TrickPoseHorizontalOrientationRequirement horizontalFilter = TrickPoseHorizontalOrientationRequirement.Any;
+    public TrickPoseTravelFacingRequirement travelFacingFilter = TrickPoseTravelFacingRequirement.Any;
     public TrickPoseMotionStateRequirement motionFilter = TrickPoseMotionStateRequirement.Any;
     public string searchText = string.Empty;
     public bool hideCleanMatrices;
@@ -36,6 +38,7 @@ public static class TrickPoseCoverageMatrixView
         {
             verticalFilter = state != null ? state.verticalOrientation : TrickPoseVerticalOrientationRequirement.Any,
             horizontalFilter = state != null ? state.horizontalOrientation : TrickPoseHorizontalOrientationRequirement.Any,
+            travelFacingFilter = state != null ? state.travelFacing : TrickPoseTravelFacingRequirement.Any,
             motionFilter = state != null ? state.motionState : TrickPoseMotionStateRequirement.Any
         };
         return DrawAtlas(slots, plan, atlasState, selectedIndex);
@@ -83,6 +86,9 @@ public static class TrickPoseCoverageMatrixView
             if (state.horizontalFilter != TrickPoseHorizontalOrientationRequirement.Any &&
                 slot.horizontalOrientation != state.horizontalFilter)
                 return false;
+            if (state.travelFacingFilter != TrickPoseTravelFacingRequirement.Any &&
+                slot.travelFacing != state.travelFacingFilter)
+                return false;
             if (state.motionFilter != TrickPoseMotionStateRequirement.Any &&
                 slot.motionState != state.motionFilter)
                 return false;
@@ -122,7 +128,7 @@ public static class TrickPoseCoverageMatrixView
         using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
         {
             EditorGUILayout.LabelField(
-                $"{section.vertical} | {section.horizontal} | {section.motion}",
+                $"{section.vertical} | {section.horizontal} | Travel {section.travelFacing} | Motion {section.motion}",
                 EditorStyles.boldLabel);
             EditorGUILayout.LabelField(
                 $"Covered {section.coveredCount}  Gap {section.gapCount}  Ambiguous {section.ambiguousCount}  Suppressed {section.suppressedCount}",
@@ -132,7 +138,7 @@ public static class TrickPoseCoverageMatrixView
             {
                 GUILayout.Space(HeaderWidth);
                 for (int c = 0; c < section.shapes.Count; c++)
-                    GUILayout.Label(section.shapes[c].ToString(), EditorStyles.miniBoldLabel, GUILayout.Width(CellWidth));
+                    GUILayout.Label(DescribeVerticalInput(section.shapes[c]), EditorStyles.miniBoldLabel, GUILayout.Width(CellWidth));
             }
 
             for (int r = 0; r < section.families.Count; r++)
@@ -140,7 +146,7 @@ public static class TrickPoseCoverageMatrixView
                 SkiController.AerialPoseFamily family = section.families[r];
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    GUILayout.Label(family.ToString(), EditorStyles.boldLabel, GUILayout.Width(HeaderWidth));
+                    GUILayout.Label(DescribeHorizontalInput(family), EditorStyles.boldLabel, GUILayout.Width(HeaderWidth));
                     for (int c = 0; c < section.shapes.Count; c++)
                     {
                         selectedIndex = DrawCell(
@@ -149,6 +155,7 @@ public static class TrickPoseCoverageMatrixView
                             section.shapes[c],
                             section.vertical,
                             section.horizontal,
+                            section.travelFacing,
                             section.motion,
                             state,
                             selectedIndex);
@@ -166,11 +173,12 @@ public static class TrickPoseCoverageMatrixView
         SkiController.AerialPoseShape shape,
         TrickPoseVerticalOrientationRequirement vertical,
         TrickPoseHorizontalOrientationRequirement horizontal,
+        TrickPoseTravelFacingRequirement travelFacing,
         TrickPoseMotionStateRequirement motion,
         TrickPoseCoverageAtlasState state,
         int selectedIndex)
     {
-        int slotIndex = FindSlotIndex(slots, family, shape, vertical, horizontal, motion);
+        int slotIndex = FindSlotIndex(slots, family, shape, vertical, horizontal, travelFacing, motion);
         if (slotIndex < 0)
         {
             GUILayout.Box("-", EditorStyles.helpBox, GUILayout.Width(CellWidth), GUILayout.Height(CellHeight));
@@ -240,15 +248,22 @@ public static class TrickPoseCoverageMatrixView
                     continue;
                 if (state.horizontalFilter != TrickPoseHorizontalOrientationRequirement.Any && slot.horizontalOrientation != state.horizontalFilter)
                     continue;
-                if (state.motionFilter != TrickPoseMotionStateRequirement.Any && slot.motionState != state.motionFilter)
+                if (state.travelFacingFilter != TrickPoseTravelFacingRequirement.Any && slot.travelFacing != state.travelFacingFilter)
+                    continue;
+                if (state.motionFilter == TrickPoseMotionStateRequirement.Any)
+                {
+                    if (slot.motionState != TrickPoseMotionStateRequirement.Any)
+                        continue;
+                }
+                else if (slot.motionState != state.motionFilter)
                     continue;
             }
 
-            string key = $"{slot.verticalOrientation}|{slot.horizontalOrientation}|{slot.motionState}";
+            string key = $"{slot.verticalOrientation}|{slot.horizontalOrientation}|{slot.travelFacing}|{slot.motionState}";
             if (!seen.Add(key))
                 continue;
 
-            AtlasSection section = CreateSection(slots, slot.verticalOrientation, slot.horizontalOrientation, slot.motionState, families, shapes);
+            AtlasSection section = CreateSection(slots, slot.verticalOrientation, slot.horizontalOrientation, slot.travelFacing, slot.motionState, families, shapes);
             if (section.totalSlots == 0)
                 continue;
             if (state != null && state.hideCleanMatrices && section.gapCount == 0 && section.ambiguousCount == 0 && section.suppressedCount == 0)
@@ -265,6 +280,9 @@ public static class TrickPoseCoverageMatrixView
             int horizontalCompare = a.horizontal.CompareTo(b.horizontal);
             if (horizontalCompare != 0)
                 return horizontalCompare;
+            int travelCompare = a.travelFacing.CompareTo(b.travelFacing);
+            if (travelCompare != 0)
+                return travelCompare;
             return a.motion.CompareTo(b.motion);
         });
 
@@ -275,6 +293,7 @@ public static class TrickPoseCoverageMatrixView
         List<TrickPoseCoverageSlot> slots,
         TrickPoseVerticalOrientationRequirement vertical,
         TrickPoseHorizontalOrientationRequirement horizontal,
+        TrickPoseTravelFacingRequirement travelFacing,
         TrickPoseMotionStateRequirement motion,
         List<SkiController.AerialPoseFamily> families,
         List<SkiController.AerialPoseShape> shapes)
@@ -283,6 +302,7 @@ public static class TrickPoseCoverageMatrixView
         {
             vertical = vertical,
             horizontal = horizontal,
+            travelFacing = travelFacing,
             motion = motion,
             families = families,
             shapes = shapes
@@ -294,6 +314,7 @@ public static class TrickPoseCoverageMatrixView
             if (slot == null ||
                 slot.verticalOrientation != vertical ||
                 slot.horizontalOrientation != horizontal ||
+                slot.travelFacing != travelFacing ||
                 slot.motionState != motion)
             {
                 continue;
@@ -522,6 +543,7 @@ public static class TrickPoseCoverageMatrixView
         SkiController.AerialPoseShape shape,
         TrickPoseVerticalOrientationRequirement vertical,
         TrickPoseHorizontalOrientationRequirement horizontal,
+        TrickPoseTravelFacingRequirement travelFacing,
         TrickPoseMotionStateRequirement motion)
     {
         int bestIndex = -1;
@@ -533,6 +555,7 @@ public static class TrickPoseCoverageMatrixView
                 slot.poseShape != shape ||
                 slot.verticalOrientation != vertical ||
                 slot.horizontalOrientation != horizontal ||
+                slot.travelFacing != travelFacing ||
                 slot.motionState != motion)
             {
                 continue;
@@ -631,6 +654,7 @@ public static class TrickPoseCoverageMatrixView
     {
         public TrickPoseVerticalOrientationRequirement vertical;
         public TrickPoseHorizontalOrientationRequirement horizontal;
+        public TrickPoseTravelFacingRequirement travelFacing;
         public TrickPoseMotionStateRequirement motion;
         public List<SkiController.AerialPoseFamily> families;
         public List<SkiController.AerialPoseShape> shapes;
@@ -648,5 +672,28 @@ public static class TrickPoseCoverageMatrixView
         Candidate = 2,
         Ambiguous = 3,
         Suppressed = 4
+    }
+
+    private static string DescribeHorizontalInput(SkiController.AerialPoseFamily family)
+    {
+        return family switch
+        {
+            SkiController.AerialPoseFamily.Left => "Left",
+            SkiController.AerialPoseFamily.Right => "Right",
+            SkiController.AerialPoseFamily.Spread => "Both / Spread",
+            SkiController.AerialPoseFamily.Neutral => "Neutral",
+            _ => family.ToString()
+        };
+    }
+
+    private static string DescribeVerticalInput(SkiController.AerialPoseShape shape)
+    {
+        return shape switch
+        {
+            SkiController.AerialPoseShape.Driving => "Forward / Driving",
+            SkiController.AerialPoseShape.LaidOut => "Backward / LaidOut",
+            SkiController.AerialPoseShape.Neutral => "Neutral",
+            _ => shape.ToString()
+        };
     }
 }

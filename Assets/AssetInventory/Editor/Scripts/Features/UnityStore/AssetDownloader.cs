@@ -61,7 +61,7 @@ namespace AssetInventory
             _asset.CurrentState = Asset.State.New;
             DBAdapter.DB.Execute("update Asset set CurrentSubState=0, CurrentState=0, Version=? where Id=?", _asset.LatestVersion, _asset.AssetId);
             _asset.Refresh();
-            _asset.PackageDownloader?.RefreshState();
+            _asset.PackageDownloader?.RefreshState(true);
         }
 
         private void OnDownloadFinished(int foreignId)
@@ -82,10 +82,33 @@ namespace AssetInventory
             return _assetState;
         }
 
-        public void RefreshState()
+        /// <summary>
+        /// Whether external changes (FileSystemWatcher) have invalidated the cached state.
+        /// </summary>
+        public bool IsDirty { get; set; } = true;
+
+        /// <summary>
+        /// Returns true if this asset is in a stable state that doesn't need active polling
+        /// unless explicitly dirtied by a file system event.
+        /// </summary>
+        public bool IsStable => _assetState.state == State.Downloaded
+                                || _assetState.state == State.Unavailable
+                                || _assetState.state == State.UpdateAvailable;
+
+        public void RefreshState(bool force = false)
         {
+            // Skip refresh for stable states unless dirtied by file system event or forced
+            if (!force && !IsDirty && IsStable)
+            {
+                lastRefresh = DateTime.Now;
+                return;
+            }
+
             lastRefresh = DateTime.Now;
-            _headerCache.Clear();
+            IsDirty = false;
+
+            // Only clear header cache when dirtied (file changed), not on every poll
+            if (force) _headerCache.Clear();
 
             try
             {

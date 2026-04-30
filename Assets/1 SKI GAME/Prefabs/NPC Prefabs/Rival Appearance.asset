@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 713419f2b5604f7a8bd1e326d721fcf0, type: 3}
+  m_Name: Rival Appearance
+  m_EditorClassIdentifier: Assembly-CSharp::NpcAppearancePresetSO
+  skinPatternOption: {fileID: 0}
+  skinColor: {r: 0.4117647, g: 0.4117647, b: 0.4117647, a: 1}
+  eyeOption: {fileID: 11400000, guid: 17dc8d1ae22c96f418b1c27e5e636ef8, type: 2}
+  eyeColor: {r: 0.5450981, g: 0, b: 0, a: 1}
+  eyeOutlineColor: {r: 0, g: 0, b: 0, a: 1}
+  hatOption: {fileID: 11400000, guid: 2b5bfd1f083401640884832a9c6c971a, type: 2}
+  hatColor: {r: 0.2941177, g: 0, b: 0.509804, a: 1}
+  hatPatternOption: {fileID: 0}
+  legacyHatPattern: {fileID: 0}
+  hatChannelColors: []
+  jacketOption: {fileID: 11400000, guid: ba9954626be3fbe45969d6fde9da0960, type: 2}
+  jacketColor: {r: 0.29411766, g: 0, b: 0.50980395, a: 1}
+  jacketPatternOption: {fileID: 0}
+  legacyJacketPattern: {fileID: 0}
+  jacketChannelColors:
+  - channelId: secondary
+    color: {r: 0.21053028, g: 0.50980395, b: 0, a: 1}
+  glovesOption: {fileID: 11400000, guid: a7bb8f61aaf7ad945ab882e8f287a24b, type: 2}
+  glovesColor: {r: 0.21176472, g: 0.50980395, b: 0, a: 1}
+  glovesPatternOption: {fileID: 0}
+  legacyGlovesPattern: {fileID: 0}
+  gloveChannelColors: []
+  bootsOption: {fileID: 11400000, guid: ccefa4063ebbc354aabd39c926bc2c92, type: 2}
+  bootsColor: {r: 0.21176472, g: 0.50980395, b: 0, a: 1}
+  bootsPatternOption: {fileID: 0}
+  legacyBootsPattern: {fileID: 0}
+  bootChannelColors: []
+  accessoryOption: {fileID: 11400000, guid: f47a441b898db894eb2a0d5ad541a91a, type: 2}
+  accessoryColor: {r: 1, g: 0.8431373, b: 0, a: 1}
+  accessoryPatternOption: {fileID: 0}
+  legacyAccessoryPattern: {fileID: 0}
+  accessoryChannelColors: []
+  skisOption: {fileID: 0}
+  skisProfileOverride: {fileID: 11400000, guid: aea6564c77c1a1449b18e01828c56a86, type: 2}
+  skisColor: {r: 0.54509807, g: 0, b: 0, a: 1}
+  skisPatternOption: {fileID: 0}
+  legacySkisPattern: {fileID: 0}
+  polesOption: {fileID: 0}
+  polesProfileOverride: {fileID: 0}
+  polesColor: {r: 0, g: 0, b: 0, a: 1}
+  polesPatternOption: {fileID: 0}
+  legacyPolesPattern: {fileID: 0}

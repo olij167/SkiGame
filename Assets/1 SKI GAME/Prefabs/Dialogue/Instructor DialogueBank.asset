@@ -1,0 +1,111 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78f60e84cf6c47f99eb9c744ba1f1757, type: 3}
+  m_Name: Instructor DialogueBank
+  m_EditorClassIdentifier: Assembly-CSharp::NpcDialogueBankSO
+  lines:
+  - id: ambientTutorial
+    topic: tutorial
+    trigger: 0
+    priority: 1000
+    text: "Hey broski, this your first time on the slopes? No stress. \nHold {input:Lean}
+      to control how fast you accelarate. \nAlternate {input:LeftSki} and {input:RightSki}
+      to skate forwards and hold them together to wedge your skis and slow down.
+      \n\nCome talk to me and I'll show you the ropes! "
+    duration: 4
+    cooldown: 0
+    showSpeakerName: 1
+    preferImportantStyle: 0
+    importance: 0
+    styleOverride: {fileID: 0}
+  - id: tip1
+    topic: tips
+    trigger: 3
+    priority: 0
+    text: If you hold {input:Jump} you'll jump higher
+    duration: 4
+    cooldown: 0
+    showSpeakerName: 1
+    preferImportantStyle: 1
+    importance: 0
+    styleOverride: {fileID: 0}
+  - id: tip2
+    topic: tips
+    trigger: 3
+    priority: 0
+    text: 'Have you learnt any tricks yet? Try holding {input:Pose} in the air and
+      see what you can pull off based on your body''s orientation! '
+    duration: 4
+    cooldown: 0
+    showSpeakerName: 1
+    preferImportantStyle: 1
+    importance: 0
+    styleOverride: {fileID: 0}
+  - id: tip3
+    topic: tips
+    trigger: 3
+    priority: 0
+    text: 'Holding {input:Pose} in the air will pull off different tricks. It''s
+      hard to master though... how your body is oriented, how you are moving, whether
+      you are leaning, and your leg positions all contribute to the trick you''ll
+      perform... sounds pretty TRICKY to me heheh '
+    duration: 4
+    cooldown: 0
+    showSpeakerName: 1
+    preferImportantStyle: 1
+    importance: 0
+    styleOverride: {fileID: 0}
+  - id: instructor_pre_lesson_skate
+    topic: instructor.pre_lesson
+    trigger: 1
+    priority: 18
+    text: Alternate left and right to skate forward.
+    duration: 3.25
+    cooldown: 0
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+  - id: instructor_pre_lesson_lean
+    topic: instructor.pre_lesson
+    trigger: 1
+    priority: 18
+    text: Lean forward to build speed, then lean back to settle yourself.
+    duration: 3.75
+    cooldown: 0
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+  - id: instructor_pre_lesson_talk
+    topic: instructor.pre_lesson
+    trigger: 1
+    priority: 20
+    text: Come talk to me when you're ready for a ski lesson.
+    duration: 3.5
+    cooldown: 0
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 1
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+  - id: instructor_pre_lesson_choose
+    topic: instructor.pre_lesson
+    trigger: 0
+    priority: 17
+    text: Start with the beginner lesson if you want the full tour, or pick a harder
+      lesson if you already know the basics.
+    duration: 4.25
+    cooldown: 0
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}

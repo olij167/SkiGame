@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 using UnityEditor;
 using UnityEngine.Experimental.Rendering;
 
-namespace RetroShadersPro.URP
+namespace RetroShadersPro.URP.Editor
 {
     internal class RetroTerrainLitShaderGUI : ShaderGUI, ITerrainLayerCustomUI
     {

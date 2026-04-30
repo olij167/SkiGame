@@ -17,6 +17,7 @@ Material:
   - _LIGHTMODE_UNLIT
   - _RECEIVESHADOWSMODE_ON
   - _SNAPMODE_WORLD
+  - _WRAPMODE_REPEAT
   m_InvalidKeywords:
   - _USE_AFFINE_TEXTURES_ON
   - _USE_AMBIENT_OVERRIDE_ON
@@ -102,6 +103,7 @@ Material:
     - _ResolutionLimit: 128
     - _SnapMode: 1
     - _SnapsPerUnit: 64
+    - _WrapMode: 1
     m_Floats:
     - _AffineTextureStrength: 1
     - _AlphaClip: 0
@@ -138,6 +140,7 @@ Material:
     - _USE_AFFINE_TEXTURES: 1
     - _USE_AMBIENT_OVERRIDE: 1
     - _USE_DITHERING: 0
+    - _USE_FLAT_SHADING: 0
     - _USE_POINT_FILTER: 1
     - _USE_REFLECTION_CUBEMAP: 0
     - _USE_SPECULAR_LIGHT: 0

@@ -504,6 +504,15 @@ void SetupTerrainDebugTextureData(inout InputData inputData, float2 uv)
     #endif
 }
 
+// Why must Unity be like this lmao.
+#if UNITY_VERSION < 60040000
+float EncodeMeshRenderingLayer()
+{
+    uint renderingLayers = GetMeshRenderingLayer();
+    return EncodeMeshRenderingLayer(renderingLayers);
+}
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
 //                  Vertex and Fragment functions                            //
 ///////////////////////////////////////////////////////////////////////////////
@@ -756,8 +765,7 @@ void SplatmapFragment(
     outColor = half4(color.rgb, 1.0h);
 
 #ifdef _WRITE_RENDERING_LAYERS
-    uint renderingLayers = GetMeshRenderingLayer();
-    outRenderingLayers = float4(EncodeMeshRenderingLayer(renderingLayers), 0, 0, 0);
+    outRenderingLayers = float4(EncodeMeshRenderingLayer(), 0, 0, 0);
 #endif
 }
 

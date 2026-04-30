@@ -11,14 +11,15 @@ public enum TrickPoseCoverageAxis
     PoseShape = 4,
     VerticalOrientation = 5,
     HorizontalOrientation = 6,
-    MotionState = 7,
-    Orientation = 8,
-    SpinDirection = 9,
-    FlipDirection = 10,
-    YawBucket = 11,
-    PitchBucket = 12,
-    RollBucket = 13,
-    TotalSpeedBucket = 14
+    TravelFacing = 7,
+    MotionState = 8,
+    Orientation = 9,
+    SpinDirection = 10,
+    FlipDirection = 11,
+    YawBucket = 12,
+    PitchBucket = 13,
+    RollBucket = 14,
+    TotalSpeedBucket = 15
 }
 
 [Serializable]
@@ -45,6 +46,8 @@ public sealed class TrickPoseCoverageExclusionRule
     public SkiController.AerialPoseShape poseShape = SkiController.AerialPoseShape.None;
     public TrickPoseVerticalOrientationRequirement verticalOrientation = TrickPoseVerticalOrientationRequirement.Any;
     public TrickPoseHorizontalOrientationRequirement horizontalOrientation = TrickPoseHorizontalOrientationRequirement.Any;
+    public TrickPoseTravelFacingRequirement travelFacing = TrickPoseTravelFacingRequirement.Any;
+  
     public TrickPoseMotionStateRequirement motionState = TrickPoseMotionStateRequirement.Any;
     public SkiController.AerialOrientationModifier orientationModifier = SkiController.AerialOrientationModifier.None;
     public TrickPoseSpinDirectionRequirement spinDirection = TrickPoseSpinDirectionRequirement.Any;
@@ -67,7 +70,9 @@ public sealed class TrickPoseCoveragePlanSO : ScriptableObject
     public bool usePoseShape = true;
     public bool useVerticalOrientation = true;
     public bool useHorizontalOrientation = true;
-    public bool useMotionState = true;
+    public bool useTravelFacing = true;
+
+    public bool useMotionState;
     public bool useOrientation;
     public bool useSpinDirection;
     public bool useFlipDirection;
@@ -113,6 +118,14 @@ public sealed class TrickPoseCoveragePlanSO : ScriptableObject
         TrickPoseHorizontalOrientationRequirement.LeftSide,
         TrickPoseHorizontalOrientationRequirement.RightSide
     };
+    public List<TrickPoseTravelFacingRequirement> travelFacings = new List<TrickPoseTravelFacingRequirement>
+    {
+        TrickPoseTravelFacingRequirement.Forward,
+        TrickPoseTravelFacingRequirement.Backward,
+        TrickPoseTravelFacingRequirement.Left,
+        TrickPoseTravelFacingRequirement.Right
+    };
+    
     public List<TrickPoseMotionStateRequirement> motionStates = new List<TrickPoseMotionStateRequirement>
     {
         TrickPoseMotionStateRequirement.Any,

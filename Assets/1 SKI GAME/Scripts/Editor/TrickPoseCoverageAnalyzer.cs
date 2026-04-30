@@ -509,14 +509,21 @@ public static class TrickPoseCoverageAnalyzer
     {
         float score = 0f;
 
-        if (entry.requiredPoseFamily != SkiController.AerialPoseFamily.None && entry.requiredPoseFamily != context.poseFamily)
+        SkiController.AerialPoseFamily effectiveRequiredFamily = entry.GetEffectiveRequiredPoseFamily();
+        SkiController.AerialPoseShape effectiveRequiredShape = entry.GetEffectiveRequiredPoseShape();
+
+        if (effectiveRequiredFamily != SkiController.AerialPoseFamily.None && effectiveRequiredFamily != context.poseFamily)
             score += 3f;
-        if (entry.requiredPoseShape != SkiController.AerialPoseShape.None && entry.requiredPoseShape != context.poseShape)
+
+        if (effectiveRequiredShape != SkiController.AerialPoseShape.None && effectiveRequiredShape != context.poseShape)
             score += 3f;
         if (entry.requiredVerticalOrientation != TrickPoseVerticalOrientationRequirement.Any && entry.requiredVerticalOrientation != context.verticalOrientation)
             score += 2.5f;
         if (entry.requiredHorizontalOrientation != TrickPoseHorizontalOrientationRequirement.Any && entry.requiredHorizontalOrientation != context.horizontalOrientation)
             score += 2.5f;
+        if (entry.requiredTravelFacing != TrickPoseTravelFacingRequirement.Any && entry.requiredTravelFacing != context.travelFacing)
+            score += 2.5f;
+        
         if (entry.requiredMotionState != TrickPoseMotionStateRequirement.Any && entry.requiredMotionState != context.motionState)
             score += 2f;
         if (UsesLegacyOrientationModifier(entry) && entry.requiredOrientationModifier != context.orientationModifier)
@@ -668,6 +675,7 @@ public static class TrickPoseCoverageAnalyzer
             context.poseShape.ToString(),
             context.verticalOrientation.ToString(),
             context.horizontalOrientation.ToString(),
+            
             context.motionState.ToString(),
             DescribeInputs(context),
             BandLabel(context.yawAngularVelocity, settings.yawMagnitude, settings.density),
@@ -685,12 +693,16 @@ public static class TrickPoseCoverageAnalyzer
             labels.Add("Left");
         if (context.rightInput)
             labels.Add("Right");
+        if (!context.leftInput && !context.rightInput && context.poseFamily == SkiController.AerialPoseFamily.Neutral)
+            labels.Add("Neutral");
         if (context.tuckInput)
             labels.Add("Tuck");
         else if (context.leanInput >= 0.35f)
             labels.Add("ForwardLean");
         else if (context.leanInput <= -0.35f)
             labels.Add("BackwardLean");
+        if (context.travelFacing != TrickPoseTravelFacingRequirement.Any)
+            labels.Add($"Travel{context.travelFacing}");
         if (context.rising)
             labels.Add("Rising");
         if (context.diving)
@@ -724,6 +736,7 @@ public static class TrickPoseCoverageAnalyzer
                entry.requiredOrientationModifier != SkiController.AerialOrientationModifier.None &&
                entry.requiredVerticalOrientation == TrickPoseVerticalOrientationRequirement.Any &&
                entry.requiredHorizontalOrientation == TrickPoseHorizontalOrientationRequirement.Any &&
+               entry.requiredTravelFacing == TrickPoseTravelFacingRequirement.Any &&
                entry.requiredMotionState == TrickPoseMotionStateRequirement.Any;
     }
 

@@ -1,5 +1,6 @@
 #if !UNITY_EDITOR_WIN || !NET_4_6
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using SixLabors.ImageSharp;
@@ -80,12 +81,12 @@ namespace ImpossibleRobert.Common
             return matchCount > total * coverageThreshold;
         }
 
-        public static bool IsErrorPreview(Image<Rgba32> image, float requiredRatio = 0.06f, byte tolerance = 10)
+        public static bool IsErrorPreview(Image<Rgba32> image, float requiredRatio = 0.06f)
         {
             int width = image.Width;
             int height = image.Height;
             int total = width * height;
-            int magentaCount = 0;
+            int pinkCount = 0;
 
             image.ProcessPixelRows(pixelAccessor =>
             {
@@ -95,17 +96,42 @@ namespace ImpossibleRobert.Common
                     for (int x = 0; x < width; x++)
                     {
                         Rgba32 c = row[x];
-                        if (Math.Abs(c.R - 255) <= tolerance &&
-                            c.G <= tolerance &&
-                            Math.Abs(c.B - 255) <= tolerance)
+                        if (IsMagentaPixel(c.R, c.G, c.B))
                         {
-                            magentaCount++;
+                            pinkCount++;
                         }
                     }
                 }
             });
 
-            return ((float)magentaCount / total) >= requiredRatio;
+            return ((float)pinkCount / total) >= requiredRatio;
+        }
+
+        public static bool IsLowDiversityPinkPreview(Image<Rgba32> image, int maxDistinctColors = 20)
+        {
+            int width = image.Width;
+            int height = image.Height;
+            HashSet<(byte, byte, byte)> buckets = new HashSet<(byte, byte, byte)>();
+            bool hasPink = false;
+
+            image.ProcessPixelRows(pixelAccessor =>
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    Span<Rgba32> row = pixelAccessor.GetRowSpan(y);
+                    for (int x = 0; x < width; x++)
+                    {
+                        Rgba32 c = row[x];
+                        buckets.Add(((byte)(c.R >> 3), (byte)(c.G >> 3), (byte)(c.B >> 3)));
+                        if (!hasPink && IsMagentaPixel(c.R, c.G, c.B))
+                        {
+                            hasPink = true;
+                        }
+                    }
+                }
+            });
+
+            return hasPink && buckets.Count <= maxDistinctColors;
         }
 
         public static ulong ComputePerceptualHash(Image<Rgba32> image, int hashSize = 8)

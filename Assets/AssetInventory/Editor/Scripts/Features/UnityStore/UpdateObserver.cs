@@ -101,16 +101,25 @@ namespace AssetInventory
 
                 AssetInfo info = _all[_curIndex];
 
-                // refresh prioritized items faster
-                if (DateTime.Now - info.PackageDownloader.lastRefresh > TimeSpan.FromSeconds(_curIndex < _prioCount ? 5 : 30))
+                // Skip stable assets unless they were dirtied by a file system event
+                bool isPrio = _curIndex < _prioCount;
+                bool isDirty = info.PackageDownloader.IsDirty;
+                bool isStable = info.PackageDownloader.IsStable;
+
+                // Stable non-priority assets only need checking if dirtied
+                if (isStable && !isPrio && !isDirty)
+                {
+                    // no-op, skip expensive I/O
+                }
+                else if (DateTime.Now - info.PackageDownloader.lastRefresh > TimeSpan.FromSeconds(isPrio ? 5 : (isDirty ? 2 : 60)))
                 {
                     info.Refresh();
                     info.PackageDownloader.RefreshState();
-                    if (_curIndex % AI.Config.observationSpeed == 0) await Task.Yield();
+                    if (AI.Config.observationSpeed > 0 && _curIndex % AI.Config.observationSpeed == 0) await Task.Yield();
                 }
 
                 InitializationProgress = (float)_curIndex / _all.Count;
-                PrioInitializationProgress = (float)_curIndex / _prioCount;
+                PrioInitializationProgress = _prioCount > 0 ? (float)_curIndex / _prioCount : 1f;
                 _curIndex++;
             }
         }
@@ -204,13 +213,14 @@ namespace AssetInventory
             string lowerPath = path.ToLowerInvariant();
             if (Path.GetExtension(lowerPath) != "") lowerPath = Path.GetDirectoryName(lowerPath);
 
-            // refresh all affected files
+            // Mark affected assets as dirty so the scan loop picks them up
             _all
                 .Where(info => !string.IsNullOrEmpty(info.Location))
                 .Where(info => info.GetLocation(true).ToLowerInvariant().StartsWith(lowerPath)).ForEach(info =>
                 {
+                    if (info.PackageDownloader != null) info.PackageDownloader.IsDirty = true;
                     info.Refresh();
-                    info.PackageDownloader?.RefreshState();
+                    info.PackageDownloader?.RefreshState(true);
                 });
         }
 

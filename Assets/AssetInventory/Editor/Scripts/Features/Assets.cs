@@ -4,13 +4,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
-#if USE_URP
-using UnityEditor.Rendering.Universal;
-#endif
 using UnityEngine;
 
 namespace AssetInventory
@@ -1076,7 +1072,15 @@ namespace AssetInventory
 
             if (AI.Config.convertToPipeline && !previewMode && conversionNeeded && info.SRPSupportPackage == null)
             {
-                await RunURPConverterAsync();
+                bool unityConverterSucceeded = false;
+                if (AI.Config.useUnityPipelineConverter)
+                {
+                    unityConverterSucceeded = await PipelineConverter.RunUnityConverterAsync();
+                }
+                if (!unityConverterSucceeded && AI.Config.useCustomPipelineConverter)
+                {
+                    PipelineConverter.ConvertImportedMaterials(results.Values);
+                }
             }
 
             // do post steps after all files are materialized as otherwise nested prefab operations will fail
@@ -1124,149 +1128,24 @@ namespace AssetInventory
         /// <summary>
         /// Runs the URP material converter if available (fire-and-forget).
         /// </summary>
-        public static void RunURPConverter()
-        {
-#if USE_URP
-            if (AssetUtils.IsOnURP())
-            {
-                try
-                {
-                    Converters.RunInBatchMode(
-                        ConverterContainerId.BuiltInToURP
-                        , new List<ConverterId>
-                        {
-                            ConverterId.Material,
-                            ConverterId.ReadonlyMaterial
-                        }
-                        , ConverterFilter.Inclusive
-                    );
-                }
-                catch (Exception e)
-                {
-                    Debug.LogWarning($"Could not run URP converter: {e.Message}");
-                }
-            }
-#endif
-        }
+        /// <returns>True if the Unity converter ran without error, false otherwise.</returns>
+        public static bool RunURPConverter() => PipelineConverter.RunUnityConverter();
 
         /// <summary>
         /// Runs the URP material converter and waits for it to complete.
-        /// Uses reflection to await the callback-based Scan method which fires asynchronously.
-        /// Use this instead of RunURPConverter when subsequent operations (e.g. preview generation)
-        /// depend on the materials being fully converted.
         /// </summary>
-        public static async Task RunURPConverterAsync()
-        {
-#if USE_URP
-            if (!AssetUtils.IsOnURP()) return;
-
-            try
-            {
-                // Get converter types via reflection since FilterConverters is internal
-                MethodInfo filterMethod = typeof (Converters).GetMethod("FilterConverters", BindingFlags.NonPublic | BindingFlags.Static);
-                if (filterMethod == null) return;
-
-                List<Type> converterTypes = (List<Type>)filterMethod.Invoke(null, new object[]
-                {
-                    ConverterContainerId.BuiltInToURP,
-                    new List<ConverterId> {ConverterId.Material, ConverterId.ReadonlyMaterial},
-                    ConverterFilter.Inclusive
-                });
-
-                foreach (Type converterType in converterTypes)
-                {
-                    object converter = Activator.CreateInstance(converterType);
-                    if (converter == null) continue;
-
-                    // Get the Scan method: void Scan(Action<List<IRenderPipelineConverterItem>>)
-                    MethodInfo scanMethod = converter.GetType().GetMethod("Scan");
-                    if (scanMethod == null) continue;
-
-                    ParameterInfo[] scanParams = scanMethod.GetParameters();
-                    if (scanParams.Length != 1) continue;
-
-                    // Extract the callback delegate type: Action<List<IRenderPipelineConverterItem>>
-                    Type callbackType = scanParams[0].ParameterType;
-
-                    // Extract the item type from the generic arguments: List<T> -> T
-                    Type listType = callbackType.GetGenericArguments()[0]; // List<IRenderPipelineConverterItem>
-                    Type itemType = listType.GetGenericArguments()[0]; // IRenderPipelineConverterItem
-
-                    // Get BeforeConvert, Convert, AfterConvert methods
-                    MethodInfo beforeConvert = converter.GetType().GetMethod("BeforeConvert");
-                    MethodInfo convertMethod = converter.GetType().GetMethod("Convert");
-                    MethodInfo afterConvert = converter.GetType().GetMethod("AfterConvert");
-
-                    TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
-
-                    // Create callback state and get the generic instance method specialized to the item type
-                    ConverterCallbackState state = new ConverterCallbackState
-                    {
-                        Converter = converter, BeforeConvert = beforeConvert,
-                        ConvertMethod = convertMethod, AfterConvert = afterConvert, Tcs = tcs
-                    };
-                    MethodInfo helperMethod = typeof (ConverterCallbackState)
-                        .GetMethod(nameof (ConverterCallbackState.OnScanFinished))
-                        .MakeGenericMethod(itemType);
-
-                    // Create the delegate that matches Action<List<IRenderPipelineConverterItem>>
-                    Delegate callback = Delegate.CreateDelegate(callbackType, state, helperMethod);
-
-                    // Invoke Scan with our callback
-                    scanMethod.Invoke(converter, new object[] {callback});
-
-                    // Wait for the callback to fire, with a timeout
-                    Task completed = await Task.WhenAny(tcs.Task, Task.Delay(30000));
-                    if (completed != tcs.Task)
-                    {
-                        Debug.LogWarning($"URP converter '{converterType.Name}' timed out after 30 seconds.");
-                    }
-                }
-
-                AssetDatabase.SaveAssets();
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"Could not run async URP converter: {e.Message}");
-            }
-#else
-            await Task.CompletedTask;
-#endif
-        }
+        /// <returns>True if the Unity converter ran successfully, false otherwise.</returns>
+        public static Task<bool> RunURPConverterAsync() => PipelineConverter.RunUnityConverterAsync();
 
         /// <summary>
-        /// State object and callback handler for the reflection-based converter scan.
-        /// The generic OnScanFinished method is specialized at runtime via MakeGenericMethod
-        /// to match the internal IRenderPipelineConverterItem type.
+        /// Converts material assets at the given project-relative paths from BIRP to the current render pipeline.
         /// </summary>
-        private class ConverterCallbackState
-        {
-            public object Converter;
-            public MethodInfo BeforeConvert;
-            public MethodInfo ConvertMethod;
-            public MethodInfo AfterConvert;
-            public TaskCompletionSource<bool> Tcs;
+        public static void ConvertImportedMaterialsToPipeline(IEnumerable<string> importedPaths) => PipelineConverter.ConvertImportedMaterials(importedPaths);
 
-            public void OnScanFinished<T>(List<T> items)
-            {
-                try
-                {
-                    BeforeConvert?.Invoke(Converter, null);
-                    foreach (T item in items)
-                    {
-                        object[] args = {item, null};
-                        ConvertMethod.Invoke(Converter, args);
-                    }
-                    AfterConvert?.Invoke(Converter, null);
-                    Tcs.TrySetResult(true);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogWarning($"URP converter callback failed: {e.Message}");
-                    Tcs.TrySetResult(false);
-                }
-            }
-        }
+        /// <summary>
+        /// Scans all materials in the project and converts any remaining BIRP materials to the current render pipeline.
+        /// </summary>
+        public static void ConvertAllProjectMaterialsToPipeline() => PipelineConverter.ConvertAllProjectMaterials();
 
         private static void PerformPostImportOperations(string path)
         {

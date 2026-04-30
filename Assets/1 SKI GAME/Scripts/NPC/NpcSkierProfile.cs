@@ -2,7 +2,7 @@ using UnityEngine;
 using SkiGame.Runs;
 
 [DisallowMultipleComponent]
-public class NpcSkierProfile : MonoBehaviour
+public class NpcSkierProfile : MonoBehaviour, INpcDialogueNameSource
 {
     public enum SkierArchetype
     {
@@ -71,6 +71,7 @@ public class NpcSkierProfile : MonoBehaviour
     [SerializeField] private Vector2 laneBiasRange = new Vector2(-0.75f, 0.75f);
 
     public string SkierName => skierName;
+    public string DialogueDisplayName => string.IsNullOrWhiteSpace(skierName) ? "Skier" : skierName.Trim();
     public SkierArchetype Archetype => archetype;
 
     public float Skill01 => skill01;

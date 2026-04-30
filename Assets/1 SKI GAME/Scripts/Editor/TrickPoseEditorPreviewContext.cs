@@ -63,6 +63,8 @@ public sealed class TrickPoseEditorPreviewContext
     public SkiController.AerialOrientationModifier orientationModifier;
     public TrickPoseVerticalOrientationRequirement verticalOrientation;
     public TrickPoseHorizontalOrientationRequirement horizontalOrientation;
+    public TrickPoseTravelFacingRequirement travelFacing;
+    
     public TrickPoseMotionStateRequirement motionState;
     public string poseName;
 
@@ -126,6 +128,7 @@ public static class TrickPoseEditorPreviewUtility
         bool hasAuthoredOrientationRotation = forceMatched && TrickPoseOrientationUtility.TryBuildPresentationEuler(
             entry.requiredVerticalOrientation,
             entry.requiredHorizontalOrientation,
+            entry.requiredTravelFacing,
             out authoredOrientationEuler);
         Vector3 representativeFallback = forceMatched ? Vector3.zero : controllerEntryEuler;
         Vector3 entryEuler = forceMatched
@@ -179,6 +182,10 @@ public static class TrickPoseEditorPreviewUtility
             context.horizontalOrientation = entry.requiredHorizontalOrientation != TrickPoseHorizontalOrientationRequirement.Any
                 ? entry.requiredHorizontalOrientation
                 : GetCurrentHorizontalOrientation(controller);
+            context.travelFacing = entry.requiredTravelFacing != TrickPoseTravelFacingRequirement.Any
+                ? entry.requiredTravelFacing
+                : GetCurrentTravelFacing(controller);
+            
             context.motionState = entry.requiredMotionState != TrickPoseMotionStateRequirement.Any
                 ? entry.requiredMotionState
                 : GetCurrentMotionState(controller);
@@ -283,6 +290,8 @@ public static class TrickPoseEditorPreviewUtility
         AddStatus(statuses, "Shape", DescribeEnumCondition(entry.requiredPoseShape, context.poseShape, SkiController.AerialPoseShape.None));
         AddStatus(statuses, "Vertical Orientation", DescribeEnumCondition(entry.requiredVerticalOrientation, context.verticalOrientation, TrickPoseVerticalOrientationRequirement.Any));
         AddStatus(statuses, "Horizontal Orientation", DescribeEnumCondition(entry.requiredHorizontalOrientation, context.horizontalOrientation, TrickPoseHorizontalOrientationRequirement.Any));
+        AddStatus(statuses, "Travel Facing", DescribeEnumCondition(entry.requiredTravelFacing, context.travelFacing, TrickPoseTravelFacingRequirement.Any));
+        
         AddStatus(statuses, "Motion State", DescribeEnumCondition(entry.requiredMotionState, context.motionState, TrickPoseMotionStateRequirement.Any));
         AddStatus(statuses, "Airborne", DescribeBoolCondition(entry.requireAirborne, context.airborne));
         AddStatus(statuses, "Pose Input", DescribeBoolCondition(entry.requirePoseButtonHeld, context.poseInputHeld));
@@ -404,7 +413,8 @@ public static class TrickPoseEditorPreviewUtility
             bool suppressLegacyOrientation = TrickPoseOrientationUtility.ShouldSuppressLegacyPreviewModifier(
                 context.hasPresentationRotation,
                 context.verticalOrientation,
-                context.horizontalOrientation);
+                context.horizontalOrientation,
+                context.travelFacing);
 
             modifierRotation = suppressLegacyOrientation ? Quaternion.identity : context.orientationModifier switch
             {
@@ -530,6 +540,13 @@ public static class TrickPoseEditorPreviewUtility
                     ? entry.requiredHorizontalOrientation
                     : GetCurrentHorizontalOrientation(controller);
 
+            if (context.travelFacing == TrickPoseTravelFacingRequirement.Any)
+                context.travelFacing = forceMatched && entry != null && entry.requiredTravelFacing != TrickPoseTravelFacingRequirement.Any
+                    ? entry.requiredTravelFacing
+                    : GetCurrentTravelFacing(controller);
+
+            
+
             if (context.motionState == TrickPoseMotionStateRequirement.Any)
                 context.motionState = forceMatched && entry != null && entry.requiredMotionState != TrickPoseMotionStateRequirement.Any
                     ? entry.requiredMotionState
@@ -541,6 +558,8 @@ public static class TrickPoseEditorPreviewUtility
             context.poseShape = DerivePoseShape(context);
             context.verticalOrientation = DeriveVerticalOrientation(context);
             context.horizontalOrientation = DeriveHorizontalOrientation(context);
+            context.travelFacing = DeriveTravelFacing(context);
+            
             context.motionState = DeriveMotionState(context);
             context.orientationModifier = DeriveOrientationModifier(context);
         }
@@ -653,6 +672,17 @@ public static class TrickPoseEditorPreviewUtility
         return TrickPoseHorizontalOrientationRequirement.Upright;
     }
 
+    private static TrickPoseTravelFacingRequirement DeriveTravelFacing(TrickPoseEditorPreviewContext context)
+    {
+        if (context == null || !context.airborne || !context.poseInputHeld)
+            return TrickPoseTravelFacingRequirement.Any;
+
+        if (context.hasPresentationRotation)
+            return TrickPoseOrientationUtility.DerivePreviewTravelFacing(Quaternion.Euler(context.presentationRotationEuler), true);
+
+        return TrickPoseTravelFacingRequirement.Forward;
+    } 
+
     private static TrickPoseMotionStateRequirement DeriveMotionState(TrickPoseEditorPreviewContext context)
     {
         if (context == null || !context.airborne || !context.poseInputHeld)
@@ -667,14 +697,21 @@ public static class TrickPoseEditorPreviewUtility
 
     private static bool Matches(TrickPoseEntry entry, TrickPoseEditorPreviewContext context)
     {
-        if (entry.requiredPoseFamily != SkiController.AerialPoseFamily.None && context.poseFamily != entry.requiredPoseFamily)
+        SkiController.AerialPoseFamily effectiveRequiredFamily = entry.GetEffectiveRequiredPoseFamily();
+        SkiController.AerialPoseShape effectiveRequiredShape = entry.GetEffectiveRequiredPoseShape();
+
+        if (effectiveRequiredFamily != SkiController.AerialPoseFamily.None && context.poseFamily != effectiveRequiredFamily)
             return false;
-        if (entry.requiredPoseShape != SkiController.AerialPoseShape.None && context.poseShape != entry.requiredPoseShape)
+
+        if (effectiveRequiredShape != SkiController.AerialPoseShape.None && context.poseShape != effectiveRequiredShape)
             return false;
         if (entry.requiredVerticalOrientation != TrickPoseVerticalOrientationRequirement.Any && context.verticalOrientation != entry.requiredVerticalOrientation)
             return false;
         if (entry.requiredHorizontalOrientation != TrickPoseHorizontalOrientationRequirement.Any && context.horizontalOrientation != entry.requiredHorizontalOrientation)
             return false;
+        if (entry.requiredTravelFacing != TrickPoseTravelFacingRequirement.Any && context.travelFacing != entry.requiredTravelFacing)
+            return false;
+        
         if (entry.requiredMotionState != TrickPoseMotionStateRequirement.Any && context.motionState != entry.requiredMotionState)
             return false;
         if (UsesLegacyOrientationModifier(entry) && context.orientationModifier != entry.requiredOrientationModifier)
@@ -865,6 +902,11 @@ public static class TrickPoseEditorPreviewUtility
         return controller != null ? controller.CurrentPoseHorizontalOrientation : TrickPoseHorizontalOrientationRequirement.Any;
     }
 
+    private static TrickPoseTravelFacingRequirement GetCurrentTravelFacing(SkiController controller)
+    {
+        return controller != null ? controller.CurrentPoseTravelFacing : TrickPoseTravelFacingRequirement.Any;
+    }
+
     private static TrickPoseMotionStateRequirement GetCurrentMotionState(SkiController controller)
     {
         return controller != null ? controller.CurrentPoseMotionState : TrickPoseMotionStateRequirement.Any;
@@ -876,6 +918,7 @@ public static class TrickPoseEditorPreviewUtility
                entry.requiredOrientationModifier != SkiController.AerialOrientationModifier.None &&
                entry.requiredVerticalOrientation == TrickPoseVerticalOrientationRequirement.Any &&
                entry.requiredHorizontalOrientation == TrickPoseHorizontalOrientationRequirement.Any &&
+               entry.requiredTravelFacing == TrickPoseTravelFacingRequirement.Any &&
                entry.requiredMotionState == TrickPoseMotionStateRequirement.Any;
     }
 

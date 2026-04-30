@@ -5,10 +5,19 @@ using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 #pragma warning disable CS0618 // Type or member is obsolete
+#if UNITY_6000_2_OR_NEWER
+using BaseTreeView = UnityEditor.IMGUI.Controls.TreeView<int>;
+using BaseTreeViewItem = UnityEditor.IMGUI.Controls.TreeViewItem<int>;
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState<int>;
+#else
+using BaseTreeView = UnityEditor.IMGUI.Controls.TreeView;
+using BaseTreeViewItem = UnityEditor.IMGUI.Controls.TreeViewItem;
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState;
+#endif
 
 namespace AssetInventory
 {
-    internal sealed class TreeViewItem<T> : TreeViewItem where T : TreeElement
+    internal sealed class TreeViewItem<T> : BaseTreeViewItem where T : TreeElement
     {
         public T Data { get; }
 
@@ -18,24 +27,24 @@ namespace AssetInventory
         }
     }
 
-    internal class TreeViewWithTreeModel<T> : TreeView where T : TreeElement
+    internal class TreeViewWithTreeModel<T> : BaseTreeView where T : TreeElement
     {
-        private readonly List<TreeViewItem> _rows = new List<TreeViewItem>(100);
+        private readonly List<BaseTreeViewItem> _rows = new List<BaseTreeViewItem>(100);
         public event Action TreeChanged;
 
         protected TreeModel<T> TreeModel { get; private set; }
 
-        public event Action<IList<TreeViewItem>> BeforeDroppingDraggedItems;
+        public event Action<IList<BaseTreeViewItem>> BeforeDroppingDraggedItems;
         public event Action<IList<int>> OnSelectionChanged;
         public event Action<int> OnDoubleClickedItem;
         public event Action<GenericMenu, IReadOnlyList<T>, int> OnContextMenuPopulate;
 
-        public TreeViewWithTreeModel(TreeViewState state, TreeModel<T> model) : base(state)
+        public TreeViewWithTreeModel(BaseTreeViewState state, TreeModel<T> model) : base(state)
         {
             Init(model);
         }
 
-        public TreeViewWithTreeModel(TreeViewState state, MultiColumnHeader multiColumnHeader, TreeModel<T> model) : base(state, multiColumnHeader)
+        public TreeViewWithTreeModel(BaseTreeViewState state, MultiColumnHeader multiColumnHeader, TreeModel<T> model) : base(state, multiColumnHeader)
         {
             Init(model);
         }
@@ -53,12 +62,12 @@ namespace AssetInventory
             Reload();
         }
 
-        protected override TreeViewItem BuildRoot()
+        protected override BaseTreeViewItem BuildRoot()
         {
             return new TreeViewItem<T>(TreeModel.Root.TreeId, -1, TreeModel.Root.TreeName, TreeModel.Root);
         }
 
-        protected override IList<TreeViewItem> BuildRows(TreeViewItem root)
+        protected override IList<BaseTreeViewItem> BuildRows(BaseTreeViewItem root)
         {
             if (TreeModel.Root == null)
             {
@@ -82,7 +91,7 @@ namespace AssetInventory
             return _rows;
         }
 
-        private void AddChildrenRecursive(T parent, int depth, IList<TreeViewItem> newRows)
+        private void AddChildrenRecursive(T parent, int depth, IList<BaseTreeViewItem> newRows)
         {
             foreach (T child in parent.Children)
             {
@@ -103,7 +112,7 @@ namespace AssetInventory
             }
         }
 
-        private void Search(T searchFromThis, string search, List<TreeViewItem> result)
+        private void Search(T searchFromThis, string search, List<BaseTreeViewItem> result)
         {
             if (string.IsNullOrEmpty(search)) throw new ArgumentException("Invalid search: cannot be null or empty", "search");
 
@@ -137,7 +146,7 @@ namespace AssetInventory
             SortSearchResult(result);
         }
 
-        protected virtual void SortSearchResult(List<TreeViewItem> rows)
+        protected virtual void SortSearchResult(List<BaseTreeViewItem> rows)
         {
             rows.Sort((x, y) => EditorUtility.NaturalCompare(x.displayName, y.displayName)); // sort by displayName by default, can be overridden for multicolumn solutions
         }
@@ -228,7 +237,7 @@ namespace AssetInventory
             if (hasSearch) return;
 
             DragAndDrop.PrepareStartDrag();
-            List<TreeViewItem> draggedRows = GetRows().Where(item => args.draggedItemIDs.Contains(item.id)).ToList();
+            List<BaseTreeViewItem> draggedRows = GetRows().Where(item => args.draggedItemIDs.Contains(item.id)).ToList();
             DragAndDrop.SetGenericData(_genericDragID, draggedRows);
             DragAndDrop.objectReferences = new UnityEngine.Object[] {}; // this IS required for dragging to work
             string title = draggedRows.Count == 1 ? draggedRows[0].displayName : "< Multiple >";
@@ -238,7 +247,7 @@ namespace AssetInventory
         protected override DragAndDropVisualMode HandleDragAndDrop(DragAndDropArgs args)
         {
             // Check if we can handle the current drag data (could be dragged in from other areas/windows in the editor)
-            List<TreeViewItem> draggedRows = DragAndDrop.GetGenericData(_genericDragID) as List<TreeViewItem>;
+            List<BaseTreeViewItem> draggedRows = DragAndDrop.GetGenericData(_genericDragID) as List<BaseTreeViewItem>;
             if (draggedRows == null) return DragAndDropVisualMode.None;
 
             // Parent item is null when dragging outside any tree view items.
@@ -270,12 +279,12 @@ namespace AssetInventory
             }
         }
 
-        protected virtual void OnDropDraggedElementsAtIndex(List<TreeViewItem> draggedRows, T parent, int insertIndex)
+        protected virtual void OnDropDraggedElementsAtIndex(List<BaseTreeViewItem> draggedRows, T parent, int insertIndex)
         {
             if (BeforeDroppingDraggedItems != null) BeforeDroppingDraggedItems(draggedRows);
 
             List<TreeElement> draggedElements = new List<TreeElement>();
-            foreach (TreeViewItem x in draggedRows)
+            foreach (BaseTreeViewItem x in draggedRows)
             {
                 draggedElements.Add(((TreeViewItem<T>)x).Data);
             }
@@ -285,9 +294,9 @@ namespace AssetInventory
             SetSelection(selectedIDs, TreeViewSelectionOptions.RevealAndFrame);
         }
 
-        private bool ValidDrag(TreeViewItem parent, List<TreeViewItem> draggedItems)
+        private bool ValidDrag(BaseTreeViewItem parent, List<BaseTreeViewItem> draggedItems)
         {
-            TreeViewItem currentParent = parent;
+            BaseTreeViewItem currentParent = parent;
             while (currentParent != null)
             {
                 if (draggedItems.Contains(currentParent)) return false;

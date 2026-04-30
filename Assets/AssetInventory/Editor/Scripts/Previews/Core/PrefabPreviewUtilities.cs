@@ -28,26 +28,26 @@ namespace AssetInventory
             MeshRenderer[] meshRenderers = prefab.GetComponentsInChildren<MeshRenderer>(true);
             SkinnedMeshRenderer[] skinnedMeshRenderers = prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true);
             int total3DRenderers = meshRenderers.Length + skinnedMeshRenderers.Length;
-            
+
             // Check for Canvas in children or parents (for temporary canvas case)
             bool hasCanvas = prefab.GetComponentInChildren<Canvas>() != null || prefab.GetComponentInParent<Canvas>() != null;
-            
+
             if (hasCanvas)
             {
                 // Check if prefab also has significant 3D content (MeshRenderers or SkinnedMeshRenderers)
                 // Prefabs with both Canvas and 3D renderers should be treated as Model type,
                 // as they're likely 3D scenes with UI overlays (e.g., adventure games, FPS demos)
-                
+
                 // If there are 3D renderers, treat as Model to use perspective camera and 3D bounds
                 // Pure UI prefabs (Canvas only, no 3D content) will still be treated as UI
                 if (total3DRenderers > 0)
                 {
                     return PrefabType.Model;
                 }
-                
+
                 return PrefabType.UI;
             }
-            
+
             // Check for VFX, but also check for significant 3D content
             // Prefabs with both VFX AND substantial mesh content should be treated as Model
             if (prefab.GetComponentInChildren<VisualEffect>())
@@ -58,10 +58,10 @@ namespace AssetInventory
                 {
                     return PrefabType.Model;
                 }
-                
+
                 return PrefabType.VFX;
             }
-            
+
             // Check for particle systems, but also check for significant 3D content
             // Prefabs with both particles AND substantial mesh content (like a space station
             // with some particle effects for lighting/smoke) should be treated as Model
@@ -73,10 +73,10 @@ namespace AssetInventory
                 {
                     return PrefabType.Model;
                 }
-                
+
                 return PrefabType.Particles;
             }
-            
+
             return PrefabType.Model;
         }
 
@@ -118,13 +118,13 @@ namespace AssetInventory
             MeshRenderer[] meshRenderers = prefab.GetComponentsInChildren<MeshRenderer>(true);
             SkinnedMeshRenderer[] skinnedMeshRenderers = prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true);
             int total3DRenderers = meshRenderers.Length + skinnedMeshRenderers.Length;
-            
+
             if (total3DRenderers > 0)
             {
                 // This is a 3D prefab (possibly with UI overlays) - don't create temporary canvas
                 return false;
             }
-            
+
             // Check if the prefab has any RectTransform components
             RectTransform[] rectTransforms = prefab.GetComponentsInChildren<RectTransform>(true);
             if (rectTransforms.Length == 0)
@@ -457,6 +457,11 @@ namespace AssetInventory
             Renderer[] renderers = go.GetComponentsInChildren<Renderer>(true);
             foreach (Renderer renderer in renderers)
             {
+#if UNITY_2023_1_OR_NEWER
+                // VFXRenderer does not allow setting materials - skip to avoid warnings
+                if (renderer is VFXRenderer) continue;
+#endif
+
                 // Use sharedMaterials to avoid material leak warnings in edit mode
                 Material[] sharedMats = renderer.sharedMaterials;
                 Material[] newMaterials = new Material[sharedMats.Length];
@@ -467,6 +472,14 @@ namespace AssetInventory
                     Material originalMaterial = sharedMats[i];
                     if (originalMaterial == null)
                     {
+                        // ParticleSystemRenderer commonly has a null second slot (trail material).
+                        // Leave null slots untouched on particle/trail renderers — they are expected.
+                        if (renderer is ParticleSystemRenderer || renderer is TrailRenderer)
+                        {
+                            newMaterials[i] = null;
+                            continue;
+                        }
+
                         // Null material slots render as magenta, which trips the error-shader
                         // detector (IsErrorShader). Replace with a neutral material that matches
                         // the preview background so null submeshes blend in instead.
@@ -487,26 +500,39 @@ namespace AssetInventory
                         continue;
                     }
 
-                    // Check if the material uses an incompatible shader
+                    // Check if the material uses a known Built-in Render Pipeline (BIRP) shader
+                    // that needs conversion. Only convert these specific shaders — leave everything
+                    // else (URP, HDRP, Shader Graph, custom shaders, etc.) untouched.
+                    // Note: We do NOT convert error shaders here. Custom shaders may temporarily
+                    // appear as error shaders in the preview stage context but work fine otherwise.
+                    // The preview validation system (IsErrorShader) handles detecting bad renders separately.
                     Shader shader = originalMaterial.shader;
                     string shaderName = shader != null ? shader.name : "";
-                    
-                    // Check if shader is already compatible with the current render pipeline
-                    bool isAlreadyCompatible = false;
-                    if (isOnURP)
+
+                    bool needsConversion = IsBIRPShader(shaderName);
+
+                    // Only convert known BIRP shaders; leave everything else as-is
+                    if (needsConversion)
                     {
-                        isAlreadyCompatible = shaderName.StartsWith("Universal Render Pipeline/") ||
-                                             shaderName.StartsWith("Shader Graphs/");
-                    }
-                    else if (isOnHDRP)
-                    {
-                        isAlreadyCompatible = shaderName.StartsWith("HDRP/") ||
-                                             shaderName.StartsWith("Shader Graphs/");
-                    }
-                    
-                    // Replace any shader that isn't already compatible (including error shaders, Standard, etc.)
-                    if (!isAlreadyCompatible)
-                    {
+                        // For particle shaders — or any BIRP shader on a ParticleSystemRenderer —
+                        // use the URP/HDRP Particles shader so vertex colors from the particle
+                        // system are respected (URP/Lit ignores vertex color).
+                        bool isParticleRenderer = renderer is ParticleSystemRenderer || renderer is TrailRenderer;
+                        if (shaderName.StartsWith("Particles/") || (isParticleRenderer && !shaderName.StartsWith("Particles/")))
+                        {
+                            Material particleMat = CreateURPParticleMaterial(shaderName, originalMaterial, isOnURP);
+                            if (particleMat != null)
+                            {
+                                newMaterials[i] = particleMat;
+                                materialsChanged = true;
+                            }
+                            else
+                            {
+                                newMaterials[i] = originalMaterial;
+                            }
+                            continue;
+                        }
+
                         // Create a new material with the compatible shader
                         Material newMaterial = new Material(targetShader);
                         newMaterial.hideFlags = HideFlags.HideAndDontSave; // Prevent leak warnings
@@ -539,17 +565,26 @@ namespace AssetInventory
                         {
                             newMaterial.SetFloat("_Metallic", originalMaterial.GetFloat("_Metallic"));
                         }
-                        if (originalMaterial.HasProperty("_Glossiness") && newMaterial.HasProperty("_Smoothness"))
-                        {
-                            newMaterial.SetFloat("_Smoothness", originalMaterial.GetFloat("_Glossiness"));
-                        }
+                        bool hasMetallicGlossMap = false;
                         if (originalMaterial.HasProperty("_MetallicGlossMap"))
                         {
                             Texture metallicMap = originalMaterial.GetTexture("_MetallicGlossMap");
                             if (metallicMap != null && newMaterial.HasProperty("_MetallicGlossMap"))
                             {
                                 newMaterial.SetTexture("_MetallicGlossMap", metallicMap);
+                                newMaterial.EnableKeyword("_METALLICSPECGLOSSMAP");
+                                hasMetallicGlossMap = true;
                             }
+                        }
+                        // When a metallic gloss map is present, Unity's converter uses _GlossMapScale
+                        // as the smoothness value (it controls the texture interpretation), not _Glossiness.
+                        if (hasMetallicGlossMap && originalMaterial.HasProperty("_GlossMapScale") && newMaterial.HasProperty("_Smoothness"))
+                        {
+                            newMaterial.SetFloat("_Smoothness", originalMaterial.GetFloat("_GlossMapScale"));
+                        }
+                        else if (originalMaterial.HasProperty("_Glossiness") && newMaterial.HasProperty("_Smoothness"))
+                        {
+                            newMaterial.SetFloat("_Smoothness", originalMaterial.GetFloat("_Glossiness"));
                         }
 
                         // --- Normal map ---
@@ -574,6 +609,7 @@ namespace AssetInventory
                             if (occlusionMap != null && newMaterial.HasProperty("_OcclusionMap"))
                             {
                                 newMaterial.SetTexture("_OcclusionMap", occlusionMap);
+                                newMaterial.EnableKeyword("_OCCLUSIONMAP");
                             }
                             if (originalMaterial.HasProperty("_OcclusionStrength") && newMaterial.HasProperty("_OcclusionStrength"))
                             {
@@ -582,23 +618,35 @@ namespace AssetInventory
                         }
 
                         // --- Emission ---
-                        if (originalMaterial.HasProperty("_EmissionColor") && newMaterial.HasProperty("_EmissionColor"))
+                        // Only enable emission if the original material actually had it enabled.
+                        // BIRP Standard shader stores emission state in:
+                        //   - _EMISSION keyword (most reliable)
+                        //   - globalIlluminationFlags: EmissiveIsBlack (0x4) means emission is OFF
+                        // Materials can have non-zero _EmissionColor or an _EmissionMap texture
+                        // while emission is actually disabled (e.g. m_LightmapFlags: 4).
+                        bool emissionWasEnabled = originalMaterial.IsKeywordEnabled("_EMISSION")
+                            || (originalMaterial.globalIlluminationFlags & MaterialGlobalIlluminationFlags.EmissiveIsBlack) == 0;
+
+                        if (emissionWasEnabled)
                         {
-                            Color emission = originalMaterial.GetColor("_EmissionColor");
-                            if (emission.maxColorComponent > 0f)
+                            if (originalMaterial.HasProperty("_EmissionColor") && newMaterial.HasProperty("_EmissionColor"))
                             {
-                                newMaterial.SetColor("_EmissionColor", emission);
-                                newMaterial.EnableKeyword("_EMISSION");
-                                newMaterial.globalIlluminationFlags = originalMaterial.globalIlluminationFlags;
+                                Color emission = originalMaterial.GetColor("_EmissionColor");
+                                if (emission.maxColorComponent > 0f)
+                                {
+                                    newMaterial.SetColor("_EmissionColor", emission);
+                                    newMaterial.EnableKeyword("_EMISSION");
+                                    newMaterial.globalIlluminationFlags = originalMaterial.globalIlluminationFlags;
+                                }
                             }
-                        }
-                        if (originalMaterial.HasProperty("_EmissionMap"))
-                        {
-                            Texture emissionMap = originalMaterial.GetTexture("_EmissionMap");
-                            if (emissionMap != null && newMaterial.HasProperty("_EmissionMap"))
+                            if (originalMaterial.HasProperty("_EmissionMap"))
                             {
-                                newMaterial.SetTexture("_EmissionMap", emissionMap);
-                                newMaterial.EnableKeyword("_EMISSION");
+                                Texture emissionMap = originalMaterial.GetTexture("_EmissionMap");
+                                if (emissionMap != null && newMaterial.HasProperty("_EmissionMap"))
+                                {
+                                    newMaterial.SetTexture("_EmissionMap", emissionMap);
+                                    newMaterial.EnableKeyword("_EMISSION");
+                                }
                             }
                         }
 
@@ -610,6 +658,8 @@ namespace AssetInventory
                             if (mode == 1) // Cutout
                             {
                                 newMaterial.SetFloat("_Surface", 0); // Opaque
+                                newMaterial.SetFloat("_AlphaClip", 1);
+                                newMaterial.SetFloat("_AlphaToMask", 1);
                                 newMaterial.EnableKeyword("_ALPHATEST_ON");
                                 newMaterial.SetOverrideTag("RenderType", "TransparentCutout");
                                 newMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
@@ -622,10 +672,15 @@ namespace AssetInventory
                             {
                                 newMaterial.SetFloat("_Surface", 1); // Transparent
                                 newMaterial.SetFloat("_Blend", mode == 2 ? 0 : 1); // Alpha/Premultiply
+                                newMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                                newMaterial.EnableKeyword("_ALPHAPREMULTIPLY_ON");
                                 newMaterial.SetOverrideTag("RenderType", "Transparent");
                                 newMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                                newMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                                // Blend state matching URP BaseShaderGUI (preserveSpecular mode)
+                                newMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
                                 newMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                                newMaterial.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+                                newMaterial.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                                 newMaterial.SetInt("_ZWrite", 0);
                             }
                         }
@@ -644,6 +699,202 @@ namespace AssetInventory
                     renderer.sharedMaterials = newMaterials;
                 }
             }
+        }
+
+        /// <summary>
+        /// Creates a URP/HDRP particle material that matches the blending mode of the original BIRP particle shader.
+        /// </summary>
+        private static Material CreateURPParticleMaterial(string originalShaderName, Material originalMaterial, bool isOnURP)
+        {
+            // Find the appropriate URP/HDRP particle shader
+            string particleShaderName = isOnURP
+                ? "Universal Render Pipeline/Particles/Unlit"
+                : "HDRP/Particles/Unlit"; // HDRP equivalent
+
+            Shader particleShader = Shader.Find(particleShaderName);
+            if (particleShader == null) return null;
+
+            Material newMat = new Material(particleShader);
+            newMat.hideFlags = HideFlags.HideAndDontSave;
+
+            // Copy base texture (URP uses _BaseMap, BIRP uses _MainTex)
+            if (originalMaterial.HasProperty("_MainTex"))
+            {
+                Texture mainTex = originalMaterial.GetTexture("_MainTex");
+                if (mainTex != null && newMat.HasProperty("_BaseMap"))
+                {
+                    newMat.SetTexture("_BaseMap", mainTex);
+                    newMat.SetTextureScale("_BaseMap", originalMaterial.GetTextureScale("_MainTex"));
+                    newMat.SetTextureOffset("_BaseMap", originalMaterial.GetTextureOffset("_MainTex"));
+                }
+            }
+
+            // Copy color — legacy BIRP particle shaders (Particles/Additive, Alpha Blended, etc.)
+            // use _TintColor with a 2x multiply convention: finalColor = 2 * _TintColor * texture.
+            // URP Particles/Unlit uses _BaseColor directly (no 2x multiply), so we apply the factor.
+            if (originalMaterial.HasProperty("_TintColor") && newMat.HasProperty("_BaseColor"))
+            {
+                Color tint = originalMaterial.GetColor("_TintColor");
+                newMat.SetColor("_BaseColor", new Color(tint.r * 2f, tint.g * 2f, tint.b * 2f, tint.a));
+            }
+            else if (originalMaterial.HasProperty("_Color") && newMat.HasProperty("_BaseColor"))
+            {
+                newMat.SetColor("_BaseColor", originalMaterial.GetColor("_Color"));
+            }
+
+            // Determine blend mode from the original BIRP particle shader.
+            // Particles/Standard Unlit uses _Mode: 0=Opaque, 1=Cutout, 2=Fade, 3=Transparent, 4=Additive
+            // We also detect from shader name for simpler shaders (Particles/Additive, etc.)
+            int blendMode = 0; // Default: alpha blend in URP (maps to _Blend)
+
+            if (originalShaderName == "Particles/Additive" || originalShaderName == "Particles/Additive (Soft)")
+            {
+                blendMode = 2; // Additive
+            }
+            else if (originalShaderName == "Particles/Multiply" || originalShaderName == "Particles/Multiply (Double)")
+            {
+                blendMode = 3; // Multiply
+            }
+            else if (originalShaderName == "Particles/Standard Unlit" || originalShaderName == "Particles/Standard Surface")
+            {
+                // Read _Mode from the material to determine blend mode
+                if (originalMaterial.HasProperty("_Mode"))
+                {
+                    int mode = (int)originalMaterial.GetFloat("_Mode");
+                    // Particles/Standard Unlit _Mode: 0=Opaque, 1=Cutout, 2=Fade, 3=Transparent, 4=Additive, 5=Subtractive, 6=Modulate
+                    switch (mode)
+                    {
+                        case 0: // Opaque
+                            newMat.SetFloat("_Surface", 0);
+                            newMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT"); // still needed for particle rendering
+                            return newMat;
+                        case 1: // Cutout
+                            newMat.SetFloat("_Surface", 0);
+                            newMat.EnableKeyword("_ALPHATEST_ON");
+                            if (originalMaterial.HasProperty("_Cutoff") && newMat.HasProperty("_Cutoff"))
+                                newMat.SetFloat("_Cutoff", originalMaterial.GetFloat("_Cutoff"));
+                            return newMat;
+                        case 4: // Additive
+                            blendMode = 2;
+                            break;
+                        case 5: // Subtractive
+                            blendMode = 4;
+                            break;
+                        case 6: // Modulate
+                            blendMode = 3;
+                            break;
+                        default: // 2=Fade, 3=Transparent → alpha blend
+                            blendMode = 0;
+                            break;
+                    }
+                }
+            }
+            else if (originalShaderName == "Standard" || originalShaderName == "Standard (Specular setup)")
+            {
+                // Standard shader on a ParticleSystemRenderer — read _Mode for blend mode
+                // Standard _Mode: 0=Opaque, 1=Cutout, 2=Fade, 3=Transparent
+                if (originalMaterial.HasProperty("_Mode"))
+                {
+                    int mode = (int)originalMaterial.GetFloat("_Mode");
+                    switch (mode)
+                    {
+                        case 0:
+                            newMat.SetFloat("_Surface", 0);
+                            return newMat;
+                        case 1:
+                            newMat.SetFloat("_Surface", 0);
+                            newMat.EnableKeyword("_ALPHATEST_ON");
+                            if (originalMaterial.HasProperty("_Cutoff") && newMat.HasProperty("_Cutoff"))
+                                newMat.SetFloat("_Cutoff", originalMaterial.GetFloat("_Cutoff"));
+                            return newMat;
+                        case 2: // Fade → alpha blend
+                            blendMode = 0;
+                            break;
+                        case 3: // Transparent → alpha blend
+                            blendMode = 0;
+                            break;
+                    }
+                }
+            }
+            else
+            {
+                // Other particle shaders (Alpha Blended, VertexLit, etc.) → alpha blend
+                blendMode = 0;
+            }
+
+            // Apply URP particle transparent settings.
+            // The shader uses Blend[_SrcBlend][_DstBlend], [_SrcBlendAlpha][_DstBlendAlpha] directly.
+            // We must set these to the correct values since no ShaderGUI ValidateMaterial() runs at runtime.
+            // Values derived from URP BaseShaderGUI.SetupMaterialBlendModeInternal().
+            newMat.SetFloat("_Surface", 1); // Transparent
+            newMat.SetFloat("_Blend", blendMode); // 0=Alpha, 2=Additive, 3=Multiply
+            newMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+
+            switch (blendMode)
+            {
+                case 0: // Alpha
+                    newMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                    newMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    newMat.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+                    newMat.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    newMat.SetInt("_ZWrite", 0);
+                    break;
+                case 2: // Additive
+                    // preserveSpecular lifts srcBlend to One; shader handles alpha multiply internally
+                    newMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                    newMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                    newMat.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+                    newMat.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+                    newMat.SetInt("_ZWrite", 0);
+                    newMat.EnableKeyword("_ALPHAPREMULTIPLY_ON");
+                    break;
+                case 3: // Multiply
+                    newMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.DstColor);
+                    newMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
+                    newMat.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.Zero);
+                    newMat.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+                    newMat.SetInt("_ZWrite", 0);
+                    newMat.EnableKeyword("_ALPHAMODULATE_ON");
+                    break;
+                default: // Fallback: alpha blend
+                    newMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                    newMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    newMat.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+                    newMat.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    newMat.SetInt("_ZWrite", 0);
+                    break;
+            }
+
+            // Set render queue to -1 (auto) like Unity's converter does
+            newMat.renderQueue = -1;
+
+            return newMat;
+        }
+
+        /// <summary>
+        /// Returns true if the shader name is a known Built-in Render Pipeline shader
+        /// that should be converted when running on URP or HDRP.
+        /// </summary>
+        internal static bool IsBIRPShader(string shaderName)
+        {
+            if (string.IsNullOrEmpty(shaderName)) return false;
+
+            // Exact matches for the main BIRP lit shaders that render incorrectly on SRP
+            if (shaderName == "Standard" || shaderName == "Standard (Specular setup)") return true;
+
+            // Legacy shader families that are definitely BIRP-only
+            // (but exclude Legacy Shaders/Particles/* — these render correctly in URP/HDRP)
+            if (shaderName.StartsWith("Legacy Shaders/") && !shaderName.StartsWith("Legacy Shaders/Particles/")) return true;
+
+            // Modern BIRP particle shaders that need conversion (Standard Surface/Unlit).
+            // Legacy simple particle shaders (Particles/Additive, Particles/Alpha Blended, etc.)
+            // render correctly in URP/HDRP and should NOT be converted.
+            if (shaderName == "Particles/Standard Surface" || shaderName == "Particles/Standard Unlit") return true;
+
+            // Mobile shaders (but exclude Mobile/Particles/* — these render correctly in URP/HDRP)
+            if (shaderName.StartsWith("Mobile/") && !shaderName.StartsWith("Mobile/Particles/")) return true;
+
+            return false;
         }
     }
 }

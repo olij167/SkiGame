@@ -456,7 +456,12 @@ namespace AssetInventory
             }
 
             // TODO: check if there are support packages and import those
-            if (AI.Config.convertToPipeline) Assets.RunURPConverter();
+            if (AI.Config.convertToPipeline)
+            {
+                bool unityConverterSucceeded = false;
+                if (AI.Config.useUnityPipelineConverter) unityConverterSucceeded = PipelineConverter.RunUnityConverter();
+                if (!unityConverterSucceeded && AI.Config.useCustomPipelineConverter) PipelineConverter.ConvertAllProjectMaterials();
+            }
 
             OnImportDone?.Invoke();
 

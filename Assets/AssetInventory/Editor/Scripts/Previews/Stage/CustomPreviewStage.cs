@@ -238,9 +238,11 @@ namespace AssetInventory
 
             // Convert preview-instance materials to the active render pipeline before rendering.
             // This is the non-destructive fallback that runs on the instantiated preview copy only.
-            // When convertToPipeline is on, Unity's converter already handled materialized assets,
-            // but this still catches any residual incompatible materials at render time.
-            PrefabPreviewUtilities.ConvertMaterialsToCurrentPipeline(InstantiatedPrefab);
+            // Only runs when the custom pipeline converter is enabled.
+            if (AI.Config.convertToPipeline && AI.Config.useCustomPipelineConverter)
+            {
+                PrefabPreviewUtilities.ConvertMaterialsToCurrentPipeline(InstantiatedPrefab);
+            }
 
             // Handle special prefab types
             if (PrefabType == CustomPrefabPreviewGenerator.PrefabType.Particles)

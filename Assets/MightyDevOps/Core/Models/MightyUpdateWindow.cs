@@ -135,6 +135,7 @@ namespace Mighty
             };
 
 
+            if (dataCore.moduleUpdates == null) return;
             foreach (var item in dataCore.moduleUpdates)
             {
                 // Create a container for each news item

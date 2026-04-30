@@ -1,0 +1,78 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 301e6494375742f4b98ef78f27b43667, type: 3}
+  m_Name: Quest_Tutorial_Lesson_Advanced
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.QuestDefinitionSO
+  id: tutorial.lesson.advanced
+  title: Advanced Ski Lesson
+  description: Pass a tighter readiness check, then focus on trick landings, style,
+    and mountain navigation awareness.
+  autoAccept: 0
+  tutorialQuest: 1
+  stages:
+  - id: tutorial.lesson.advanced.stage1
+    title: Readiness Check
+    description: Show sharp braking and controlled airtime before the advanced lesson
+      opens up.
+    objectives:
+    - id: tutorial.lesson.advanced.quick_stop
+      title: Quick stop
+      description: Brake aggressively and in control.
+      template: 10
+      movementSkill: 20
+    - id: tutorial.lesson.advanced.jump_adjust
+      title: Jump adjust
+      description: Stay deliberate in the air.
+      template: 10
+      movementSkill: 30
+    - id: tutorial.lesson.advanced.air_time
+      title: Stay airborne for 0.5 seconds
+      description: Hold the landing window a little longer.
+      template: 20
+      targetValue: 0.5
+      distanceStat: 20
+  - id: tutorial.lesson.advanced.stage2
+    title: Tricks and Style
+    description: Start landing tricks intentionally, then layer in style and more
+      specific landings.
+    objectives:
+    - id: tutorial.lesson.advanced.any_landing
+      title: Land any trick
+      description: Land one successful trick.
+      template: 60
+      trickTarget: 0
+    - id: tutorial.lesson.advanced.styled_landing
+      title: Land a styled trick
+      description: Use style during the trick and land it.
+      template: 60
+      trickTarget: 30
+    - id: tutorial.lesson.advanced.named_landing
+      title: Land a named trick
+      description: Land a trick that resolves with a named landing.
+      optional: 1
+      template: 60
+      trickTarget: 40
+    - id: tutorial.lesson.advanced.grind_landing
+      title: Land a grind trick
+      description: Use a grind feature if one is available nearby.
+      optional: 1
+      template: 60
+      trickTarget: 20
+  - id: tutorial.lesson.advanced.stage3
+    title: Map and Navigation Features
+    description: Use the map deliberately before committing to more complex routes.
+    objectives:
+    - id: tutorial.lesson.advanced.map_viewed
+      title: View the map
+      description: Open the map and use it to plan your next route.
+      template: 80
+      uiTarget: 10

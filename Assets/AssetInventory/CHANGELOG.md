@@ -4,6 +4,17 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [4.2.0] - 2026-04-21
+
+- Unity 6.4, 6.5 & 6.6 compatibility
+- Allow excluding directories in additional folders
+- Improve verification/detection of pink preview images
+- Highly improved URP pipeline conversion mechanism
+- Use custom converter also on import
+- New About dialog
+- Fix package update filter before/after not working reliably
+- Fix captioning error on outdated preview files
+
 ## [4.1.1] - 2026-03-25
 
 - New main toolbar button to open the tool from there

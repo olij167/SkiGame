@@ -31,6 +31,7 @@ Material:
   - _RECEIVESHADOWSMODE_ON
   - _SNAPMODE_VIEW
   - _USE_FLAT_SHADING
+  - _WRAPMODE_REPEAT
   m_InvalidKeywords:
   - _ALPHAPREMULTIPLY_ON
   - _SURFACE_TYPE_TRANSPARENT
@@ -123,6 +124,7 @@ Material:
     - _ResolutionLimit: 32
     - _SnapMode: 2
     - _SnapsPerUnit: 32
+    - _WrapMode: 1
     m_Floats:
     - _AffineTextureStrength: 1
     - _AlphaClip: 0

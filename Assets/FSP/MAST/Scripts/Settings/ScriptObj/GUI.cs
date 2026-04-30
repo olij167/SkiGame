@@ -24,7 +24,7 @@ namespace MAST
                     
                     [SerializeField] public Color tintColor = new Color32(255, 255, 255, 127);
                     
-                    [SerializeField] public float yPos()
+                    public float yPos()
                     {
                         return gridHeight * yUnitSize;
                     }

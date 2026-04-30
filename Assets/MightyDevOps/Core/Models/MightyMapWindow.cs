@@ -184,6 +184,38 @@ namespace Mighty
             MightyCoreData.modulesStarted = false;
         }
 
+        static bool SyncMiniMapPlaneToSceneViewCamera()
+        {
+            if (sceneData?.MiniMap == null) return false;
+            var sv = GetSceneView();
+            if (sv == null) return false;
+            Vector3 pos = svCameraOverride == null ? GetSVCameraPosition() : svCameraOverride.transform.position;
+            var p = sceneData.MiniMap.Position;
+            const float eps = 0.0001f;
+            bool changed = false;
+            if (sv.in2DMode)
+            {
+                if (Mathf.Abs(p.x - pos.x) > eps || Mathf.Abs(p.y - pos.y) > eps)
+                {
+                    p.x = pos.x;
+                    p.y = pos.y;
+                    changed = true;
+                }
+            }
+            else
+            {
+                if (Mathf.Abs(p.x - pos.x) > eps || Mathf.Abs(p.z - pos.z) > eps)
+                {
+                    p.x = pos.x;
+                    p.z = pos.z;
+                    changed = true;
+                }
+            }
+            if (changed)
+                sceneData.MiniMap.Position = p;
+            return changed;
+        }
+
         private static void EditorUpdate()
         {
             if (!isSceneAnchored) return;
@@ -222,37 +254,31 @@ namespace Mighty
                 data.svRot = svCameraOverride.transform.rotation;
             }
 
-            bool positionChanged = Math.Round(data.svPos.x, 3) != Math.Round(data._svPos.x, 3) &&
-                                 Math.Round(data.svPos.z, 3) != Math.Round(data._svPos.z, 3);
+            bool positionChangedPlane = is2DMode
+                ? Math.Round(data.svPos.x, 3) != Math.Round(data._svPos.x, 3) ||
+                  Math.Round(data.svPos.y, 3) != Math.Round(data._svPos.y, 3)
+                : Math.Round(data.svPos.x, 3) != Math.Round(data._svPos.x, 3) ||
+                  Math.Round(data.svPos.z, 3) != Math.Round(data._svPos.z, 3);
             bool rotationChanged = data.svRot != data._svRot;
-            bool positionOrRotationChanged = positionChanged || (data.svPos != data._svPos);
+            bool positionOrRotationChanged = positionChangedPlane || (data.svPos != data._svPos);
 
-            if (positionChanged && showSceneCamIcon)
+            if (followSceneView && sceneData?.MiniMap != null)
             {
-                if (followSceneView)
+                if (SyncMiniMapPlaneToSceneViewCamera())
                 {
-                    sceneData.MiniMap.Position = data.svPos;
-                    sceneData.MiniMap.Rotation = data.svRot;
-
-                    if (isSceneAnchored)
-                        UpdateMarkers();
-                    root?.MarkDirtyRepaint();
-                }
-                else
-                {
-                    sceneCamIcon?.MarkDirtyRepaint();
+                    UpdateView();
+                    window?.Repaint();
                 }
             }
-
-            else if ((rotationChanged || positionOrRotationChanged) && showSceneCamIcon)
+            else if (positionChangedPlane && showSceneCamIcon && !followSceneView)
             {
-                sceneData.MiniMap.Rotation = data.svRot;
+                sceneCamIcon?.MarkDirtyRepaint();
+            }
 
-                // Only query for sceneCamIcon if it's null and we have a valid window
+            if ((rotationChanged || positionOrRotationChanged) && (showSceneCamIcon || followSceneView))
+            {
                 if (sceneCamIcon == null && window?.rootVisualElement != null)
-                {
                     sceneCamIcon = window.rootVisualElement.Q<Button>(name: "sceneCamIcon");
-                }
 
                 if (sceneCamIcon != null)
                 {
@@ -853,55 +879,70 @@ namespace Mighty
             // DevLog($"EditorApplication.timeSinceStartup: {EditorApplication.timeSinceStartup} data.mapRefreshSeconds: {data.mapRefreshSeconds} EditorApplication.timeSinceStartup % data.mapRefreshSeconds: {EditorApplication.timeSinceStartup % data.mapRefreshSeconds}");
 
             var targetRatio = (float)screenWidth / (float)screenHeight;
-
-            var hh = sceneData.MiniMap.Topleft.z - sceneData.MiniMap.Botleft.z;
+            bool gui2D = sv.in2DMode;
+            var hh = gui2D ? sceneData.MiniMap.Topleft.y - sceneData.MiniMap.Botleft.y : sceneData.MiniMap.Topleft.z - sceneData.MiniMap.Botleft.z;
             var ww = hh * targetRatio;
             float xOffset = ((sceneData.MiniMap.Topright.x - sceneData.MiniMap.Topleft.x) / 2) - (ww / 2);
             float x1 = sceneData.MiniMap.Topleft.x + xOffset;
             float x2 = sceneData.MiniMap.Topright.x - xOffset;
-            float z1 = sceneData.MiniMap.Botright.z;
-            float z2 = sceneData.MiniMap.Topleft.z;
+            float z1 = gui2D ? sceneData.MiniMap.Botright.y : sceneData.MiniMap.Botright.z;
+            float z2 = gui2D ? sceneData.MiniMap.Topleft.y : sceneData.MiniMap.Topleft.z;
 
             sceneCamIcon ??= window.rootVisualElement.Q<Button>(name: "sceneCamIcon");
 
             if (sceneCamIcon != null)
-                if (data.svPos.x >= x1 && data.svPos.x <= x2 &&
-                    data.svPos.z >= z1 && data.svPos.z <= z2)
+            {
+                if (followSceneView)
                 {
                     showSceneCamIcon = true;
-                    var xx = (1 - ((x2 - data.svPos.x) / ww)) * screenWidth;
-                    var zz = (1 - ((data.svPos.z - z1) / hh)) * screenHeight;
-
                     sceneCamIcon.style.display = DisplayStyle.Flex;
                     sceneCamIcon.SendToBack();
-
-                    // if (!isHoveringOnMappable) sceneCamIcon.BringToFront();
                     float prevTop = sceneCamIcon.style.top.value.value;
                     float prevLeft = sceneCamIcon.style.left.value.value;
-                    // var prevRotate = sceneCamIcon.style.rotate.value.angle;
-
-                    sceneCamIcon.style.top = zz - 8;
-                    sceneCamIcon.style.left = xx - 8;
+                    sceneCamIcon.style.top = screenHeight * 0.5f - 8f;
+                    sceneCamIcon.style.left = screenWidth * 0.5f - 8f;
                     sceneCamIcon.style.rotate = new StyleRotate(new UnityEngine.UIElements.Rotate(new Angle(camera.transform.rotation.eulerAngles.y)));
-
-                    float tolerance = 0.1f; // Adjust the tolerance value as needed
-                    bool topEqual = Math.Abs(prevTop - sceneCamIcon.style.top.value.value) < tolerance;
-                    bool leftEqual = Math.Abs(prevLeft - sceneCamIcon.style.left.value.value) < tolerance;
-
-                    if (!topEqual || !leftEqual)
-                    {
-                        // DevLog($"prevTop: {prevTop} / sceneCamIcon.style.top.value.value: {sceneCamIcon.style.top.value.value} prevTop==sceneCamIcon.style.top.value.value: {prevTop == sceneCamIcon.style.top.value.value}");
-                        // DevLog($"prevLeft: {prevLeft} / sceneCamIcon.style.left.value.value: {sceneCamIcon.style.left.value.value} prevLeft==sceneCamIcon.style.left.value.value: {prevLeft == sceneCamIcon.style.left.value.value}");
-
+                    float tolerance = 0.1f;
+                    if (Math.Abs(prevTop - sceneCamIcon.style.top.value.value) >= tolerance ||
+                        Math.Abs(prevLeft - sceneCamIcon.style.left.value.value) >= tolerance)
                         Dirty = true;
-                        sceneCamIcon.MarkDirtyRepaint();
-                    }
+                    sceneCamIcon.MarkDirtyRepaint();
                 }
                 else
                 {
-                    sceneCamIcon.style.display = DisplayStyle.None;
+                    float svPlane = gui2D ? data.svPos.y : data.svPos.z;
+                    if (data.svPos.x >= x1 && data.svPos.x <= x2 && svPlane >= z1 && svPlane <= z2)
+                    {
+                        showSceneCamIcon = true;
+                        var xx = (1 - ((x2 - data.svPos.x) / ww)) * screenWidth;
+                        var zz = (1 - ((svPlane - z1) / hh)) * screenHeight;
 
+                        sceneCamIcon.style.display = DisplayStyle.Flex;
+                        sceneCamIcon.SendToBack();
+
+                        float prevTop = sceneCamIcon.style.top.value.value;
+                        float prevLeft = sceneCamIcon.style.left.value.value;
+
+                        sceneCamIcon.style.top = zz - 8;
+                        sceneCamIcon.style.left = xx - 8;
+                        sceneCamIcon.style.rotate = new StyleRotate(new UnityEngine.UIElements.Rotate(new Angle(camera.transform.rotation.eulerAngles.y)));
+
+                        float tolerance = 0.1f;
+                        bool topEqual = Math.Abs(prevTop - sceneCamIcon.style.top.value.value) < tolerance;
+                        bool leftEqual = Math.Abs(prevLeft - sceneCamIcon.style.left.value.value) < tolerance;
+
+                        if (!topEqual || !leftEqual)
+                        {
+                            Dirty = true;
+                            sceneCamIcon.MarkDirtyRepaint();
+                        }
+                    }
+                    else
+                    {
+                        sceneCamIcon.style.display = DisplayStyle.None;
+                    }
                 }
+            }
 
             if (IsDirty(true)) UpdateView();
         }
@@ -1409,6 +1450,9 @@ namespace Mighty
                 {
                     button.style.backgroundImage = icons.map_follow_sceneview_on;
                     followSceneView = true;
+                    SyncMiniMapPlaneToSceneViewCamera();
+                    UpdateView();
+                    window?.Repaint();
                 }
                 ShowToast($"{(followSceneView ? "Following Sceneview" : "Explorer Mode")}");
             };
@@ -2057,7 +2101,16 @@ namespace Mighty
                     sceneCamIcon.style.borderRightColor =
                     new Color(0, 0, 1, 1);
 
-                sceneCamIcon.clicked += () => followSceneView = true;
+                sceneCamIcon.clicked += () =>
+                {
+                    followSceneView = true;
+                    SyncMiniMapPlaneToSceneViewCamera();
+                    UpdateView();
+                    window?.Repaint();
+                    var followBtn = top?.Q<Button>(name: "followSceneView");
+                    if (followBtn != null && icons.map_follow_sceneview_on != null)
+                        followBtn.style.backgroundImage = icons.map_follow_sceneview_on;
+                };
 
                 Map.Add(sceneCamIcon);
             }

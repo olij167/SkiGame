@@ -3620,7 +3620,7 @@ namespace SkiGame.Progression
             var titleBlock = new VisualElement();
             titleBlock.AddToClassList("quest-card-titleblock");
 
-            var title = new Label(string.IsNullOrWhiteSpace(definition.title) ? definition.SafeId : definition.title);
+            var title = new Label(FormatQuestTitle(definition));
             title.AddToClassList("quest-card-title");
             titleBlock.Add(title);
 
@@ -3737,14 +3737,14 @@ namespace SkiGame.Progression
 
             if (showQuestDescription)
             {
-                var description = new Label(definition.description.Trim());
+                var description = new Label(FormatQuestDescription(definition));
                 description.AddToClassList("quest-card-description");
                 body.Add(description);
             }
 
             if (!state.completed && stage != null && !string.IsNullOrWhiteSpace(stage.description))
             {
-                var stageDescription = new Label(stage.description.Trim());
+                var stageDescription = new Label(FormatStageDescription(definition, stage));
                 stageDescription.AddToClassList("quest-card-stage-description");
                 body.Add(stageDescription);
             }
@@ -3765,7 +3765,7 @@ namespace SkiGame.Progression
                     if (objectiveDef == null)
                         continue;
 
-                    objectiveList.Add(MakeQuestObjectiveRow(objectiveDef, objectiveState, accent));
+                        objectiveList.Add(MakeQuestObjectiveRow(definition, stage, objectiveDef, objectiveState, accent));
                     objectiveCount++;
                 }
             }
@@ -3909,7 +3909,7 @@ namespace SkiGame.Progression
             return false;
         }
 
-        private VisualElement MakeQuestObjectiveRow(QuestObjectiveDefinition objectiveDef, QuestObjectiveRuntimeState objectiveState, Color accent)
+        private VisualElement MakeQuestObjectiveRow(QuestDefinitionSO definition, QuestStageDefinition stage, QuestObjectiveDefinition objectiveDef, QuestObjectiveRuntimeState objectiveState, Color accent)
         {
             var row = new VisualElement();
             row.AddToClassList("quest-objective-row");
@@ -3923,7 +3923,7 @@ namespace SkiGame.Progression
             var copy = new VisualElement();
             copy.AddToClassList("quest-objective-copy");
 
-            var title = new Label(string.IsNullOrWhiteSpace(objectiveDef.title) ? objectiveDef.BuildAuthoringSummary() : objectiveDef.title);
+            var title = new Label(FormatObjectiveTitle(definition, stage, objectiveDef));
             title.AddToClassList("quest-objective-title");
             copy.Add(title);
 
@@ -3958,14 +3958,41 @@ namespace SkiGame.Progression
             element.RegisterCallback<PointerUpEvent>(evt => evt.StopPropagation());
         }
 
-        private static string BuildQuestStageLabel(QuestDefinitionSO definition, QuestRuntimeState state)
+        private string FormatQuestTitle(QuestDefinitionSO definition)
         {
-            var stage = definition != null ? definition.GetStage(state.currentStageIndex) : null;
-            if (stage == null)
-                return "Quest in progress";
+            return QuestTextFormatter.FormatQuestTitle(definition, ResolveInputActions());
+        }
 
-            string stageTitle = string.IsNullOrWhiteSpace(stage.title) ? $"Stage {state.currentStageIndex + 1}" : stage.title.Trim();
-            return stageTitle;
+        private string FormatQuestDescription(QuestDefinitionSO definition)
+        {
+            return QuestTextFormatter.FormatQuestDescription(definition, ResolveInputActions());
+        }
+
+        private string FormatStageDescription(QuestDefinitionSO definition, QuestStageDefinition stage)
+        {
+            return QuestTextFormatter.FormatStageDescription(definition, stage, ResolveInputActions());
+        }
+
+        private string FormatObjectiveTitle(QuestDefinitionSO definition, QuestStageDefinition stage, QuestObjectiveDefinition objective)
+        {
+            return QuestTextFormatter.FormatObjectiveTitle(definition, stage, objective, ResolveInputActions());
+        }
+
+        private string ResolveStageLabel(QuestDefinitionSO definition, QuestRuntimeState state)
+        {
+            return QuestTextFormatter.FormatStageTitle(definition, definition != null ? definition.GetStage(state.currentStageIndex) : null, state.currentStageIndex, ResolveInputActions());
+        }
+
+        private InputActionAsset ResolveInputActions()
+        {
+            return toggleOverlayAction != null && toggleOverlayAction.action != null
+                ? toggleOverlayAction.action.actionMap != null ? toggleOverlayAction.action.actionMap.asset : null
+                : null;
+        }
+
+        private string BuildQuestStageLabel(QuestDefinitionSO definition, QuestRuntimeState state)
+        {
+            return ResolveStageLabel(definition, state);
         }
 
         private static QuestObjectiveDefinition FindObjectiveDefinition(QuestStageDefinition stage, string objectiveId)

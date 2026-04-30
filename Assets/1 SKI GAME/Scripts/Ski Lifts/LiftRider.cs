@@ -53,6 +53,9 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
     private bool _prevDetectCollisions;
     private bool _prevSkiEnabled;
     private bool _prevWalkEnabled;
+    private bool _prevWalkControlsEnabled = true;
+
+    private SkierLimbLineVisual _limbVisual;
 
     private LiftBoardGate _nearbyBoardGate;
 
@@ -85,10 +88,13 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
     private void Awake()
     {
         if (!rb) rb = GetComponent<Rigidbody>();
+        CacheRidePoseReferences();
     }
 
     private void OnEnable()
     {
+        WorldInteractionPromptRegistry.Register(this);
+
         // Hook into the assigned InputActionReference
         if (liftInput != null && liftInput.action != null)
         {
@@ -101,6 +107,8 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
 
     private void OnDisable()
     {
+        WorldInteractionPromptRegistry.Unregister(this);
+
         if (liftInput != null && liftInput.action != null)
         {
             liftInput.action.started -= OnLiftInput;
@@ -286,6 +294,57 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
         }
     }
 
+    private void CacheRidePoseReferences()
+    {
+        if (_limbVisual == null)
+            _limbVisual = GetComponentInChildren<SkierLimbLineVisual>(true);
+
+        if (walkingController == null)
+            walkingController = GetComponent<WalkingController>();
+
+        if (skiController == null)
+            skiController = GetComponent<SkiController>();
+
+        if (rb == null)
+            rb = GetComponent<Rigidbody>();
+    }
+
+    private void ApplyChairLiftSeatedPose()
+    {
+        CacheRidePoseReferences();
+
+        if (walkingController != null)
+        {
+            _prevWalkControlsEnabled = walkingController.ControlsEnabled;
+
+            // Use walk-mode limb anchors for the seated pose, but keep the ski equipment visible.
+            walkingController.enabled = true;
+            walkingController.SetWalkPresentationKeepsSkisEquipped(true);
+            walkingController.ForceEnterWalkMode();
+            walkingController.ClearExternalMove();
+            walkingController.ControlsEnabled = false;
+            walkingController.SetRiderPoseActive(true);
+        }
+
+        if (_limbVisual != null)
+            _limbVisual.SetRiderPoseOverride(SkierLimbLineVisual.RiderPoseMode.LiftSeated);
+    }
+
+    private void ClearChairLiftSeatedPose()
+    {
+        CacheRidePoseReferences();
+
+        if (_limbVisual != null)
+            _limbVisual.ClearRiderPoseOverride();
+
+        if (walkingController != null)
+        {
+            walkingController.SetRiderPoseActive(false);
+            walkingController.ControlsEnabled = _prevWalkControlsEnabled;
+            walkingController.SetWalkPresentationKeepsSkisEquipped(false);
+        }
+    }
+
     public void OnAttachedToCarrier(LiftCarrier carrier)
     {
         currentCarrier = carrier;
@@ -319,6 +378,10 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
 
         if (isChairMode)
         {
+            _prevWalkControlsEnabled = walkingController != null
+    ? walkingController.ControlsEnabled
+    : true;
+
             // Cache previous states so detach restores correctly
             if (_hadPreferredModeBeforeQueue)
             {
@@ -342,6 +405,8 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
                 rb.isKinematic = true;
                 rb.detectCollisions = false;
             }
+
+            ApplyChairLiftSeatedPose();
 
             transform.SetParent(carrier.attachPoint, true);
             transform.localPosition = Vector3.zero;
@@ -390,13 +455,18 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
             rb.linearVelocity = horiz + fwd * detachForwardImpulse;
         }
 
+        if (isChairMode)
+            ClearChairLiftSeatedPose();
+
         // Restore prior controller state
         if (IsPlayerControlled())
         {
             if (walkingController)
             {
                 walkingController.enabled = true;
+                walkingController.ControlsEnabled = _prevWalkControlsEnabled;
                 walkingController.SetWalkPresentationKeepsSkisEquipped(false);
+                walkingController.SetRiderPoseActive(false);
                 walkingController.ForceEnterSkiMode();
             }
 
@@ -411,7 +481,9 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
             if (walkingController)
             {
                 walkingController.enabled = true;
+                walkingController.ControlsEnabled = _prevWalkControlsEnabled;
                 walkingController.SetWalkPresentationKeepsSkisEquipped(false);
+                walkingController.SetRiderPoseActive(false);
 
                 if (_prevSkiEnabled)
                     walkingController.ForceEnterSkiMode();

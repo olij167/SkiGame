@@ -218,7 +218,7 @@ namespace AssetInventory
 
                 // Create a temporary RuntimeAnimatorController
                 UnityEditor.Animations.AnimatorController tempController = new UnityEditor.Animations.AnimatorController();
-                tempController.name = $"TempAnimController_{modelInstance.GetInstanceID()}";
+                tempController.name = $"TempAnimController_{modelInstance.GetStableId()}";
                 tempController.AddLayer("Base Layer");
                 UnityEditor.Animations.AnimatorState state = tempController.layers[0].stateMachine.AddState(clip.name);
                 state.motion = clip;
@@ -1015,7 +1015,7 @@ namespace AssetInventory
                                     if (animator.runtimeAnimatorController == null)
                                     {
                                         UnityEditor.Animations.AnimatorController tempController = new UnityEditor.Animations.AnimatorController();
-                                        tempController.name = $"TempHumanoidController_{stage.InstantiatedPrefab.GetInstanceID()}";
+                                        tempController.name = $"TempHumanoidController_{stage.InstantiatedPrefab.GetStableId()}";
                                         tempController.AddLayer("Base Layer");
 
                                         UnityEditor.Animations.AnimatorState state = tempController.layers[0].stateMachine.AddState(clip.name);
@@ -1082,7 +1082,7 @@ namespace AssetInventory
                                             if (animator.runtimeAnimatorController == null)
                                             {
                                                 UnityEditor.Animations.AnimatorController tempController = new UnityEditor.Animations.AnimatorController();
-                                                tempController.name = $"TempGenericController_{stage.InstantiatedPrefab.GetInstanceID()}";
+                                                tempController.name = $"TempGenericController_{stage.InstantiatedPrefab.GetStableId()}";
                                                 tempController.AddLayer("Base Layer");
 
                                                 // Add the animation clip to the controller
@@ -1163,7 +1163,7 @@ namespace AssetInventory
                                                 if (sourceAnimator.runtimeAnimatorController == null)
                                                 {
                                                     UnityEditor.Animations.AnimatorController tempController = new UnityEditor.Animations.AnimatorController();
-                                                    tempController.name = $"TempHumanoidController_{stage.InstantiatedPrefab.GetInstanceID()}";
+                                                    tempController.name = $"TempHumanoidController_{stage.InstantiatedPrefab.GetStableId()}";
                                                     tempController.AddLayer("Base Layer");
 
                                                     UnityEditor.Animations.AnimatorState state = tempController.layers[0].stateMachine.AddState(clip.name);

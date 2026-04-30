@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a43f710fb7664a64a83dc35e498b2d51, type: 3}
+  m_Name: NpcQuestOffer_Instructor_BeginnerLesson
+  m_EditorClassIdentifier: Assembly-CSharp::NpcQuestOfferSO
+  questDefinition: {fileID: 11400000, guid: 2d3a8f3c1b2749e7a6c14a1c0f6b3210, type: 2}
+  offerTitle: Beginner Ski Lesson
+  offerDialogue: Ready for your first lesson? We'll start with skating, leaning,
+    turning, and getting your first pass.
+  acceptedDialogue: Great. Start by moving around me, then I'll send you toward
+    the resort.
+  inProgressDialogue: Keep working through the basics. Move, turn, brake, then
+    check in at the resort.
+  completedDialogue: Nice. You know enough to start exploring safely.
+  turnInDialogue: That's your first lesson done. Come back when you want to learn
+    faster movement.
+  requiredCompletedQuests: []
+  blockedByCompletedQuests: []
+  autoTrackOnAccept: 1
+  showNavigationTarget: 1

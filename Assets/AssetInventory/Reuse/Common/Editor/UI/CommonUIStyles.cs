@@ -244,8 +244,19 @@ namespace ImpossibleRobert.Common
 
         public static Texture2D LoadTexture(string name)
         {
-            string asset = AssetDatabase.FindAssets("t:Texture2d " + name).FirstOrDefault();
-            return AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GUIDToAssetPath(asset));
+            string[] guids = AssetDatabase.FindAssets("t:Texture2d " + name);
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                string fileName = System.IO.Path.GetFileNameWithoutExtension(path);
+                if (string.Equals(fileName, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                }
+            }
+            // Fallback: return first match if no exact match found
+            if (guids.Length > 0) return AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GUIDToAssetPath(guids[0]));
+            return null;
         }
 
         private static GUIStyle _whiteCenter;

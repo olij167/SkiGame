@@ -70,7 +70,7 @@ namespace NOT_Lonely.Weatherade
         private Material blurMtl;
         private float vsmExp = 5;
 
-        [SerializeField] public RenderTexture sceneDepthTex { get; private set; }
+        /*[SerializeField]*/ public RenderTexture sceneDepthTex { get; private set; }
         [SerializeField] private RenderTexture texBlured;
         [SerializeField] private RenderTexture texRGBA;
 

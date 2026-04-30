@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 
 namespace AssetInventory
 {
+    [Serializable]
     public class TemplateExportSettings
     {
         public List<TemplateExportEnvironment> environments = new List<TemplateExportEnvironment>();

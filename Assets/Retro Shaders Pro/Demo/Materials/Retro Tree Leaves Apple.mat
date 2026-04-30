@@ -20,6 +20,7 @@ Material:
   - _SNAPMODE_VIEW
   - _USE_AMBIENT_OVERRIDE
   - _USE_FLAT_SHADING
+  - _WRAPMODE_CLAMP
   m_InvalidKeywords:
   - _USE_AFFINE_TEXTURES_ON
   - _USE_AMBIENT_OVERRIDE_ON
@@ -108,6 +109,7 @@ Material:
     - _ResolutionLimit: 64
     - _SnapMode: 2
     - _SnapsPerUnit: 32
+    - _WrapMode: 0
     m_Floats:
     - _AffineTextureStrength: 1
     - _AlphaClip: 1

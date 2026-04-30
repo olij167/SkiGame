@@ -45,9 +45,9 @@ public sealed class PointOfInterestRegistryEditor : Editor
         // Draw all serialized fields (Discovery, Gizmos, Custom POIs, Lift POI Identity, etc.)
         DrawDefaultInspector();
 
-        // Keep cache fresh enough that the discovered list is useful.
-        // (Cache is non-serialized, so inspector must query and display it explicitly.)
-        ThrottledRefresh(reg, 0.5d);
+        // Cache is non-serialized, so only keep it hot while the read-only list is visible.
+        if (_showDiscovered)
+            ThrottledRefresh(reg, 1.0d);
 
         EditorGUILayout.Space(10);
         DrawCustomPlacementTool(reg);

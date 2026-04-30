@@ -333,7 +333,7 @@ namespace AudioTool
             byte[] bytes = reader.ReadBytes(10);
 
             int exponent = ((bytes[0] & 0x7F) << 8) | bytes[1];
-            long mantissa = 0;
+            ulong mantissa = 0;
             for (int i = 2; i < 10; i++)
             {
                 mantissa = (mantissa << 8) | bytes[i];

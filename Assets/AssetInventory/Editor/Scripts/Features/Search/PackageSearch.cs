@@ -449,14 +449,14 @@ namespace AssetInventory
                         filteredAssets = filteredAssets.Where(a => a.LastRelease >= yearAgo);
                         break;
 
-                    case 5: // Before Date
+                    case 6: // Before Date
                         if (opt.UpdateBeforeDate.HasValue)
                         {
                             filteredAssets = filteredAssets.Where(a => a.LastRelease <= opt.UpdateBeforeDate.Value);
                         }
                         break;
 
-                    case 6: // After Date
+                    case 7: // After Date
                         if (opt.UpdateAfterDate.HasValue)
                         {
                             filteredAssets = filteredAssets.Where(a => a.LastRelease >= opt.UpdateAfterDate.Value);

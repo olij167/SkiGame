@@ -20,8 +20,10 @@ namespace SkiGame.Progression
         public string questId;
         public bool accepted;
         public bool completed;
+        public bool readyToTurnIn;
         public int currentStageIndex;
         public string pinnedObjectiveId;
+        public string acceptedFromNpcIdentityId;
         public List<QuestObjectiveRuntimeState> objectiveStates = new List<QuestObjectiveRuntimeState>();
     }
 

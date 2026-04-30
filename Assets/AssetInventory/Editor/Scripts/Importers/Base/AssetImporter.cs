@@ -219,6 +219,15 @@ namespace AssetInventory
                 || path.Contains(".plastic/", StringComparison.OrdinalIgnoreCase);
         }
 
+        internal static bool IsExcludedDirectory(string path, string[] excludedDirectories, bool normalize = true)
+        {
+            if (excludedDirectories == null || excludedDirectories.Length == 0) return false;
+            if (normalize) path = path.Replace('\\', '/');
+
+            string[] parts = path.Split('/');
+            return parts.Any(p => excludedDirectories.Any(e => string.Equals(p, e, StringComparison.OrdinalIgnoreCase)));
+        }
+
         protected static void RemoveWorkFolder(Asset asset, string tempPath)
         {
             // remove files again, no need to wait

@@ -17,11 +17,12 @@ namespace AssetInventory
 {
     public static class AI
     {
-        public const string VERSION = "4.1.1";
+        public const string VERSION = "4.2.0";
         public const string DEFINE_SYMBOL = "ASSET_INVENTORY";
         public const string DEFINE_SYMBOL_OLLAMA = "BRAIN_OLLAMA";
         public const string DEFINE_SYMBOL_HIDE_AI = DEFINE_SYMBOL + "_HIDE_AI";
         public const string DEFINE_SYMBOL_HIDE_BROWSER = DEFINE_SYMBOL + "_HIDE_BROWSER";
+        public const string DEFINE_SYMBOL_HIDE_TOOLS_MENU = DEFINE_SYMBOL + "_HIDE_TOOLS_MENU";
         public const string DEFINE_SYMBOL_HIDE_PROJECT_TOOLBAR = DEFINE_SYMBOL + "_HIDE_PROJECT_TOOLBAR";
 
         internal const string HOME_LINK = "https://www.wetzold.com/tool";

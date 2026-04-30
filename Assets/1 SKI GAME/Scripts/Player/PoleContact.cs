@@ -151,6 +151,11 @@ public class PoleContact : MonoBehaviour
     private Vector3 _passiveAirLocalVelocity;
     private float _passiveAirPoseSuppression;
 
+    private bool _stackVisualOverrideActive;
+    private Vector3 _stackVisualOverrideWorldPosition;
+    private Quaternion _stackVisualOverrideWorldRotation = Quaternion.identity;
+    private float _stackVisualOverrideWeight;
+
     private void Reset()
     {
         groundMask = Physics.DefaultRaycastLayers;
@@ -206,6 +211,7 @@ public class PoleContact : MonoBehaviour
         poleRoot.localPosition = _baseLocalPos;
         poleRoot.localRotation = _baseLocalRot;
         ClearAuthoredPoseOverride();
+        ClearStackVisualOverride();
         _passiveAirDriftActive = false;
         _passiveAirPoseSuppression = 0f;
     }
@@ -251,6 +257,44 @@ public class PoleContact : MonoBehaviour
     {
         _authoredPoseEnabled = false;
         _authoredBlendWeight = 0f;
+    }
+
+    public void SetStackVisualOverrideWorld(Vector3 worldPosition, Quaternion worldRotation, float weight)
+    {
+        _stackVisualOverrideActive = weight > 0.001f;
+        _stackVisualOverrideWorldPosition = worldPosition;
+        _stackVisualOverrideWorldRotation = worldRotation;
+        _stackVisualOverrideWeight = Mathf.Clamp01(weight);
+    }
+
+    public void ClearStackVisualOverride()
+    {
+        _stackVisualOverrideActive = false;
+        _stackVisualOverrideWeight = 0f;
+    }
+
+    /// <summary>
+    /// Applies a stack visual override immediately, instead of waiting until this PoleContact's next LateUpdate.
+    /// Used by SkierLimbLineVisual, which runs after PoleContact and needs the handle to stay pinned to the hand
+    /// during the current frame.
+    /// </summary>
+    public void ApplyStackVisualOverrideWorldImmediate(Vector3 worldPosition, Quaternion worldRotation, float weight)
+    {
+        SetStackVisualOverrideWorld(worldPosition, worldRotation, weight);
+
+        Transform root = PoleRoot;
+        if (!_stackVisualOverrideActive || root == null)
+            return;
+
+        if (_stackVisualOverrideWeight >= 0.999f)
+        {
+            root.SetPositionAndRotation(_stackVisualOverrideWorldPosition, _stackVisualOverrideWorldRotation);
+            return;
+        }
+
+        root.SetPositionAndRotation(
+            Vector3.Lerp(root.position, _stackVisualOverrideWorldPosition, _stackVisualOverrideWeight),
+            Quaternion.Slerp(root.rotation, _stackVisualOverrideWorldRotation, _stackVisualOverrideWeight));
     }
 
     public void SetPassiveAirDriftContext(bool isAirborne, Vector3 localVelocity, float authoredPoseWeight)
@@ -300,6 +344,17 @@ public class PoleContact : MonoBehaviour
             return;
 
         float dt = Time.deltaTime;
+
+        if (_stackVisualOverrideActive)
+        {
+            // The stack target is already blended by SkierLimbLineVisual.
+            // Do not heavily re-lerp position here, or the pole grip visibly separates from the hand.
+            float rotationLerp = 1f - Mathf.Exp(-poseLerpSpeed * 2.5f * dt);
+
+            poleRoot.position = _stackVisualOverrideWorldPosition;
+            poleRoot.rotation = Quaternion.Slerp(poleRoot.rotation, _stackVisualOverrideWorldRotation, rotationLerp);
+            return;
+        }
 
         SkiController.PoleStrokePhase phase = skiController.CurrentPolePhase;
         float phaseT = Mathf.Clamp01(skiController.PoleStrokeT);

@@ -19,6 +19,9 @@ public sealed class NpcAppearanceBootstrap : MonoBehaviour
 
     public void Apply()
     {
+        if (TryGetComponent(out NpcIdentity identity) && identity.IsAuthored && identity.PreserveAuthoredAppearance)
+            return;
+
         if (appearanceGenerator != null)
             appearanceGenerator.ApplyRandomAppearance(profile);
     }

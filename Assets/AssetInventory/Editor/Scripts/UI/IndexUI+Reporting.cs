@@ -10,6 +10,11 @@ using UnityEditor.PackageManager;
 using UnityEngine;
 using static AssetInventory.AssetTreeViewControl;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
+#if UNITY_6000_2_OR_NEWER
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState<int>;
+#else
+using BaseTreeViewState = UnityEditor.IMGUI.Controls.TreeViewState;
+#endif
 
 namespace AssetInventory
 {
@@ -40,7 +45,7 @@ namespace AssetInventory
             get
             {
 #pragma warning disable CS0618 // Type or member is obsolete
-                if (_reportTreeViewState == null) _reportTreeViewState = new TreeViewState();
+                if (_reportTreeViewState == null) _reportTreeViewState = new BaseTreeViewState();
 #pragma warning restore CS0618 // Type or member is obsolete
 
                 // Calculate available width dynamically (accounting for inspector width)
@@ -74,7 +79,7 @@ namespace AssetInventory
         }
         private TreeViewWithTreeModel<AssetInfo> _reportTreeView;
 #pragma warning disable CS0618 // Type or member is obsolete
-        private TreeViewState _reportTreeViewState;
+        private BaseTreeViewState _reportTreeViewState;
 #pragma warning restore CS0618 // Type or member is obsolete
 
         private TreeModel<AssetInfo> ReportTreeModel

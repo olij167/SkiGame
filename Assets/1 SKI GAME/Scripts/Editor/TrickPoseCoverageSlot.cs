@@ -30,6 +30,7 @@ public sealed class TrickPoseCoverageSlot
     public SkiController.AerialPoseShape poseShape = SkiController.AerialPoseShape.None;
     public TrickPoseVerticalOrientationRequirement verticalOrientation = TrickPoseVerticalOrientationRequirement.Any;
     public TrickPoseHorizontalOrientationRequirement horizontalOrientation = TrickPoseHorizontalOrientationRequirement.Any;
+    public TrickPoseTravelFacingRequirement travelFacing = TrickPoseTravelFacingRequirement.Any;
     public TrickPoseMotionStateRequirement motionState = TrickPoseMotionStateRequirement.Any;
     public SkiController.AerialOrientationModifier orientationModifier = SkiController.AerialOrientationModifier.None;
     public TrickPoseSpinDirectionRequirement spinDirection = TrickPoseSpinDirectionRequirement.Any;

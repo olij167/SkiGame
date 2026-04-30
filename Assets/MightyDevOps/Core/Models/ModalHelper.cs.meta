@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: ca6d5994750cb3241a3b96ebb96529b0
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 177244
+  packageName: MIGHTY PORTAL
+  packageVersion: 2.2.5
+  assetPath: Assets/MightyDevOps/Core/Models/ModalHelper.cs
+  uploadId: 902664

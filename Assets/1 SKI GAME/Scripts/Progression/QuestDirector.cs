@@ -36,9 +36,12 @@ namespace SkiGame.Progression
         [SerializeField] private bool enableTrackedQuestGuidance = true;
         [SerializeField] private int maxTrackedQuestWaypoints = 3;
         [SerializeField] private float guidanceArriveDistance = 9f;
+        [Header("Tutorial Legacy Flow")]
+        [SerializeField] private bool autoCreateTutorialQuestFlowController = false;
 
         public event Action<QuestDefinitionSO, QuestRuntimeState> OnQuestAccepted;
         public event Action<QuestDefinitionSO, QuestRuntimeState> OnQuestCompleted;
+        public event Action<QuestDefinitionSO, QuestRuntimeState> OnQuestReadyToTurnIn;
         public event Action<QuestDefinitionSO, QuestRuntimeState> OnQuestStageAdvanced;
         public event Action OnQuestTrackingChanged;
 
@@ -106,6 +109,11 @@ namespace SkiGame.Progression
 
         public bool TryAcceptQuest(string questId)
         {
+            return TryAcceptQuest(questId, null);
+        }
+
+        public bool TryAcceptQuest(string questId, string offeredByNpcIdentityId)
+        {
             if (!_questById.TryGetValue(questId ?? string.Empty, out var definition) || definition == null)
                 return false;
 
@@ -114,12 +122,16 @@ namespace SkiGame.Progression
                 return false;
 
             var runtimeState = GetOrCreateQuestState(profile.quests, definition);
-            if (runtimeState.completed)
+            if (runtimeState.completed && !runtimeState.readyToTurnIn)
                 return false;
 
             if (!runtimeState.accepted)
             {
                 runtimeState.accepted = true;
+                runtimeState.completed = false;
+                runtimeState.readyToTurnIn = false;
+                runtimeState.acceptedFromNpcIdentityId = offeredByNpcIdentityId;
+                runtimeState.currentStageIndex = 0;
                 SyncObjectiveStates(definition, runtimeState);
                 EnsureQuestTracked(profile.quests, definition.SafeId);
                 ProgressionEventRecorder.RecordQuestAccepted(profile);
@@ -166,6 +178,53 @@ namespace SkiGame.Progression
         {
             var state = GetQuestState(questId);
             return state != null && state.completed;
+        }
+
+        public bool IsQuestReadyToTurnIn(string questId)
+        {
+            var state = GetQuestState(questId);
+            return state != null && state.accepted && state.readyToTurnIn && !state.completed;
+        }
+
+        public bool TryRestartQuest(string questId, string offeredByNpcIdentityId = null)
+        {
+            if (!_questById.TryGetValue(questId ?? string.Empty, out var definition) || definition == null)
+                return false;
+
+            var profile = EnsureProfileState();
+            if (profile?.quests == null)
+                return false;
+
+            var runtimeState = GetOrCreateQuestState(profile.quests, definition);
+            runtimeState.accepted = true;
+            runtimeState.completed = false;
+            runtimeState.readyToTurnIn = false;
+            runtimeState.currentStageIndex = 0;
+            runtimeState.acceptedFromNpcIdentityId = offeredByNpcIdentityId;
+            runtimeState.objectiveStates.Clear();
+            SyncObjectiveStates(definition, runtimeState);
+            profile.quests.completedQuestIds?.Remove(definition.SafeId);
+            EnsureQuestTracked(profile.quests, definition.SafeId);
+            MarkDirty();
+            RefreshTrackedQuestGuidance(profile);
+            OnQuestAccepted?.Invoke(definition, runtimeState);
+            FlushDirtySaveIfNeeded(force: true);
+            return true;
+        }
+
+        public bool TryTurnInQuest(string questId, string giverIdentityId)
+        {
+            var runtimeState = GetQuestState(questId);
+            if (runtimeState == null || !runtimeState.accepted || runtimeState.completed || !runtimeState.readyToTurnIn)
+                return false;
+
+            var definition = GetQuestDefinition(questId);
+            if (definition == null || !IsValidTurnInTarget(definition, runtimeState, giverIdentityId))
+                return false;
+
+            CompleteQuest(definition, runtimeState);
+            FlushDirtySaveIfNeeded(force: true);
+            return true;
         }
 
         public void GetQuestDefinitions(List<QuestDefinitionSO> buffer)
@@ -331,6 +390,9 @@ namespace SkiGame.Progression
 
         private void EnsureTutorialQuestFlowController()
         {
+            if (!autoCreateTutorialQuestFlowController)
+                return;
+
             if (!CatalogContainsTutorialQuest())
                 return;
 
@@ -388,7 +450,9 @@ namespace SkiGame.Progression
                 questId = definition.SafeId,
                 accepted = false,
                 completed = false,
+                readyToTurnIn = false,
                 currentStageIndex = 0,
+                acceptedFromNpcIdentityId = string.Empty,
                 objectiveStates = new List<QuestObjectiveRuntimeState>()
             };
 
@@ -499,7 +563,16 @@ namespace SkiGame.Progression
 
                 if (definition.GetStage(runtimeState.currentStageIndex) == null)
                 {
-                    CompleteQuest(definition, runtimeState);
+                    if (definition.completionMode == QuestCompletionMode.RequireTurnIn)
+                    {
+                        runtimeState.readyToTurnIn = true;
+                        MarkDirty();
+                        OnQuestReadyToTurnIn?.Invoke(definition, runtimeState);
+                    }
+                    else
+                    {
+                        CompleteQuest(definition, runtimeState);
+                    }
                     changed = true;
                 }
                 else
@@ -1160,6 +1233,7 @@ namespace SkiGame.Progression
         private void CompleteQuest(QuestDefinitionSO definition, QuestRuntimeState runtimeState)
         {
             runtimeState.completed = true;
+            runtimeState.readyToTurnIn = false;
 
             var profile = EnsureProfileState();
             if (profile?.quests?.completedQuestIds != null && !profile.quests.completedQuestIds.Contains(definition.SafeId))
@@ -1174,6 +1248,35 @@ namespace SkiGame.Progression
 
             MarkDirty();
             OnQuestCompleted?.Invoke(definition, runtimeState);
+        }
+
+        private static bool IsValidTurnInTarget(QuestDefinitionSO definition, QuestRuntimeState runtimeState, string giverIdentityId)
+        {
+            if (definition == null)
+                return false;
+
+            switch (definition.turnInTargetType)
+            {
+                case QuestTurnInTargetType.None:
+                    return true;
+
+                case QuestTurnInTargetType.OriginalQuestGiver:
+                    return !string.IsNullOrWhiteSpace(runtimeState.acceptedFromNpcIdentityId) &&
+                           string.Equals(runtimeState.acceptedFromNpcIdentityId, giverIdentityId, StringComparison.OrdinalIgnoreCase);
+
+                case QuestTurnInTargetType.SpecificNpcIdentity:
+                    return !string.IsNullOrWhiteSpace(definition.turnInNpcIdentityId) &&
+                           string.Equals(definition.turnInNpcIdentityId, giverIdentityId, StringComparison.OrdinalIgnoreCase);
+
+                default:
+                    if (definition.turnInToOriginalQuestGiver)
+                    {
+                        return !string.IsNullOrWhiteSpace(runtimeState.acceptedFromNpcIdentityId) &&
+                               string.Equals(runtimeState.acceptedFromNpcIdentityId, giverIdentityId, StringComparison.OrdinalIgnoreCase);
+                    }
+
+                    return true;
+            }
         }
 
         private void EnsureQuestTracked(QuestLogState questLog, string questId)

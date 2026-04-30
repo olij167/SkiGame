@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: f1b2ca3ff8678da4e92dd804840d5c76
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 177244
+  packageName: MIGHTY PORTAL
+  packageVersion: 2.2.5
+  assetPath: Assets/MightyDevOps/Core/Models/UnityDefaultCursor.cs
+  uploadId: 902664
