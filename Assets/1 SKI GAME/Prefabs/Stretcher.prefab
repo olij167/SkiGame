@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 405075551820606577}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Anti Roll Ref
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -40,7 +40,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2194975470932987052}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Mount Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -73,7 +73,7 @@ GameObject:
   - component: {fileID: 923516668684630253}
   - component: {fileID: 249338377500989111}
   - component: {fileID: 5749328038591903563}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Stretcher
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -120,19 +120,20 @@ MonoBehaviour:
   explicitSnowmobile: {fileID: 0}
   autoFindNearestSnowmobileIfUnpaired: 1
   initialSpawnClearance: 0.35
-  yawAlignTorque: 8
-  yawAngularDamping: 1.5
-  maxYawTorque: 20
+  yawAlignTorque: 6
+  yawAngularDamping: 1.25
+  maxYawTorque: 14
   groundMask:
     serializedVersion: 2
     m_Bits: 64
-  probeStartHeight: 4
-  probeLength: 5
-  rideHeight: 1
-  rideSpringStrength: 120
-  rideSpringDamping: 18
-  groundStickForce: 5
-  alignToGroundSpeed: 10
+  probeStartHeight: 2.5
+  probeLength: 4
+  rideHeight: 0.75
+  rideSpringStrength: 65
+  rideSpringDamping: 10
+  groundStickForce: 2
+  alignToGroundSpeed: 7
+  maxRideSpringAcceleration: 35
   falloffSpeedThreshold: 16
   falloffAngularThreshold: 120
   stabilityDrainFromSpeed: 0.7
@@ -140,14 +141,14 @@ MonoBehaviour:
   stabilityRecoveryPerSecond: 0.35
   pickupTrigger: {fileID: 2618758877830515727}
   casualtyPickupRadius: 6
-  ropeLength: 3
-  ropeSlack: 0.8
-  ropeSpring: 350
-  ropeDamper: 60
+  ropeLength: 4
+  ropeSlack: 1.1
+  ropeSpring: 220
+  ropeDamper: 32
   ropeMaxForce: 20000
-  ropeTolerance: 0.03
+  ropeTolerance: 0.08
   stretcherJointMassScale: 1
-  snowmobileJointMassScale: 0.15
+  snowmobileJointMassScale: 0.05
   ropeMaterial: {fileID: 2100000, guid: 141ceffa29a4fad4ca45d200017f28b2, type: 2}
   ropeWidth: 0.05
   ropeSegmentCount: 12
@@ -157,7 +158,7 @@ MonoBehaviour:
   casualtyLeftSideEuler: {x: -180, y: -90, z: 90}
   casualtyRightSideEuler: {x: 0, y: -90, z: 90}
   sideLieChance: 0.45
-  loadedExtraMass: 4
+  loadedExtraMass: 3
   loadedCenterOfMassOffset: {x: 0, y: -0.25, z: 0}
   loadedAngularDamping: 3.25
   pickupScanInterval: 0.05
@@ -198,7 +199,7 @@ GameObject:
   m_Component:
   - component: {fileID: 337650037089393664}
   - component: {fileID: 2618758877830515727}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Stretcher Trigger
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -253,7 +254,7 @@ GameObject:
   - component: {fileID: 1169445087396917518}
   - component: {fileID: 7403868601544486332}
   - component: {fileID: 4892566311188229200}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Tow Point
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -330,6 +331,7 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!135 &4892566311188229200
 SphereCollider:
@@ -364,7 +366,9 @@ GameObject:
   - component: {fileID: 3411598796861428087}
   - component: {fileID: 6441944756619094009}
   - component: {fileID: 6587163753606639382}
-  m_Layer: 0
+  - component: {fileID: 8270705669230341214}
+  - component: {fileID: 7866456468059927423}
+  m_Layer: 23
   m_Name: Stretcher Object
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -441,6 +445,7 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!65 &6587163753606639382
 BoxCollider:
@@ -463,3 +468,48 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &8270705669230341214
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8782995760256686238}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bee0a6fa1f5d4f4db481219040523c4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AstarPathfindingProject::Pathfinding.NavmeshCut
+  version: 1073741824
+  graphMask:
+    value: -1
+  type: 3
+  mesh: {fileID: 0}
+  rectangleSize: {x: 1, y: 1}
+  circleRadius: 1
+  circleResolution: 6
+  height: 1
+  meshScale: 1
+  center: {x: 0, y: 0, z: 0}
+  updateDistance: 0.4
+  isDual: 0
+  radiusExpansionMode: 1
+  cutsAddedGeom: 1
+  updateRotationDistance: 10
+  useRotationAndScale: 1
+--- !u!114 &7866456468059927423
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8782995760256686238}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 183748dd497aa473a98ff0cd8cb67fc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AstarPathfindingProject::Pathfinding.DynamicObstacle
+  version: 1073741824
+  uniqueID: 7939115252546888732
+  updateError: 1
+  checkTime: 0.2

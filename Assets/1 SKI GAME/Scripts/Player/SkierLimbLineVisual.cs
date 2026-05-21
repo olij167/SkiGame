@@ -119,50 +119,68 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
     [SerializeField] private float jumpReleaseArmOpen = 0.08f;
 
     [Header("Walk Airborne Pose")]
-    [Tooltip("How quickly the light airborne pose blends in once walk mode leaves the ground.")]
-    [SerializeField] private float walkAirPoseBlendInSpeed = 8.5f;
+    [Tooltip("How quickly the walking air pose blends in once walk mode leaves the ground.")]
+    [SerializeField] private float walkAirPoseBlendInSpeed = 12f;
 
-    [Tooltip("How quickly the light airborne pose blends back out after landing.")]
-    [SerializeField] private float walkAirPoseBlendOutSpeed = 13f;
+    [Tooltip("How quickly the walking air pose blends back out after landing.")]
+    [SerializeField] private float walkAirPoseBlendOutSpeed = 15f;
 
-    [Tooltip("How far the walk feet move forward during takeoff / light airborne pose.")]
-    [SerializeField] private float walkAirFootForward = 0.14f;
+    [Tooltip("Upward speed that gives the rising/launch part of the walking air pose full strength.")]
+    [SerializeField] private float walkAirRiseSpeedForFullPose = 4f;
 
-    [Tooltip("How far the walk feet move upward during takeoff / light airborne pose.")]
-    [SerializeField] private float walkAirFootUp = 0.16f;
+    [Tooltip("Vertical speed range treated as the float/apex part of the walking air pose.")]
+    [SerializeField] private float walkAirApexVerticalSpeed = 1.25f;
 
-    [Tooltip("How far the walk hands move upward during takeoff / light airborne pose.")]
-    [SerializeField] private float walkAirHandUp = 0.11f;
+    [Tooltip("Downward speed that gives the falling/landing-prep part of the walking air pose full strength.")]
+    [SerializeField] private float walkAirFallSpeedForFullPose = 7f;
 
-    [Tooltip("How far the walk hands move outward during takeoff / light airborne pose.")]
-    [SerializeField] private float walkAirHandOutward = 0.045f;
-
-    [Tooltip("How much hand/foot targets trail behind the player's planar air velocity.")]
-    [SerializeField] private float walkAirVelocityLag = 0.065f;
-
-    [Tooltip("Velocity magnitude where airborne limb drag reaches full effect.")]
+    [Tooltip("Velocity magnitude where airborne limb lag reaches full strength.")]
     [SerializeField] private float walkAirVelocityForFullLag = 7f;
 
-    [Tooltip("Extra forward bias applied to knee target hints while airborne.")]
-    [SerializeField] private float walkAirKneeForward = 0.12f;
+    [Tooltip("How strongly hands and feet trail behind movement while airborne.")]
+    [SerializeField] private float walkAirVelocityLag = 0.12f;
 
-    [Tooltip("Extra upward bias applied to knee target hints while airborne.")]
-    [SerializeField] private float walkAirKneeUp = 0.14f;
+    [Tooltip("How strongly airborne movement input reaches the hands and feet forward.")]
+    [SerializeField] private float walkAirInputReach = 0.08f;
 
-    [Tooltip("Extra forward bias applied to elbow target hints while airborne.")]
-    [SerializeField] private float walkAirElbowForward = 0.045f;
+    [Tooltip("How much the jump release/stretch pose temporarily suppresses the pure airborne blend. Lower values make the air pose appear sooner.")]
+    [SerializeField, Range(0f, 1f)] private float walkAirJumpReleaseSuppression = 0.15f;
 
-    [Tooltip("Extra upward bias applied to elbow target hints while airborne.")]
-    [SerializeField] private float walkAirElbowUp = 0.12f;
+    [Tooltip("Walking airborne foot reach forward. Used mostly during apex and falling/landing-prep.")]
+    [SerializeField] private float walkAirFootForward = 0.16f;
 
-    [Tooltip("Additional arm bend used by the lightweight airborne pose.")]
-    [SerializeField] private float walkAirArmBendAdd = 0.10f;
+    [Tooltip("Walking airborne foot lift. Used mostly near apex.")]
+    [SerializeField] private float walkAirFootUp = 0.14f;
 
-    [Tooltip("Additional leg bend used by the lightweight airborne pose.")]
-    [SerializeField] private float walkAirLegBendAdd = 0.13f;
+    [Tooltip("Walking airborne hand reach forward. Used mostly during falling/landing-prep.")]
+    [SerializeField] private float walkAirHandForward = 0.08f;
 
-    [Tooltip("How much the jump release/stretch pose temporarily suppresses the airborne ragdoll pose.")]
-    [SerializeField, Range(0f, 1f)] private float walkAirJumpReleaseSuppression = 0.45f;
+    [Tooltip("Walking airborne hand lift. Used mostly during rise and apex.")]
+    [SerializeField] private float walkAirHandUp = 0.18f;
+
+    [Tooltip("Walking airborne hand spread outward for balance.")]
+    [SerializeField] private float walkAirHandOutward = 0.13f;
+
+    [Tooltip("Walking airborne knee hint forward. This is the main leg tuck control.")]
+    [SerializeField] private float walkAirKneeForward = 0.24f;
+
+    [Tooltip("Walking airborne knee hint upward. This is the main knee lift control.")]
+    [SerializeField] private float walkAirKneeUp = 0.16f;
+
+    [Tooltip("Walking airborne elbow hint forward. Used mostly during falling/landing-prep.")]
+    [SerializeField] private float walkAirElbowForward = 0.06f;
+
+    [Tooltip("Walking airborne elbow hint upward. This is the main arm bend/lift control.")]
+    [SerializeField] private float walkAirElbowUp = 0.18f;
+
+    [Tooltip("Walking airborne elbow spread outward for balance.")]
+    [SerializeField] private float walkAirElbowOutward = 0.10f;
+
+    [Tooltip("Extra arm bend while walking airborne.")]
+    [SerializeField] private float walkAirArmBendAdd = 0.14f;
+
+    [Tooltip("Extra leg bend while walking airborne.")]
+    [SerializeField] private float walkAirLegBendAdd = 0.16f;
 
     [Header("Walk Landing Pose")]
     [SerializeField] private float walkLandingBodyDrop = 0.10f;
@@ -176,31 +194,6 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
     [SerializeField] private float skiLandingBodyDrop = 0.075f;
     [SerializeField] private float skiLandingLegBendAdd = 0.10f;
     [SerializeField] private float skiLandingArmBendAdd = 0.035f;
-
-    [Header("Walk Airborne Light Ragdoll Pose")]
-    [SerializeField] private float walkAirborneBlendInSpeed = 5.5f;
-    [SerializeField] private float walkAirborneBlendOutSpeed = 9.0f;
-
-    [Tooltip("Velocity magnitude where airborne limb drag reaches full strength.")]
-    [SerializeField] private float walkAirborneVelocityForFullDrag = 8.0f;
-
-    [Tooltip("Maximum hand anchor drag behind player velocity while walking airborne.")]
-    [SerializeField] private float walkAirborneHandDrag = 0.18f;
-
-    [Tooltip("Maximum foot anchor drag behind player velocity while walking airborne.")]
-    [SerializeField] private float walkAirborneFootDrag = 0.12f;
-
-    [Tooltip("Small outward spread for limbs while walking airborne.")]
-    [SerializeField] private float walkAirborneSideSpread = 0.035f;
-
-    [Tooltip("Small arm bend added while walking airborne.")]
-    [SerializeField] private float walkAirborneArmBendAdd = 0.055f;
-
-    [Tooltip("Small leg bend added while walking airborne.")]
-    [SerializeField] private float walkAirborneLegBendAdd = 0.075f;
-
-    [Tooltip("How much the jump release pose suppresses the airborne ragdoll blend at the start of the jump.")]
-    [SerializeField, Range(0f, 1f)] private float walkAirborneJumpReleaseSuppression = 0.55f;
 
     [Header("Seated Rider Pose")]
     [SerializeField] private float seatedBodyDrop = 0.26f;
@@ -224,8 +217,17 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
     [SerializeField] private float movementForwardBias = 0.04f;
 
     [Header("Walk Bend")]
-    [SerializeField] private float walkArmBend = 0.10f;
-    [SerializeField] private float walkLegBend = 0.14f;
+    [Tooltip("Arm bend when standing idle in walk mode. Keep this low to avoid a crouched idle pose.")]
+    [SerializeField] private float walkIdleArmBend = 0.055f;
+
+    [Tooltip("Arm bend while walking/running or performing active walk poses.")]
+    [SerializeField] private float walkMoveArmBend = 0.10f;
+
+    [Tooltip("Leg bend when standing idle in walk mode. Keep this low to avoid a crouched idle pose.")]
+    [SerializeField] private float walkIdleLegBend = 0.055f;
+
+    [Tooltip("Leg bend while walking/running or performing active walk poses.")]
+    [SerializeField] private float walkMoveLegBend = 0.14f;
 
     [Header("Suspension")]
     [SerializeField] private bool enableSuspension = true;
@@ -463,8 +465,7 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
     private float _walkCycleTime;
     private float _walkMotionBlend;
     private float _walkAirPoseBlend;
-
-    private float _walkAirborneBlend;
+    private float _walkAirPoseTime;
 
     private RiderPoseMode _riderPoseMode;
     private Transform _riderLeftHandTarget;
@@ -1478,11 +1479,11 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
     }
 
     private Vector3 ApplyWalkAnchorPoseOffset(
-    Transform anchor,
-    Vector3 baseTargetLocalPosition,
-    bool left,
-    LimbKind limbKind,
-    bool walkingMode)
+        Transform anchor,
+        Vector3 baseTargetLocalPosition,
+        bool left,
+        LimbKind limbKind,
+        bool walkingMode)
     {
         if (anchor == null)
             return baseTargetLocalPosition;
@@ -1514,8 +1515,9 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
         float charge = GetJumpCharge01(walkingMode);
         float release = GetJumpRelease01(walkingMode);
         float landing = GetLandingPose01(walkingMode);
+        float air = GetWalkAirActive01(walkingMode);
 
-        if (charge <= 0.001f && release <= 0.001f && landing <= 0.001f)
+        if (charge <= 0.001f && release <= 0.001f && landing <= 0.001f && air <= 0.001f)
             return target;
 
         if (limbKind == LimbKind.Leg)
@@ -1535,7 +1537,30 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
             target += localUp * (jumpReleaseBodyLift * 0.65f * release);
         }
 
+        if (air > 0.001f)
+            target += GetWalkAirEndpointLocalOffset(anchor, left, limbKind, walkingMode);
+
         return target;
+    }
+
+    private struct WalkAirPoseState
+    {
+        public float active01;
+        public float release01;
+        public float rise01;
+        public float apex01;
+        public float fall01;
+        public float input01;
+        public float planarSpeed01;
+        public float verticalSpeed01;
+        public float verticalSpeed;
+
+        public Vector3 up;
+        public Vector3 forward;
+        public Vector3 right;
+        public Vector3 velocity;
+        public Vector3 planarVelocity;
+        public Vector3 inputWorld;
     }
 
     private float GetWalkAirTarget01(bool walkingMode)
@@ -1554,6 +1579,14 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
         return Mathf.Clamp01(_walkAirPoseBlend);
     }
 
+    private float GetWalkAirActive01(bool walkingMode)
+    {
+        if (!walkingMode || IsSeatedPoseActive())
+            return 0f;
+
+        return Mathf.Max(GetJumpRelease01(walkingMode), GetWalkAirPose01(walkingMode));
+    }
+
     private Vector3 GetWalkVisualVelocity()
     {
         if (walkingController != null && walkingController.IsWalkingMode)
@@ -1566,7 +1599,8 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
     {
         float target = GetWalkAirTarget01(walkingMode);
 
-        // Let the takeoff stretch read for a moment before the loose airborne pose fully takes over.
+        // Other poses in this script are additive. Do not fully hide the air pose behind release;
+        // only soften it briefly so the launch extension still reads.
         float release = GetJumpRelease01(walkingMode);
         if (release > 0.001f)
             target *= 1f - Mathf.Clamp01(release * walkAirJumpReleaseSuppression);
@@ -1577,27 +1611,183 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
 
         float t = 1f - Mathf.Exp(-Mathf.Max(0.01f, speed) * dt);
         _walkAirPoseBlend = Mathf.Lerp(_walkAirPoseBlend, target, t);
+
+        if (walkingMode && !IsSeatedPoseActive() && (target > 0.001f || release > 0.001f || _walkAirPoseBlend > 0.001f))
+            _walkAirPoseTime += dt;
+        else
+            _walkAirPoseTime = 0f;
     }
 
-    private Vector3 GetWalkAirVelocityLagLocalOffset(
-        Transform anchor,
-        float amount,
-        bool walkingMode)
+    private void GetWalkAirPhaseWeights(bool walkingMode, out float rise01, out float apex01, out float fall01)
     {
-        float air01 = GetWalkAirPose01(walkingMode);
-        if (air01 <= 0.001f || anchor == null || amount <= 0f)
+        rise01 = 0f;
+        apex01 = 0f;
+        fall01 = 0f;
+
+        float airBlend = GetWalkAirPose01(walkingMode);
+        float release01 = GetJumpRelease01(walkingMode);
+        float active01 = GetWalkAirActive01(walkingMode);
+        if (active01 <= 0.001f)
+            return;
+
+        Vector3 velocity = GetWalkVisualVelocity();
+        float verticalSpeed = Vector3.Dot(velocity, GetBodyUp());
+
+        float riseByVelocity = Mathf.Clamp01(verticalSpeed / Mathf.Max(0.01f, walkAirRiseSpeedForFullPose));
+        float fallByVelocity = Mathf.Clamp01(-verticalSpeed / Mathf.Max(0.01f, walkAirFallSpeedForFullPose));
+        float apexByVelocity = 1f - Mathf.Clamp01(Mathf.Abs(verticalSpeed) / Mathf.Max(0.01f, walkAirApexVerticalSpeed));
+
+        // Give the launch pose a short deterministic window so the pose still appears if velocity is noisy.
+        const float launchWindow = 0.22f;
+        float launchByTime = 1f - Mathf.Clamp01(_walkAirPoseTime / launchWindow);
+
+        rise01 = Mathf.Max(release01, Mathf.Max(riseByVelocity * airBlend, launchByTime * airBlend * 0.75f));
+        apex01 = apexByVelocity * airBlend;
+        fall01 = fallByVelocity * airBlend;
+
+        float total = rise01 + apex01 + fall01;
+        if (total > 1f)
+        {
+            rise01 /= total;
+            apex01 /= total;
+            fall01 /= total;
+        }
+    }
+
+    private Vector3 WorldOffsetToAnchorLocal(Transform anchor, Vector3 worldOffset)
+    {
+        if (anchor == null || worldOffset.sqrMagnitude <= 0.0000001f)
+            return Vector3.zero;
+
+        Transform parent = anchor.parent;
+        return parent != null ? parent.InverseTransformDirection(worldOffset) : worldOffset;
+    }
+
+    private Vector3 GetWalkAirVelocityLagWorldOffset(float multiplier, bool walkingMode)
+    {
+        float air01 = GetWalkAirActive01(walkingMode);
+        if (air01 <= 0.001f || walkAirVelocityLag <= 0.001f)
             return Vector3.zero;
 
         Vector3 velocity = GetWalkVisualVelocity();
-        Vector3 planarVelocity = Vector3.ProjectOnPlane(velocity, GetBodyUp());
-
-        if (planarVelocity.sqrMagnitude <= 0.0001f)
+        float speed = velocity.magnitude;
+        if (speed <= 0.01f)
             return Vector3.zero;
 
-        float speed01 = Mathf.Clamp01(planarVelocity.magnitude / Mathf.Max(0.01f, walkAirVelocityForFullLag));
-        Vector3 lagWorld = -planarVelocity.normalized;
+        float speed01 = Mathf.Clamp01(speed / Mathf.Max(0.01f, walkAirVelocityForFullLag));
+        return -velocity.normalized * (walkAirVelocityLag * multiplier * speed01 * air01);
+    }
 
-        return GetAnchorParentLocalDirection(anchor, lagWorld, Vector3.back) * (amount * speed01 * air01);
+    private Vector3 GetWalkAirEndpointLocalOffset(
+        Transform anchor,
+        bool left,
+        LimbKind limbKind,
+        bool walkingMode)
+    {
+        if (anchor == null)
+            return Vector3.zero;
+
+        GetWalkAirPhaseWeights(walkingMode, out float rise01, out float apex01, out float fall01);
+        float pose01 = Mathf.Clamp01(rise01 + apex01 + fall01);
+        if (pose01 <= 0.001f)
+            return Vector3.zero;
+
+        float sideSign = left ? -1f : 1f;
+        Vector3 localForward = GetAnchorParentLocalDirection(anchor, GetBodyForward(), Vector3.forward);
+        Vector3 localUp = GetAnchorParentLocalDirection(anchor, GetBodyUp(), Vector3.up);
+        Vector3 localOut = GetAnchorParentLocalDirection(anchor, GetBodyRight() * sideSign, left ? Vector3.left : Vector3.right);
+
+        Vector3 offset = Vector3.zero;
+
+        if (limbKind == LimbKind.Leg)
+        {
+            float forward01 = 0.20f * rise01 + 0.65f * apex01 + 1.00f * fall01;
+            float up01 = 0.10f * rise01 + 1.00f * apex01 + 0.35f * fall01;
+
+            offset += localForward * (walkAirFootForward * forward01);
+            offset += localUp * (walkAirFootUp * up01);
+        }
+        else
+        {
+            float forward01 = -0.20f * rise01 + 0.30f * apex01 + 1.00f * fall01;
+            float up01 = 0.95f * rise01 + 1.00f * apex01 + 0.40f * fall01;
+            float out01 = 0.55f * rise01 + 1.00f * apex01 + 0.75f * fall01;
+
+            offset += localForward * (walkAirHandForward * forward01);
+            offset += localUp * (walkAirHandUp * up01);
+            offset += localOut * (walkAirHandOutward * out01);
+        }
+
+        if (walkingController != null && walkAirInputReach > 0.001f)
+        {
+            Vector2 input = walkingController.LastUserMoveRaw;
+            float input01 = Mathf.Clamp01(Mathf.Max(input.magnitude, walkingController.WalkAirMoveBlend01));
+
+            if (input01 > 0.001f)
+            {
+                walkingController.GetMoveBasis(out Vector3 basisForward, out Vector3 basisRight);
+                Vector3 inputWorld = Vector3.ProjectOnPlane((basisForward * input.y) + (basisRight * input.x), GetBodyUp());
+
+                if (inputWorld.sqrMagnitude > 0.0001f)
+                {
+                    Vector3 localInput = WorldOffsetToAnchorLocal(anchor, inputWorld.normalized);
+                    float limbMul = limbKind == LimbKind.Arm ? 1f : 0.65f;
+                    offset += localInput * (walkAirInputReach * limbMul * input01 * pose01);
+                }
+            }
+        }
+
+        float lagMul = limbKind == LimbKind.Arm ? 1.1f : 0.85f;
+        offset += WorldOffsetToAnchorLocal(anchor, GetWalkAirVelocityLagWorldOffset(lagMul, walkingMode));
+
+        return offset;
+    }
+
+    private Vector3 GetWalkAirJointWorldOffset(bool left, LimbKind limbKind, bool walkingMode)
+    {
+        GetWalkAirPhaseWeights(walkingMode, out float rise01, out float apex01, out float fall01);
+        float pose01 = Mathf.Clamp01(rise01 + apex01 + fall01);
+        if (pose01 <= 0.001f)
+            return Vector3.zero;
+
+        float sideSign = left ? -1f : 1f;
+        Vector3 offset = Vector3.zero;
+
+        if (limbKind == LimbKind.Leg)
+        {
+            float forward01 = 0.45f * rise01 + 0.85f * apex01 + 1.00f * fall01;
+            float up01 = 0.35f * rise01 + 1.00f * apex01 + 0.65f * fall01;
+
+            offset += GetBodyForward() * (walkAirKneeForward * forward01);
+            offset += GetBodyUp() * (walkAirKneeUp * up01);
+            offset += GetBodyRight() * sideSign * (0.025f * pose01);
+            offset += GetWalkAirVelocityLagWorldOffset(0.25f, walkingMode);
+        }
+        else
+        {
+            float forward01 = -0.10f * rise01 + 0.25f * apex01 + 1.00f * fall01;
+            float up01 = 0.90f * rise01 + 1.00f * apex01 + 0.45f * fall01;
+            float out01 = 0.60f * rise01 + 1.00f * apex01 + 0.75f * fall01;
+
+            offset += GetBodyForward() * (walkAirElbowForward * forward01);
+            offset += GetBodyUp() * (walkAirElbowUp * up01);
+            offset += GetBodyRight() * sideSign * (walkAirElbowOutward * out01);
+            offset += GetWalkAirVelocityLagWorldOffset(0.35f, walkingMode);
+        }
+
+        return offset;
+    }
+
+    private float GetWalkAirArmBendAdd(bool walkingMode)
+    {
+        GetWalkAirPhaseWeights(walkingMode, out float rise01, out float apex01, out float fall01);
+        return walkAirArmBendAdd * Mathf.Clamp01(0.65f * rise01 + 1.00f * apex01 + 0.85f * fall01);
+    }
+
+    private float GetWalkAirLegBendAdd(bool walkingMode)
+    {
+        GetWalkAirPhaseWeights(walkingMode, out float rise01, out float apex01, out float fall01);
+        return walkAirLegBendAdd * Mathf.Clamp01(0.45f * rise01 + 0.90f * apex01 + 1.00f * fall01);
     }
 
     private bool IsRiderPoseActive()
@@ -1746,83 +1936,6 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
         }
 
         return target;
-    }
-
-    private float GetWalkAirborneTarget01(bool walkingMode)
-    {
-        if (!walkingMode || walkingController == null || IsSeatedPoseActive())
-            return 0f;
-
-        return walkingController.IsWalkAirborne ? 1f : 0f;
-    }
-
-    private float GetWalkAirbornePose01(bool walkingMode)
-    {
-        if (!walkingMode || IsSeatedPoseActive())
-            return 0f;
-
-        return Mathf.Clamp01(_walkAirborneBlend);
-    }
-
-    private void UpdateWalkAirborneBlend(bool walkingMode, float dt)
-    {
-        float target = GetWalkAirborneTarget01(walkingMode);
-
-        // Let the jump release stretch lead for a brief moment before the airborne
-        // light-ragdoll drag fully takes over.
-        float release = GetJumpRelease01(walkingMode);
-        if (release > 0.001f)
-            target *= 1f - Mathf.Clamp01(release * walkAirborneJumpReleaseSuppression);
-
-        float speed = target > _walkAirborneBlend
-            ? walkAirborneBlendInSpeed
-            : walkAirborneBlendOutSpeed;
-
-        float t = 1f - Mathf.Exp(-Mathf.Max(0.01f, speed) * dt);
-        _walkAirborneBlend = Mathf.Lerp(_walkAirborneBlend, target, t);
-    }
-
-    private Vector3 GetWalkAirborneAnchorOffset(
-        Transform anchor,
-        bool left,
-        LimbKind limbKind,
-        bool walkingMode)
-    {
-        float airborne = GetWalkAirbornePose01(walkingMode);
-        if (airborne <= 0.001f || anchor == null)
-            return Vector3.zero;
-
-        Vector3 velocity = GetVelocity();
-        float speed = velocity.magnitude;
-        if (speed <= 0.05f)
-            return Vector3.zero;
-
-        float speed01 = Mathf.Clamp01(speed / Mathf.Max(0.01f, walkAirborneVelocityForFullDrag));
-
-        // Drag behind actual movement direction. This includes vertical velocity, so:
-        // - while rising, limbs are pulled slightly downward/back
-        // - while falling, limbs are pulled slightly upward/back
-        Vector3 dragWorld = -velocity.normalized;
-
-        Vector3 localDrag = GetAnchorParentLocalDirection(
-            anchor,
-            dragWorld,
-            limbKind == LimbKind.Arm ? Vector3.back : Vector3.back);
-
-        Vector3 localOutward = GetAnchorParentLocalDirection(
-            anchor,
-            GetBodyRight() * (left ? -1f : 1f),
-            left ? Vector3.left : Vector3.right);
-
-        float dragAmount = limbKind == LimbKind.Arm
-            ? walkAirborneHandDrag
-            : walkAirborneFootDrag;
-
-        Vector3 offset = Vector3.zero;
-        offset += localDrag * (dragAmount * speed01 * airborne);
-        offset += localOutward * (walkAirborneSideSpread * speed01 * airborne);
-
-        return offset;
     }
 
     private void UpdateWalkCycle(bool walkingMode)
@@ -3211,14 +3324,14 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
             bool groundedWalkVisual = walkingController == null || walkingController.IsWalkGrounded;
             float charge = GetJumpCharge01(walkingMode);
             float release = GetJumpRelease01(walkingMode);
-            float air = GetWalkAirPose01(walkingMode);
-            float airborne = Mathf.Max(release, air);
+            float airborne = GetWalkAirActive01(walkingMode);
 
-            float bendAmount = walkArmBend;
+            float activeWalkPose01 = Mathf.Clamp01(Mathf.Max(_walkMotionBlend, Mathf.Max(charge, Mathf.Max(release, airborne))));
+            float bendAmount = Mathf.Lerp(walkIdleArmBend, walkMoveArmBend, activeWalkPose01);
             bendAmount *= Mathf.Lerp(1f, runArmBendMultiplier, GetRunPose01(walkingMode));
             bendAmount += jumpSquatArmBendAdd * charge;
             bendAmount -= jumpReleaseArmOpen * release;
-            bendAmount += walkAirArmBendAdd * airborne;
+            bendAmount += GetWalkAirArmBendAdd(walkingMode);
             bendAmount = Mathf.Max(0.03f, bendAmount);
 
             Vector3 bendAxis =
@@ -3250,17 +3363,7 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
             bendAxis = SafeNormalizeOrFallback(Vector3.ProjectOnPlane(bendAxis, dir), right * sideSign);
 
             Vector3 hint = root + dir * 0.5f + bendAxis * bendAmount;
-
-            // Explicit airborne elbow travel.
-            hint += forward * (walkAirElbowForward * airborne);
-            hint += up * (walkAirElbowUp * airborne);
-
-            Vector3 planarVelocity = Vector3.ProjectOnPlane(GetWalkVisualVelocity(), up);
-            if (planarVelocity.sqrMagnitude > 0.0001f)
-            {
-                float speed01 = Mathf.Clamp01(planarVelocity.magnitude / Mathf.Max(0.01f, walkAirVelocityForFullLag));
-                hint -= planarVelocity.normalized * (walkAirVelocityLag * 0.35f * air * speed01);
-            }
+            hint += GetWalkAirJointWorldOffset(left, LimbKind.Arm, walkingMode);
 
             return SolveStackJoint(root, end, LimbKind.Arm, left, hint);
         }
@@ -3294,15 +3397,15 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
             bool groundedWalkVisual = walkingController == null || walkingController.IsWalkGrounded;
             float charge = GetJumpCharge01(walkingMode);
             float release = GetJumpRelease01(walkingMode);
-            float air = GetWalkAirPose01(walkingMode);
-            float airborne = Mathf.Max(release, air);
+            float airborne = GetWalkAirActive01(walkingMode);
 
-            float bendAmount = walkLegBend;
+            float activeWalkPose01 = Mathf.Clamp01(Mathf.Max(_walkMotionBlend, Mathf.Max(charge, Mathf.Max(release, airborne))));
+            float bendAmount = Mathf.Lerp(walkIdleLegBend, walkMoveLegBend, activeWalkPose01);
             bendAmount *= Mathf.Lerp(1f, runLegBendMultiplier, GetRunPose01(walkingMode));
 
             bendAmount += jumpSquatLegBendAdd * charge;
             bendAmount -= jumpReleaseLegStraighten * release;
-            bendAmount += walkAirLegBendAdd * airborne;
+            bendAmount += GetWalkAirLegBendAdd(walkingMode);
 
             Vector3 bendAxis =
                 forward +
@@ -3339,17 +3442,7 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
             bendAxis = SafeNormalizeOrFallback(Vector3.ProjectOnPlane(bendAxis, dir), forward);
 
             Vector3 hint = root + dir * 0.5f + bendAxis * bendAmount;
-
-            // Explicit airborne knee travel. This creates the "knees up and forward" read.
-            hint += forward * (walkAirKneeForward * airborne);
-            hint += up * (walkAirKneeUp * airborne);
-
-            Vector3 planarVelocity = Vector3.ProjectOnPlane(GetWalkVisualVelocity(), up);
-            if (planarVelocity.sqrMagnitude > 0.0001f)
-            {
-                float speed01 = Mathf.Clamp01(planarVelocity.magnitude / Mathf.Max(0.01f, walkAirVelocityForFullLag));
-                hint -= planarVelocity.normalized * (walkAirVelocityLag * 0.25f * air * speed01);
-            }
+            hint += GetWalkAirJointWorldOffset(left, LimbKind.Leg, walkingMode);
 
             return SolveStackJoint(root, end, LimbKind.Leg, left, hint);
         }
@@ -3609,25 +3702,11 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
             targetLocalPosition += localUp * (lift * walkFootLift * strideMul * _walkMotionBlend);
         }
 
-        if (walkingMode && !IsSeatedPoseActive())
-        {
-            float release01 = GetJumpRelease01(walkingMode);
-            float air01 = GetWalkAirPose01(walkingMode);
-            float airborne01 = Mathf.Max(release01, air01);
-
-            // Takeoff / airborne: feet come up and forward instead of continuing a walk stride.
-            targetLocalPosition += localForward * (walkAirFootForward * airborne01);
-            targetLocalPosition += localUp * (walkAirFootUp * airborne01);
-
-            // Subtle trailing behind horizontal air velocity.
-            targetLocalPosition += GetWalkAirVelocityLagLocalOffset(anchor, walkAirVelocityLag, walkingMode);
-        }
-
         targetLocalPosition = ApplyWalkAnchorPoseOffset(anchor, targetLocalPosition, left, LimbKind.Leg, walkingMode);
 
         float activePose01 = Mathf.Max(
             _walkMotionBlend,
-            Mathf.Max(GetJumpCharge01(walkingMode), Mathf.Max(GetJumpRelease01(walkingMode), GetWalkAirPose01(walkingMode))));
+            Mathf.Max(GetJumpCharge01(walkingMode), Mathf.Max(GetJumpRelease01(walkingMode), GetWalkAirActive01(walkingMode))));
 
         float followSpeed = walkingMode && (activePose01 > 0.001f || IsSeatedPoseActive())
             ? walkCycleSpeed
@@ -3663,8 +3742,6 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
 
         Vector3 localForward = GetAnchorParentLocalDirection(anchor, GetBodyForward(), Vector3.forward);
         Vector3 localUp = GetAnchorParentLocalDirection(anchor, GetBodyUp(), Vector3.up);
-        Vector3 localRight = GetAnchorParentLocalDirection(anchor, GetBodyRight(), Vector3.right);
-        float sideSign = left ? -1f : 1f;
 
         bool groundedWalkVisual =
             walkingMode &&
@@ -3685,25 +3762,11 @@ public sealed class SkierLimbLineVisual : MonoBehaviour
             targetLocalPosition += localUp * (lift * walkHandLift * strideMul * _walkMotionBlend);
         }
 
-        if (walkingMode && !IsSeatedPoseActive())
-        {
-            float release01 = GetJumpRelease01(walkingMode);
-            float air01 = GetWalkAirPose01(walkingMode);
-            float airborne01 = Mathf.Max(release01, air01);
-
-            // Arms lift and open slightly in air. This is deliberately smaller than stack ragdoll.
-            targetLocalPosition += localUp * (walkAirHandUp * airborne01);
-            targetLocalPosition += localRight * (sideSign * walkAirHandOutward * airborne01);
-            targetLocalPosition += localForward * (walkAirFootForward * 0.20f * airborne01);
-
-            targetLocalPosition += GetWalkAirVelocityLagLocalOffset(anchor, walkAirVelocityLag * 1.15f, walkingMode);
-        }
-
         targetLocalPosition = ApplyWalkAnchorPoseOffset(anchor, targetLocalPosition, left, LimbKind.Arm, walkingMode);
 
         float activePose01 = Mathf.Max(
             _walkMotionBlend,
-            Mathf.Max(GetJumpCharge01(walkingMode), Mathf.Max(GetJumpRelease01(walkingMode), GetWalkAirPose01(walkingMode))));
+            Mathf.Max(GetJumpCharge01(walkingMode), Mathf.Max(GetJumpRelease01(walkingMode), GetWalkAirActive01(walkingMode))));
 
         float followSpeed = walkingMode && (activePose01 > 0.001f || IsSeatedPoseActive())
             ? walkCycleSpeed

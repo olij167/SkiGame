@@ -1,0 +1,7 @@
+interface:
+  display_name: "PungentFunk Unity Utility Doctrine"
+  short_description: "Unity utility architecture and editor doctrine"
+  default_prompt: "Use $pungentfunk-unity-utility-doctrine to update or audit a PungentFunk Utilities Unity editor tool."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,30 @@
+Font license audit note
+=======================
+Font file: Vectroid.otf
+Original archive path: vectroid/Vectroid.otf
+Resolved zip entry: Lots of fonts/vectroid/Vectroid.otf
+Grouped family: Vectroid
+Internal family: Vectroid
+Full name: Vectroid-Regular
+Style: Regular
+
+Audit status: Commercial-free use
+License basis: Creative Commons Zero (CC0)
+Recommendation: OK for commercial use
+Evidence: bundled local license file
+Source/local file from audit: local License.txt / license.txt
+Generic/official license URL used by builder: https://creativecommons.org/publicdomain/zero/1.0/legalcode.en
+
+Notes:
+Public-domain-style CC0 dedication in bundled license.
+
+Embedded font metadata:
+- License description: 
+- License URL: https://creativecommons.org/publicdomain/zero/1.0/
+- Copyright: Released in 2022 under CC0 license. No rights reserved.
+
+Copied local license/readme files:
+- Lots Of Fonts - Redistributable/Commercial-Free Redistribution/Creative Commons Zero (CC0)/Vectroid/SOURCE_LICENSES/license.txt
+- Lots Of Fonts - Redistributable/Commercial-Free Redistribution/Creative Commons Zero (CC0)/Vectroid/SOURCE_LICENSES/license.txt.meta
+
+This file is generated from an audit manifest. It is not legal advice.

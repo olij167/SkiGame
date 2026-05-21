@@ -50,21 +50,25 @@ public sealed class NpcQuestOfferPresenter : MonoBehaviour
         if (dialogueAgent == null || data == null)
             return;
 
-        dialogueAgent.Presenter.ShowQuestOffer(new NpcDialogueBubblePresenter.NpcQuestOfferBubbleViewData
+        dialogueAgent.Presenter.ShowContent(new NpcDialogueBubbleContent
         {
-            npcName = data.npcName,
-            questTitle = data.questTitle,
+            kind = NpcDialogueBubbleContentKind.Card,
+            lifetimeMode = NpcDialogueBubbleLifetimeMode.PersistentUntilHidden,
+            speakerName = data.npcName,
+            titleText = data.questTitle,
             bodyText = data.bodyText,
-            indexText = data.indexText,
-            confirmText = data.holdText,
-            confirmBindingText = data.holdText,
-            stateText = string.Empty,
-            canCycle = !string.IsNullOrWhiteSpace(data.cycleText)
-        });
+            metaText = data.indexText,
+            controlsText = string.IsNullOrWhiteSpace(data.cycleText)
+                ? data.holdText
+                : $"{data.holdText}    {data.cycleText}",
+            showSpeaker = !string.IsNullOrWhiteSpace(data.npcName),
+            importance = NpcDialogueImportance.Quest,
+            priority = 1000
+        }, forceInterrupt: true);
     }
 
     public void Hide()
     {
-        dialogueAgent?.Presenter.HideQuestOffer(immediate: true);
+        dialogueAgent?.Presenter.HideContent(immediate: true);
     }
 }

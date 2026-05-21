@@ -23,6 +23,7 @@ public static class NpcDialogueTextFormatter
     private static readonly Regex ItalicRegex = new(@"\{i\}(.*?)\{/i\}", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
     private static readonly Regex SmallRegex = new(@"\{small\}(.*?)\{/small\}", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
     private static readonly Regex CapsRegex = new(@"\{caps\}(.*?)\{/caps\}", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+    private static readonly Regex ValueTokenRegex = new(@"\{([a-zA-Z][a-zA-Z0-9_.]*)\}", RegexOptions.Compiled);
 
     public static string Format(string text, DialogueContext context, string speakerName, InputActionAsset inputActions, NpcDialogueBubbleStyleSO style = null)
     {
@@ -32,14 +33,46 @@ public static class NpcDialogueTextFormatter
         string resolved = text
             .Replace("{npcName}", FirstNonEmpty(context.npcName, speakerName, "NPC"))
             .Replace("{playerName}", FirstNonEmpty(context.playerName, "You"))
-            .Replace("{passName}", FirstNonEmpty(context.passName, "pass"))
+            .Replace("{passName}", FirstNonEmpty(context.passName, context.currentPassName, "your pass"))
             .Replace("{passExpiry}", FirstNonEmpty(context.passExpiry, "soon"))
-            .Replace("{raceName}", FirstNonEmpty(context.raceName, "the race"));
+            .Replace("{passExpirySeconds}", FormatSeconds(context.passExpirySeconds))
+            .Replace("{lift}", FirstNonEmpty(context.liftName, context.nearbyLiftName, "this lift"))
+            .Replace("{liftName}", FirstNonEmpty(context.liftName, "this lift"))
+            .Replace("{stationName}", FirstNonEmpty(context.stationName, "this station"))
+            .Replace("{regionName}", FirstNonEmpty(context.regionName, "this area"))
+            .Replace("{requiredPass}", FirstNonEmpty(context.requiredPassName, "the right pass"))
+            .Replace("{requiredPassName}", FirstNonEmpty(context.requiredPassName, "the right pass"))
+            .Replace("{requiredPassTier}", HasLiftAccessContext(context) && context.requiredPassTier >= 0 ? context.requiredPassTier.ToString() : string.Empty)
+            .Replace("{requiredPassId}", FirstNonEmpty(context.requiredPassId))
+            .Replace("{currentPass}", FirstNonEmpty(context.currentPassName, context.passName, "your pass"))
+            .Replace("{currentPassName}", FirstNonEmpty(context.currentPassName, context.passName, "your pass"))
+            .Replace("{currentPassTier}", HasLiftAccessContext(context) && context.currentPassTier >= 0 ? context.currentPassTier.ToString() : string.Empty)
+            .Replace("{kioskHint}", FirstNonEmpty(context.kioskHint))
+            .Replace("{upgradeHint}", FirstNonEmpty(context.upgradeHint))
+            .Replace("{raceName}", FirstNonEmpty(context.raceName, "the race"))
+            .Replace("{anchorName}", FirstNonEmpty(context.anchorName, "this spot"))
+            .Replace("{nearbyRun}", FirstNonEmpty(context.nearbyRunName, "that run"))
+            .Replace("{nearbyRunName}", FirstNonEmpty(context.nearbyRunName, "that run"))
+            .Replace("{runDifficulty}", FirstNonEmpty(context.nearbyRunDifficulty, "pretty serious"))
+            .Replace("{nearbyRunDifficulty}", FirstNonEmpty(context.nearbyRunDifficulty, "pretty serious"))
+            .Replace("{nearbyLift}", FirstNonEmpty(context.nearbyLiftName, context.liftName, "that lift"))
+            .Replace("{nearbyLiftName}", FirstNonEmpty(context.nearbyLiftName, context.liftName, "that lift"))
+            .Replace("{nearbyPoi}", FirstNonEmpty(context.nearbyPoiName, "over there"))
+            .Replace("{nearbyPoiName}", FirstNonEmpty(context.nearbyPoiName, "over there"))
+            .Replace("{weather}", FirstNonEmpty(context.weather, "weather"))
+            .Replace("{timeOfDay}", FirstNonEmpty(context.timeOfDay, "today"))
+            .Replace("{kiosk}", FirstNonEmpty(context.kioskName, "the kiosk"))
+            .Replace("{kioskName}", FirstNonEmpty(context.kioskName, "the kiosk"))
+            .Replace("{speakerName}", FirstNonEmpty(context.speakerName, speakerName, context.npcName, "Skier"))
+            .Replace("{listenerName}", FirstNonEmpty(context.listenerName, "them"))
+            .Replace("{questTitle}", FirstNonEmpty(context.questTitle, context.questDefinition != null ? context.questDefinition.title : null, "the quest"))
+            .Replace("{questStage}", FirstNonEmpty(context.questStage, ResolveQuestStage(context), "current step"))
+            .Replace("{objectiveName}", FirstNonEmpty(context.objectiveName, "the objective"));
 
         resolved = InputTokenRegex.Replace(resolved, match =>
         {
-            string actionName = match.Groups.Count > 1 ? match.Groups[1].Value : string.Empty;
-            string display = InputPromptResolver.GetBindingDisplay(inputActions, actionName);
+            string payload = match.Groups.Count > 1 ? match.Groups[1].Value : string.Empty;
+            string display = InputPromptResolver.ResolveInputPlaceholderPayload(inputActions, payload);
             return ApplyInlineStyle(display, ResolveInlineStyle("input", style));
         });
 
@@ -50,8 +83,107 @@ public static class NpcDialogueTextFormatter
         resolved = ItalicRegex.Replace(resolved, match => $"<i>{match.Groups[1].Value}</i>");
         resolved = SmallRegex.Replace(resolved, match => $"<size=85%>{match.Groups[1].Value}</size>");
         resolved = CapsRegex.Replace(resolved, match => match.Groups[1].Value.ToUpperInvariant());
+        resolved = ValueTokenRegex.Replace(resolved, match => ResolveValueToken(match.Groups[1].Value, context, match.Value));
         resolved = StripUnknownCustomTags(resolved);
         return resolved;
+    }
+
+    private static bool HasLiftAccessContext(DialogueContext context)
+    {
+        return !string.IsNullOrWhiteSpace(context.liftId) ||
+               !string.IsNullOrWhiteSpace(context.liftName) ||
+               !string.IsNullOrWhiteSpace(context.requiredPassId) ||
+               !string.IsNullOrWhiteSpace(context.requiredPassName) ||
+               !string.IsNullOrWhiteSpace(context.currentPassId) ||
+               !string.IsNullOrWhiteSpace(context.currentPassName);
+    }
+
+    private static string FormatSeconds(float seconds)
+    {
+        if (float.IsPositiveInfinity(seconds))
+            return "infinite";
+
+        return seconds > 0f ? Mathf.CeilToInt(seconds).ToString() : "0";
+    }
+
+    private static string ResolveValueToken(string key, DialogueContext context, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return fallback;
+
+        string normalized = key.Trim();
+
+        if (context.values != null && context.values.TryGetValue(normalized, out var value) && !string.IsNullOrWhiteSpace(value))
+            return value;
+
+        return normalized switch
+        {
+            "pass" => FirstNonEmpty(context.passName, context.currentPassName, "your pass"),
+            "passName" => FirstNonEmpty(context.passName, context.currentPassName, "your pass"),
+            "passExpiry" => FirstNonEmpty(context.passExpiry, "soon"),
+
+            "requiredPass" => FirstNonEmpty(context.requiredPassName, "the right pass"),
+            "requiredPassName" => FirstNonEmpty(context.requiredPassName, "the right pass"),
+            "requiredPassId" => FirstNonEmpty(context.requiredPassId),
+
+            "currentPass" => FirstNonEmpty(context.currentPassName, context.passName, "your pass"),
+            "currentPassName" => FirstNonEmpty(context.currentPassName, context.passName, "your pass"),
+            "currentPassId" => FirstNonEmpty(context.currentPassId),
+
+            "lift" => FirstNonEmpty(context.liftName, context.nearbyLiftName, "this lift"),
+            "liftName" => FirstNonEmpty(context.liftName, context.nearbyLiftName, "this lift"),
+            "nearbyLift" => FirstNonEmpty(context.nearbyLiftName, context.liftName, "that lift"),
+            "nearbyLiftName" => FirstNonEmpty(context.nearbyLiftName, context.liftName, "that lift"),
+
+            "nearbyRun" => FirstNonEmpty(context.nearbyRunName, "that run"),
+            "nearbyRunName" => FirstNonEmpty(context.nearbyRunName, "that run"),
+            "nearbyRunDifficulty" => FirstNonEmpty(context.nearbyRunDifficulty, "pretty serious"),
+            "runDifficulty" => FirstNonEmpty(context.nearbyRunDifficulty, "pretty serious"),
+
+            "nearbyPoi" => FirstNonEmpty(context.nearbyPoiName, "over there"),
+            "nearbyPoiName" => FirstNonEmpty(context.nearbyPoiName, "over there"),
+
+            "kiosk" => FirstNonEmpty(context.kioskName, "the kiosk"),
+            "kioskName" => FirstNonEmpty(context.kioskName, "the kiosk"),
+
+            "race" => FirstNonEmpty(context.raceName, "the race"),
+            "raceName" => FirstNonEmpty(context.raceName, "the race"),
+
+            "anchor" => FirstNonEmpty(context.anchorName, "this spot"),
+            "anchorName" => FirstNonEmpty(context.anchorName, "this spot"),
+
+            _ => ResolveExternalValueToken(normalized, context, fallback)
+        };
+    }
+
+    private static string ResolveExternalValueToken(string key, DialogueContext context, string fallback)
+    {
+        var providers = Object.FindObjectsOfType<MonoBehaviour>();
+        for (int i = 0; i < providers.Length; i++)
+        {
+            if (providers[i] is IDialogueContextProvider provider &&
+                provider.TryGetDialogueValue(key, context, out string value) &&
+                !string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return fallback;
+    }
+
+    private static string ResolveQuestStage(DialogueContext context)
+    {
+        var definition = context.questDefinition;
+        var state = context.questState;
+        if (definition == null || state == null)
+            return string.Empty;
+
+        var stage = definition.GetStage(state.currentStageIndex);
+        if (stage == null)
+            return string.Empty;
+
+        return FirstNonEmpty(stage.title, stage.id);
     }
 
     private static string ApplyInlineStyle(string text, NpcDialogueInlineTextStyle? style)
@@ -111,7 +243,7 @@ public static class NpcDialogueTextFormatter
             "warning" => DefaultStyle(new Color(1f, 0.82f, 0.45f, 1f), true),
             "success" => DefaultStyle(new Color(0.64f, 0.97f, 0.72f, 1f), true),
             "muted" => DefaultStyle(new Color(0.73f, 0.79f, 0.86f, 1f), false),
-            "input" => DefaultStyle(style != null ? style.chipTextColor : Color.white, true),
+            "input" => DefaultStyle(style != null ? style.controlsColor : Color.white, true),
             "quest" => DefaultStyle(style != null ? style.titleColor : Color.white, true),
             "objective" => DefaultStyle(style != null ? style.speakerColor : Color.white, true),
             _ => null

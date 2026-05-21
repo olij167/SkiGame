@@ -6,6 +6,7 @@ using UnityEngine;
 public sealed class NpcDialogueBankSO : ScriptableObject
 {
     [SerializeField] private List<NpcDialogueLine> lines = new();
+    [SerializeField] private bool allowTriggerFallbackWhenTopicMissing = false;
 
     private Dictionary<string, NpcDialogueLine> _byId;
 
@@ -33,7 +34,7 @@ public sealed class NpcDialogueBankSO : ScriptableObject
             results.Add(candidate);
         }
 
-        if (results.Count > 0)
+        if (results.Count > 0 || (requireTopic && !allowTriggerFallbackWhenTopicMissing))
             return;
 
         for (int i = 0; i < lines.Count; i++)
@@ -46,6 +47,9 @@ public sealed class NpcDialogueBankSO : ScriptableObject
                 continue;
 
             if (!AudienceMatches(candidate.audience, context.audience))
+                continue;
+
+            if (!DialogueRequirementEvaluator.AreMet(candidate.requirements, context))
                 continue;
 
             results.Add(candidate);
@@ -78,6 +82,54 @@ public sealed class NpcDialogueBankSO : ScriptableObject
 
         line = ChooseWeightedRandom(buffer);
         return line != null;
+    }
+
+    public int CountCandidates(string topicId, DialogueContext context)
+    {
+        var buffer = new List<NpcDialogueLine>();
+        GetCandidateLines(topicId, context, buffer);
+        return buffer.Count;
+    }
+
+    public string ExplainCandidateFailure(string topicId, DialogueContext context)
+    {
+        string normalizedTopic = Normalize(topicId);
+        int exactCandidates = 0;
+        int topicMatches = 0;
+        int triggerMatches = 0;
+        int topicWrongTrigger = 0;
+        int triggerWrongTopic = 0;
+        int audienceFailures = 0;
+        int requirementFailures = 0;
+
+        for (int i = 0; i < lines.Count; i++)
+        {
+            var line = lines[i];
+            if (line == null || string.IsNullOrWhiteSpace(line.text))
+                continue;
+
+            bool topicMatch = !string.IsNullOrWhiteSpace(normalizedTopic) && Normalize(line.topic) == normalizedTopic;
+            bool triggerMatch = line.trigger == context.trigger;
+            bool audienceMatch = AudienceMatches(line.audience, context.audience);
+            bool requirementsMet = DialogueRequirementEvaluator.AreMet(line.requirements, context);
+
+            if (topicMatch)
+                topicMatches++;
+            if (triggerMatch)
+                triggerMatches++;
+            if (topicMatch && !triggerMatch)
+                topicWrongTrigger++;
+            if (triggerMatch && !topicMatch)
+                triggerWrongTopic++;
+            if ((topicMatch || triggerMatch) && !audienceMatch)
+                audienceFailures++;
+            if ((topicMatch || triggerMatch) && audienceMatch && !requirementsMet)
+                requirementFailures++;
+            if (topicMatch && triggerMatch && audienceMatch && requirementsMet)
+                exactCandidates++;
+        }
+
+        return $"[{nameof(NpcDialogueBankSO)}] {name}: candidates={exactCandidates} topic='{topicId}' trigger={context.trigger} audience={context.audience} topicMatches={topicMatches} triggerMatches={triggerMatches} topicWrongTrigger={topicWrongTrigger} triggerWrongTopic={triggerWrongTopic} audienceFailures={audienceFailures} requirementFailures={requirementFailures}";
     }
 
     public NpcDialogueLine ChooseWeightedRandom(IReadOnlyList<NpcDialogueLine> candidates)
@@ -121,7 +173,8 @@ public sealed class NpcDialogueBankSO : ScriptableObject
                 return false;
         }
 
-        return AudienceMatches(candidate.audience, context.audience);
+        return AudienceMatches(candidate.audience, context.audience) &&
+               DialogueRequirementEvaluator.AreMet(candidate.requirements, context);
     }
 
     private static bool AudienceMatches(NpcDialogueAudience candidateAudience, NpcDialogueAudience requestedAudience)

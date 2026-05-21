@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6678631807193378806}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Passenger  Right Hand Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -43,7 +43,7 @@ GameObject:
   - component: {fileID: 429740323361373033}
   - component: {fileID: 7426193391674077905}
   - component: {fileID: 8693327722003844367}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Seat
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -122,6 +122,7 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!65 &8693327722003844367
 BoxCollider:
@@ -153,7 +154,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8110601621006635897}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Left Hand Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -185,7 +186,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4235960978139217810}
   - component: {fileID: 667936730541695872}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Pickup Trigger
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -240,7 +241,7 @@ GameObject:
   - component: {fileID: 2264841758930689547}
   - component: {fileID: 961721384785613563}
   - component: {fileID: 7251961688287336098}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Tow Hitch
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -317,6 +318,7 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!135 &7251961688287336098
 SphereCollider:
@@ -351,7 +353,7 @@ GameObject:
   - component: {fileID: 6907397985224307906}
   - component: {fileID: 694912268399909933}
   - component: {fileID: 280534357487104281}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: FrontBody
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -428,6 +430,7 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!65 &280534357487104281
 BoxCollider:
@@ -460,7 +463,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4227604163394741753}
   - component: {fileID: 8478456930479854137}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Right Tread Root
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -516,7 +519,7 @@ GameObject:
   - component: {fileID: 2006425738038345881}
   - component: {fileID: 5255933511712120475}
   - component: {fileID: 5846018641116010126}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Rear Tread
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -593,6 +596,7 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!65 &5846018641116010126
 BoxCollider:
@@ -627,7 +631,7 @@ GameObject:
   - component: {fileID: 5591963687731173859}
   - component: {fileID: 6616126777891509635}
   - component: {fileID: 2991664054120666313}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: RearBody
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -704,6 +708,7 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!65 &2991664054120666313
 BoxCollider:
@@ -736,7 +741,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1494385357732605480}
   - component: {fileID: 4629547365037333111}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Treads
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -791,7 +796,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6183205865883180041}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Passenger Left Hand Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -825,7 +830,7 @@ GameObject:
   - component: {fileID: 6325970407335696190}
   - component: {fileID: 7596905103317695085}
   - component: {fileID: 9129253134294630100}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Windscreen
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -902,6 +907,7 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!136 &9129253134294630100
 CapsuleCollider:
@@ -936,7 +942,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6416539393627165626}
   - component: {fileID: 5047515742168208307}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Left Tread Root
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -989,7 +995,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5078452587934598143}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Probe_RR
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1020,7 +1026,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7215290863564703803}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Probe_FL
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1051,7 +1057,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5688950435142111301}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Seat Positions
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1087,7 +1093,7 @@ GameObject:
   - component: {fileID: 8661916391656360702}
   - component: {fileID: 2895881277652194734}
   - component: {fileID: 15284535590436790}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Left Tread Vis
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1164,6 +1170,7 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!1 &5242792762602756690
 GameObject:
@@ -1177,7 +1184,9 @@ GameObject:
   - component: {fileID: 3688355343622801433}
   - component: {fileID: 1312529223099671743}
   - component: {fileID: 444612385219681115}
-  m_Layer: 0
+  - component: {fileID: -986823745595754181}
+  - component: {fileID: 7849279131118792469}
+  m_Layer: 23
   m_Name: SnowMobile
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1259,23 +1268,23 @@ MonoBehaviour:
   passengerHandsAboveDriverSeat: 0
   passengerHandForwardOffsetFromDriverSeat: 0
   towHitch: {fileID: 7911736102077236413}
-  maxForwardSpeed: 60
-  maxReverseSpeed: 40
-  forwardAcceleration: 30
-  reverseAcceleration: 20
-  brakingDeceleration: 30
-  coastingDeceleration: 8
-  steerDegreesPerSecond: 220
-  standstillSteerFactor: 0.65
+  maxForwardSpeed: 32
+  maxReverseSpeed: 12
+  forwardAcceleration: 20
+  reverseAcceleration: 12
+  brakingDeceleration: 24
+  coastingDeceleration: 6
+  steerDegreesPerSecond: 115
+  standstillSteerFactor: 0.42
   slopeClimbAssist: 8
   groundedTraction: 7
   groundedLateralGrip: 1
-  rotationSharpness: 50
+  rotationSharpness: 16
   uphillDriveForce: 12
   uphillThrottleAssist: 0.65
-  lowSpeedLateralGrip: 11.5
-  highSpeedLateralGrip: 7.25
-  poweredDriftGripMultiplier: 0.82
+  lowSpeedLateralGrip: 13
+  highSpeedLateralGrip: 11
+  poweredDriftGripMultiplier: 1
   groundMask:
     serializedVersion: 2
     m_Bits: 64
@@ -1283,43 +1292,44 @@ MonoBehaviour:
   frontRightProbe: {fileID: 6063275112177752039}
   rearLeftProbe: {fileID: 735225177407958666}
   rearRightProbe: {fileID: 5078452587934598143}
-  probeRayLength: 2.2
-  rideHeight: 1.8
-  rideSpringStrength: 95
-  rideSpringDamping: 12
-  groundedDownforce: 8
+  probeRayLength: 3
+  rideHeight: 1
+  rideSpringStrength: 80
+  rideSpringDamping: 15
+  groundedDownforce: 10
   maxGroundSampleAngle: 70
-  maxDriveSlopeAngle: 60
+  maxDriveSlopeAngle: 70
   minGroundedProbes: 2
   frontObstacleProbeExtraHeight: 0.35
   frontObstacleCheckDistance: 0.9
   steepSurfaceBrakeDeceleration: 28
-  probeRadius: 0.2
-  groundNormalBlendSpeed: 10
-  groundPointBlendSpeed: 12
-  groundAdhesionForce: 8
+  probeRadius: 0.3
+  groundNormalBlendSpeed: 8
+  groundPointBlendSpeed: 9
+  groundAdhesionForce: 10
   minorObstacleHeightTolerance: 0.28
   obstacleSlowdownMinMultiplier: 0.45
   obstacleAngleBuffer: 8
-  landingCompressionDampingMultiplier: 1.45
-  springMaxAccel: 60
-  airborneGravityMultiplier: 1
-  airbornePlanarDrag: 0.2
-  airborneYawControl: 35
+  landingCompressionDampingMultiplier: 1.35
+  springMaxAccel: 50
+  airborneGravityMultiplier: 1.2
+  airbornePlanarDrag: 0.25
+  airborneYawControl: 30
   airbornePitchAssist: 3
   airborneVerticalDrag: 0.65
   stableGroundedProbes: 3
-  groundedEnterDelay: 0.05
-  groundedExitDelay: 0.08
-  landingSupportBlendTime: 0.18
-  maxVerticalSpeedForGroundSnap: 3.5
-  maxAngularVelocityForGroundSnap: 2.75
+  groundedEnterDelay: 0.7
+  groundedExitDelay: 0.7
+  landingSupportBlendTime: 0.25
+  maxVerticalSpeedForGroundSnap: 4
+  maxAngularVelocityForGroundSnap: 3
   airborneUprightAssist: 4.5
   airborneRollDamping: 2.5
   airbornePitchDamping: 2
   unmountedBrakeDrag: 6
   rescuePickupTrigger: {fileID: 667936730541695872}
   autoPickupHealthyTargets: 1
+  pickupScanInterval: 0.05
   leftTreadRoot: {fileID: 6416539393627165626}
   rightTreadRoot: {fileID: 4227604163394741753}
   leftTreadVisual: {fileID: 8661916391656360702}
@@ -1331,7 +1341,6 @@ MonoBehaviour:
   dismountPrompt: Dismount Snowmobile
   promptPriority: 70
   interactionTrigger: {fileID: 444612385219681115}
-  pickupScanInterval: 0.05
 --- !u!65 &444612385219681115
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1353,6 +1362,51 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 6, y: 4, z: 8}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &-986823745595754181
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5242792762602756690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bee0a6fa1f5d4f4db481219040523c4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AstarPathfindingProject::Pathfinding.NavmeshCut
+  version: 1073741824
+  graphMask:
+    value: -1
+  type: 3
+  mesh: {fileID: 0}
+  rectangleSize: {x: 2, y: 6.15}
+  circleRadius: 1
+  circleResolution: 6
+  height: 2
+  meshScale: 1
+  center: {x: 0, y: 0, z: 0}
+  updateDistance: 0.4
+  isDual: 0
+  radiusExpansionMode: 1
+  cutsAddedGeom: 1
+  updateRotationDistance: 10
+  useRotationAndScale: 1
+--- !u!114 &7849279131118792469
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5242792762602756690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 183748dd497aa473a98ff0cd8cb67fc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AstarPathfindingProject::Pathfinding.DynamicObstacle
+  version: 1073741824
+  uniqueID: 6516659072028468676
+  updateError: 1
+  checkTime: 0.2
 --- !u!1 &5452419823073588255
 GameObject:
   m_ObjectHideFlags: 0
@@ -1362,7 +1416,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 735225177407958666}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Probe_RL
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1395,7 +1449,7 @@ GameObject:
   - component: {fileID: 2107524084140916152}
   - component: {fileID: 3356946057168113495}
   - component: {fileID: 6129852485542861372}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Right Tread Vis
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1472,6 +1526,7 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!1 &5921950714217607158
 GameObject:
@@ -1482,7 +1537,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 609864617171289447}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Dismount Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1516,7 +1571,7 @@ GameObject:
   - component: {fileID: 4385124720251363603}
   - component: {fileID: 6573982105916829571}
   - component: {fileID: 8282265269084399189}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: SteeringWheel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1595,6 +1650,7 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!136 &8282265269084399189
 CapsuleCollider:
@@ -1628,7 +1684,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 680596474224224687}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Right Hand Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1659,7 +1715,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6063275112177752039}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Probe_FR
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1690,7 +1746,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4803865074680987901}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Passenger Seat Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1721,7 +1777,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7083847969354162377}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: SeatPos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1752,7 +1808,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8770241243268831649}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Probes
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1787,7 +1843,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8157630589607507610}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Body
   m_TagString: Untagged
   m_Icon: {fileID: 0}

@@ -21,21 +21,11 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: DemoSpruce_Branch
-  m_Shader: {fileID: 4800000, guid: b9bd95518c236d74da2314ed2f18f853, type: 3}
+  m_Shader: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - _ALPHATEST_ON
-  - _COVERAGE_ON
-  - _DISPLACEMENT_ON
-  - _NORMALMAP
-  - _SPARKLE_ON
-  - _SPARKLE_TEX_LS
-  - _SPARKLE_TEX_SS
-  - _SSS_ON
-  - _TRACES_ON
-  - _USE_AVERAGED_NORMALS
-  - _USE_COVERAGE_DETAIL
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
@@ -43,36 +33,17 @@ Material:
   m_CustomRenderQueue: 2450
   stringTagMap:
     RenderType: TransparentCutout
-  disabledShaderPasses: []
+  disabledShaderPasses:
+  - MOTIONVECTORS
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
-    - _AlbedoLOD:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
     - _BaseMap:
         m_Texture: {fileID: 2800000, guid: 874065534dcebe24784b930da96c7266, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _CoverageDetailTex:
-        m_Texture: {fileID: 2800000, guid: d0b5b89c7e88bd7458d9cd833ddb03e2, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _CoverageTex0:
-        m_Texture: {fileID: 2800000, guid: d1e56c8ed5a0d0e478b7731cd7c1ba76, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _CoverageTex1:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _CoverageTex2:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -104,28 +75,12 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _NormalLOD:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _PaintedMask:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _PaintedMaskNormal:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ParallaxMap:
         m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _SparkleTex:
-        m_Texture: {fileID: 2800000, guid: 21921935555788b49b1942a7097bdabe, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SpecGlossMap:
@@ -150,10 +105,6 @@ Material:
     - _AlphaClip: 1
     - _AlphaToMask: 1
     - _Blend: 0
-    - _BlendByNormalsPower: 1
-    - _BlendByNormalsPowerOverride: 0
-    - _BlendByNormalsStrength: 5
-    - _BlendByNormalsStrengthOverride: 0
     - _BlendModePreserveSpecular: 1
     - _BlendOp: 0
     - _BumpScale: 1
@@ -162,66 +113,10 @@ Material:
     - _CameraNearFadeDistance: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _ColorEnhance: 0.05
-    - _ColorEnhanceOverride: 0
-    - _Cov0SmoothnessOverride: 0
-    - _Cov1SmoothnessOverride: 0
-    - _Cov2SmoothnessOverride: 0
-    - _CovTriBlendContrast: 12
-    - _CovTriBlendContrastOverride: 0
-    - _Coverage: 1
-    - _CoverageAmount: 0.75
-    - _CoverageAmountOverride: 0
-    - _CoverageAreaBias: 0.05
-    - _CoverageAreaBiasOverride: 0
-    - _CoverageAreaFalloffHardness: 0.75
-    - _CoverageAreaMaskRange: 1
-    - _CoverageAreaMaskRangeOverride: 0
-    - _CoverageColor1Override: 0
-    - _CoverageColor2Override: 0
-    - _CoverageColorOverride: 0
-    - _CoverageDetailTexOverride: 0
-    - _CoverageDisplacement: 1.5
-    - _CoverageDisplacement1: 1
-    - _CoverageDisplacement1Override: 0
-    - _CoverageDisplacement2: 1
-    - _CoverageDisplacement2Override: 0
-    - _CoverageDisplacementOffset: 0
-    - _CoverageDisplacementOffsetOverride: 0
-    - _CoverageDisplacementOverride: 0
-    - _CoverageLeakReduction: 0.1
-    - _CoverageLeakReductionOverride: 0
-    - _CoverageNormalScale0: 1
-    - _CoverageNormalScale0Override: 0
-    - _CoverageNormalScale1: 1
-    - _CoverageNormalScale1Override: 0
-    - _CoverageNormalScale2: 1
-    - _CoverageNormalScale2Override: 0
-    - _CoverageNormalsOverlay: 0.75
-    - _CoverageNormalsOverlayOverride: 0
-    - _CoverageOverride: 0
-    - _CoverageTex0Override: 0
-    - _CoverageTex1Override: 0
-    - _CoverageTex2Override: 0
-    - _CoverageTiling: 0.05
-    - _CoverageTiling1: 0.05
-    - _CoverageTiling1Override: 0
-    - _CoverageTiling2: 0.05
-    - _CoverageTiling2Override: 0
-    - _CoverageTilingOverride: 0
     - _Cull: 0
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
-    - _DetailDistance: 15
-    - _DetailDistanceOverride: 0
     - _DetailNormalMapScale: 1
-    - _DetailNormalScale: 1
-    - _DetailNormalScaleOverride: 0
-    - _DetailTexRemapOverride: 0
-    - _DetailTiling: 0.65
-    - _DetailTilingOverride: 0
-    - _Displacement: 1
-    - _DisplacementOverride: 0
     - _DistortionBlend: 0.5
     - _DistortionEnabled: 0
     - _DistortionStrength: 1
@@ -229,163 +124,38 @@ Material:
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EmissionEnabled: 0
-    - _EmissionMasking: 0.98
-    - _EmissionMaskingOverride: 0
-    - _EnhanceRemap0Override: 0
-    - _EnhanceRemap1Override: 0
-    - _EnhanceRemap2Override: 0
     - _EnvironmentReflections: 1
     - _FlipbookMode: 0
     - _GlossMapScale: 1
     - _Glossiness: 0
     - _GlossyReflections: 1
-    - _HeightMap0ContrastOverride: 0
-    - _HeightMap0LOD: 1
-    - _HeightMap0LODOverride: 0
-    - _HeightMap1ContrastOverride: 0
-    - _HeightMap1LOD: 1
-    - _HeightMap1LODOverride: 0
-    - _HeightMap2ContrastOverride: 0
-    - _HeightMap2LOD: 1
-    - _HeightMap2LODOverride: 0
-    - _HighlightBrightness0: 1
-    - _HighlightBrightness0Override: 0
-    - _HighlightBrightness1: 1
-    - _HighlightBrightness1Override: 0
-    - _HighlightBrightness2: 1
-    - _HighlightBrightness2Override: 0
     - _LightingEnabled: 1
-    - _LocalSparkleTiling: 1
-    - _LocalSparkleTilingOverride: 0
-    - _MapID: 0
-    - _MaskCoverageByAlpha: 1
-    - _MaskCoverageByAlphaOverride: 0
     - _Metallic: 0
     - _Mode: 1
     - _OcclusionStrength: 1
-    - _PaintableCoverage: 0
-    - _PaintableCoverageOverride: 0
     - _Parallax: 0.02
-    - _PrecipitationDirOffset: 0
-    - _PrecipitationDirOffsetOverride: 0
-    - _PrecipitationDirRangeOverride: 0
     - _QueueOffset: 0
     - _ReceiveShadows: 1
-    - _SSS_intensity: 1
-    - _SSS_intensityOverride: 0
-    - _ScreenSpaceSparklesTiling: 2
-    - _ScreenSpaceSparklesTilingOverride: 0
     - _Smoothness: 0
     - _SmoothnessTextureChannel: 0
     - _SoftParticlesEnabled: 0
     - _SoftParticlesFarFadeDistance: 1
     - _SoftParticlesNearFadeDistance: 0
-    - _Sparkle: 1
-    - _SparkleDistFalloff: 50
-    - _SparkleDistFalloffOverride: 0
-    - _SparkleOverride: 0
-    - _SparkleTexLS: 1
-    - _SparkleTexLSOverride: 0
-    - _SparkleTexOverride: 0
-    - _SparkleTexSS: 1
-    - _SparkleTexSSOverride: 0
-    - _SparklesAmount: 0.85
-    - _SparklesAmountOverride: 0
-    - _SparklesBrightness: 20
-    - _SparklesBrightnessOverride: 0
-    - _SparklesHighlightMaskExpansion: 0.95
-    - _SparklesHighlightMaskExpansionOverride: 0
-    - _SparklesLightmapMaskPower: 4.5
-    - _SparklesLightmapMaskPowerOverride: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
-    - _Sss: 1
-    - _SssMaskRemap0Override: 0
-    - _SssMaskRemap1Override: 0
-    - _SssMaskRemap2Override: 0
-    - _SssOverride: 0
     - _Surface: 0
-    - _TessEdgeL: 10
-    - _TessEdgeLOverride: 0
-    - _TessFactorSnow: 0.5
-    - _TessFactorSnowOverride: 0
-    - _TessMaxDisp: 0.35
-    - _TessMaxDispOverride: 0
-    - _TessSnowdriftRangeOverride: 0
-    - _Tessellation: 1
-    - _TessellationOverride: 0
-    - _ThreeTexMode: 0
-    - _ThreeTexModeOverride: 0
-    - _TilingMultiplier: 1
-    - _TraceDetail: 0
-    - _TraceDetailIntensity: 0.5
-    - _TraceDetailIntensityOverride: 0
-    - _TraceDetailNormalScale: 1
-    - _TraceDetailNormalScaleOverride: 0
-    - _TraceDetailOverride: 0
-    - _TraceDetailTiling: 1
-    - _TraceDetailTilingOverride: 0
-    - _Traces: 1
-    - _TracesBaseBlend0: 1
-    - _TracesBaseBlend0Override: 0
-    - _TracesBaseBlend1: 1
-    - _TracesBaseBlend1Override: 0
-    - _TracesBaseBlend2: 1
-    - _TracesBaseBlend2Override: 0
-    - _TracesColor1Override: 0
-    - _TracesColor2Override: 0
-    - _TracesColorBlendRange1Override: 0
-    - _TracesColorBlendRange2Override: 0
-    - _TracesColorBlendRangeOverride: 0
-    - _TracesColorOverride: 0
-    - _TracesNormalScale: 1
-    - _TracesNormalScale1: 0.8
-    - _TracesNormalScale1Override: 0
-    - _TracesNormalScale2: 0.8
-    - _TracesNormalScale2Override: 0
-    - _TracesNormalScaleOverride: 0
-    - _TracesOverride: 0
     - _UVSec: 0
-    - _UseAveragedNormals: 1
-    - _UseAveragedNormalsOverride: 1
-    - _UseCoverageDetail: 1
-    - _UseCoverageDetailOverride: 0
     - _WindQuality: 0
     - _WorkflowMode: 1
-    - _XRMotionVectorsPass: 1
     - _ZWrite: 1
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _CameraFadeParams: {r: 0, g: Infinity, b: 0, a: 0}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _Cov0Smoothness: {r: 0, g: 1, b: 0, a: 0}
-    - _Cov1Smoothness: {r: 0, g: 1, b: 0, a: 0}
-    - _Cov2Smoothness: {r: 0, g: 1, b: 0, a: 0}
-    - _CoverageColor: {r: 1, g: 1, b: 1, a: 1}
-    - _CoverageColor1: {r: 1, g: 1, b: 1, a: 1}
-    - _CoverageColor2: {r: 1, g: 1, b: 1, a: 1}
-    - _DetailTexRemap: {r: 0.05, g: 0.5, b: 0, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _EnhanceRemap0: {r: 0, g: 1, b: 0, a: 0}
-    - _EnhanceRemap1: {r: 0, g: 1, b: 0, a: 0}
-    - _EnhanceRemap2: {r: 0, g: 1, b: 0, a: 0}
-    - _HeightMap0Contrast: {r: 0, g: 1.0000001, b: 0, a: 0}
-    - _HeightMap1Contrast: {r: 0, g: 1, b: 0, a: 0}
-    - _HeightMap2Contrast: {r: 0, g: 1, b: 0, a: 0}
     - _HueVariation: {r: 1, g: 0.5, b: 0, a: 0.1}
-    - _PrecipitationDirRange: {r: 0, g: 1, b: 0, a: 0}
     - _SoftParticleFadeParams: {r: 0, g: 0, b: 0, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _SssMaskRemap0: {r: 0, g: 1, b: 0, a: 0}
-    - _SssMaskRemap1: {r: 0, g: 1, b: 0, a: 0}
-    - _SssMaskRemap2: {r: 0, g: 1, b: 0, a: 0}
-    - _TessSnowdriftRange: {r: 0.63, g: 0.775, b: 0, a: 0}
-    - _TracesColor: {r: 0.1, g: 0.25, b: 0.4, a: 0.1}
-    - _TracesColor1: {r: 0.1, g: 0.25, b: 0.4, a: 0.1}
-    - _TracesColor2: {r: 0.1, g: 0.25, b: 0.4, a: 0.1}
-    - _TracesColorBlendRange: {r: 0, g: 0.5, b: 0, a: 0}
-    - _TracesColorBlendRange1: {r: 0, g: 1, b: 0, a: 0}
-    - _TracesColorBlendRange2: {r: 0, g: 1, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

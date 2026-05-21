@@ -120,6 +120,7 @@ namespace AssetInventory
         private string[] _logOptions;
         private string[] _blipOptions;
         private string[] _aiBackendOptions;
+        private string[] _browserTypeOptions;
 
         private int _lastTab = -1;
         private string _newTag;
@@ -509,6 +510,7 @@ namespace AssetInventory
             _logOptions = new[] {"Media Downloads", "Image Resizing", "Audio Parsing", "Package Parsing", "Custom Actions", "Preview Creation"};
             _blipOptions = new[] {"Small (1Gb)", "Large (1.8Gb)"};
             _aiBackendOptions = new[] {"Blip", "Ollama", "LM Studio"};
+            _browserTypeOptions = new[] {"System Default", "Custom"};
             _imageTypeOptions = new List<string> {"-all-", string.Empty}.Concat(TextureNameSuggester.suffixPatterns.Keys.Select(StringUtils.CamelCaseToWords)).ToArray();
             _expertSearchFields = new List<string> {"-Add Field-", string.Empty}.Concat(assetFields).ToArray();
 
@@ -766,7 +768,7 @@ namespace AssetInventory
             string releaseDate = _onlineInfo?.version?.publishedDate != null ? _onlineInfo.version.publishedDate.Value.ToString() : "Unknown";
             if (_updateAvailable && _onlineInfo != null && GUILayout.Button(CommonUIStyles.Content($"v{_onlineInfo.version?.name} available!", $"Released {releaseDate}"), EditorStyles.linkLabel))
             {
-                Application.OpenURL(AI.ASSET_STORE_LINK);
+                AI.OpenURL(AI.ASSET_STORE_LINK);
             }
             if (_activePackageDownloads > 0 && GUILayout.Button(EditorGUIUtility.IconContent("Loading", $"|{_activePackageDownloads} Downloads Active"), EditorStyles.label, GUILayout.Width(iconSize), GUILayout.Height(iconSize)))
             {
@@ -835,26 +837,26 @@ namespace AssetInventory
                     "Please consider leaving a review and spreading the word. This is so important on the Asset Store and is the only way to make asset development viable.\n\n"
                     , "Leave Review", "Maybe Later"))
             {
-                Application.OpenURL(AI.ASSET_STORE_LINK);
+                AI.OpenURL(AI.ASSET_STORE_LINK);
             }
         }
 
-        private void GatherTreeChildren(int id, List<AssetInfo> result, TreeModel<AssetInfo> treeModel)
+        private void GatherTreeChildren(int id, List<AssetInfo> result, HashSet<int> seen, TreeModel<AssetInfo> treeModel)
         {
             AssetInfo info = treeModel.Find(id);
             if (info == null) return;
 
-            GatherTreeChildrenRecursive(info, result);
+            GatherTreeChildrenRecursive(info, result, seen);
         }
 
-        private void GatherTreeChildrenRecursive(TreeElement node, List<AssetInfo> result)
+        private void GatherTreeChildrenRecursive(TreeElement node, List<AssetInfo> result, HashSet<int> seen)
         {
-            if (node is AssetInfo info && info.Id > 0) result.Add(info);
+            if (node is AssetInfo info && info.Id > 0 && seen.Add(info.TreeId)) result.Add(info);
             if (node.HasChildren)
             {
                 foreach (TreeElement child in node.Children)
                 {
-                    GatherTreeChildrenRecursive(child, result);
+                    GatherTreeChildrenRecursive(child, result, seen);
                 }
             }
         }

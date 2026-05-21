@@ -1,9 +1,0 @@
-A demo scene isn't REALLY needed for MIGHTY PORTAL
-
-Just use it!!!!
-
-Unity 6 has caused a few wild problems with my original demo scene that I didn't anticipate.  As such, I will just redo it from scratch.  
-
-The next update will have one, but, honestly, you don't really need it.  Just go into your scenes and start flying around.
-
-Thanks!

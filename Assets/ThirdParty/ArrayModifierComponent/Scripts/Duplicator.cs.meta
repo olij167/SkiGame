@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: b732e61508524a3418875289ffaa9897
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 176485
+  packageName: Array Modifier Component
+  packageVersion: 1.0
+  assetPath: Assets/ThirdParty/ArrayModifierComponent/Scripts/Duplicator.cs
+  uploadId: 384610

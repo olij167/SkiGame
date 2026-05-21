@@ -1,0 +1,152 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 836e95faa9c8ea7498ff5d96e16498e8, type: 3}
+  m_Name: BeginnerLessonDialogueSequence
+  m_EditorClassIdentifier: Assembly-CSharp::NpcDialogueSequenceSO
+  sequenceId: beginnerTutorial
+  displayName: Beginner Ski Lessons
+  nodes:
+  - nodeId: start
+    nodeType: 0
+    speakerIdentityId: instructor
+    speakerRole: TutorialInstructor
+    text: Ready for your first lesson?
+    duration: 4
+    waitForPlayerContinue: 0
+    importance: 3
+    styleOverride: {fileID: 0}
+    requirements: []
+    promptText: 
+    choices: []
+    actions: []
+    nextNodeId: explain
+    targetNodeId: 
+    waitSeconds: 0
+  - nodeId: explain
+    nodeType: 0
+    speakerIdentityId: instructor
+    speakerRole: TutorialInstructor
+    text: 'We''ll start with the basics: Leaning, skating, turning, and wedging.'
+    duration: 8
+    waitForPlayerContinue: 0
+    importance: 3
+    styleOverride: {fileID: 0}
+    requirements: []
+    promptText: 
+    choices: []
+    actions: []
+    nextNodeId: lean
+    targetNodeId: 
+    waitSeconds: 0
+  - nodeId: lean
+    nodeType: 0
+    speakerIdentityId: instructor
+    speakerRole: TutorialInstructor
+    text: Hold {input:Lean:positive} to gain speed and {input:Lean:negative} to lose
+      speed.
+    duration: 16
+    waitForPlayerContinue: 0
+    importance: 3
+    styleOverride: {fileID: 0}
+    requirements: []
+    promptText: 
+    choices: []
+    actions: []
+    nextNodeId: turn
+    targetNodeId: 
+    waitSeconds: 0
+  - nodeId: turn
+    nodeType: 0
+    speakerIdentityId: instructor
+    speakerRole: TutorialInstructor
+    text: Hold {input:LeftSki} or {input:RightSki} to turn
+    duration: 16
+    waitForPlayerContinue: 0
+    importance: 3
+    styleOverride: {fileID: 0}
+    requirements: []
+    promptText: 
+    choices: []
+    actions: []
+    nextNodeId: skate
+    targetNodeId: 
+    waitSeconds: 0
+  - nodeId: skate
+    nodeType: 0
+    speakerIdentityId: instructor
+    speakerRole: TutorialInstructor
+    text: Alternate {input:LeftSki} and {input:RightSki} to skate forward
+    duration: 16
+    waitForPlayerContinue: 0
+    importance: 3
+    styleOverride: {fileID: 0}
+    requirements: []
+    promptText: 
+    choices: []
+    actions: []
+    nextNodeId: wedge
+    targetNodeId: 
+    waitSeconds: 0
+  - nodeId: wedge
+    nodeType: 0
+    speakerIdentityId: instructor
+    speakerRole: TutorialInstructor
+    text: Hold both {input:LeftSki} and {input:RightSki} together to wedge your skis
+      and brake.
+    duration: 16
+    waitForPlayerContinue: 0
+    importance: 3
+    styleOverride: {fileID: 0}
+    requirements: []
+    promptText: 
+    choices: []
+    actions: []
+    nextNodeId: tryIt
+    targetNodeId: 
+    waitSeconds: 0
+  - nodeId: tryIt
+    nodeType: 0
+    speakerIdentityId: instructor
+    speakerRole: TutorialInstructor
+    text: Now, give all that a go!
+    duration: 6
+    waitForPlayerContinue: 0
+    importance: 3
+    styleOverride: {fileID: 0}
+    requirements: []
+    promptText: 
+    choices: []
+    actions: []
+    nextNodeId: end
+    targetNodeId: 
+    waitSeconds: 0
+  - nodeId: end
+    nodeType: 5
+    speakerIdentityId: instructor
+    speakerRole: TutorialInstructor
+    text: 
+    duration: 0
+    waitForPlayerContinue: 0
+    importance: 3
+    styleOverride: {fileID: 0}
+    requirements: []
+    promptText: 
+    choices: []
+    actions: []
+    nextNodeId: 
+    targetNodeId: 
+    waitSeconds: 0
+  startNodeId: start
+  canSkip: 1
+  autoCloseOnEnd: 1
+  defaultImportance: 3
+  styleOverride: {fileID: 0}

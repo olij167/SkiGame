@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: e319c11352c43f241b830cb493e98b06
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 231462
+  packageName: Easy Array Modifier
+  packageVersion: 1.0
+  assetPath: Assets/ThirdParty/ArrayModifier/Prefabs/Chair.prefab
+  uploadId: 522576

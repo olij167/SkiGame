@@ -1,0 +1,85 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37d0ad92d5fa4d68a2f7ccfcb5c7326b, type: 3}
+  m_Name: Generic NpcSocialGroup
+  m_EditorClassIdentifier: Assembly-CSharp::NpcSocialGroupSO
+  groupId: generic
+  displayName: General Public
+  allowedAnchorTypes: 000000000300000004000000070000000800000006000000
+  requiredAnchorTags: []
+  requiredActorTags: []
+  speakerSlots:
+  - speakerRole: A
+    requiredTags: []
+  - speakerRole: B
+    requiredTags: []
+  minSpeakers: 2
+  maxSpeakers: 2
+  requiresMultipleSpeakers: 1
+  weight: 1
+  cooldownSeconds: 30
+  globalCooldownSeconds: 10
+  sequence: {fileID: 11400000, guid: 7a563453230d3f144a475ab5eb4fcd80, type: 2}
+  fallbackBank: {fileID: 11400000, guid: 471131173032cea478d343760d819f9f, type: 2}
+  fallbackTopics:
+  - smallTalk
+  - tips
+  audience: 2
+  requirements: []
+  canRepeat: 1
+  avoidImmediateRepeat: 1
+  dialogueEntries:
+  - entryId: social.nearby_run
+    sequence: {fileID: 11400000, guid: 7a563453230d3f144a475ab5eb4fcd80, type: 2}
+    fallbackBank: {fileID: 11400000, guid: 471131173032cea478d343760d819f9f, type: 2}
+    fallbackTopics: []
+    allowedAnchorTypes: 00000000020000000300000004000000
+    requiredAnchorTags: []
+    requirements: []
+    weight: 0
+    cooldownSeconds: 0
+    avoidImmediateRepeat: 0
+    requiredContextKeys: []
+  socialTags: []
+  preferredArchetypes: 00000000010000000200000004000000050000000600000007000000
+  skillRange: {x: 0, y: 1}
+  allowedRegionIds:
+  - Sublime
+  - Bluff
+  - Valley
+  - Nest
+  - Madcap
+  - Shoulder
+  - Wonderland
+  - Awzruca
+  preferredPoiCategories: 0a000000140000001e00000028000000320000003c00000046000000
+  preferredAnchorTypes: 0000000002000000030000000400000001000000
+  appearanceProfile: {fileID: 11400000, guid: 9e7950c0b06ebcd4fbcc79cd0d3b6dc5, type: 2}
+  appearancePresets: []
+  palette: []
+  applySharedPalette: 0
+  paletteVariation: 0.15
+  dialogueBanks:
+  - {fileID: 11400000, guid: 471131173032cea478d343760d819f9f, type: 2}
+  commonSequences:
+  - {fileID: 11400000, guid: 7a563453230d3f144a475ab5eb4fcd80, type: 2}
+  canSkiRuns: 1
+  canRideLifts: 1
+  canLoiterAtPoi: 1
+  canSpectateRace: 1
+  canVisitLandmarks: 1
+  canPerformTricks: 0
+  loiterWeight: 1
+  runWeight: 1
+  liftWeight: 1
+  landmarkWeight: 0.5
+  trickWeight: 0.1

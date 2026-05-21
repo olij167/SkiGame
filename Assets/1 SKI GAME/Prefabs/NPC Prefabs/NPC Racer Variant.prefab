@@ -76,6 +76,10 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6581433815363429812, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+      propertyPath: externalInputSourceBehaviour
+      value: 
+      objectReference: {fileID: 3022155257223070360}
     - target: {fileID: 6721536688426726489, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
       propertyPath: m_Enabled
       value: 0

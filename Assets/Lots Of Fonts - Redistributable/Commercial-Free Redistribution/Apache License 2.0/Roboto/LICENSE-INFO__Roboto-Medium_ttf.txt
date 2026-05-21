@@ -1,0 +1,29 @@
+Font license audit note
+=======================
+Font file: Roboto-Medium.ttf
+Original archive path: Roboto/Roboto-Medium.ttf
+Resolved zip entry: Lots of fonts/Roboto/Roboto-Medium.ttf
+Grouped family: Roboto
+Internal family: Roboto
+Full name: Roboto Medium
+Style: Medium
+
+Audit status: Commercial-free use
+License basis: Apache License 2.0
+Recommendation: OK for commercial use
+Evidence: embedded metadata / bundled license / Google Fonts
+Source/local file from audit: local metadata; https://www.apache.org/licenses/LICENSE-2.0; https://fonts.google.com/faq
+Generic/official license URL used by builder: https://www.apache.org/licenses/LICENSE-2.0.txt
+
+Notes:
+Archive metadata/license indicates Apache 2.0; newer Google Fonts copies of some families may now be OFL.
+
+Embedded font metadata:
+- License description: Licensed under the Apache License, Version 2.0
+- License URL: http://www.apache.org/licenses/LICENSE-2.0
+- Copyright: Font data copyright Google 2012
+
+Copied local license/readme files:
+- None found near the original font file. Use the license URL/evidence above for manual verification.
+
+This file is generated from an audit manifest. It is not legal advice.

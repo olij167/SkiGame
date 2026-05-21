@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: c232c681ef5727549b93374bf478c98e
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 176485
+  packageName: Array Modifier Component
+  packageVersion: 1.0
+  assetPath: Assets/ThirdParty/ArrayModifierComponent/Scripts/FixedCountDuplicator.cs
+  uploadId: 384610

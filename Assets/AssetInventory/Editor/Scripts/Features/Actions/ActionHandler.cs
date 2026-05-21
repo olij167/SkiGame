@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using ImpossibleRobert.Common;
 using Unity.EditorCoroutines.Editor;
@@ -53,14 +54,47 @@ namespace AssetInventory
 
         public const string AI_ACTION_LOCK = AI.DEFINE_SYMBOL + "_ACTION_LOCK";
 
-        private const string AI_ACTION_SETUP_DONE = AI.DEFINE_SYMBOL + "_SETUP_DONE";
+        private static string AI_ACTION_SETUP_DONE => AI.DEFINE_SYMBOL + "_SETUP_DONE_" + Application.dataPath.GetHashCode().ToString("X8");
 
         // These constants match ActionRunner's PREF_PREFIX for proper interrupt detection
         private const string AUTOMATOR_ACTION_ACTIVE = "Automator_ActionActive_";
         private const string AUTOMATOR_CURRENT_STEP = "Automator_CurrentStep_";
 
         // global cancellation request
-        public bool CancellationRequested { get; set; }
+        private bool _cancellationRequested;
+        private CancellationTokenSource _cts;
+
+        public bool CancellationRequested
+        {
+            get => _cancellationRequested;
+            set
+            {
+                _cancellationRequested = value;
+                if (value) _cts?.Cancel();
+                else
+                {
+                    if (_cts == null || _cts.IsCancellationRequested)
+                    {
+                        _cts?.Dispose();
+                        _cts = new CancellationTokenSource();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Cancellation token tied to the global Stop button. Pass to async operations
+        /// (HTTP calls, AI requests, etc.) so they can be interrupted immediately
+        /// instead of waiting for the next polling check of <see cref="CancellationRequested"/>.
+        /// </summary>
+        public CancellationToken CancellationToken
+        {
+            get
+            {
+                if (_cts == null) _cts = new CancellationTokenSource();
+                return _cts.Token;
+            }
+        }
 
         public bool ActionsInProgress
         {

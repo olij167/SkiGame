@@ -32,10 +32,9 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2584481698058452599}
-  - {fileID: 6008854156458174023}
-  - {fileID: 7061930340200865038}
-  - {fileID: 5183615983868931454}
+  - {fileID: 8715858060793299308}
   - {fileID: 6076723282410438311}
+  - {fileID: 8671607087868135156}
   m_Father: {fileID: 1931090390662744828}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!65 &9102821746034390035
@@ -75,7 +74,7 @@ MonoBehaviour:
   stanceOut: 0
   groundLayers:
     serializedVersion: 2
-    m_Bits: 65
+    m_Bits: 64
   tipRegionLocalZThreshold: 0.5
   tailRegionLocalZThreshold: -0.3
   minCollisionUpDot: 0.25
@@ -83,6 +82,9 @@ MonoBehaviour:
   probeUpOffset: 0.1
   probeDistance: 0.5
   probeContactDistance: 0.18
+  endProbeContactDistance: 0.35
+  endProbeRecoveryExtraContactDistance: 0.45
+  endDominanceMargin: 0.04
   posedProbeExtraContactDistance: 0.3
   useEdgeCompensationProbes: 1
   edgeProbeHalfWidth: 0.08
@@ -94,6 +96,18 @@ MonoBehaviour:
   intermediateProbeFraction: 0.55
   useHighOriginRecoveryProbe: 1
   recoveryProbeExtraUpOffset: 0.35
+  explicitTipProbe: {fileID: 5919005893691105366}
+  explicitTailProbe: {fileID: 6379366636383534823}
+  explicitBaseProbe: {fileID: 7036679092626847336}
+  explicitTipBottomProbe: {fileID: 8737210695796966181}
+  explicitTailBottomProbe: {fileID: 5193824401891092490}
+  useBottomEndProbes: 1
+  bottomEndProbeLocalYOffset: -0.08
+  useManualLocalProbeZ: 0
+  manualTipLocalZ: 0.85
+  manualTailLocalZ: -0.85
+  fallbackSkiHalfLength: 1.45
+  collisionPollSkin: 0.025
 --- !u!1 &154894592666884878
 GameObject:
   m_ObjectHideFlags: 0
@@ -103,10 +117,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1931090390662744828}
+  - component: {fileID: 3002867916409725910}
   - component: {fileID: 3231282787931471276}
   - component: {fileID: 9194888708551206877}
-  - component: {fileID: 3002867916409725910}
-  - component: {fileID: 5639384503387283439}
+  - component: {fileID: 6779760339688764539}
   - component: {fileID: 7596907828029317582}
   - component: {fileID: 1162040451237696183}
   - component: {fileID: 3328606950685842056}
@@ -120,14 +134,15 @@ GameObject:
   - component: {fileID: 7450519742665636248}
   - component: {fileID: 6721536688426726489}
   - component: {fileID: 5278650216396597934}
+  - component: {fileID: 1784925924441905991}
   - component: {fileID: 7056251311214554038}
   - component: {fileID: 3577129971718139236}
+  - component: {fileID: -6586554584124434831}
   - component: {fileID: 9118590775965157313}
   - component: {fileID: 6310751696964683197}
   - component: {fileID: 870573912974893619}
   - component: {fileID: 8372029706752488572}
-  - component: {fileID: 2849942397213681774}
-  - component: {fileID: 3289933560086555512}
+  - component: {fileID: 3340012549760587526}
   m_Layer: 22
   m_Name: NPC Skier
   m_TagString: NPC
@@ -162,8 +177,36 @@ Transform:
   - {fileID: 3253231204292085287}
   - {fileID: 1641579436902742489}
   - {fileID: 4565397477657207433}
+  - {fileID: 4701048433937495506}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!54 &3002867916409725910
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 154894592666884878}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!136 &3231282787931471276
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -208,34 +251,7 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 5
   m_Center: {x: 0, y: 0, z: 0}
---- !u!54 &3002867916409725910
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 154894592666884878}
-  serializedVersion: 5
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 1
-  m_IsKinematic: 0
-  m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 0
---- !u!114 &5639384503387283439
+--- !u!114 &6779760339688764539
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -244,28 +260,29 @@ MonoBehaviour:
   m_GameObject: {fileID: 154894592666884878}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 73369e05852f4c4a9d9b2247922716c3, type: 3}
+  m_Script: {fileID: 11500000, guid: 1d7b2f8b5c7642aeb4e6f44a7f04d521, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcTalkInteractable
-  identity: {fileID: 0}
-  skierProfile: {fileID: 6721536688426726489}
-  genericInteractionProfile: {fileID: 11400000, guid: c46650f9f297e2b47ba04f5de8b53667, type: 2}
+  m_EditorClassIdentifier: Assembly-CSharp::NpcSocialActor
   dialogueAgent: {fileID: 1162040451237696183}
-  questGiver: {fileID: 0}
-  interactAction: {fileID: 1189063969923822077, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-  previousOfferAction: {fileID: -3129377363197609676, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-  nextOfferAction: {fileID: -4318636406519063868, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-  requireHoldForTalk: 0
-  holdToConfirmSeconds: 0.2
-  promptPriority: 57
-  interactionAreaTrigger: {fileID: 9194888708551206877}
-  questOfferAnchor: {fileID: 680367897278398339}
-  defaultPromptVerb: Talk to
-  interactionTopicId: smallTalk1
-  autoBeginQuestSessionOnEnter: 1
-  registerOnlyWhileNearby: 1
-  tapInteractCyclesNextOffer: 1
-  postConfirmInputLockoutSeconds: 0.25
+  identity: {fileID: 0}
+  genericProfile: {fileID: 11400000, guid: c46650f9f297e2b47ba04f5de8b53667, type: 2}
+  socialTags:
+  - generic
+  socialRoleOverride: 
+  allowSocialChatter: 1
+  allowNpcToNpcDialogue: 1
+  allowPlayerFacingSocialBarks: 1
+  suppressWhileQuestOfferActive: 1
+  suppressWhileInteracting: 1
+  suppressWhileRidingLift: 1
+  suppressWhileRacing: 1
+  suppressWhileStacked: 1
+  personalCooldownSeconds: 10
+  socialRejoinCooldownSeconds: {x: 30, y: 90}
+  forceLeaveAfterConversationChance: 0.4
+  rotateTowardSpeaker: 1
+  lookAtTurnSpeed: 6
+  logDebug: 0
 --- !u!114 &7596907828029317582
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -279,23 +296,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NpcAmbientDialogueEmitter
   dialogueAgent: {fileID: 1162040451237696183}
-  talkInteractable: {fileID: 5639384503387283439}
+  talkInteractable: {fileID: 0}
+  questGiver: {fileID: 0}
+  socialActor: {fileID: 6779760339688764539}
+  liftAttendantContext: {fileID: 0}
   playOnPlayerNearby: 1
   playAmbientAutomatically: 1
   activationRadius: 18
   minDelay: 0
   maxDelay: 15
   ambientTopics:
-  - ambient1
-  - ambient2
-  - ambient3
-  - tip1
-  - tip2
-  - tip3
+  - smallTalk
+  - tips
   audience: 0
   suppressDuringQuestOffer: 1
   suppressDuringInteraction: 1
   requirePlayerInTrigger: 0
+  fallbackToGenericAmbientWhenQuestAmbientFails: 1
+  logAmbientDebug: 0
+  includeInactivePlayersInResolution: 0
+  maxResolvedPlayerDistanceFromCamera: 5000
 --- !u!114 &1162040451237696183
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -308,7 +328,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b22eb217ef574554beb70f24c2279dff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NpcDialogueAgent
-  dialogueBank: {fileID: 11400000, guid: ca2af3ea00d6a7b4c8462412e66aa28d, type: 2}
+  dialogueBank: {fileID: 11400000, guid: 471131173032cea478d343760d819f9f, type: 2}
   bubblePresenter: {fileID: 3328606950685842056}
   bubbleAnchor: {fileID: 680367897278398339}
   speakerNameSource: {fileID: 0}
@@ -338,6 +358,21 @@ MonoBehaviour:
   questStyle: {fileID: 11400000, guid: fcb0018b306c71f4b94aef5af93ac84c, type: 2}
   tutorialStyle: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
   criticalStyle: {fileID: 11400000, guid: 64bd11a6904214c49b4e87b1b134700a, type: 2}
+  bubblePrefab: {fileID: 723512565437607312, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+  instantiatePrefabOnAwake: 1
+  generateFallbackIfMissing: 1
+  canvas: {fileID: 8828717600930385197}
+  canvasGroup: {fileID: 7408892740923752283}
+  rootRect: {fileID: 4701048433937495506}
+  backgroundImage: {fileID: 9116590131905782334}
+  backgroundOutline: {fileID: 6887658726423876124}
+  accentBar: {fileID: 5036157836841515937}
+  speakerLabel: {fileID: 1207483626912451408}
+  titleLabel: {fileID: 4228642426810449447}
+  bodyLabel: {fileID: 4227955558042018522}
+  metaLabel: {fileID: 5133062592701136230}
+  controlsLabel: {fileID: 6575698180181310612}
+  errorLabel: {fileID: 5111281034841838292}
 --- !u!114 &6581433815363429812
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -365,6 +400,7 @@ MonoBehaviour:
   sorenessMeter: {fileID: 7949360351100678939}
   gearLoadout: {fileID: 7450519742665636248}
   autoSwapSkiVisuals: 1
+  acceptPlayerInput: 0
   leftSkiAction: {fileID: 0}
   rightSkiAction: {fileID: 0}
   leanAction: {fileID: 0}
@@ -372,7 +408,7 @@ MonoBehaviour:
   jumpAction: {fileID: 0}
   tuckAction: {fileID: 0}
   poseAction: {fileID: 0}
-  externalInputSourceBehaviour: {fileID: 0}
+  externalInputSourceBehaviour: {fileID: 5278650216396597934}
   _authoredBaseRigSnapshot:
     body:
       hasValue: 1
@@ -431,7 +467,7 @@ MonoBehaviour:
   tuckBodyDrop: 0.22
   tuckBodyYScale: 0.78
   tuckBodyZScale: 0.92
-  tuckHeadDown: 0.08
+  tuckHeadDown: 0.14
   tuckHeadForward: 0.04
   groundLayers:
     serializedVersion: 2
@@ -442,10 +478,25 @@ MonoBehaviour:
   groundContactDistance: 0.5
   groundContactDistanceWhenSkiContact: 0.55
   maxGroundSlopeAngle: 75
+  maxSkiOnlyGroundedBodyGap: 1.25
+  useSkiTransformGroundFallback: 1
+  skiTransformFallbackProbeUp: 0.65
+  skiTransformFallbackProbeDown: 1.25
+  skiTransformFallbackRadius: 0.05
+  skiTransformFallbackMaxGap: 0.25
+  skiTransformFallbackCoyoteTime: 0.035
+  skiEndFallbackMaxGap: 0.3
+  skiEndFallbackProbeUp: 0.7
+  skiEndFallbackProbeDown: 1.3
+  skiEndFallbackRadius: 0.05
+  endContactFlattenAngularDamp: 12
   groundNormalSmoothSpeed: 12
   controlCoyoteTime: 0.08
-  alignNormalSmoothSpeed: 10
-  alignMaxDegreesPerSec: 120
+  skiSupportNormalResolveSpeed: 22
+  skiSupportNormalCacheTime: 0.12
+  terrainRayNormalOverrideAngle: 3
+  alignNormalSmoothSpeed: 12
+  alignMaxDegreesPerSec: 125
   wallCatchMinImpactSpeed: 3
   wallCatchMinTangentialSpeed: 3
   wallCatchChance: 1
@@ -501,21 +552,34 @@ MonoBehaviour:
   minPoleSpeedFactor: 0.1
   poleUphillEffectiveness: 1.25
   tipContactStackFraction: 0.8
-  tipContactMinSpeed: 3.5
-  tipContactStackTime: 0.38
-  minBaseAlignForGroundNormal: 0.18
+  tipContactMinSpeed: 3.6
+  tipContactStackTime: 0.5
+  minBaseAlignForGroundNormal: 0.15
   severeEdgeAlignment: 0.02
-  lowSpeedEdgeStackAlignment: 0.28
+  lowSpeedEdgeStackAlignment: 0.3
   enableNoseTailSlides: 1
-  noseTailSlideMinSpeed: 4
-  noseTailSlideFullSpeed: 9
-  noseTailSlideFlattenBelowSpeed: 3
-  noseTailSlideLeanThreshold: 0.25
+  noseTailSlideMinSpeed: 3.7
+  noseTailSlideFullSpeed: 10
+  noseTailSlideFlattenBelowSpeed: 2.8
+  noseTailSlideLeanThreshold: 0.2
   noseTailSlideMinBaseAlignment: 0.02
-  noseTailSlideAlignmentSuppression: 0.7
+  noseTailSlideAlignmentSuppression: 0.65
   noseTailSlideStateGrace: 0.16
-  tipBalanceGraceMultiplier: 1.8
-  tipBalancePitchBias: 9
+  tipBalanceGraceMultiplier: 2.1
+  tipBalancePitchBias: 6.5
+  enableEndContactFlattenRecovery: 1
+  endContactFlattenRecoveryDuration: 0.24
+  endContactFlattenRecoveryDownAccel: 22
+  endContactFlattenRecoveryAngularDamp: 14
+  endContactFlattenRecoveryAwayDamp: 8
+  endContactFlattenRecoveryProjection: 0.35
+  endContactFlattenRecoveryMinAirTime: 0.1
+  endContactFlattenRecoveryMaxRisingSpeed: 0.05
+  endContactFlattenRecoveryPostJumpSuppressTime: 0.3
+  endContactFlattenRecoveryAllowsJump: 1
+  endContactFlattenRecoveryMaxEndProbeDistance: 0.22
+  endContactFlattenRecoveryMaxBodyGap: 0.7
+  endContactFlattenRecoveryCorrectiveOnly: 1
   jumpForceRange: {x: 3, y: 6}
   jumpCoyoteTime: 0.2
   jumpBufferTime: 12
@@ -534,61 +598,74 @@ MonoBehaviour:
   airPitchTurnSpeed: 80
   airAngularAcceleration: 720
   airAngularDamping: 360
-  airTuckSpinMultiplier: 1.5
+  airTuckSpinMultiplier: 2
   airControlBlendInTime: 0.18
   airPitchUseDeltaFromTakeoff: 0.6
   airPitchDeadzone: 0.05
-  airStyleBlendSpeed: 10
-  airStyleBodyYaw: 14
-  airStyleBodyRoll: 10
-  airStyleOpenPitch: 10
+  airStyleBlendSpeed: 5
+  airStyleBodyYaw: 25
+  airStyleBodyRoll: 25
+  airStyleOpenPitch: 25
   airStyleBodyDrop: 0.06
   airStyleBodySideOffset: 0.05
   airStyleBodyBackOffset: 0.04
   airStyleHeadUp: 0.03
   trickPoseProfile: {fileID: 11400000, guid: b7152c07daeb5b74eb49d3522e02df9e, type: 2}
   debugAuthoredTrickPose: 0
-  trickPoseCommitMinHoldTime: 0.22
+  trickPoseCommitMinHoldTime: 1
   trickPoseSwitchScoreMargin: 2
-  trickPoseRetentionGraceTime: 0.18
-  trickPoseIntentSnapshotWindow: 0.2
+  trickPoseRetentionGraceTime: 0.3
+  trickPoseIntentSnapshotWindow: 0.6
   trickPoseIntentBiasStrength: 1
   debugTrickPoseRecognition: 0
   enablePassiveAirDrift: 1
   passiveAirDriftMaxPosition: 0.05
   passiveAirDriftMaxRotation: 7
-  passiveAirDriftVelocityInfluence: 0.06
+  passiveAirDriftVelocityInfluence: 0.2
   passiveAirDriftLerpSpeed: 6
   passiveAirDriftWhilePoseMultiplier: 0.2
   useSimpleContactGrinding: 1
   grindableLayers:
     serializedVersion: 2
     m_Bits: 1
-  grindMinPlanarSpeed: 0
-  grindStrengthResponse: 5
+  grindMinPlanarSpeed: 0.1
+  grindContactProbeRadius: 0.28
+  grindContactProbeUp: 0.45
+  grindContactProbeDown: 1.25
+  grindAllowsStationaryContactSupport: 1
+  useNearbyGrindableProbeSearch: 1
+  nearbyGrindableProbePriority: 0.18
+  grindStrengthResponse: 8
   grindFrictionMultiplier: 0.55
   grindCarveSteerMultiplier: 0.35
   grindQuickStopMultiplier: 0.25
   grindWedgeBrakeMultiplier: 0.35
   grindSlopeGravityMultiplier: 1.05
-  grindYawTorque: 18
-  grindPitchTorque: 16
-  grindRollTorque: 12
-  grindTuckControlBonus: 0.9
+  grindTractionBuildTime: 0.65
+  grindMinTractionFactor: 0.18
+  grindSkateImpulseMultiplier: 0.38
+  grindPolePushMultiplier: 0.45
+  grindPoleBrakeMultiplier: 0.25
+  grindLowSpeedDriveAccel: 1.2
+  grindLowSpeedDriveMaxSpeed: 4
+  grindYawTorque: 25
+  grindPitchTorque: 20
+  grindRollTorque: 15
+  grindTuckControlBonus: 1
   grindMaxHybridAngularSpeed: 10
-  grindNoseTailMinSpeedMultiplier: 0.55
-  grindNoseTailLeanThresholdMultiplier: 0.65
+  grindNoseTailMinSpeedMultiplier: 0.4
+  grindNoseTailLeanThresholdMultiplier: 0.4
   grindNoseTailAlignmentSuppressionBonus: 0.2
   grindEndProbeBias: 0.035
   grindStanceLeanThreshold: 0.3
   grindStanceHoldTime: 0.08
   grindStanceReleaseTime: 0.06
-  landingSteepSlopeStartAngle: 40
-  landingVerySteepSlopeAngle: 70
-  landingAlignBoostDuration: 0.1
-  landingAlignBoostMultiplier: 0.5
-  landingProjectionStrength: 0.5
-  landingVelocityRetention: 0.963
+  landingSteepSlopeStartAngle: 35
+  landingVerySteepSlopeAngle: 65
+  landingAlignBoostDuration: 0.2
+  landingAlignBoostMultiplier: 1
+  landingProjectionStrength: 0.6
+  landingVelocityRetention: 0.8
   skiLandingVisualDuration: 0.22
   skiLandingVisualMinFallHeight: 0.35
   skiLandingVisualMaxFallHeight: 6
@@ -596,28 +673,28 @@ MonoBehaviour:
   skiLandingVisualMaxDownwardSpeed: 15
   skiLandingVisualMinVisibleIntensity: 0.05
   logSkiLandingVisualDebug: 0
-  maxLandingTiltAngle: 40
-  maxLandingMisalignmentAngle: 40
-  minLandingSpeedForStackCheck: 8
-  minLandingAirTime: 0.16
-  minLandingDownwardSpeed: 6
-  hardLandingMinFallHeight: 5
-  hardLandingMinDownwardSpeed: 6
+  maxLandingTiltAngle: 45
+  maxLandingMisalignmentAngle: 90
+  minLandingSpeedForStackCheck: 6
+  minLandingAirTime: 2
+  minLandingDownwardSpeed: 3
+  hardLandingMinFallHeight: 6
+  hardLandingMinDownwardSpeed: 12
   hardLandingMinImpactAngleFromPlane: 50
-  heavyTipStackAngle: 60
+  heavyTipStackAngle: 45
   stackTorqueImpulse: 6
-  stackPlanarVelocityRetention: 1
+  stackPlanarVelocityRetention: 0.5
   stackMinimumRecoveryDelay: 0.65
-  requireBothSkisForStackRecovery: 1
+  requireBothSkisForStackRecovery: 0
   stackRecoveryMinSkiBaseAlignment: 0.35
   stackImpactLayers:
     serializedVersion: 2
-    m_Bits: 4194313
+    m_Bits: 4194305
   ignoreGroundLayerForImpactStack: 1
-  obstacleImpactMinPlanarSpeed: 4.5
-  obstacleImpactMinIntoSpeed: 2.75
-  obstacleImpactFullSpeed: 13
-  stackImpactSlideRetention: 0.35
+  obstacleImpactMinPlanarSpeed: 6
+  obstacleImpactMinIntoSpeed: 4
+  obstacleImpactFullSpeed: 16
+  stackImpactSlideRetention: 0.45
   stackImpactBounce: 0.08
   stackImpactMaxUpwardVelocity: 1.25
   stackedSecondaryImpactMinSpeed: 3
@@ -633,18 +710,18 @@ MonoBehaviour:
   includePoleCollidersInStackCollisionSuppression: 1
   disableNonConvexMeshCollidersInsteadOfTrigger: 1
   showDebugHUD: 0
-  debugShowInputs: 1
-  debugShowTraverseHold: 1
+  debugShowInputs: 0
+  debugShowTraverseHold: 0
   debugShowGrinding: 1
   debugShowJumpLanding: 1
   debugShowSkiContacts: 1
-  debugDrawGizmosSelected: 1
+  debugDrawGizmosSelected: 0
   drawStackRecoveryGizmo: 1
   stackRecoveryGizmoLength: 1.35
   stackRecoveryGizmoGroundProbeDistance: 2.5
   stackRecoveryGizmoRecoverColor: {r: 0.1, g: 1, b: 0.25, a: 1}
   stackRecoveryGizmoContinueColor: {r: 1, g: 0.1, b: 0.05, a: 1}
-  debugHUDScale: 1
+  debugHUDScale: 1.128
 --- !u!114 &4733748899985594099
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -696,8 +773,8 @@ MonoBehaviour:
   rightPoleBackParent: {fileID: 2301824631252324530}
   cameraTransform: {fileID: 0}
   toggleHoldDuration: 1
-  walkSpeed: 3
-  runSpeed: 6
+  walkSpeed: 6
+  runSpeed: 12
   acceleration: 25
   deceleration: 30
   airControlSpeedMultiplier: 0.65
@@ -705,8 +782,8 @@ MonoBehaviour:
   allowAirTurn: 1
   airControlPercent: 0.35
   airTurnSpeed: 3.5
-  minJumpForce: 3.2
-  jumpForce: 5
+  minJumpForce: 4
+  jumpForce: 8
   maxJumpChargeTime: 0.45
   jumpBufferTime: 0.16
   jumpCoyoteTime: 0.12
@@ -714,7 +791,7 @@ MonoBehaviour:
   jumpGroundIgnoreDuration: 0.12
   jumpLaunchSeparation: 0.04
   groundCheckDistance: 1
-  groundCheckRadius: 0.3
+  groundCheckRadius: 1.3
   walkGroundMinUpDot: 0.25
   logWalkJumpDebug: 0
   landingMinAirTime: 0.12
@@ -723,24 +800,25 @@ MonoBehaviour:
   landingMaxDownwardSpeed: 11
   landingMinFallDistance: 0.35
   landingMaxFallDistance: 4.5
-  landingMinVisibleIntensity: 0.08
-  landingMinimumPoseIntensity: 0.16
+  landingMinVisibleIntensity: 0
+  landingMinimumPoseIntensity: 0.496
   landingDescentConfirmSpeed: 0.25
   landingDescentConfirmDistance: 0.06
-  logWalkLandingDebug: 0
+  logWalkLandingDebug: 1
   groundLayers:
     serializedVersion: 2
     m_Bits: 64
-  skiGroundClearance: 1
-  skiGroundRayHeight: 10
-  skiGroundRayDistance: 20
+  skiGroundClearance: 0.05
+  skiGroundRayHeight: 2
+  skiGroundRayDistance: 5
   alignWalkFeetToGroundOnEnter: 1
   walkFootGroundClearance: 0.035
   walkFootGroundRayHeight: 1.25
   walkFootGroundRayDistance: 3
   walkGroundSnapFramesAfterModeChange: 3
   drawWalkFootGroundSnapGizmos: 1
-  controlsEnabled: 0
+  controlsEnabled: 1
+  acceptPlayerInput: 0
 --- !u!114 &7370084777478072468
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -765,17 +843,17 @@ MonoBehaviour:
   rightPoleGripAnchor: {fileID: 5826795582726494638}
   leftSkiBindingAnchor: {fileID: 6076723282410438311}
   rightSkiBindingAnchor: {fileID: 6927237084453382536}
-  leftShoulderLocalOffset: {x: -0.22, y: 0.18, z: 0.02}
-  rightShoulderLocalOffset: {x: 0.22, y: 0.18, z: 0.02}
-  leftHipLocalOffset: {x: -0.16, y: -0.26, z: 0.02}
-  rightHipLocalOffset: {x: 0.16, y: -0.26, z: 0.02}
-  walkFootSpacing: 0.18
-  walkFootForwardStride: 0.2
-  walkFootLift: 0.07
-  walkHandSpacing: 0.24
-  walkHandForwardStride: 0.16
-  walkHandLift: 0.05
-  walkCycleSpeed: 5.5
+  leftShoulderLocalOffset: {x: -0.4, y: 0.6, z: 0}
+  rightShoulderLocalOffset: {x: 0.4, y: 0.6, z: 0}
+  leftHipLocalOffset: {x: -0.3, y: -0.75, z: 0}
+  rightHipLocalOffset: {x: 0.3, y: -0.75, z: 0}
+  walkFootSpacing: 0.5
+  walkFootForwardStride: 0.7
+  walkFootLift: 0.3
+  walkHandSpacing: 0.5
+  walkHandForwardStride: 0.5
+  walkHandLift: 0.3
+  walkCycleSpeed: 12
   walkIdleReturnSpeed: 10
   walkMoveThreshold: 0.08
   walkPlanarSpeedForFullCycle: 2.5
@@ -801,53 +879,50 @@ MonoBehaviour:
   snowmobilePassengerLegBend: 0.36
   snowmobilePassengerArmBend: 0.2
   riderHandTargetFollowSpeed: 18
-  runStrideMultiplier: 1.45
-  runCycleSpeedMultiplier: 1.25
-  runArmBendMultiplier: 1.25
-  runLegBendMultiplier: 1.2
-  walkJumpBodyDrop: 0.15
-  skiJumpBodyDrop: 0.11
-  jumpReleaseBodyLift: 0.08
+  runStrideMultiplier: 2
+  runCycleSpeedMultiplier: 1.3
+  runArmBendMultiplier: 2
+  runLegBendMultiplier: 1.5
+  walkJumpBodyDrop: 0.6
+  skiJumpBodyDrop: 0.5
+  jumpReleaseBodyLift: 0.2
   jumpSquatFootForward: 0.05
-  jumpSquatHandBack: 0.04
-  jumpSquatHandDown: 0.04
-  jumpSquatLegBendAdd: 0.18
-  jumpSquatArmBendAdd: 0.08
+  jumpSquatHandBack: 0.1
+  jumpSquatHandDown: -0.2
+  jumpSquatLegBendAdd: 0.4
+  jumpSquatArmBendAdd: 0.3
   jumpReleaseLegStraighten: 0.12
-  jumpReleaseArmOpen: 0.08
-  walkAirPoseBlendInSpeed: 8.5
+  jumpReleaseArmOpen: 0.1
+  walkAirPoseBlendInSpeed: 2
   walkAirPoseBlendOutSpeed: 13
-  walkAirFootForward: 0.14
-  walkAirFootUp: 0.16
-  walkAirHandUp: 0.11
-  walkAirHandOutward: 0.045
-  walkAirVelocityLag: 0.065
+  walkAirRiseSpeedForFullPose: 4
+  walkAirApexVerticalSpeed: 1.25
+  walkAirFallSpeedForFullPose: 7
   walkAirVelocityForFullLag: 7
-  walkAirKneeForward: 0.12
-  walkAirKneeUp: 0.14
-  walkAirElbowForward: 0.045
-  walkAirElbowUp: 0.12
-  walkAirArmBendAdd: 0.1
-  walkAirLegBendAdd: 0.13
+  walkAirVelocityLag: 1
+  walkAirInputReach: 0.08
   walkAirJumpReleaseSuppression: 0.45
-  walkLandingBodyDrop: 0.1
-  walkLandingFootForward: 0.025
-  walkLandingHandBack: 0.02
-  walkLandingHandDown: 0.025
-  walkLandingLegBendAdd: 0.14
-  walkLandingArmBendAdd: 0.05
-  skiLandingBodyDrop: 0.075
-  skiLandingLegBendAdd: 0.1
-  skiLandingArmBendAdd: 0.035
-  walkAirborneBlendInSpeed: 5.5
-  walkAirborneBlendOutSpeed: 9
-  walkAirborneVelocityForFullDrag: 8
-  walkAirborneHandDrag: 0.18
-  walkAirborneFootDrag: 0.12
-  walkAirborneSideSpread: 0.035
-  walkAirborneArmBendAdd: 0.055
-  walkAirborneLegBendAdd: 0.075
-  walkAirborneJumpReleaseSuppression: 0.55
+  walkAirFootForward: 0.1
+  walkAirFootUp: 0.8
+  walkAirHandForward: 0.1
+  walkAirHandUp: 0.8
+  walkAirHandOutward: 0.13
+  walkAirKneeForward: 0.4
+  walkAirKneeUp: 0.2
+  walkAirElbowForward: -0.1
+  walkAirElbowUp: 0.4
+  walkAirElbowOutward: 0.1
+  walkAirArmBendAdd: 0.14
+  walkAirLegBendAdd: -0.2
+  walkLandingBodyDrop: 0.4
+  walkLandingFootForward: 0.2
+  walkLandingHandBack: -0.1
+  walkLandingHandDown: -0.2
+  walkLandingLegBendAdd: 0.4
+  walkLandingArmBendAdd: 0.3
+  skiLandingBodyDrop: 0.4
+  skiLandingLegBendAdd: 0.4
+  skiLandingArmBendAdd: 0.3
   seatedBodyDrop: 0.26
   seatedFootForward: 0.34
   seatedFootUp: 0.08
@@ -855,18 +930,20 @@ MonoBehaviour:
   seatedHandDown: 0.08
   seatedLegBend: 0.34
   seatedArmBend: 0.18
-  armBaseBend: 0.1
-  armTuckBend: 0.1
+  armBaseBend: 0.2
+  armTuckBend: 0.3
   armAirBend: 0.06
   armPolePhaseInfluence: 0.08
-  legBaseBend: 0.12
-  legTuckBend: 0.16
-  legInputBend: 0.08
-  legAirStraighten: 0.12
-  limbOutwardBias: 0.05
-  movementForwardBias: 0.04
-  walkArmBend: 0.1
-  walkLegBend: 0.14
+  legBaseBend: 0.2
+  legTuckBend: 0.3
+  legInputBend: 0.15
+  legAirStraighten: 0.2
+  limbOutwardBias: 0.1
+  movementForwardBias: 0.1
+  walkIdleArmBend: 0.055
+  walkMoveArmBend: 0.1
+  walkIdleLegBend: 0.055
+  walkMoveLegBend: 0.14
   enableSuspension: 1
   suspensionMaxOffset: 0.14
   suspensionSpeed: 10
@@ -894,16 +971,16 @@ MonoBehaviour:
   minValidWalkBodyHeightFromFeet: 0.65
   maxValidWalkBodyHeightFromFeet: 1.35
   enableStackLimbPhysics: 1
-  stackBlendInSpeed: 16
-  stackBlendOutSpeed: 8
+  stackBlendInSpeed: 20
+  stackBlendOutSpeed: 10
   stackEndpointGravity: 9.81
-  stackEndpointDamping: 7.5
-  stackBodyAccelerationInfluence: 0.85
-  stackAngularVelocityInfluence: 0.75
-  stackImpactVelocityInheritance: 0.85
-  stackEndpointSleepSpeed: 0.045
-  stackBodySleepSpeed: 0.08
-  stackConstraintIterations: 3
+  stackEndpointDamping: 7
+  stackBodyAccelerationInfluence: 0.2
+  stackAngularVelocityInfluence: 0.5
+  stackImpactVelocityInheritance: 0.8
+  stackEndpointSleepSpeed: 0.1
+  stackBodySleepSpeed: 0.2
+  stackConstraintIterations: 4
   constrainStackEndpointsToGround: 1
   stackEndpointGroundProbeUp: 0.35
   stackEndpointGroundProbeDown: 0.8
@@ -911,29 +988,29 @@ MonoBehaviour:
   stackEndpointGroundSkin: 0.015
   moveHandFootVisualsDuringStack: 1
   enableStackOutwardSpread: 1
-  stackArmOutwardAcceleration: 5.5
+  stackArmOutwardAcceleration: 8
   stackLegOutwardAcceleration: 2.75
-  stackOutwardLiftAcceleration: 1.2
-  stackOutwardReachFade: 0.65
-  stackInitialOutwardVelocity: 1.15
-  stackSharedImpactVelocity: 0.48
-  stackImpactTangentVelocity: 0.55
-  stackImpactWhipVelocity: 1.35
-  stackArmImpactVelocityMultiplier: 1.2
-  stackLegImpactVelocityMultiplier: 0.85
-  stackOppositeSideImpactReduction: 0.35
-  stackAnchorSpringAcceleration: 3.5
-  stackAnchorSpringDamping: 0.85
+  stackOutwardLiftAcceleration: 0.1
+  stackOutwardReachFade: 0.4
+  stackInitialOutwardVelocity: 2
+  stackSharedImpactVelocity: 0.2
+  stackImpactTangentVelocity: 1.2
+  stackImpactWhipVelocity: 2
+  stackArmImpactVelocityMultiplier: 1.3
+  stackLegImpactVelocityMultiplier: 0.6
+  stackOppositeSideImpactReduction: 0.5
+  stackAnchorSpringAcceleration: 1.2
+  stackAnchorSpringDamping: 2
   useRigAssistLengthsForStack: 1
-  fallbackUpperArmLength: 0.32
-  fallbackLowerArmLength: 0.34
-  fallbackUpperLegLength: 0.42
-  fallbackLowerLegLength: 0.42
+  fallbackUpperArmLength: 0.497
+  fallbackLowerArmLength: 0.497
+  fallbackUpperLegLength: 0.654
+  fallbackLowerLegLength: 0.775
   moveEquipmentVisualsDuringStack: 1
-  stackSkiAnchorFollow: 0.55
-  stackSkiRotationFollow: 0.45
-  stackPoleAnchorFollow: 0.95
-  stackPoleRotationFollow: 0.85
+  stackSkiAnchorFollow: 0.5
+  stackSkiRotationFollow: 0.3
+  stackPoleAnchorFollow: 0.9
+  stackPoleRotationFollow: 0.75
   allowLogicalEquipmentRootFallback: 0
   stackSkiRotationOffsetEuler: {x: 0, y: 0, z: 0}
   stackPoleRotationOffsetEuler: {x: 0, y: 0, z: 0}
@@ -973,11 +1050,18 @@ MonoBehaviour:
   liftCarrierLayers:
     serializedVersion: 2
     m_Bits: 1
-  liftDetectionRadius: 30
+  liftDetectionRadius: 20
   liftDetectPoint: {fileID: 6019492779789769427}
   holdToAttach: 1
   attachInputBuffer: 0.2
   attachAttemptInterval: 0.05
+  hardFollowChairAttachPoint: 1
+  useRigidbodyPositionForChairFollow: 1
+  maxChairAttachErrorBeforeSnap: 0.05
+  logLiftAttachDebug: 0
+  drawLiftAttachDebugGizmos: 0
+  logAttachedChairFollowDebug: 0
+  attachedChairFollowLogInterval: 1
   liftInput: {fileID: 0}
 --- !u!114 &6350686913724402779
 MonoBehaviour:
@@ -1220,6 +1304,24 @@ MonoBehaviour:
   assertiveness01: 0.5
   hesitationOnSteeps01: 0.35
   socialPresenceBias01: 0.35
+  socialness: 0.5
+  riskTolerance: 0.5
+  explorationWeight: 0.5
+  raceInterest: 0.25
+  trickInterest: 0.25
+  liftUseWeight: 0.6
+  kioskVisitWeight: 0.2
+  lodgeRestWeight: 0.2
+  medicVisitWeight: 0.05
+  viewpointPauseWeight: 0.25
+  idleWanderWeight: 0.15
+  leaveAreaWeight: 0.08
+  groupAffinity: 0.45
+  socialLoiterDurationRange: {x: 20, y: 90}
+  viewpointPauseDurationRange: {x: 8, y: 25}
+  lodgeRestDurationRange: {x: 30, y: 120}
+  idleWanderDurationRange: {x: 8, y: 30}
+  practiceTrickDurationRange: {x: 10, y: 40}
   turnRadiusPreference01: 0.5
   edgePreference01: 0.5
   mergeCaution01: 0.5
@@ -1259,8 +1361,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NpcSkierRunFollower
   skiController: {fileID: 6581433815363429812}
   profile: {fileID: 6721536688426726489}
-  inputEnabled: 0
-  skiMode: 0
+  inputEnabled: 1
+  skiMode: 1
   currentRun: {fileID: 0}
   knownRuns: []
   broadTargetPoint: {x: 0, y: 0, z: 0}
@@ -1311,6 +1413,31 @@ MonoBehaviour:
   lowSpeedLeanDampenThreshold: 3.4
   shallowSlopeLeanDampenMaxDeg: 11
   settledForwardLeanCap: 0.22
+--- !u!114 &1784925924441905991
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 154894592666884878}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2632ce62c35017145839126645a62eb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AutoSkiApproachDriver
+  turnSensitivity: 2.25
+  turnDeadZone: 0.06
+  maxCruiseSpeed: 7.5
+  minCruiseSpeed: 2.2
+  brakeLeanStrength: 0.85
+  userCancelLegThreshold: 0.12
+  userCancelLeanThreshold: 0.12
+  targetSlowRadius: 3.2
+  targetStopRadiusMultiplier: 1.8
+  reverseBrakeFacingDot: -0.15
+  nearTargetBrakeStrength: 0.95
+  polesMaxSpeed: 5
+  polesMinFacingDot: 0.55
 --- !u!114 &7056251311214554038
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1332,7 +1459,7 @@ MonoBehaviour:
   pathAgent: {fileID: 3577129971718139236}
   sorenessMeter: {fileID: 7949360351100678939}
   playerFocus: {fileID: 0}
-  body: {fileID: 0}
+  body: {fileID: 3002867916409725910}
   autoFindRunsInScene: 1
   autoFindLiftsInScene: 1
   availableRuns: []
@@ -1349,6 +1476,15 @@ MonoBehaviour:
   liftDetachDistance: 6
   boardingTimeout: 20
   respawnCooldown: 20
+  useGenericActivityLifecycle: 1
+  skiRunIntentDurationRange: {x: 35, y: 160}
+  liftIntentDurationRange: {x: 45, y: 220}
+  traverseIntentDurationRange: {x: 18, y: 70}
+  genericIntentRepeatPenalty: 0.35
+  genericAnchorRepeatPenalty: 0.15
+  socialConversationReactionMin: 2
+  socialConversationReactionMax: 8
+  flowThroughMovementBiasAfterLoiter: 0.5
   hubDetectRadius: 65
   hubLoiterChance: 0.6
   hubWanderRadius: 10
@@ -1368,12 +1504,12 @@ MonoBehaviour:
   spectatorCelebrateHopHeight: 0.22
   spectatorCelebrateHopFrequency: 2.2
   spectatorCelebrateSwayDegrees: 12
-  liftStageDistance: 3.5
-  liftStageArrivalDistance: 2.2
-  liftBoardCommitDistance: 2.2
+  liftStageDistance: 5
+  liftStageArrivalDistance: 3
+  liftBoardCommitDistance: 2
   liftRetryOffsetRadius: 4
   liftQueueTriggerSlack: 1.5
-  maxBoardingRetries: 2
+  maxBoardingRetries: 3
   minimumLiftVerticalGain: 5
   maxLiftTopToRunTargetDistance: 180
   abandonLiftDistance: 45
@@ -1386,6 +1522,11 @@ MonoBehaviour:
   localFailureRecoveryDelay: 3
   softWalkFailurePauseMin: 0.9
   softWalkFailurePauseMax: 2
+  npcGroundSnapLayers:
+    serializedVersion: 2
+    m_Bits: 64
+  skiModeStrictAirborneGrace: 1.1
+  skiModeFloatingGroundGap: 3
   walkUprightLerpSpeed: 10
   walkSnapTiltDegrees: 22
   spectatorKeepSkisMaxSlopeDeg: 9
@@ -1410,7 +1551,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NpcAstarPathAgent
   walkingController: {fileID: 3368651367975192256}
-  astarAgentBehaviour: {fileID: 3289933560086555512}
+  astarAgentBehaviour: {fileID: 3340012549760587526}
   arriveDistance: 1.75
   slowRadius: 5
   sprintWhenFar: 1
@@ -1420,6 +1561,24 @@ MonoBehaviour:
   stuckTime: 2.25
   repathInterval: 0.75
   logBindingWarnings: 1
+--- !u!114 &-6586554584124434831
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 154894592666884878}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2738250a2bf4ef68df95694f9a05595, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcAppearancePresetApplier
+  preset: {fileID: 0}
+  customizer: {fileID: 6350686913724402779}
+  gearLoadout: {fileID: 7450519742665636248}
+  skiController: {fileID: 6581433815363429812}
+  runOnStart: 1
+  preferIdentityPreset: 1
 --- !u!114 &9118590775965157313
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1432,11 +1591,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2ead2cc3c654f154a8d7304618c41c7b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NpcSkierAppearanceGenerator
-  catalog: {fileID: 11400000, guid: 341f1197ef9dc524abc80cf389b1ea02, type: 2}
+  catalog: {fileID: 11400000, guid: 910ae87307a846b4a969a31a944358e7, type: 2}
   customizer: {fileID: 6350686913724402779}
   gearLoadout: {fileID: 7450519742665636248}
   skiController: {fileID: 6581433815363429812}
-  appearanceApplier: {fileID: 0}
+  appearanceApplier: {fileID: -6586554584124434831}
   hatChance: 0.75
   jacketChance: 0.9
   glovesChance: 0.8
@@ -1814,7 +1973,7 @@ MonoBehaviour:
   legacyPoleReleaseClip: {fileID: 0}
   legacyVolumeLerpSpeed: 8
   legacyPitchLerpSpeed: 8
---- !u!114 &2849942397213681774
+--- !u!114 &3340012549760587526
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1823,105 +1982,139 @@ MonoBehaviour:
   m_GameObject: {fileID: 154894592666884878}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 373b52eb9bf8c40f785bb6947a1aee66, type: 3}
+  m_Script: {fileID: 11500000, guid: cfe9431ea8ad072f2aecd3041b1524dd, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: AstarPathfindingProject::Pathfinding.Seeker
-  version: 1073741824
-  drawGizmos: 1
-  detailedGizmos: 0
-  startEndModifier:
-    addPoints: 0
-    exactStartPoint: 3
-    exactEndPoint: 3
-    useRaycasting: 0
-    mask:
+  m_EditorClassIdentifier: AstarPathfindingProject::Pathfinding.FollowerEntity
+  version: 1073741839
+  shape:
+    radius: 0.5
+    height: 2
+  movement:
+    follower:
+      rotationSpeed: 600
+      speed: 5
+      maxRotationSpeed: 720
+      maxOnSpotRotationSpeed: 720
+      slowdownTime: 0.5
+      slowdownTimeWhenTurningOnSpot: 0
+      desiredWallDistance: 0.5
+      leadInRadiusWhenApproachingDestination: 1
+      allowRotatingOnSpotBacking: 1
+    debugFlags: 64
+    stopDistance: 0.2
+    rotationSmoothing: 0
+    positionSmoothing: 0
+    groundMask:
       serializedVersion: 2
-      m_Bits: 4294967295
-    useGraphRaycasting: 0
-  traversableTags: -1
-  tagCostMultipliers:
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  - 1
-  tagEntryCosts: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-  graphMask:
-    value: -1
---- !u!114 &3289933560086555512
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 154894592666884878}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ce11ea984e202491d9271f53021d8b89, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: AstarPathfindingProject::Pathfinding.RichAI
-  version: 1073741824
-  radius: 0.5
-  height: 2
-  simulateMovement: 0
-  maxSpeed: 1
-  gravity: {x: NaN, y: NaN, z: NaN}
-  groundMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  endReachedDistance: 0.2
-  whenCloseToDestination: 0
-  rvoDensityBehavior:
-    enabled: 1
-    densityThreshold: 0.5
-    returnAfterBeingPushedAway: 0
-    progressAverage: 0
-    lastJobDensityResult: 0
-  repathRateCompatibility: NaN
-  canSearchCompability: 0
-  orientation: 0
-  enableRotation: 1
-  autoRepath:
+      m_Bits: 65
+    isStopped: 0
+  managedState:
+    rvoSettings:
+      agentTimeHorizon: 1
+      obstacleTimeHorizon: 0.5
+      maxNeighbours: 10
+      layer: 1
+      collidesWith: -1
+      priority: 0.5
+      debug: 0
+      locked: 0
+    pathfindingSettings:
+      graphMask:
+        value: -1
+      traversableTags: -1
+      tagCostMultipliers:
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      tagEntryCosts: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+    enableLocalAvoidance: 0
+    enableGravity: 1
+  managedSettings:
+    pathfindingSettings:
+      graphMask:
+        value: -1
+      traversableTags: -1
+      tagCostMultipliers:
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      tagEntryCosts: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  enableLocalAvoidanceBacking: 1
+  enableGravityBacking: 1
+  rvoSettingsBacking:
+    agentTimeHorizon: 1
+    obstacleTimeHorizon: 0.5
+    maxNeighbours: 10
+    layer: 1
+    collidesWith: -1
+    priority: 0.5
+    debug: 0
+    locked: 0
+  autoRepathBacking:
     mode: 2
-    period: 0.5
-    sensitivity: 10
-    maximumPeriod: 2
-    visualizeSensitivity: 0
-  acceleration: 5
-  rotationSpeed: 360
-  slowdownTime: 0.5
-  wallForce: 3
-  wallDist: 1
-  funnelSimplification: 0
-  slowWhenNotFacingTarget: 0
-  preventMovingBackwards: 0
+    period: 2
+  orientationBacking: 0
+  movementPlaneSourceBacking: 0
+  syncPosition: 1
+  syncRotation: 1
 --- !u!1 &667804892909455171
 GameObject:
   m_ObjectHideFlags: 0
@@ -1932,7 +2125,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4565397477657207433}
   - component: {fileID: 8068510241932362035}
-  m_Layer: 0
+  m_Layer: 22
   m_Name: RightLegLine
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2005,7 +2198,7 @@ LineRenderer:
   m_MaskInteraction: 0
   m_Positions:
   - {x: 1427.0844, y: 802.0765, z: -1444.1914}
-  - {x: 1427.2367, y: 801.47003, z: -1444}
+  - {x: 1427.2208, y: 801.45624, z: -1444.0875}
   - {x: 1427.3444, y: 800.8264, z: -1444.0414}
   m_Parameters:
     serializedVersion: 3
@@ -2085,7 +2278,7 @@ GameObject:
   - component: {fileID: 8355467383101915090}
   - component: {fileID: 5747234300704821429}
   - component: {fileID: 2448503810780526268}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Right Hand Vis
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2173,7 +2366,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8514221125374130690}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Left Hip
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2240,7 +2433,7 @@ GameObject:
   - component: {fileID: 1862974919902708420}
   - component: {fileID: 1917232588358507647}
   - component: {fileID: 6453780476991194034}
-  m_Layer: 0
+  m_Layer: 22
   m_Name: Right Foot Model
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2342,6 +2535,130 @@ CapsuleCollider:
   m_Height: 1
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &1661969688621163532
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1214172744214662290}
+  m_Layer: 3
+  m_Name: Mid Probe
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1214172744214662290
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1661969688621163532}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.05, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 965940969497993312}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1768356837095224500
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7036679092626847336}
+  m_Layer: 3
+  m_Name: Mid Probe
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7036679092626847336
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1768356837095224500}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.05, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8671607087868135156}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1839958069044726668
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6379366636383534823}
+  m_Layer: 3
+  m_Name: Rear Probe
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6379366636383534823
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1839958069044726668}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.05, z: -1.2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8671607087868135156}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1866400020487537818
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5272010346195169297}
+  m_Layer: 3
+  m_Name: Rear Probe
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5272010346195169297
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1866400020487537818}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.05, z: -1.2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 965940969497993312}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1868169769543658473
 GameObject:
   m_ObjectHideFlags: 0
@@ -2375,6 +2692,42 @@ Transform:
   - {fileID: 6187273900325957787}
   m_Father: {fileID: 1931090390662744828}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2255446201991886268
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 965940969497993312}
+  m_Layer: 3
+  m_Name: Ski Probes
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &965940969497993312
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2255446201991886268}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 6391648576536176210}
+  - {fileID: 1214172744214662290}
+  - {fileID: 5272010346195169297}
+  - {fileID: 5023146958613894159}
+  - {fileID: 6088861493934702184}
+  m_Father: {fileID: 3906934786169531492}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2300200776699259408
 GameObject:
   m_ObjectHideFlags: 0
@@ -2385,7 +2738,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6174463796297858109}
   - component: {fileID: 2909050346393913041}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Right Foot Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2549,6 +2902,37 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2843576265105217076}
   m_Mesh: {fileID: 4711208715938537054, guid: 1913fa7c51a0ec14194f76a5c649db8a, type: 3}
+--- !u!1 &2850010826906906787
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6088861493934702184}
+  m_Layer: 22
+  m_Name: Tail Probe
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6088861493934702184
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2850010826906906787}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -1.0000205, y: -0.049987793, z: -1.4999863}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 965940969497993312}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2905526501324704239
 GameObject:
   m_ObjectHideFlags: 0
@@ -2581,10 +2965,9 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 9187705467475409496}
-  - {fileID: 318359740511848462}
-  - {fileID: 5684432969908266192}
-  - {fileID: 7570925993926648287}
+  - {fileID: 8895517026968406356}
   - {fileID: 6927237084453382536}
+  - {fileID: 965940969497993312}
   m_Father: {fileID: 1931090390662744828}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!65 &5091617285071276538
@@ -2624,7 +3007,7 @@ MonoBehaviour:
   stanceOut: 0
   groundLayers:
     serializedVersion: 2
-    m_Bits: 65
+    m_Bits: 64
   tipRegionLocalZThreshold: 0.5
   tailRegionLocalZThreshold: -0.3
   minCollisionUpDot: 0.25
@@ -2632,6 +3015,9 @@ MonoBehaviour:
   probeUpOffset: 0.1
   probeDistance: 0.5
   probeContactDistance: 0.18
+  endProbeContactDistance: 0.35
+  endProbeRecoveryExtraContactDistance: 0.45
+  endDominanceMargin: 0.04
   posedProbeExtraContactDistance: 0.3
   useEdgeCompensationProbes: 1
   edgeProbeHalfWidth: 0.08
@@ -2643,6 +3029,18 @@ MonoBehaviour:
   intermediateProbeFraction: 0.55
   useHighOriginRecoveryProbe: 1
   recoveryProbeExtraUpOffset: 0.35
+  explicitTipProbe: {fileID: 6391648576536176210}
+  explicitTailProbe: {fileID: 5272010346195169297}
+  explicitBaseProbe: {fileID: 1214172744214662290}
+  explicitTipBottomProbe: {fileID: 5023146958613894159}
+  explicitTailBottomProbe: {fileID: 6088861493934702184}
+  useBottomEndProbes: 1
+  bottomEndProbeLocalYOffset: -0.08
+  useManualLocalProbeZ: 0
+  manualTipLocalZ: 0.85
+  manualTailLocalZ: -0.85
+  fallbackSkiHalfLength: 1.45
+  collisionPollSkin: 0.025
 --- !u!1 &2926978224743530625
 GameObject:
   m_ObjectHideFlags: 0
@@ -2654,7 +3052,7 @@ GameObject:
   - component: {fileID: 7617262117998935298}
   - component: {fileID: 983956315042930291}
   - component: {fileID: 7948089550352763955}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Left Hand Vis
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3093,7 +3491,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1641579436902742489}
   - component: {fileID: 217925093867931476}
-  m_Layer: 0
+  m_Layer: 22
   m_Name: LeftLegLine
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3166,7 +3564,7 @@ LineRenderer:
   m_MaskInteraction: 0
   m_Positions:
   - {x: 1426.6044, y: 802.0765, z: -1444.1914}
-  - {x: 1426.452, y: 801.47003, z: -1444}
+  - {x: 1426.4679, y: 801.45624, z: -1444.0875}
   - {x: 1426.3444, y: 800.8264, z: -1444.0414}
   m_Parameters:
     serializedVersion: 3
@@ -3244,7 +3642,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 171480837508496569}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Left Shoulder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3266,6 +3664,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 6019492779789769427}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &4168554224585368965
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5193824401891092490}
+  m_Layer: 22
+  m_Name: Tail Probe
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5193824401891092490
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4168554224585368965}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0.000020503998, y: -0.049987793, z: -1.5000137}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8671607087868135156}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4358554140042676483
 GameObject:
   m_ObjectHideFlags: 0
@@ -3275,7 +3704,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6386251517219644786}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Right Shoulder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3328,6 +3757,40 @@ Transform:
   m_Children:
   - {fileID: 6019492779789769427}
   m_Father: {fileID: 1312075762708845074}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &4468291747758066479
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8715858060793299308}
+  m_Layer: 22
+  m_Name: Snow Particles
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8715858060793299308
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4468291747758066479}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 6008854156458174023}
+  - {fileID: 7061930340200865038}
+  - {fileID: 5183615983868931454}
+  m_Father: {fileID: 7279794892209992795}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5477353911498021425
 GameObject:
@@ -3452,7 +3915,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3253231204292085287}
   - component: {fileID: 8770881865656043949}
-  m_Layer: 0
+  m_Layer: 22
   m_Name: RightArmLine
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3525,7 +3988,7 @@ LineRenderer:
   m_MaskInteraction: 0
   m_Positions:
   - {x: 1427.1643, y: 802.8865, z: -1444.1914}
-  - {x: 1427.4169, y: 802.56586, z: -1443.908}
+  - {x: 1427.5172, y: 802.50085, z: -1444.0144}
   - {x: 1427.5443, y: 802.3265, z: -1443.4915}
   m_Parameters:
     serializedVersion: 3
@@ -3684,6 +4147,71 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5717671458812776140}
   m_Mesh: {fileID: 4711208715938537054, guid: 1913fa7c51a0ec14194f76a5c649db8a, type: 3}
+--- !u!1 &5835080890079074193
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6391648576536176210}
+  m_Layer: 3
+  m_Name: Front Probe
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6391648576536176210
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5835080890079074193}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.05, z: 1.2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 965940969497993312}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &5911264203848707231
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8895517026968406356}
+  m_Layer: 22
+  m_Name: Snow Particles
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8895517026968406356
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5911264203848707231}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 318359740511848462}
+  - {fileID: 5684432969908266192}
+  - {fileID: 7570925993926648287}
+  m_Father: {fileID: 3906934786169531492}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6000226978921788756
 GameObject:
   m_ObjectHideFlags: 0
@@ -3694,7 +4222,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6927237084453382536}
   - component: {fileID: 5133248537682631831}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Right Ski Foot Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3861,7 +4389,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8888186163918753733}
   - component: {fileID: 4366887041351576239}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Left Hand Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3977,7 +4505,7 @@ GameObject:
   - component: {fileID: 5922377233306266832}
   - component: {fileID: 1598586875209685533}
   - component: {fileID: 4722736140215173554}
-  m_Layer: 0
+  m_Layer: 22
   m_Name: Left Foot Model
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4225,6 +4753,42 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
+--- !u!1 &6961122847580879830
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8671607087868135156}
+  m_Layer: 3
+  m_Name: Ski Probes
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8671607087868135156
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6961122847580879830}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 5919005893691105366}
+  - {fileID: 7036679092626847336}
+  - {fileID: 6379366636383534823}
+  - {fileID: 8737210695796966181}
+  - {fileID: 5193824401891092490}
+  m_Father: {fileID: 7279794892209992795}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7072930255460554640
 GameObject:
   m_ObjectHideFlags: 0
@@ -4235,7 +4799,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3135980645754789733}
   - component: {fileID: 2231697188348607196}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Left Foot Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4288,7 +4852,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6414947548084765449}
   - component: {fileID: 1689438231695223791}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Right Hand Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4461,7 +5025,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5681525572015335645}
   - component: {fileID: 7718994401122680020}
-  m_Layer: 0
+  m_Layer: 22
   m_Name: LeftArmLine
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4534,7 +5098,7 @@ LineRenderer:
   m_MaskInteraction: 0
   m_Positions:
   - {x: 1426.5244, y: 802.8865, z: -1444.1914}
-  - {x: 1426.2719, y: 802.56586, z: -1443.908}
+  - {x: 1426.1715, y: 802.50085, z: -1444.0144}
   - {x: 1426.1444, y: 802.3265, z: -1443.4915}
   m_Parameters:
     serializedVersion: 3
@@ -4638,6 +5202,37 @@ Transform:
   - {fileID: 2301824631252324530}
   m_Father: {fileID: 6019492779789769427}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &7726801698024740240
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8737210695796966181}
+  m_Layer: 22
+  m_Name: Tip Probe
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8737210695796966181
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7726801698024740240}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0.000020503998, y: -0.049987793, z: 1.4999863}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8671607087868135156}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8099465449433650773
 GameObject:
   m_ObjectHideFlags: 0
@@ -4699,6 +5294,37 @@ MonoBehaviour:
   m_VisibleInScene: 1
   version: 1
   m_DecalLayerMask: 1
+--- !u!1 &8123292009551534548
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5023146958613894159}
+  m_Layer: 22
+  m_Name: Tip Probe
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5023146958613894159
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8123292009551534548}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -1.0000205, y: -0.049987793, z: 1.5000137}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 965940969497993312}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8529949054023142653
 GameObject:
   m_ObjectHideFlags: 0
@@ -4709,7 +5335,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6076723282410438311}
   - component: {fileID: 5704008840638301862}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Left Ski Foot Pos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5024,7 +5650,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4233210002168255086}
-  m_Layer: 3
+  m_Layer: 22
   m_Name: Right Hip
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5045,6 +5671,37 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 6019492779789769427}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &9190843541944995053
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5919005893691105366}
+  m_Layer: 3
+  m_Name: Front Probe
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5919005893691105366
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9190843541944995053}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.05, z: 1.2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8671607087868135156}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &9197634468975655558
 GameObject:
@@ -10054,6 +10711,10 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 22
       objectReference: {fileID: 0}
+    - target: {fileID: 8018838276702134657, guid: 030bd8679a6a0094cb1d23eebbc0c113, type: 3}
+      propertyPath: m_Layer
+      value: 22
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -10089,7 +10750,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 3906934786169531492}
+    m_TransformParent: {fileID: 8895517026968406356}
     m_Modifications:
     - target: {fileID: 542965124940825636, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_SortMode
@@ -10145,15 +10806,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -0.000020503998
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1
+      value: 0.099975586
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.3
+      value: -1.2000595
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalRotation.w
@@ -10161,7 +10822,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.0019026564
+      value: -0.0019026562
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalRotation.y
@@ -10169,7 +10830,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.043577887
+      value: 0.043577883
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -10229,7 +10890,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 7279794892209992795}
+    m_TransformParent: {fileID: 8715858060793299308}
     m_Modifications:
     - target: {fileID: 542965124940825636, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_SortMode
@@ -10285,15 +10946,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.12187299
+      value: 0.121872984
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2.9576178
+      value: 2.9576175
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: 0.000020503998
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.y
@@ -10301,7 +10962,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -0.000013679266
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalRotation.w
@@ -10599,6 +11260,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 538604875883187016, guid: da14a93770a7c57408ac20990939e9c2, type: 3}
+      propertyPath: m_Layer
+      value: 22
+      objectReference: {fileID: 0}
     - target: {fileID: 4725918148240965166, guid: da14a93770a7c57408ac20990939e9c2, type: 3}
       propertyPath: m_Name
       value: Left Ski Model
@@ -10623,7 +11288,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 3906934786169531492}
+    m_TransformParent: {fileID: 8895517026968406356}
     m_Modifications:
     - target: {fileID: 542965124940825636, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_SortMode
@@ -10679,15 +11344,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -0.000020503998
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1
+      value: 0.099975586
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: 0.000013679266
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalRotation.w
@@ -10695,7 +11360,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.0019026564
+      value: -0.0019026562
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalRotation.y
@@ -10703,7 +11368,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.043577887
+      value: 0.043577883
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -10785,7 +11450,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 7279794892209992795}
+    m_TransformParent: {fileID: 8715858060793299308}
     m_Modifications:
     - target: {fileID: 542965124940825636, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_SortMode
@@ -10833,15 +11498,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.12187299
+      value: 0.121872984
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2.9576178
+      value: 2.9576175
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.000022828579
+      value: 0.000020503998
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.y
@@ -10849,7 +11514,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.8999959
+      value: -1.1999649
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalRotation.w
@@ -10925,7 +11590,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 7279794892209992795}
+    m_TransformParent: {fileID: 8715858060793299308}
     m_Modifications:
     - target: {fileID: 542965124940825636, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_SortMode
@@ -10973,15 +11638,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.12187299
+      value: 0.121872984
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2.9576178
+      value: 2.9576175
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.000019133091
+      value: 0.000020503998
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.y
@@ -10989,7 +11654,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 1.200023
+      value: 1.2000595
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalRotation.w
@@ -11064,13 +11729,376 @@ ParticleSystem:
   m_CorrespondingSourceObject: {fileID: 7104304483593863987, guid: 6288f5c737135a243a664a4890191021, type: 3}
   m_PrefabInstance: {fileID: 4091336531290168481}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &4960518610208899551
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1931090390662744828}
+    m_Modifications:
+    - target: {fileID: 188730572061046333, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_Pivot.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_Pivot.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -8.7146
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 3.3220215
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -3.7755127
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 723512565437607312, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_Name
+      value: DialogueBubbleRoot
+      objectReference: {fileID: 0}
+    - target: {fileID: 797203917513631471, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 797203917513631471, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 797203917513631471, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 797203917513631471, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 797203917513631471, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2893845764806652083, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2893845764806652083, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2893845764806652083, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2893845764806652083, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2893845764806652083, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3007002194036226390, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3007002194036226390, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3007002194036226390, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3007002194036226390, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3007002194036226390, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3695050628277436951, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3695050628277436951, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3695050628277436951, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3695050628277436951, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3695050628277436951, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3695050628277436951, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6137366371786662026, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6137366371786662026, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6137366371786662026, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6137366371786662026, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6137366371786662026, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8240725624837179076, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8240725624837179076, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8240725624837179076, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8240725624837179076, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8240725624837179076, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8240725624837179076, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8970376360839379768, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8970376360839379768, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8970376360839379768, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8970376360839379768, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8970376360839379768, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+--- !u!114 &1207483626912451408 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6059200304035973775, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+  m_PrefabInstance: {fileID: 4960518610208899551}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!114 &4227955558042018522 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 9114153463227147013, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+  m_PrefabInstance: {fileID: 4960518610208899551}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!114 &4228642426810449447 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 9113150973418274808, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+  m_PrefabInstance: {fileID: 4960518610208899551}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!224 &4701048433937495506 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 426214414257452045, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+  m_PrefabInstance: {fileID: 4960518610208899551}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5036157836841515937 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 86496081940822654, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+  m_PrefabInstance: {fileID: 4960518610208899551}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+--- !u!114 &5111281034841838292 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 160342201111876363, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+  m_PrefabInstance: {fileID: 4960518610208899551}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!114 &5133062592701136230 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 282319811826728121, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+  m_PrefabInstance: {fileID: 4960518610208899551}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!114 &6575698180181310612 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2276252690777701707, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+  m_PrefabInstance: {fileID: 4960518610208899551}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!114 &6887658726423876124 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1964322028910154691, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+  m_PrefabInstance: {fileID: 4960518610208899551}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+--- !u!225 &7408892740923752283 stripped
+CanvasGroup:
+  m_CorrespondingSourceObject: {fileID: 2451895354217315972, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+  m_PrefabInstance: {fileID: 4960518610208899551}
+  m_PrefabAsset: {fileID: 0}
+--- !u!223 &8828717600930385197 stripped
+Canvas:
+  m_CorrespondingSourceObject: {fileID: 4490839268637707506, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+  m_PrefabInstance: {fileID: 4960518610208899551}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &9116590131905782334 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4202965697189651425, guid: 710cd658cd8b9cd48b247f952ffc508d, type: 3}
+  m_PrefabInstance: {fileID: 4960518610208899551}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
 --- !u!1001 &8056921722035516136
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 3906934786169531492}
+    m_TransformParent: {fileID: 8895517026968406356}
     m_Modifications:
     - target: {fileID: 542965124940825636, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_SortMode
@@ -11126,15 +12154,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -0.000020503998
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1
+      value: 0.099975586
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.4
+      value: 1.1999649
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalRotation.w
@@ -11142,7 +12170,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.0019026564
+      value: -0.0019026562
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalRotation.y
@@ -11150,7 +12178,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.043577887
+      value: 0.043577883
       objectReference: {fileID: 0}
     - target: {fileID: 7756577213355440870, guid: 6288f5c737135a243a664a4890191021, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -11251,6 +12279,10 @@ PrefabInstance:
     - target: {fileID: 105578425068857916, guid: da14a93770a7c57408ac20990939e9c2, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 538604875883187016, guid: da14a93770a7c57408ac20990939e9c2, type: 3}
+      propertyPath: m_Layer
+      value: 22
       objectReference: {fileID: 0}
     - target: {fileID: 4725918148240965166, guid: da14a93770a7c57408ac20990939e9c2, type: 3}
       propertyPath: m_Name

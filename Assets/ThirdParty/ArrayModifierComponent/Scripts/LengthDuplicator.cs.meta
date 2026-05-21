@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 537d163c29b0b2e4d98cf7a962f35dd6
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 176485
+  packageName: Array Modifier Component
+  packageVersion: 1.0
+  assetPath: Assets/ThirdParty/ArrayModifierComponent/Scripts/LengthDuplicator.cs
+  uploadId: 384610

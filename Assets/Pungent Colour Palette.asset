@@ -1,0 +1,132 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34f9ade962ce4f449911ed52c94f0d57, type: 3}
+  m_Name: Pungent Colour Palette
+  m_EditorClassIdentifier: Assembly-CSharp::PungentColourPaletteSO
+  paletteName: Pungent Colour Palette
+  swatches:
+  - name: Background
+    color: {r: 0.10784657, g: 0.20739725, b: 0.20312054, a: 1}
+    role: 1
+    locked: 1
+    priority: 0
+    notes: 
+    tags: []
+  - name: Panel
+    color: {r: 0.46170035, g: 0.40185708, b: 0.5180137, a: 1}
+    role: 2
+    locked: 0
+    priority: 1
+    notes: 
+    tags: []
+  - name: Muted Text
+    color: {r: 1, g: 1, b: 1, a: 1}
+    role: 3
+    locked: 0
+    priority: 2
+    notes: 
+    tags: []
+  - name: Accent
+    color: {r: 0.75755477, g: 0.8016521, b: 0.8282747, a: 1}
+    role: 4
+    locked: 0
+    priority: 3
+    notes: 
+    tags: []
+  - name: Accent Secondary
+    color: {r: 0.52, g: 0.072748914, b: 0.5012345, a: 1}
+    role: 5
+    locked: 0
+    priority: 4
+    notes: 
+    tags: []
+  - name: Highlight
+    color: {r: 0.64, g: 0.168591, b: 0.3167035, a: 1}
+    role: 7
+    locked: 1
+    priority: 5
+    notes: 
+    tags: []
+  - name: Warning
+    color: {r: 0.13371617, g: 0.18437092, b: 0.45, a: 1}
+    role: 6
+    locked: 0
+    priority: 6
+    notes: 
+    tags: []
+  - name: Success
+    color: {r: 0.7774713, g: 0.32923952, b: 0.07929211, a: 1}
+    role: 8
+    locked: 0
+    priority: 7
+    notes: 
+    tags: []
+  - name: Error
+    color: {r: 0.47691372, g: 0.56108606, b: 0.15310135, a: 1}
+    role: 9
+    locked: 0
+    priority: 8
+    notes: 
+    tags: []
+  - name: Outline
+    color: {r: 0.73397386, g: 0.16246933, b: 0.22194073, a: 1}
+    role: 10
+    locked: 0
+    priority: 9
+    notes: 
+    tags: []
+  - name: Shadow
+    color: {r: 0.05516767, g: 0.07258904, b: 0.071840614, a: 1}
+    role: 12
+    locked: 1
+    priority: 10
+    notes: 
+    tags: []
+  - name: Warning
+    color: {r: 0.45305732, g: 0.5282877, b: 0.53268886, a: 1}
+    role: 11
+    locked: 0
+    priority: 11
+    notes: 
+    tags: []
+  - name: Success
+    color: {r: 0.69223183, g: 0.8157439, b: 0.18860406, a: 1}
+    role: 9
+    locked: 0
+    priority: 12
+    notes: 
+    tags: []
+  - name: Text
+    color: {r: 0.7996268, g: 0.07414519, b: 0.15188129, a: 1}
+    role: 10
+    locked: 0
+    priority: 13
+    notes: 
+    tags: []
+  notes: 
+  defaultGenerationSettings:
+    harmonyMode: 8
+    targetSwatchCount: 8
+    hueRange: {x: 0, y: 0.99999994}
+    saturationRange: {x: 0, y: 1}
+    valueRange: {x: 0, y: 0.99999994}
+    harmonyInfluence: 0
+    contrastInfluence: 1
+    randomVariation: 1
+    preserveLockedSwatches: 0
+    enforceTextContrast: 1
+    avoidNearDuplicates: 1
+    preferReadableAccentPairs: 1
+    seed: 12345
+    useSeed: 0
+  createdUtc: 2026-05-04 14:32:59Z
+  modifiedUtc: 2026-05-15 01:16:14Z

@@ -371,6 +371,31 @@ public class WalkingController : MonoBehaviour
     [Header("Runtime Overrides")]
     [SerializeField] private bool controlsEnabled = true;
 
+    [SerializeField]
+    private bool acceptPlayerInput = true;
+
+    public bool AcceptPlayerInput
+    {
+        get => acceptPlayerInput;
+        set
+        {
+            acceptPlayerInput = value;
+
+            if (!acceptPlayerInput)
+            {
+                if (_input != null)
+                    _input.Disable();
+
+                ClearWalkInputVisualState();
+                ClearWalkJumpState(clearReleaseVisual: false);
+            }
+            else if (isActiveAndEnabled && _input != null)
+            {
+                _input.Enable();
+            }
+        }
+    }
+
     private bool _externalMoveActive;
     private Vector2 _externalMove;
     private bool _externalSprint;
@@ -899,7 +924,11 @@ public class WalkingController : MonoBehaviour
     private void OnEnable()
     {
         EnsureRuntimeSetup();
-        _input.Enable();
+
+        if (acceptPlayerInput)
+            _input.Enable();
+        else
+            _input.Disable();
     }
 
     private void OnDisable()
@@ -911,6 +940,9 @@ public class WalkingController : MonoBehaviour
     private void Update()
     {
         if (!controlsEnabled)
+            return;
+
+        if (!acceptPlayerInput)
             return;
 
         HandleToggleInput();
@@ -1388,8 +1420,15 @@ public class WalkingController : MonoBehaviour
 
     private void ApplyWalkMovement()
     {
-        Vector2 rawInput = controlsEnabled ? _player.Move.ReadValue<Vector2>() : Vector2.zero;
-        bool rawSprint = controlsEnabled && _player.Sprint.IsPressed();
+        Vector2 rawInput =
+    controlsEnabled && acceptPlayerInput
+        ? _player.Move.ReadValue<Vector2>()
+        : Vector2.zero;
+
+        bool rawSprint =
+            controlsEnabled &&
+            acceptPlayerInput &&
+            _player.Sprint.IsPressed();
 
         _lastUserMoveRaw = rawInput;
         _lastUserSprintRaw = rawSprint;
@@ -1448,42 +1487,61 @@ public class WalkingController : MonoBehaviour
         _walkAirMoveBlend01 = !groundedForWalk ? Mathf.Clamp01(inputMagnitude) : 0f;
 
         float baseSpeed = sprintHeld ? runSpeed : walkSpeed;
-        float targetSpeed = baseSpeed * inputMagnitude;
+        float targetSpeed = baseSpeed * Mathf.Clamp01(inputMagnitude);
 
-        float accelLimit;
-        float turnSpeed;
-
-        if (groundedForWalk)
-        {
-            accelLimit = targetSpeed > 0.01f ? acceleration : deceleration;
-            turnSpeed = 10f;
-        }
-        else
-        {
-            targetSpeed *= Mathf.Clamp01(airControlSpeedMultiplier);
-
-            // Preserve existing air momentum when no input is held.
-            accelLimit = inputMagnitude > 0.01f
-                ? acceleration * Mathf.Clamp01(airControlAccelerationMultiplier)
-                : 0f;
-
-            turnSpeed = allowAirTurn ? Mathf.Max(0f, airTurnSpeed) : 0f;
-        }
+        float turnSpeed = groundedForWalk
+            ? 10f
+            : (allowAirTurn ? Mathf.Max(0f, airTurnSpeed) : 0f);
 
         Vector3 vel = _rb.linearVelocity;
         Vector3 velHorizontal = new Vector3(vel.x, 0f, vel.z);
-        Vector3 targetVel = desiredDir * targetSpeed;
-        Vector3 velDelta = targetVel - velHorizontal;
 
-        if (accelLimit > 0.001f)
+        if (groundedForWalk)
         {
-            Vector3 accelStep = velDelta / Mathf.Max(Time.fixedDeltaTime, 0.0001f);
-            float accelMag = accelStep.magnitude;
+            float accelLimit = targetSpeed > 0.01f ? acceleration : deceleration;
 
-            if (accelMag > accelLimit)
-                accelStep = accelStep.normalized * accelLimit;
+            Vector3 targetVel = desiredDir * targetSpeed;
+            Vector3 velDelta = targetVel - velHorizontal;
 
-            _rb.AddForce(new Vector3(accelStep.x, 0f, accelStep.z), ForceMode.Acceleration);
+            if (accelLimit > 0.001f)
+            {
+                Vector3 accelStep = velDelta / Mathf.Max(Time.fixedDeltaTime, 0.0001f);
+                float accelMag = accelStep.magnitude;
+
+                if (accelMag > accelLimit)
+                    accelStep = accelStep.normalized * accelLimit;
+
+                _rb.AddForce(new Vector3(accelStep.x, 0f, accelStep.z), ForceMode.Acceleration);
+            }
+        }
+        else if (inputMagnitude > 0.01f && desiredDir.sqrMagnitude > 0.0001f)
+        {
+            // Air control should add influence without hard-braking existing horizontal momentum.
+            Vector3 desiredPlanarDir = desiredDir.normalized;
+
+            float maxAirSpeed = Mathf.Max(0.01f, baseSpeed * Mathf.Clamp01(airControlSpeedMultiplier));
+            float alongSpeed = Vector3.Dot(velHorizontal, desiredPlanarDir);
+
+            // If already moving fast in the desired direction, keep control subtle instead of clamping/snapping.
+            float headroom01 = Mathf.Clamp01((maxAirSpeed - alongSpeed) / maxAirSpeed);
+            float airControl01 = Mathf.Clamp01(airControlAccelerationMultiplier) * Mathf.Clamp01(airControlPercent);
+            float assist01 = Mathf.Lerp(0.25f, 1f, headroom01);
+
+            Vector3 airAccel = desiredPlanarDir * (acceleration * airControl01 * inputMagnitude * assist01);
+            _rb.AddForce(new Vector3(airAccel.x, 0f, airAccel.z), ForceMode.Acceleration);
+
+            // Very light sideways damping only. This cleans up drift without making air movement feel grounded.
+            Vector3 sidewaysVelocity = velHorizontal - desiredPlanarDir * alongSpeed;
+            if (sidewaysVelocity.sqrMagnitude > 0.0001f && airControlPercent > 0.001f)
+            {
+                float sideDampLimit = deceleration * 0.12f * Mathf.Clamp01(airControlPercent);
+                Vector3 sideDamp = -sidewaysVelocity / Mathf.Max(Time.fixedDeltaTime, 0.0001f);
+
+                if (sideDamp.magnitude > sideDampLimit)
+                    sideDamp = sideDamp.normalized * sideDampLimit;
+
+                _rb.AddForce(new Vector3(sideDamp.x, 0f, sideDamp.z), ForceMode.Acceleration);
+            }
         }
 
         if (turnSpeed > 0f && desiredDir.sqrMagnitude > 0.0001f)

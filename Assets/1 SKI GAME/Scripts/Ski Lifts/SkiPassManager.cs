@@ -199,10 +199,19 @@ public class SkiPassManager : MonoBehaviour
             return;
         }
 
-        int defaultLevel = config != null ? Mathf.Max(0, config.defaultLevelIndex) : 0;
         int highestPermanent = GetHighestPermanentUnlockedLevel();
 
-        CurrentLevel = Mathf.Max(defaultLevel, highestPermanent);
+        if (!HasClaimedDefaultPass && highestPermanent < 0)
+        {
+            CurrentLevel = -1;
+            ExpiryGameHours = null;
+            TotalHours = 0.0;
+            return;
+        }
+
+        int defaultLevel = config != null ? Mathf.Max(0, config.defaultLevelIndex) : 0;
+        int claimedDefaultLevel = HasClaimedDefaultPass ? defaultLevel : -1;
+        CurrentLevel = Mathf.Max(claimedDefaultLevel, highestPermanent);
         ExpiryGameHours = null;
         TotalHours = 0.0;
     }
@@ -217,7 +226,7 @@ public class SkiPassManager : MonoBehaviour
 
     public bool IsPassActive(int level)
     {
-        if (config == null)
+        if (config == null || level < 0)
             return false;
 
         string passId = config.GetPassIdForLevel(level);
@@ -274,6 +283,9 @@ public class SkiPassManager : MonoBehaviour
                 return pass.displayName;
         }
 
+        if (CurrentLevel < 0)
+            return "No Pass";
+
         var p = config != null ? config.Get(CurrentLevel) : null;
         string baseName = p == null ? $"Pass {CurrentLevel}" : p.displayName;
 
@@ -293,6 +305,9 @@ public class SkiPassManager : MonoBehaviour
             return primary.passId.Trim();
 
         if (config == null)
+            return string.Empty;
+
+        if (CurrentLevel < 0)
             return string.Empty;
 
         return config.GetPassIdForLevel(CurrentLevel);
@@ -566,10 +581,8 @@ public class SkiPassManager : MonoBehaviour
 
     public void ResetForNewGame()
     {
-        int def = config != null ? Mathf.Max(0, config.defaultLevelIndex) : 0;
-
         _activePasses.Clear();
-        CurrentLevel = def;
+        CurrentLevel = -1;
         ExpiryGameHours = null;
         TotalHours = 0;
         HasClaimedDefaultPass = false;
@@ -582,11 +595,7 @@ public class SkiPassManager : MonoBehaviour
     {
         _activePasses.Clear();
 
-        int def = config != null ? config.defaultLevelIndex : 0;
-        CurrentLevel = Mathf.Max(0, def);
-
-        ExpiryGameHours = null;
-        TotalHours = 0;
+        RecalculateCompatibilityState();
 
         Save();
         OnPassChanged?.Invoke();

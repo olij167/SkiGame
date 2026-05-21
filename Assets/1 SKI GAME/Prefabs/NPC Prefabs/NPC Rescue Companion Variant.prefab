@@ -52,6 +52,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8572825039590221281, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
+      propertyPath: trickPoseProfile
+      value: 
+      objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 8672689641554458937, guid: d206cf64360eb614a8babbb40cce61ae, type: 3}
     m_RemovedGameObjects: []

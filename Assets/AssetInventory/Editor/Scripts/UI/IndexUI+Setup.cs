@@ -618,7 +618,7 @@ namespace AssetInventory
                         EditorGUILayout.HelpBox("AI captions require Ollama to be installed. This is a free tool you need to download and install yourself.", MessageType.Error);
                         if (GUILayout.Button("Ollama Website", CommonUIStyles.wrappedLinkLabel, GUILayout.ExpandWidth(false)))
                         {
-                            Application.OpenURL(Intelligence.OLLAMA_WEBSITE);
+                            AI.OpenURL(Intelligence.OLLAMA_WEBSITE);
                         }
                     }
                     EditorGUILayout.Space();

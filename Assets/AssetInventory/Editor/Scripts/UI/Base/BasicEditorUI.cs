@@ -12,7 +12,7 @@ namespace AssetInventory
         {
             get
             {
-                if (_logo == null) _logo = CommonUIStyles.LoadTexture("asset-inventory-logo");
+                if (_logo == null) _logo = CommonUIStyles.LoadTexture("AssetInventory");
                 return _logo;
             }
         }

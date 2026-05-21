@@ -57,6 +57,7 @@ public sealed class NpcDialogueLine
     public int sequenceIndex;
     public string speakerRole;
     public string socialTopicId;
+    public DialogueRequirement[] requirements;
 
     public bool IsAmbientLike =>
         trigger == NpcDialogueTrigger.Ambient ||
@@ -84,7 +85,8 @@ public sealed class NpcDialogueLine
             responseGroupId = responseGroupId,
             sequenceIndex = sequenceIndex,
             speakerRole = speakerRole,
-            socialTopicId = socialTopicId
+            socialTopicId = socialTopicId,
+            requirements = requirements
         };
     }
 }

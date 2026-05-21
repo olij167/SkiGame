@@ -33,6 +33,7 @@ Material:
   - _SSS_ON
   - _STOCHASTIC_ON
   - _TRACES_ON
+  - _TRACE_DETAIL
   - _USE_COVERAGE_DETAIL
   m_InvalidKeywords: []
   m_LightmapFlags: 4
@@ -366,7 +367,7 @@ Material:
     - _ThreeTexMode: 0
     - _ThreeTexModeOverride: 0
     - _TilingMultiplier: 1
-    - _TraceDetail: 0
+    - _TraceDetail: 1
     - _TraceDetailIntensity: 0.5
     - _TraceDetailIntensityOverride: 0
     - _TraceDetailNormalScale: 1

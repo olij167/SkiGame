@@ -18,88 +18,26 @@ MonoBehaviour:
     the resort, claiming a pass, and taking your first lift-assisted run.
   autoAccept: 0
   tutorialQuest: 1
+  completionMode: 0
+  turnInTargetType: 0
+  turnInNpcIdentityId: 
+  turnInGenericArchetypeId: 
+  turnInLocationId: 
+  turnInToOriginalQuestGiver: 0
   stages:
   - id: tutorial.lesson.beginner.stage1
-    title: Reach the Instructor
-    description: Get moving on skis and settle into the core weight-shift basics
-      before the rest of the lesson begins.
+    title: Basic Ski Control
+    description: Going over the basics
     objectives:
-    - id: tutorial.lesson.beginner.move
-      title: Use movement input
-      description: Start moving around the instructor and get your skis responding.
+    - id: tutorial.lesson.beginner.lean
+      title: Lean with {input:Lean:positive} to build speed and {input:Lean:negative}
+        to slow down
+      description: Hold {input:Lean:positive} to build speed and {input:Lean:negative}
+        to slow down
       optional: 0
       hiddenUntilAvailable: 0
       autoPinWhenAvailable: 1
-      template: 0
-      requiredCount: 3
-      targetValue: 1
-      comparison: 0
-      inputAction: 0
-      movementSkill: 0
-      distanceStat: 0
-      thresholdStat: 0
-      stateTarget: 0
-      activityTarget: 0
-      trickTarget: 0
-      interactionTarget: 0
-      uiTarget: 0
-      namedTrick: 
-      trickRequirement:
-        flavor: 0
-        minimumSpinDegrees: 0
-        requiredSpinDirection: 0
-        minimumFlipCount: 0
-        requiredFlipDirection: 0
-        requiresGrind: 0
-        requiresSlide: 0
-        requiresValidAuthoredPose: 0
-        requiresPoseRotationCombo: 0
-        requiredPoseFamily: 0
-        requiredPoseShape: 0
-        requiredOrientationModifier: 0
-        explicitPoseLabel: 
-        requiresSwitchLanding: 0
-        requiresNoseLanding: 0
-        requiresTailLanding: 0
-        requiredZoneId: 
-      compoundMode: 40
-      compoundObjectives: []
-      advancedCondition:
-        kind: 0
-        key: 
-        comparison: 0
-        targetCount: 1
-        targetValue: 1
-        stateValueKind: 0
-        boolValue: 1
-        stringValue: 
-        filters: []
-        trickRequirement:
-          flavor: 0
-          minimumSpinDegrees: 0
-          requiredSpinDirection: 0
-          minimumFlipCount: 0
-          requiredFlipDirection: 0
-          requiresGrind: 0
-          requiresSlide: 0
-          requiresValidAuthoredPose: 0
-          requiresPoseRotationCombo: 0
-          requiredPoseFamily: 0
-          requiredPoseShape: 0
-          requiredOrientationModifier: 0
-          explicitPoseLabel: 
-          requiresSwitchLanding: 0
-          requiresNoseLanding: 0
-          requiresTailLanding: 0
-          requiredZoneId: 
-        children: []
-    - id: tutorial.lesson.beginner.lean_forward
-      title: Lean forward
-      description: Lean forward to accelerate.
-      optional: 0
-      hiddenUntilAvailable: 0
-      autoPinWhenAvailable: 1
-      template: 0
+      template: 90
       requiredCount: 1
       targetValue: 1
       comparison: 0
@@ -132,7 +70,145 @@ MonoBehaviour:
         requiresTailLanding: 0
         requiredZoneId: 
       compoundMode: 40
-      compoundObjectives: []
+      compoundObjectives:
+      - id: lean.forward
+        title: Lean Forward
+        description: Hold {input:Lean:positive} to build speed
+        optional: 0
+        hiddenUntilAvailable: 0
+        autoPinWhenAvailable: 1
+        template: 0
+        requiredCount: 1
+        targetValue: 1
+        comparison: 0
+        inputAction: 40
+        movementSkill: 0
+        distanceStat: 0
+        thresholdStat: 0
+        stateTarget: 0
+        activityTarget: 0
+        trickTarget: 0
+        interactionTarget: 0
+        uiTarget: 0
+        namedTrick: 
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
+        compoundMode: 40
+        compoundObjectives: []
+        advancedCondition:
+          kind: 0
+          key: 
+          comparison: 0
+          targetCount: 1
+          targetValue: 1
+          stateValueKind: 0
+          boolValue: 1
+          stringValue: 
+          filters: []
+          trickRequirement:
+            flavor: 0
+            minimumSpinDegrees: 0
+            requiredSpinDirection: 0
+            minimumFlipCount: 0
+            requiredFlipDirection: 0
+            requiresGrind: 0
+            requiresSlide: 0
+            requiresValidAuthoredPose: 0
+            requiresPoseRotationCombo: 0
+            requiredPoseFamily: 0
+            requiredPoseShape: 0
+            requiredOrientationModifier: 0
+            explicitPoseLabel: 
+            requiresSwitchLanding: 0
+            requiresNoseLanding: 0
+            requiresTailLanding: 0
+            requiredZoneId: 
+          children: []
+      - id: lean.back
+        title: Lean Backward
+        description: Hold {input:Lean:negative} to lower speed
+        optional: 0
+        hiddenUntilAvailable: 0
+        autoPinWhenAvailable: 1
+        template: 0
+        requiredCount: 1
+        targetValue: 1
+        comparison: 0
+        inputAction: 50
+        movementSkill: 0
+        distanceStat: 0
+        thresholdStat: 0
+        stateTarget: 0
+        activityTarget: 0
+        trickTarget: 0
+        interactionTarget: 0
+        uiTarget: 0
+        namedTrick: 
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
+        compoundMode: 40
+        compoundObjectives: []
+        advancedCondition:
+          kind: 0
+          key: 
+          comparison: 0
+          targetCount: 1
+          targetValue: 1
+          stateValueKind: 0
+          boolValue: 1
+          stringValue: 
+          filters: []
+          trickRequirement:
+            flavor: 0
+            minimumSpinDegrees: 0
+            requiredSpinDirection: 0
+            minimumFlipCount: 0
+            requiredFlipDirection: 0
+            requiresGrind: 0
+            requiresSlide: 0
+            requiresValidAuthoredPose: 0
+            requiresPoseRotationCombo: 0
+            requiredPoseFamily: 0
+            requiredPoseShape: 0
+            requiredOrientationModifier: 0
+            explicitPoseLabel: 
+            requiresSwitchLanding: 0
+            requiresNoseLanding: 0
+            requiresTailLanding: 0
+            requiredZoneId: 
+          children: []
       advancedCondition:
         kind: 0
         key: 
@@ -162,19 +238,19 @@ MonoBehaviour:
           requiresTailLanding: 0
           requiredZoneId: 
         children: []
-    - id: tutorial.lesson.beginner.lean_backward
-      title: Lean backward
-      description: Lean backward to decelerate.
+    - id: tutorial.lesson.beginner.turn
+      title: Turning
+      description: Hold {input:LeftSki} or {input:RightSki} to turn accordingly.
       optional: 0
       hiddenUntilAvailable: 0
       autoPinWhenAvailable: 1
-      template: 0
+      template: 20
       requiredCount: 1
-      targetValue: 1
+      targetValue: 2.5
       comparison: 0
-      inputAction: 50
+      inputAction: 0
       movementSkill: 0
-      distanceStat: 0
+      distanceStat: 40
       thresholdStat: 0
       stateTarget: 0
       activityTarget: 0
@@ -200,8 +276,77 @@ MonoBehaviour:
         requiresNoseLanding: 0
         requiresTailLanding: 0
         requiredZoneId: 
-      compoundMode: 40
-      compoundObjectives: []
+      compoundMode: 50
+      compoundObjectives:
+      - id: turn.left
+        title: Turn Left
+        description: Hold {input:LeftSki} to turn left
+        optional: 0
+        hiddenUntilAvailable: 0
+        autoPinWhenAvailable: 1
+        template: 20
+        requiredCount: 1
+        targetValue: 1
+        comparison: 0
+        inputAction: 0
+        movementSkill: 0
+        distanceStat: 40
+        thresholdStat: 0
+        stateTarget: 0
+        activityTarget: 0
+        trickTarget: 0
+        interactionTarget: 0
+        uiTarget: 0
+        namedTrick: 
+        trickRequirement:
+          flavor: 0
+          minimumSpinDegrees: 0
+          requiredSpinDirection: 0
+          minimumFlipCount: 0
+          requiredFlipDirection: 0
+          requiresGrind: 0
+          requiresSlide: 0
+          requiresValidAuthoredPose: 0
+          requiresPoseRotationCombo: 0
+          requiredPoseFamily: 0
+          requiredPoseShape: 0
+          requiredOrientationModifier: 0
+          explicitPoseLabel: 
+          requiresSwitchLanding: 0
+          requiresNoseLanding: 0
+          requiresTailLanding: 0
+          requiredZoneId: 
+        compoundMode: 40
+        compoundObjectives: []
+        advancedCondition:
+          kind: 0
+          key: 
+          comparison: 0
+          targetCount: 1
+          targetValue: 1
+          stateValueKind: 0
+          boolValue: 1
+          stringValue: 
+          filters: []
+          trickRequirement:
+            flavor: 0
+            minimumSpinDegrees: 0
+            requiredSpinDirection: 0
+            minimumFlipCount: 0
+            requiredFlipDirection: 0
+            requiresGrind: 0
+            requiresSlide: 0
+            requiresValidAuthoredPose: 0
+            requiresPoseRotationCombo: 0
+            requiredPoseFamily: 0
+            requiredPoseShape: 0
+            requiredOrientationModifier: 0
+            explicitPoseLabel: 
+            requiresSwitchLanding: 0
+            requiresNoseLanding: 0
+            requiresTailLanding: 0
+            requiredZoneId: 
+          children: []
       advancedCondition:
         kind: 0
         key: 
@@ -231,14 +376,9 @@ MonoBehaviour:
           requiresTailLanding: 0
           requiredZoneId: 
         children: []
-  - id: tutorial.lesson.beginner.stage2
-    title: Basic Ski Control
-    description: Use skating to create momentum, then practice turning, wedging,
-      and a quick stop.
-    objectives:
     - id: tutorial.lesson.beginner.skate
       title: Skate forward
-      description: Alternate Left and Right to skate forward.
+      description: Alternate {input:LeftSki} and {input:RightSki} to skate forward.
       optional: 0
       hiddenUntilAvailable: 0
       autoPinWhenAvailable: 1
@@ -305,78 +445,10 @@ MonoBehaviour:
           requiresTailLanding: 0
           requiredZoneId: 
         children: []
-    - id: tutorial.lesson.beginner.turn
-      title: Turn for 2.5 seconds
-      description: Hold Left or Right to turn accordingly.
-      optional: 0
-      hiddenUntilAvailable: 0
-      autoPinWhenAvailable: 1
-      template: 20
-      requiredCount: 1
-      targetValue: 2.5
-      comparison: 0
-      inputAction: 0
-      movementSkill: 0
-      distanceStat: 40
-      thresholdStat: 0
-      stateTarget: 0
-      activityTarget: 0
-      trickTarget: 0
-      interactionTarget: 0
-      uiTarget: 0
-      namedTrick: 
-      trickRequirement:
-        flavor: 0
-        minimumSpinDegrees: 0
-        requiredSpinDirection: 0
-        minimumFlipCount: 0
-        requiredFlipDirection: 0
-        requiresGrind: 0
-        requiresSlide: 0
-        requiresValidAuthoredPose: 0
-        requiresPoseRotationCombo: 0
-        requiredPoseFamily: 0
-        requiredPoseShape: 0
-        requiredOrientationModifier: 0
-        explicitPoseLabel: 
-        requiresSwitchLanding: 0
-        requiresNoseLanding: 0
-        requiresTailLanding: 0
-        requiredZoneId: 
-      compoundMode: 40
-      compoundObjectives: []
-      advancedCondition:
-        kind: 0
-        key: 
-        comparison: 0
-        targetCount: 1
-        targetValue: 1
-        stateValueKind: 0
-        boolValue: 1
-        stringValue: 
-        filters: []
-        trickRequirement:
-          flavor: 0
-          minimumSpinDegrees: 0
-          requiredSpinDirection: 0
-          minimumFlipCount: 0
-          requiredFlipDirection: 0
-          requiresGrind: 0
-          requiresSlide: 0
-          requiresValidAuthoredPose: 0
-          requiresPoseRotationCombo: 0
-          requiredPoseFamily: 0
-          requiredPoseShape: 0
-          requiredOrientationModifier: 0
-          explicitPoseLabel: 
-          requiresSwitchLanding: 0
-          requiresNoseLanding: 0
-          requiresTailLanding: 0
-          requiredZoneId: 
-        children: []
     - id: tutorial.lesson.beginner.wedge
       title: Wedge to brake
-      description: Hold Left AND Right to wedge your skis and brake.
+      description: Hold both {input:LeftSki} and {input:RightSki} to wedge your skis
+        and brake.
       optional: 0
       hiddenUntilAvailable: 0
       autoPinWhenAvailable: 1
@@ -445,7 +517,8 @@ MonoBehaviour:
         children: []
     - id: tutorial.lesson.beginner.quick_stop
       title: Quick stop
-      description: Lean backward and make a sharp turn to perform a quick stop
+      description: Lean backward [{input:Lean:negative}] and make a sharp turn  [{input:LeftSki}/{input:RightSki}]
+        to perform a quick stop
       optional: 1
       hiddenUntilAvailable: 0
       autoPinWhenAvailable: 1
@@ -512,7 +585,7 @@ MonoBehaviour:
           requiresTailLanding: 0
           requiredZoneId: 
         children: []
-  - id: tutorial.lesson.beginner.stage3
+  - id: tutorial.lesson.beginner.stage2
     title: Resort Basics
     description: Visit the resort, then claim the default pass so the lift network
       is available.
@@ -793,7 +866,7 @@ MonoBehaviour:
           requiresTailLanding: 0
           requiredZoneId: 
         children: []
-  - id: tutorial.lesson.beginner.stage4
+  - id: tutorial.lesson.beginner.stage3
     title: First Lift and First Run
     description: Ride a lift, step off at the top, and complete a short downhill
       run.

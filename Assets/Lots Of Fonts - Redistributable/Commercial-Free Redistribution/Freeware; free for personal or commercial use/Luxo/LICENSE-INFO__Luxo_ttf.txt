@@ -1,0 +1,30 @@
+Font license audit note
+=======================
+Font file: Luxo.ttf
+Original archive path: luxo/Luxo.ttf
+Resolved zip entry: Lots of fonts/luxo/Luxo.ttf
+Grouped family: Luxo
+Internal family: Luxo
+Full name: Luxo
+Style: Regular
+
+Audit status: Commercial-free use
+License basis: Freeware; free for personal or commercial use
+Recommendation: OK for commercial use
+Evidence: bundled readme
+Source/local file from audit: local luxo/readme.txt
+Generic/official license URL used by builder: No generic URL mapped; inspect copied local license/readme files.
+
+Notes:
+Redistribution allowed; font may not be sold.
+
+Embedded font metadata:
+- License description: 
+- License URL: 
+- Copyright: © 1998 utopiafonts. dale_thorpe@bssc.edu.au
+
+Copied local license/readme files:
+- Lots Of Fonts - Redistributable/Commercial-Free Redistribution/Freeware; free for personal or commercial use/Luxo/SOURCE_LICENSES/readme.txt
+- Lots Of Fonts - Redistributable/Commercial-Free Redistribution/Freeware; free for personal or commercial use/Luxo/SOURCE_LICENSES/readme.txt.meta
+
+This file is generated from an audit manifest. It is not legal advice.

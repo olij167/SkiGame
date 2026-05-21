@@ -1,0 +1,30 @@
+Font license audit note
+=======================
+Font file: Hardman.ttf
+Original archive path: Hardman.ttf
+Resolved zip entry: Lots of fonts/Hardman.ttf
+Grouped family: Hardman
+Internal family: Hardman
+Full name: Hardman
+Style: Regular
+
+Audit status: Commercial-free use
+License basis: GPL and OFL dual license
+Recommendation: OK for commercial use
+Evidence: embedded metadata
+Source/local file from audit: local metadata
+Generic/official license URL used by builder: https://openfontlicense.org/open-font-license-official-text/
+
+Notes:
+Commercial use is allowed under open-source terms; comply with selected license.
+
+Embedded font metadata:
+- License description: GPL- General Public License AND OFL-Open Font License
+- License URL: http://www.fsf.org/licenses/gpl.html AND http://scripts.sil.org/OFL
+- Copyright: Copyright (c) 2012 by Peter Wiegel.   Open Font under Terms of following Free Software Licenses:
+GPL (General Public License) with font-exception and OFL (Open Font License
+
+Copied local license/readme files:
+- None found near the original font file. Use the license URL/evidence above for manual verification.
+
+This file is generated from an audit manifest. It is not legal advice.

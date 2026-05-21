@@ -4834,7 +4834,7 @@ namespace SkiGame.Progression
 
             // Tint the tile based on the player’s ACTIVE pass level.
             var cfg = _skiPassMgr.Config;
-            var level = cfg != null ? cfg.Get(_skiPassMgr.CurrentLevel) : null;
+            var level = cfg != null && _skiPassMgr.CurrentLevel >= 0 ? cfg.Get(_skiPassMgr.CurrentLevel) : null;
 
             if (level == null)
             {
@@ -4851,7 +4851,7 @@ namespace SkiGame.Progression
 
             // Ensure selection is valid
             if (_skiPassSelectedLevel < 0)
-                _skiPassSelectedLevel = _skiPassMgr.CurrentLevel;
+                _skiPassSelectedLevel = Mathf.Max(0, _skiPassMgr.CurrentLevel);
 
             if (!_skiPassCardsBuilt || forceRebuildCards)
                 BuildSkiPassCardsAndDurations();
@@ -4861,7 +4861,9 @@ namespace SkiGame.Progression
                 _lblSkiPassCurrentName.text = _skiPassMgr.GetCurrentPassDisplayName();
 
             if (_lblSkiPassCurrentExpiry != null)
-                _lblSkiPassCurrentExpiry.text = _skiPassMgr.HasTimedPass ? "Active" : "Default pass";
+                _lblSkiPassCurrentExpiry.text = _skiPassMgr.CurrentLevel < 0
+                    ? "No pass claimed"
+                    : _skiPassMgr.HasTimedPass ? "Active" : "Default pass";
 
             if (_lblSkiPassTimeRemaining != null)
                 _lblSkiPassTimeRemaining.text = _skiPassMgr.GetRemainingTimeString();

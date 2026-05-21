@@ -512,7 +512,7 @@ namespace AssetInventory
                         case MetadataDefinition.DataType.Url:
                             if (GUI.Button(cellRect, metaInfo.StringValue?.Replace("https://", "").Replace("www.", ""), EditorStyles.linkLabel))
                             {
-                                Application.OpenURL(metaInfo.StringValue);
+                                AI.OpenURL(metaInfo.StringValue);
                             }
                             break;
 

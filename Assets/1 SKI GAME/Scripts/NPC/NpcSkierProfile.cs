@@ -37,6 +37,26 @@ public class NpcSkierProfile : MonoBehaviour, INpcDialogueNameSource
     [Range(0f, 1f)][SerializeField] private float hesitationOnSteeps01 = 0.35f;
     [Range(0f, 1f)][SerializeField] private float socialPresenceBias01 = 0.35f;
 
+    [Header("Generic Activity Preferences")]
+    [Range(0f, 1f)][SerializeField] private float socialness = 0.5f;
+    [Range(0f, 1f)][SerializeField] private float riskTolerance = 0.5f;
+    [Range(0f, 1f)][SerializeField] private float explorationWeight = 0.5f;
+    [Range(0f, 1f)][SerializeField] private float raceInterest = 0.25f;
+    [Range(0f, 1f)][SerializeField] private float trickInterest = 0.25f;
+    [Range(0f, 1f)][SerializeField] private float liftUseWeight = 0.6f;
+    [Range(0f, 1f)][SerializeField] private float kioskVisitWeight = 0.2f;
+    [Range(0f, 1f)][SerializeField] private float lodgeRestWeight = 0.2f;
+    [Range(0f, 1f)][SerializeField] private float medicVisitWeight = 0.05f;
+    [Range(0f, 1f)][SerializeField] private float viewpointPauseWeight = 0.25f;
+    [Range(0f, 1f)][SerializeField] private float idleWanderWeight = 0.15f;
+    [Range(0f, 1f)][SerializeField] private float leaveAreaWeight = 0.08f;
+    [Range(0f, 1f)][SerializeField] private float groupAffinity = 0.45f;
+    [SerializeField] private Vector2 socialLoiterDurationRange = new Vector2(20f, 90f);
+    [SerializeField] private Vector2 viewpointPauseDurationRange = new Vector2(8f, 25f);
+    [SerializeField] private Vector2 lodgeRestDurationRange = new Vector2(30f, 120f);
+    [SerializeField] private Vector2 idleWanderDurationRange = new Vector2(8f, 30f);
+    [SerializeField] private Vector2 practiceTrickDurationRange = new Vector2(10f, 40f);
+
     [Header("Style Tuning")]
     [Range(0f, 1f)][SerializeField] private float turnRadiusPreference01 = 0.5f;
     [Range(0f, 1f)][SerializeField] private float edgePreference01 = 0.5f;
@@ -88,6 +108,24 @@ public class NpcSkierProfile : MonoBehaviour, INpcDialogueNameSource
     public float Assertiveness01 => assertiveness01;
     public float HesitationOnSteeps01 => hesitationOnSteeps01;
     public float SocialPresenceBias01 => socialPresenceBias01;
+    public float Socialness => socialness;
+    public float RiskTolerance => riskTolerance;
+    public float ExplorationWeight => explorationWeight;
+    public float RaceInterest => raceInterest;
+    public float TrickInterest => trickInterest;
+    public float LiftUseWeight => liftUseWeight;
+    public float KioskVisitWeight => kioskVisitWeight;
+    public float LodgeRestWeight => lodgeRestWeight;
+    public float MedicVisitWeight => medicVisitWeight;
+    public float ViewpointPauseWeight => viewpointPauseWeight;
+    public float IdleWanderWeight => idleWanderWeight;
+    public float LeaveAreaWeight => leaveAreaWeight;
+    public float GroupAffinity => groupAffinity;
+    public Vector2 SocialLoiterDurationRange => NormalizeDurationRange(socialLoiterDurationRange, 20f, 90f);
+    public Vector2 ViewpointPauseDurationRange => NormalizeDurationRange(viewpointPauseDurationRange, 8f, 25f);
+    public Vector2 LodgeRestDurationRange => NormalizeDurationRange(lodgeRestDurationRange, 30f, 120f);
+    public Vector2 IdleWanderDurationRange => NormalizeDurationRange(idleWanderDurationRange, 8f, 30f);
+    public Vector2 PracticeTrickDurationRange => NormalizeDurationRange(practiceTrickDurationRange, 10f, 40f);
     public float TurnRadiusPreference01 => turnRadiusPreference01;
     public float EdgePreference01 => edgePreference01;
     public float MergeCaution01 => mergeCaution01;
@@ -126,6 +164,19 @@ public class NpcSkierProfile : MonoBehaviour, INpcDialogueNameSource
         assertiveness01 = Random.Range(0.1f, 0.95f);
         hesitationOnSteeps01 = Random.Range(0.05f, 0.8f);
         socialPresenceBias01 = Random.Range(0.05f, 0.8f);
+        socialness = Mathf.Clamp01(socialPresenceBias01 + Random.Range(-0.12f, 0.18f));
+        riskTolerance = Mathf.Clamp01((skill01 * 0.45f) + (confidence01 * 0.35f) + ((1f - caution01) * 0.2f));
+        explorationWeight = Mathf.Clamp01(roamResortBias01 + Random.Range(-0.15f, 0.15f));
+        raceInterest = Mathf.Clamp01((confidence01 * 0.35f) + (assertiveness01 * 0.35f) + Random.Range(-0.12f, 0.15f));
+        trickInterest = Mathf.Clamp01((jumpiness01 * 0.55f) + (riskTolerance * 0.3f) + Random.Range(-0.1f, 0.15f));
+        liftUseWeight = Mathf.Clamp01(Mathf.Lerp(0.35f, 0.9f, confidence01) + Random.Range(-0.1f, 0.1f));
+        kioskVisitWeight = Mathf.Clamp01(Mathf.Lerp(0.35f, 0.08f, confidence01) + Random.Range(-0.06f, 0.08f));
+        lodgeRestWeight = Mathf.Clamp01(Mathf.Lerp(0.35f, 0.1f, skill01) + scenicPauseBias01 * 0.12f);
+        medicVisitWeight = Mathf.Clamp01(Mathf.Lerp(0.1f, 0.02f, skill01) + Random.Range(-0.02f, 0.03f));
+        viewpointPauseWeight = Mathf.Clamp01(scenicPauseBias01 + Random.Range(-0.08f, 0.12f));
+        idleWanderWeight = Mathf.Clamp01(Mathf.Lerp(0.1f, 0.28f, roamResortBias01));
+        leaveAreaWeight = Mathf.Clamp01(Mathf.Lerp(0.04f, 0.14f, roamResortBias01));
+        groupAffinity = Mathf.Clamp01((socialness * 0.7f) + (crowdTolerance01 * 0.3f));
         turnRadiusPreference01 = Random.Range(0.15f, 0.85f);
         edgePreference01 = Random.Range(0.1f, 0.8f);
         mergeCaution01 = Random.Range(0.15f, 0.85f);
@@ -167,6 +218,11 @@ public class NpcSkierProfile : MonoBehaviour, INpcDialogueNameSource
                 assertiveness01 = Mathf.Min(assertiveness01, 0.35f);
                 hesitationOnSteeps01 = Mathf.Max(hesitationOnSteeps01, 0.65f);
                 socialPresenceBias01 = Mathf.Max(socialPresenceBias01, 0.3f);
+                socialness = Mathf.Max(socialness, 0.35f);
+                riskTolerance = Mathf.Min(riskTolerance, 0.35f);
+                kioskVisitWeight = Mathf.Max(kioskVisitWeight, 0.35f);
+                lodgeRestWeight = Mathf.Max(lodgeRestWeight, 0.32f);
+                trickInterest = Mathf.Min(trickInterest, 0.12f);
                 turnRadiusPreference01 = Mathf.Max(turnRadiusPreference01, 0.7f);
                 edgePreference01 = Mathf.Max(edgePreference01, 0.55f);
                 mergeCaution01 = Mathf.Max(mergeCaution01, 0.72f);
@@ -177,6 +233,10 @@ public class NpcSkierProfile : MonoBehaviour, INpcDialogueNameSource
             case SkierArchetype.CasualTourist:
                 scenicPauseBias01 = Mathf.Max(scenicPauseBias01, 0.45f);
                 socialPresenceBias01 = Mathf.Max(socialPresenceBias01, 0.4f);
+                socialness = Mathf.Max(socialness, 0.55f);
+                explorationWeight = Mathf.Max(explorationWeight, 0.55f);
+                kioskVisitWeight = Mathf.Max(kioskVisitWeight, 0.28f);
+                viewpointPauseWeight = Mathf.Max(viewpointPauseWeight, 0.42f);
                 roamResortBias01 = Mathf.Max(roamResortBias01, 0.45f);
                 repeatRunBias01 = Mathf.Min(repeatRunBias01, 0.35f);
                 turnRadiusPreference01 = Mathf.Max(turnRadiusPreference01, 0.58f);
@@ -189,6 +249,9 @@ public class NpcSkierProfile : MonoBehaviour, INpcDialogueNameSource
                 caution01 = Mathf.Min(caution01, 0.42f);
                 lineVariation01 = Mathf.Min(lineVariation01, 0.45f);
                 assertiveness01 = Mathf.Max(assertiveness01, 0.58f);
+                liftUseWeight = Mathf.Max(liftUseWeight, 0.62f);
+                raceInterest = Mathf.Max(raceInterest, 0.35f);
+                lodgeRestWeight = Mathf.Min(lodgeRestWeight, 0.22f);
                 hesitationOnSteeps01 = Mathf.Min(hesitationOnSteeps01, 0.28f);
                 turnRadiusPreference01 = Mathf.Min(turnRadiusPreference01, 0.38f);
                 edgePreference01 = Mathf.Min(edgePreference01, 0.42f);
@@ -204,6 +267,11 @@ public class NpcSkierProfile : MonoBehaviour, INpcDialogueNameSource
                 roamResortBias01 = Mathf.Min(roamResortBias01, 0.25f);
                 lineVariation01 = Mathf.Max(lineVariation01, 0.45f);
                 assertiveness01 = Mathf.Max(assertiveness01, 0.82f);
+                riskTolerance = Mathf.Max(riskTolerance, 0.8f);
+                raceInterest = Mathf.Max(raceInterest, 0.65f);
+                trickInterest = Mathf.Max(trickInterest, 0.45f);
+                kioskVisitWeight = Mathf.Min(kioskVisitWeight, 0.12f);
+                lodgeRestWeight = Mathf.Min(lodgeRestWeight, 0.12f);
                 hesitationOnSteeps01 = Mathf.Min(hesitationOnSteeps01, 0.18f);
                 turnRadiusPreference01 = Mathf.Min(turnRadiusPreference01, 0.3f);
                 edgePreference01 = Mathf.Min(edgePreference01, 0.3f);
@@ -219,6 +287,10 @@ public class NpcSkierProfile : MonoBehaviour, INpcDialogueNameSource
                 roamResortBias01 = Mathf.Max(roamResortBias01, 0.7f);
                 lineVariation01 = Mathf.Max(lineVariation01, 0.48f);
                 socialPresenceBias01 = Mathf.Max(socialPresenceBias01, 0.45f);
+                explorationWeight = Mathf.Max(explorationWeight, 0.75f);
+                viewpointPauseWeight = Mathf.Max(viewpointPauseWeight, 0.72f);
+                raceInterest = Mathf.Min(raceInterest, 0.28f);
+                trickInterest = Mathf.Min(trickInterest, 0.2f);
                 turnRadiusPreference01 = Mathf.Max(turnRadiusPreference01, 0.62f);
                 edgePreference01 = Mathf.Max(edgePreference01, 0.62f);
                 mergeCaution01 = Mathf.Max(mergeCaution01, 0.55f);
@@ -231,6 +303,9 @@ public class NpcSkierProfile : MonoBehaviour, INpcDialogueNameSource
                 roamResortBias01 = Mathf.Min(roamResortBias01, 0.28f);
                 repeatRunBias01 = Mathf.Max(repeatRunBias01, 0.6f);
                 scenicPauseBias01 = Mathf.Min(scenicPauseBias01, 0.3f);
+                liftUseWeight = Mathf.Max(liftUseWeight, 0.9f);
+                viewpointPauseWeight = Mathf.Min(viewpointPauseWeight, 0.18f);
+                idleWanderWeight = Mathf.Min(idleWanderWeight, 0.12f);
                 turnRadiusPreference01 = Mathf.Lerp(turnRadiusPreference01, 0.45f, 0.6f);
                 mergeCaution01 = Mathf.Lerp(mergeCaution01, 0.45f, 0.6f);
                 break;
@@ -239,6 +314,9 @@ public class NpcSkierProfile : MonoBehaviour, INpcDialogueNameSource
                 crowdTolerance01 = Mathf.Max(crowdTolerance01, 0.62f);
                 scenicPauseBias01 = Mathf.Max(scenicPauseBias01, 0.38f);
                 socialPresenceBias01 = Mathf.Max(socialPresenceBias01, 0.78f);
+                socialness = Mathf.Max(socialness, 0.82f);
+                groupAffinity = Mathf.Max(groupAffinity, 0.75f);
+                lodgeRestWeight = Mathf.Max(lodgeRestWeight, 0.25f);
                 edgePreference01 = Mathf.Max(edgePreference01, 0.55f);
                 mergeCaution01 = Mathf.Max(mergeCaution01, 0.62f);
                 overtakeTendency01 = Mathf.Min(overtakeTendency01, 0.25f);
@@ -250,6 +328,8 @@ public class NpcSkierProfile : MonoBehaviour, INpcDialogueNameSource
                 caution01 = Mathf.Clamp01(caution01 + Random.Range(-0.15f, 0.2f));
                 jumpiness01 = Mathf.Max(jumpiness01, 0.45f);
                 lineVariation01 = Mathf.Max(lineVariation01, 0.72f);
+                trickInterest = Mathf.Max(trickInterest, 0.35f);
+                idleWanderWeight = Mathf.Max(idleWanderWeight, 0.24f);
                 hesitationOnSteeps01 = Mathf.Max(hesitationOnSteeps01, 0.45f);
                 turnRadiusPreference01 = Mathf.Clamp01(turnRadiusPreference01 + Random.Range(-0.25f, 0.25f));
                 edgePreference01 = Mathf.Clamp01(edgePreference01 + Random.Range(-0.2f, 0.3f));
@@ -264,6 +344,16 @@ public class NpcSkierProfile : MonoBehaviour, INpcDialogueNameSource
         float min = Mathf.Clamp01(Mathf.Min(range.x, range.y));
         float max = Mathf.Clamp01(Mathf.Max(range.x, range.y));
         return Random.Range(min, max);
+    }
+
+    private static Vector2 NormalizeDurationRange(Vector2 range, float fallbackMin, float fallbackMax)
+    {
+        float min = Mathf.Max(0.1f, Mathf.Min(range.x, range.y));
+        float max = Mathf.Max(min, Mathf.Max(range.x, range.y));
+        if (max <= 0.1f)
+            return new Vector2(fallbackMin, Mathf.Max(fallbackMin, fallbackMax));
+
+        return new Vector2(min, max);
     }
 
     private void DeriveDifficultyBand(float skill, float confidence, float caution, out SkiRunDifficulty minDiff, out SkiRunDifficulty maxDiff)

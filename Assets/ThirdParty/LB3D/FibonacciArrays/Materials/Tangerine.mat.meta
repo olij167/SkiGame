@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 4692f181a9fddd64b864ada80c2d93c4
+timeCreated: 1505962956
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 101245
+  packageName: 'Fibonacci Arrays [Optimal Spacing Script]'
+  packageVersion: 1.2.0
+  assetPath: Assets/ThirdParty/LB3D/FibonacciArrays/Materials/Tangerine.mat
+  uploadId: 395887

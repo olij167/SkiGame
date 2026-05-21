@@ -43,11 +43,11 @@ namespace ImpossibleRobert.Common
 
         /// <summary>
         /// Returns a stable integer identifier for the object.
-        /// Uses GetEntityId on Unity 6.1+ and GetInstanceID on older versions.
+        /// Uses GetEntityId on Unity 6.2+ and GetInstanceID on older versions.
         /// </summary>
         public static int GetStableId(this Object obj)
         {
-#if UNITY_6000_1_OR_NEWER
+#if UNITY_6000_2_OR_NEWER
             return obj.GetEntityId().GetHashCode();
 #else
             return obj.GetInstanceID();

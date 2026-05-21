@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: ba8a5ae79f4e673498ad28c934551bce
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 176485
+  packageName: Array Modifier Component
+  packageVersion: 1.0
+  assetPath: Assets/ThirdParty/ArrayModifierComponent/Scripts/Editor/ArrayModifierEditor.cs
+  uploadId: 384610

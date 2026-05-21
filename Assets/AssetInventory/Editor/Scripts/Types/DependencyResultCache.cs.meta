@@ -1,5 +1,5 @@
-fileFormatVersion: 2
-guid: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+﻿fileFormatVersion: 2
+guid: 5c2bc4fda1834600b1ec86a9527173cc
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
@@ -13,6 +13,6 @@ AssetOrigin:
   serializedVersion: 1
   productId: 349582
   packageName: Asset Inventory 4
-  packageVersion: 4.2.0
+  packageVersion: 4.3.1
   assetPath: Assets/AssetInventory/Editor/Scripts/Types/DependencyResultCache.cs
-  uploadId: 903406
+  uploadId: 912610

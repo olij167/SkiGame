@@ -185,7 +185,19 @@ public sealed class SkierTrickTracker : MonoBehaviour
     [Header("Slide Tracking Advanced")]
     [SerializeField] private float slideStartMaxBaseAlignment = 0.88f;
     [SerializeField] private float slideKeepMaxBaseAlignment = 0.94f;
-    [SerializeField] private float slideCoyoteTime = 0.08f;
+    [SerializeField] private float slideCoyoteTime = 0.12f;
+
+    [Tooltip("Prefer the SkiController's validated nose/tail slide state as the slide entry authority.")]
+    [SerializeField] private bool useControllerValidatedSlideState = true;
+
+    [Tooltip("Once a nose/tail slide has started, keep tracking until the skis have flattened this much.")]
+    [SerializeField] private float slideFlattenedBaseAlignment = 0.96f;
+
+    [Tooltip("Minimum speed to continue accumulating slide distance after entry has already been validated.")]
+    [SerializeField] private float slideContinueMinSpeed = 0.45f;
+
+    [Tooltip("Extra grace after validated controller slide state disappears before ending the tracked slide.")]
+    [SerializeField] private float slideValidatedStateGrace = 0.18f;
 
     [Header("Pose Gating")]
     [SerializeField] private float minPoseHoldTime = 0.20f;
@@ -327,6 +339,8 @@ public sealed class SkierTrickTracker : MonoBehaviour
     private int _slideSegmentId;
 
     private float _lastSlideValidTime;
+    private float _lastControllerSlideValidTime;
+    private bool _slideEntryValidatedByController;
     private int _lastTouchEndContactSign;
 
     private bool _grindTrackActive;
@@ -1169,24 +1183,81 @@ public sealed class SkierTrickTracker : MonoBehaviour
         OnTrickResolved?.Invoke(result);
     }
 
+    private bool TryGetControllerValidatedSlideSign(out int sign)
+    {
+        sign = 0;
+
+        if (!useControllerValidatedSlideState || skiController == null)
+            return false;
+
+        sign = skiController.CurrentSkiEndSlideSign;
+        return sign != 0 && skiController.CurrentSkiEndSlide01 > 0.01f;
+    }
+
+    private bool IsControllerSlideStillMatching(int sign)
+    {
+        return TryGetControllerValidatedSlideSign(out int controllerSign) &&
+               controllerSign == sign;
+    }
+
+    private bool IsSkiFlatRecovered(SkiContact contact)
+    {
+        if (contact == null)
+            return false;
+
+        if (contact.HasTipContact && contact.EndContactSign != 0)
+            return false;
+
+        if (contact.ProbeBaseHit && contact.BaseContactAlignment >= slideFlattenedBaseAlignment)
+            return true;
+
+        if (contact.HasCollisionContact && contact.BaseContactAlignment >= slideFlattenedBaseAlignment)
+            return true;
+
+        return false;
+    }
+
+    private bool AreSkisFlattenedOutAfterSlide()
+    {
+        SkiContact l = skiController != null ? skiController.LeftSkiContactRef : null;
+        SkiContact r = skiController != null ? skiController.RightSkiContactRef : null;
+
+        if (l == null || r == null)
+            return false;
+
+        return IsSkiFlatRecovered(l) && IsSkiFlatRecovered(r);
+    }
+
     private bool TryGetResolvedEndContactSign(out int sign, out float strongestBaseAlignment)
     {
         sign = 0;
         strongestBaseAlignment = 1f;
+
+        if (TryGetControllerValidatedSlideSign(out int controllerSign))
+        {
+            sign = controllerSign;
+            strongestBaseAlignment = 0f;
+            return true;
+        }
+
+        if (skiController == null)
+            return false;
 
         SkiContact l = skiController.LeftSkiContactRef;
         SkiContact r = skiController.RightSkiContactRef;
 
         bool leftValid =
             l != null &&
-            l.IsGrounded &&
             l.HasTipContact &&
+            l.EndContactSign != 0 &&
+            (l.HasCollisionContact || l.ProbeTipHit || l.ProbeTailHit) &&
             l.BaseContactAlignment <= minEndContactBaseAlignment;
 
         bool rightValid =
             r != null &&
-            r.IsGrounded &&
             r.HasTipContact &&
+            r.EndContactSign != 0 &&
+            (r.HasCollisionContact || r.ProbeTipHit || r.ProbeTailHit) &&
             r.BaseContactAlignment <= minEndContactBaseAlignment;
 
         if (!leftValid && !rightValid)
@@ -1194,24 +1265,25 @@ public sealed class SkierTrickTracker : MonoBehaviour
 
         if (leftValid && rightValid)
         {
-            if (l.EndContactSign == r.EndContactSign && l.EndContactSign != 0)
+            if (l.EndContactSign == r.EndContactSign)
             {
                 sign = l.EndContactSign;
                 strongestBaseAlignment = Mathf.Min(l.BaseContactAlignment, r.BaseContactAlignment);
-                return true;
+                return sign != 0;
             }
 
-            // If both are end-contacting but opposing, reject unless one is clearly much flatter than the other.
             if (allowSingleSkiEndContactForLandingTags)
             {
-                if (l.BaseContactAlignment <= r.BaseContactAlignment && r.BaseContactAlignment >= maxOpposingEndContactBaseAlignment)
+                if (l.BaseContactAlignment <= r.BaseContactAlignment &&
+                    r.BaseContactAlignment >= maxOpposingEndContactBaseAlignment)
                 {
                     sign = l.EndContactSign;
                     strongestBaseAlignment = l.BaseContactAlignment;
                     return sign != 0;
                 }
 
-                if (r.BaseContactAlignment <= l.BaseContactAlignment && l.BaseContactAlignment >= maxOpposingEndContactBaseAlignment)
+                if (r.BaseContactAlignment <= l.BaseContactAlignment &&
+                    l.BaseContactAlignment >= maxOpposingEndContactBaseAlignment)
                 {
                     sign = r.EndContactSign;
                     strongestBaseAlignment = r.BaseContactAlignment;
@@ -1222,21 +1294,21 @@ public sealed class SkierTrickTracker : MonoBehaviour
             return false;
         }
 
-        if (allowSingleSkiEndContactForLandingTags)
-        {
-            if (leftValid)
-            {
-                sign = l.EndContactSign;
-                strongestBaseAlignment = l.BaseContactAlignment;
-                return sign != 0;
-            }
+        if (!allowSingleSkiEndContactForLandingTags)
+            return false;
 
-            if (rightValid)
-            {
-                sign = r.EndContactSign;
-                strongestBaseAlignment = r.BaseContactAlignment;
-                return sign != 0;
-            }
+        if (leftValid)
+        {
+            sign = l.EndContactSign;
+            strongestBaseAlignment = l.BaseContactAlignment;
+            return sign != 0;
+        }
+
+        if (rightValid)
+        {
+            sign = r.EndContactSign;
+            strongestBaseAlignment = r.BaseContactAlignment;
+            return sign != 0;
         }
 
         return false;
@@ -1316,56 +1388,93 @@ public sealed class SkierTrickTracker : MonoBehaviour
 
     private void TryStartSlideTracking()
     {
-        if (_slideActive)
+        if (_slideActive || skiController == null)
             return;
 
-        if (!TryGetResolvedEndContactSign(out int resolvedSign, out float strongestBase))
+        bool controllerValidated = TryGetControllerValidatedSlideSign(out int controllerSign);
+
+        float strongestBase = 1f;
+        if (!controllerValidated &&
+            !TryGetResolvedEndContactSign(out controllerSign, out strongestBase))
+        {
             return;
+        }
 
         Vector3 groundNormal = skiController.GroundNormal.sqrMagnitude > 0.0001f
             ? skiController.GroundNormal.normalized
             : Vector3.up;
 
         float planarSpeed = Vector3.ProjectOnPlane(skiController.Velocity, groundNormal).magnitude;
-        if (planarSpeed < minSlideSpeed)
-            return;
 
-        if (strongestBase > slideStartMaxBaseAlignment)
-            return;
+        if (!controllerValidated)
+        {
+            if (planarSpeed < minSlideSpeed)
+                return;
+
+            if (strongestBase > slideStartMaxBaseAlignment)
+                return;
+        }
 
         _slideActive = true;
-        _slideSign = resolvedSign;
+        _slideSign = controllerSign;
         _slideDistance = 0f;
         _lastSlidePosition = transform.position;
         _slideSegmentId = _nextSegmentId;
         _focusSegmentId = _slideSegmentId;
         _lastSlideValidTime = Time.time;
+        _lastControllerSlideValidTime = controllerValidated ? Time.time : -999f;
+        _slideEntryValidatedByController = controllerValidated;
     }
 
     private void UpdateSlideTracking()
     {
-        if (!_slideActive)
+        if (!_slideActive || skiController == null)
             return;
-
-        bool hasResolvedSign = TryGetResolvedEndContactSign(out int resolvedSign, out float strongestBase);
 
         Vector3 groundNormal = skiController.GroundNormal.sqrMagnitude > 0.0001f
             ? skiController.GroundNormal.normalized
             : Vector3.up;
 
         float planarSpeed = Vector3.ProjectOnPlane(skiController.Velocity, groundNormal).magnitude;
-        Vector3 planarDelta = Vector3.ProjectOnPlane(transform.position - _lastSlidePosition, Vector3.up);
+
+        Vector3 planarDelta = Vector3.ProjectOnPlane(transform.position - _lastSlidePosition, groundNormal);
         _slideDistance += planarDelta.magnitude;
         _lastSlidePosition = transform.position;
 
+        bool controllerStillValid = IsControllerSlideStillMatching(_slideSign);
+        if (controllerStillValid)
+        {
+            _lastControllerSlideValidTime = Time.time;
+            _lastSlideValidTime = Time.time;
+            return;
+        }
+
+        bool hasResolvedSign = TryGetResolvedEndContactSign(out int resolvedSign, out float strongestBase);
         bool signMatches = hasResolvedSign && resolvedSign == _slideSign;
-        bool alignmentOkay = hasResolvedSign && strongestBase <= slideKeepMaxBaseAlignment;
-        bool speedOkay = planarSpeed >= minSlideSpeed;
-        bool stillValidNow = signMatches && alignmentOkay && speedOkay && !skiController.IsStacked;
+        bool alignmentStillSlideLike = hasResolvedSign && strongestBase <= slideKeepMaxBaseAlignment;
+        bool speedStillUseful = planarSpeed >= slideContinueMinSpeed;
+
+        bool stillInValidatedGrace =
+            _slideEntryValidatedByController &&
+            (Time.time - _lastControllerSlideValidTime) <= Mathf.Max(slideCoyoteTime, slideValidatedStateGrace);
+
+        bool flattenedOut = AreSkisFlattenedOutAfterSlide();
+
+        bool stillValidNow =
+            !skiController.IsStacked &&
+            !flattenedOut &&
+            speedStillUseful &&
+            ((signMatches && alignmentStillSlideLike) || stillInValidatedGrace);
 
         if (stillValidNow)
         {
             _lastSlideValidTime = Time.time;
+            return;
+        }
+
+        if (flattenedOut)
+        {
+            FinalizeSlideTracking();
             return;
         }
 
@@ -1403,6 +1512,9 @@ public sealed class SkierTrickTracker : MonoBehaviour
         _slideDistance = 0f;
         _slideSegmentId = 0;
         _lastSlidePosition = transform.position;
+        _lastSlideValidTime = -999f;
+        _lastControllerSlideValidTime = -999f;
+        _slideEntryValidatedByController = false;
     }
 
     private void UpdateGrindTracking()
@@ -1615,11 +1727,26 @@ public sealed class SkierTrickTracker : MonoBehaviour
 
     private int GetSharedEndContactSign()
     {
+        if (TryGetControllerValidatedSlideSign(out int controllerSign))
+            return controllerSign;
+
+        if (skiController == null)
+            return 0;
+
         SkiContact l = skiController.LeftSkiContactRef;
         SkiContact r = skiController.RightSkiContactRef;
 
-        bool leftEnd = l != null && l.IsGrounded && l.HasTipContact;
-        bool rightEnd = r != null && r.IsGrounded && r.HasTipContact;
+        bool leftEnd =
+            l != null &&
+            l.HasTipContact &&
+            l.EndContactSign != 0 &&
+            (l.HasCollisionContact || l.ProbeTipHit || l.ProbeTailHit);
+
+        bool rightEnd =
+            r != null &&
+            r.HasTipContact &&
+            r.EndContactSign != 0 &&
+            (r.HasCollisionContact || r.ProbeTipHit || r.ProbeTailHit);
 
         if (!leftEnd || !rightEnd)
             return 0;

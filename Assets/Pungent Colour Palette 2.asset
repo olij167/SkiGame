@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34f9ade962ce4f449911ed52c94f0d57, type: 3}
+  m_Name: Pungent Colour Palette 2
+  m_EditorClassIdentifier: PungentFunk.Utilities.Runtime::PungentFunk.Utilities.Colour.PungentColourPaletteSO
+  paletteName: Pungent Colour Palette
+  swatches:
+  - name: Text
+    color: {r: 1, g: 1, b: 1, a: 1}
+    role: 3
+    locked: 0
+    priority: 0
+    notes: 
+    tags: []
+  - name: Background
+    color: {r: 0.20562474, g: 0.17228016, b: 0.2917648, a: 1}
+    role: 1
+    locked: 1
+    priority: 1
+    notes: 
+    tags: []
+  - name: Panel
+    color: {r: 0.54565287, g: 0.38356656, b: 0.5390142, a: 1}
+    role: 2
+    locked: 1
+    priority: 2
+    notes: 
+    tags: []
+  - name: Accent
+    color: {r: 0.55999976, g: 0.41366437, b: 0.2086895, a: 1}
+    role: 5
+    locked: 1
+    priority: 3
+    notes: 
+    tags: []
+  - name: Text
+    color: {r: 1, g: 1, b: 1, a: 1}
+    role: 3
+    locked: 0
+    priority: 4
+    notes: 
+    tags: []
+  notes: 
+  defaultGenerationSettings:
+    harmonyMode: 8
+    targetSwatchCount: 8
+    hueRange: {x: 0, y: 1}
+    saturationRange: {x: 0.35, y: 0.95}
+    valueRange: {x: 0.18, y: 0.95}
+    harmonyInfluence: 0.75
+    contrastInfluence: 0.55
+    randomVariation: 0.18
+    preserveLockedSwatches: 1
+    enforceTextContrast: 1
+    avoidNearDuplicates: 1
+    preferReadableAccentPairs: 1
+    seed: 12345
+    useSeed: 0
+  createdUtc: 2026-05-07 01:11:04Z
+  modifiedUtc: 2026-05-15 01:22:59Z

@@ -127,7 +127,11 @@ namespace AssetInventory
         public void SetPrioritized(List<AssetInfo> prioritized)
         {
             // skip setting the same list twice since that will reset the initialization state
-            if (_prioritized != null && _prioritized.SequenceEqual(prioritized)) return;
+            if (_prioritized != null && _prioritized.Count == prioritized.Count)
+            {
+                HashSet<int> newIds = new HashSet<int>(prioritized.Select(p => p.AssetId));
+                if (newIds.SetEquals(_prioritized.Select(p => p.AssetId))) return;
+            }
 
             // sort prioritized to the beginning of all
             // below two lines are nicer to read but much slower than using a hashset + recreate
@@ -160,7 +164,11 @@ namespace AssetInventory
             }
             _all = reordered;
 
-            AttachDownloaders();
+            // only attach downloaders for prioritized items since the rest already have them from SetAll
+            foreach (AssetInfo info in prioritized)
+            {
+                Attach(info);
+            }
         }
 
         public void SetAll(List<AssetInfo> all)

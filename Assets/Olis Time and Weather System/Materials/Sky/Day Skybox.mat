@@ -114,7 +114,7 @@ Material:
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _CloudAlpha: 0.49551442
+    - _CloudAlpha: 0.4700658
     - _CloudCellJitter: 0.908
     - _CloudCellSize: 15
     - _CloudCoverageBias: -0.052699994
@@ -128,7 +128,7 @@ Material:
     - _CloudMapBlendEnd: 0.5
     - _CloudMapBlendStart: 0.1
     - _CloudMotionScale: 1
-    - _CloudPower: 2.9124813
+    - _CloudPower: 2.4896028
     - _CloudSeed: 5844.2397
     - _CloudShadowStrength: 0.20402
     - _CloudSoftness: 0.23400001
@@ -146,7 +146,7 @@ Material:
     - _DstBlend: 0
     - _EnvironmentReflections: 1
     - _Exposure: 1.3
-    - _FogDensity: 0.0010330866
+    - _FogDensity: 0.0010000006
     - _FogExp: 0.1
     - _FogHorizonBoost: 2.5
     - _FogMax: 0.95
@@ -165,7 +165,7 @@ Material:
     - _Metallic: 0
     - _MoonIntensity: 1
     - _MoonScale: 0.5
-    - _NightOpacity: 1.9813076e-16
+    - _NightOpacity: 1.00913225e-23
     - _NightSkySpeed: 0.05
     - _OcclusionStrength: 1
     - _OvercastSkyDim: 0.62
@@ -180,8 +180,8 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _SunDisk: 1
-    - _SunIntensity: 0.43327576
-    - _SunScale: 0.32495686
+    - _SunIntensity: 0.5703137
+    - _SunScale: 0.4277353
     - _SunSize: 0.04
     - _SunSizeConvergence: 10
     - _Surface: 0
@@ -190,19 +190,19 @@ Material:
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _CloudColor: {r: 0.8565736, g: 0.9631272, b: 0.979, a: 1}
-    - _CloudSpeed: {r: -0.011095933, g: -0.003991941, b: 0, a: 0}
+    - _CloudSpeed: {r: -0.0051581203, g: -0.0068492806, b: 0, a: 0}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _FogColor: {r: 0.56284857, g: 0.9204205, b: 0.9927581, a: 0.7572081}
+    - _FogColor: {r: 0.7070237, g: 0.971074, b: 0.92373157, a: 0.80073833}
     - _GroundColor: {r: 0.36899996, g: 0.34899998, b: 0.34099993, a: 1}
     - _MoonColor: {r: 0.7264151, g: 0.7162395, b: 0.6144832, a: 0.5176471}
-    - _MoonDir: {r: 0.48442706, g: -0.62258965, b: -0.6145832, a: 0}
-    - _SkyColor1: {r: 0.37477544, g: 0.5387211, b: 0.7284403, a: 1}
-    - _SkyColor2: {r: 0.52490944, g: 0.84056467, b: 0.9858906, a: 1}
-    - _SkyColor3: {r: 0.5062099, g: 0.82825416, b: 0.89365166, a: 0.68138045}
+    - _MoonDir: {r: 0.5103459, g: -0.71657664, b: -0.47546306, a: 0}
+    - _SkyColor1: {r: 0.32274076, g: 0.42072922, b: 0.6833978, a: 1}
+    - _SkyColor2: {r: 0.81370205, g: 0.9420266, b: 0.8476283, a: 1}
+    - _SkyColor3: {r: 0.636166, g: 0.87391204, b: 0.83143276, a: 0.7206176}
     - _SkyTint: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _SunColor: {r: 1, g: 0.9857807, b: 0.83647794, a: 1}
-    - _SunDir: {r: -0.38871682, g: 0.376981, b: 0.8407048, a: 0}
+    - _SunDir: {r: -0.44207695, g: 0.50434566, b: 0.741757, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

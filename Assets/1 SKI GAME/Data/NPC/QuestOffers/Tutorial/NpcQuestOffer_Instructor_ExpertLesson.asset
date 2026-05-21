@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NpcQuestOfferSO
   questDefinition: {fileID: 11400000, guid: c4b7e2f19a3d46c8b5e1f2a7d9c0b314, type: 2}
   offerTitle: Expert Ski Lesson
+  questLineId: 
+  offerPriority: 0
   offerDialogue: Expert lesson? This one is about activities, races, rescue work,
     and using the mountain systems properly.
   acceptedDialogue: Let's see how you handle the broader mountain.
@@ -21,7 +23,25 @@ MonoBehaviour:
     panels as needed.
   completedDialogue: You're ready to handle the mountain on your own.
   turnInDialogue: Expert lesson complete.
-  requiredCompletedQuests: []
+  replayDialogue: 
+  ambientDialogueBankOverride: {fileID: 11400000, guid: 481414fbc9a79164bb13a43546a66d39, type: 2}
+  availableAmbientTopic: instructor_pre_lesson
+  inProgressAmbientTopic: tutorialProgress
+  readyToTurnInAmbientTopic: tutorialReady
+  completedAmbientTopic: tutorialComplete
+  replayAmbientTopic: tutorialReplay
+  blockedAmbientTopic: tutorialBlocked
+  ambientWeight: 1
+  ambientCooldown: 8
+  requiredCompletedQuests:
+  - {fileID: 11400000, guid: 8c1f6e2d4b3a47f9a5c2d1e6b7f8091a, type: 2}
   blockedByCompletedQuests: []
+  showWhenAvailable: 1
+  showWhenInProgress: 0
+  showWhenReadyToTurnIn: 1
+  showWhenCompleted: 0
+  replayable: 0
+  hideIfQuestAccepted: 1
+  hideIfQuestCompleted: 1
   autoTrackOnAccept: 1
   showNavigationTarget: 1

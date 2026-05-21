@@ -1,0 +1,153 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01ad1003054914045acbe945f3e3e40f, type: 3}
+  m_Name: Pungent Weather Profile
+  m_EditorClassIdentifier: PungentFunk.Utilities.Runtime::PungentFunk.Utilities.EnvironmentSimulation.PungentWeatherProfile
+  seed: 1024
+  seasonRules:
+  - season: Winter
+    temperatureRange: {x: -12, y: 6}
+    precipitationChanceRange: {x: 25, y: 75}
+  - season: Spring
+    temperatureRange: {x: 4, y: 18}
+    precipitationChanceRange: {x: 15, y: 60}
+  - season: Summer
+    temperatureRange: {x: 14, y: 32}
+    precipitationChanceRange: {x: 5, y: 40}
+  - season: Autumn
+    temperatureRange: {x: 3, y: 18}
+    precipitationChanceRange: {x: 20, y: 70}
+  presets:
+  - id: clear
+    displayName: Clear
+    glyph: Clear
+    season: 
+    temperatureRange: {x: -5, y: 30}
+    precipitationChanceRange: {x: 0, y: 35}
+    isPrecipitating: 0
+    useAdvancedOverrides: 0
+    cloudCoverage: 0.06
+    cloudDensity: 0.08
+    cloudSoftness: 0.55
+    storminess: 0.02
+    fogginess: 0.02
+    gloom: 0.06
+    windiness: 0.18
+    wetness: 0
+    snowiness: 0
+    atmosphereTint: {r: 1, g: 1, b: 1, a: 1}
+    windSpeedRange: {x: 0.2, y: 1}
+    windDirectionRange: {x: 0, y: 360}
+    gustStrengthRange: {x: 0.02, y: 0.2}
+    skyCloudAlpha: 0.12
+    skyCloudPower: 4.4
+    skyCloudSoftness: 0.18
+    cloudCoverageBias: 0.12
+    cloudTurbulence: 0.2
+    cloudWarpStrength: 0.08
+    cloudTint: {r: 1, g: 1, b: 1, a: 1}
+    cloudShadowTint: {r: 0.72, g: 0.77, b: 0.84, a: 1}
+    terrainCloudShadowStrength: 0.08
+    volumeDensity: 0.2
+  - id: cloudy
+    displayName: Cloudy
+    glyph: Cloudy
+    season: 
+    temperatureRange: {x: -5, y: 30}
+    precipitationChanceRange: {x: 10, y: 65}
+    isPrecipitating: 0
+    useAdvancedOverrides: 0
+    cloudCoverage: 0.55
+    cloudDensity: 0.35
+    cloudSoftness: 0.55
+    storminess: 0.02
+    fogginess: 0.02
+    gloom: 0.22
+    windiness: 0.28
+    wetness: 0
+    snowiness: 0
+    atmosphereTint: {r: 1, g: 1, b: 1, a: 1}
+    windSpeedRange: {x: 0.2, y: 1}
+    windDirectionRange: {x: 0, y: 360}
+    gustStrengthRange: {x: 0.02, y: 0.2}
+    skyCloudAlpha: 0.12
+    skyCloudPower: 4.4
+    skyCloudSoftness: 0.18
+    cloudCoverageBias: 0.12
+    cloudTurbulence: 0.2
+    cloudWarpStrength: 0.08
+    cloudTint: {r: 1, g: 1, b: 1, a: 1}
+    cloudShadowTint: {r: 0.72, g: 0.77, b: 0.84, a: 1}
+    terrainCloudShadowStrength: 0.08
+    volumeDensity: 0.2
+  - id: rain
+    displayName: Rain
+    glyph: Rain
+    season: 
+    temperatureRange: {x: -5, y: 30}
+    precipitationChanceRange: {x: 45, y: 100}
+    isPrecipitating: 1
+    useAdvancedOverrides: 0
+    cloudCoverage: 0.9
+    cloudDensity: 0.78
+    cloudSoftness: 0.55
+    storminess: 0.35
+    fogginess: 0.35
+    gloom: 0.62
+    windiness: 0.58
+    wetness: 3.2
+    snowiness: 0
+    atmosphereTint: {r: 1, g: 1, b: 1, a: 1}
+    windSpeedRange: {x: 0.2, y: 1}
+    windDirectionRange: {x: 0, y: 360}
+    gustStrengthRange: {x: 0.02, y: 0.2}
+    skyCloudAlpha: 0.12
+    skyCloudPower: 4.4
+    skyCloudSoftness: 0.18
+    cloudCoverageBias: 0.12
+    cloudTurbulence: 0.2
+    cloudWarpStrength: 0.08
+    cloudTint: {r: 1, g: 1, b: 1, a: 1}
+    cloudShadowTint: {r: 0.72, g: 0.77, b: 0.84, a: 1}
+    terrainCloudShadowStrength: 0.08
+    volumeDensity: 0.2
+  - id: snow
+    displayName: Snow
+    glyph: Snow
+    season: 
+    temperatureRange: {x: -40, y: 2}
+    precipitationChanceRange: {x: 35, y: 100}
+    isPrecipitating: 1
+    useAdvancedOverrides: 0
+    cloudCoverage: 0.86
+    cloudDensity: 0.72
+    cloudSoftness: 0.55
+    storminess: 0.25
+    fogginess: 0.42
+    gloom: 0.55
+    windiness: 0.46
+    wetness: 0
+    snowiness: 0.85
+    atmosphereTint: {r: 1, g: 1, b: 1, a: 1}
+    windSpeedRange: {x: 0.2, y: 1}
+    windDirectionRange: {x: 0, y: 360}
+    gustStrengthRange: {x: 0.02, y: 0.2}
+    skyCloudAlpha: 0.12
+    skyCloudPower: 4.4
+    skyCloudSoftness: 0.18
+    cloudCoverageBias: 0.12
+    cloudTurbulence: 0.2
+    cloudWarpStrength: 0.08
+    cloudTint: {r: 1, g: 1, b: 1, a: 1}
+    cloudShadowTint: {r: 0.72, g: 0.77, b: 0.84, a: 1}
+    terrainCloudShadowStrength: 0.08
+    volumeDensity: 0.2

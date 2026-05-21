@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: cd3b6de7e8dc5c340a29fb9b985f28b3
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 176485
+  packageName: Array Modifier Component
+  packageVersion: 1.0
+  assetPath: Assets/ThirdParty/ArrayModifierComponent/Demo/Scenes/LengthFitType.unity
+  uploadId: 384610

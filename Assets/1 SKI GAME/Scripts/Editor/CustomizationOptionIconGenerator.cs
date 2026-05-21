@@ -1,19 +1,26 @@
 #if UNITY_EDITOR
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Threading;
+using PungentFunk.Utilities.Editor.PreviewExport;
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// Ski-game compatibility adapter for the generic PrefabIconGeneratorService.
+/// It intentionally keeps the useful game-specific menu items, but the icon rendering queue lives in PrefabIconGeneratorWindow.cs.
+/// This adapter uses SerializedObject/reflection-style access so the generic utility package does not need to depend on CustomizationOptionSO directly.
+/// </summary>
 public static class CustomizationOptionIconGenerator
 {
+    private const string CustomizationOptionTypeName = "CustomizationOptionSO";
     private const int DefaultSize = 256;
 
     [MenuItem("Assets/SkiGame/Customization/Generate Icons (Selected Options)", priority = 2000)]
     public static void GenerateSelected()
     {
-        var options = Selection.GetFiltered<CustomizationOptionSO>(SelectionMode.Assets);
-        if (options == null || options.Length == 0)
+        List<UnityEngine.Object> options = GetSelectedCustomizationOptions();
+        if (options.Count == 0)
         {
             EditorUtility.DisplayDialog("Generate Icons", "Select one or more CustomizationOptionSO assets.", "OK");
             return;
@@ -22,243 +29,249 @@ public static class CustomizationOptionIconGenerator
         GenerateFor(options);
     }
 
+    [MenuItem("Assets/SkiGame/Customization/Generate Icons (Selected Options)", true)]
+    private static bool ValidateGenerateSelected()
+    {
+        return GetSelectedCustomizationOptions().Count > 0;
+    }
+
     [MenuItem("SkiGame/Customization/Generate Icons (All Options)", priority = 2000)]
     public static void GenerateAll()
     {
-        var guids = AssetDatabase.FindAssets("t:CustomizationOptionSO");
-        var options = new CustomizationOptionSO[guids.Length];
+        string[] guids = AssetDatabase.FindAssets("t:" + CustomizationOptionTypeName);
+        List<UnityEngine.Object> options = new List<UnityEngine.Object>();
         for (int i = 0; i < guids.Length; i++)
-            options[i] = AssetDatabase.LoadAssetAtPath<CustomizationOptionSO>(AssetDatabase.GUIDToAssetPath(guids[i]));
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+            UnityEngine.Object option = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
+            if (IsCustomizationOption(option))
+                options.Add(option);
+        }
 
         GenerateFor(options);
     }
 
-    private static void GenerateFor(CustomizationOptionSO[] options)
+    private static List<UnityEngine.Object> GetSelectedCustomizationOptions()
     {
-        int size = DefaultSize;
-
-        foreach (var opt in options)
+        List<UnityEngine.Object> options = new List<UnityEngine.Object>();
+        UnityEngine.Object[] selected = Selection.objects;
+        for (int i = 0; i < selected.Length; i++)
         {
-            if (opt == null) continue;
+            if (IsCustomizationOption(selected[i]))
+                options.Add(selected[i]);
+        }
+        return options;
+    }
 
-            // Only prefab-based types requested
-            if (opt.type != CustomizationOptionType.Skis &&
-                opt.type != CustomizationOptionType.Poles &&
-                opt.type != CustomizationOptionType.Hat &&
-                opt.type != CustomizationOptionType.Jacket &&
-                opt.type != CustomizationOptionType.Gloves &&
-                opt.type != CustomizationOptionType.Boots &&
-                opt.type != CustomizationOptionType.Accessory)
+    private static bool IsCustomizationOption(UnityEngine.Object asset)
+    {
+        return asset != null && asset.GetType().Name == CustomizationOptionTypeName;
+    }
+
+    private static void GenerateFor(IList<UnityEngine.Object> options)
+    {
+        if (options == null || options.Count == 0)
+        {
+            EditorUtility.DisplayDialog("Generate Icons", "No CustomizationOptionSO assets were found.", "OK");
+            return;
+        }
+
+        int queued = 0;
+        for (int i = 0; i < options.Count; i++)
+        {
+            UnityEngine.Object option = options[i];
+            if (option == null || !IsPrefabBasedOption(option))
                 continue;
 
-            var prefab = ResolvePrefab(opt);
+            GameObject prefab = ResolvePrefab(option);
             if (prefab == null)
             {
-                Debug.LogWarning($"[IconGen] No prefab resolved for {opt.name} ({opt.type}).");
+                Debug.LogWarning("[CustomizationIconGenerator] No prefab resolved for " + option.name + ".", option);
                 continue;
             }
 
-            var png = GetPrefabPreviewPng(prefab, size, size);
-            if (png == null || png.Length == 0)
+            string optionPath = AssetDatabase.GetAssetPath(option);
+            string folder = Path.GetDirectoryName(optionPath);
+            if (string.IsNullOrEmpty(folder))
             {
-                Debug.LogWarning($"[IconGen] Failed to render preview for prefab {prefab.name} (option {opt.name}).");
+                Debug.LogWarning("[CustomizationIconGenerator] Could not resolve output folder for " + option.name + ".", option);
                 continue;
             }
 
-            var optPath = AssetDatabase.GetAssetPath(opt);
-            var folder = Path.GetDirectoryName(optPath).Replace('\\', '/');
-            var outPath = $"{folder}/{opt.name}_Icon.png";
-
-            // Write PNG
-            File.WriteAllBytes(outPath, png);
-
-            // Import & configure as sprite (synchronous)
-            AssetDatabase.ImportAsset(outPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
-
-            var importer = (TextureImporter)AssetImporter.GetAtPath(outPath);
-            if (importer != null)
-            {
-                importer.textureType = TextureImporterType.Sprite;
-                importer.spriteImportMode = SpriteImportMode.Single;
-                importer.alphaSource = TextureImporterAlphaSource.FromInput;
-                importer.alphaIsTransparency = true;
-                importer.mipmapEnabled = false;
-                importer.sRGBTexture = true;
-                importer.filterMode = FilterMode.Bilinear;
-                importer.wrapMode = TextureWrapMode.Clamp;
-                importer.isReadable = false;
-                importer.SaveAndReimport();
-            }
-
-            // Load sprite and assign via SerializedObject (most reliable)
-            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(outPath);
-            if (sprite == null)
-            {
-                // One more sync import pass in case the reimport queued
-                AssetDatabase.ImportAsset(outPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
-                sprite = AssetDatabase.LoadAssetAtPath<Sprite>(outPath);
-            }
-
-            if (sprite != null)
-            {
-                var so = new SerializedObject(opt);
-                so.FindProperty("icon").objectReferenceValue = sprite;
-                so.ApplyModifiedPropertiesWithoutUndo();
-                EditorUtility.SetDirty(opt);
-            }
-            else
-            {
-                Debug.LogWarning($"[IconGen] Failed to load Sprite at: {outPath} (option {opt.name})");
-            }
+            folder = folder.Replace('\\', '/');
+            string outputPath = folder + "/" + SanitizeFileName(option.name) + "_Icon.png";
+            UnityEngine.Object capturedOption = option;
+            PrefabIconGeneratorService.Enqueue(new PrefabIconGeneratorService.IconJob(
+                prefab,
+                outputPath,
+                DefaultSize,
+                true,
+                delegate (string path) { AssignSprite(capturedOption, path); }));
+            queued++;
         }
 
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
+        if (queued == 0)
+            EditorUtility.DisplayDialog("Generate Icons", "No prefab-based customization options could be queued.", "OK");
+        else
+            Debug.Log("[CustomizationIconGenerator] Queued " + queued + " customization icon job(s).");
     }
 
-    private static GameObject ResolvePrefab(CustomizationOptionSO opt)
+    private static bool IsPrefabBasedOption(UnityEngine.Object option)
     {
-        if (opt == null) return null;
-
-        switch (opt.type)
-        {
-            case CustomizationOptionType.Hat:
-                return opt.hatPrefab;
-
-            case CustomizationOptionType.Jacket:
-                return opt.jacketPrefab;
-
-            case CustomizationOptionType.Skis:
-                return ResolvePrefabFromGearProfile(opt.gearProfile, preferName: "ski");
-
-            case CustomizationOptionType.Poles:
-                return ResolvePrefabFromGearProfile(opt.gearProfile, preferName: "pole");
-
-            case CustomizationOptionType.Gloves:
-                return opt.glovePrefab;
-
-            case CustomizationOptionType.Boots:
-                return opt.bootPrefab;
-
-            case CustomizationOptionType.Accessory:
-                return opt.accessoryPrefab;
-        }
-
-        return null;
+        string typeName = GetOptionTypeName(option);
+        return typeName == "Skis" ||
+               typeName == "Poles" ||
+               typeName == "Hat" ||
+               typeName == "Jacket" ||
+               typeName == "Gloves" ||
+               typeName == "Boots" ||
+               typeName == "Accessory";
     }
 
-    // Looks for likely prefab fields, then falls back to first GameObject reference.
-    private static GameObject ResolvePrefabFromGearProfile(UnityEngine.Object gearProfile, string preferName)
+    private static string GetOptionTypeName(UnityEngine.Object option)
     {
-        if (gearProfile == null) return null;
+        if (option == null)
+            return string.Empty;
 
-        var so = new SerializedObject(gearProfile);
+        SerializedObject serialized = new SerializedObject(option);
+        SerializedProperty typeProperty = serialized.FindProperty("type");
+        if (typeProperty == null || typeProperty.propertyType != SerializedPropertyType.Enum)
+            return string.Empty;
 
-        string[] preferredProps =
-        {
-            preferName == "ski" ? "skisPrefab" : "polesPrefab",
-            preferName == "ski" ? "skiPrefab" : "polePrefab",
-            "prefab",
-            "modelPrefab",
-            "visualPrefab",
-        };
+        string[] names = typeProperty.enumDisplayNames;
+        if (names == null || typeProperty.enumValueIndex < 0 || typeProperty.enumValueIndex >= names.Length)
+            return string.Empty;
 
-        foreach (var p in preferredProps)
-        {
-            var sp = so.FindProperty(p);
-            if (sp != null && sp.propertyType == SerializedPropertyType.ObjectReference)
-            {
-                var go = sp.objectReferenceValue as GameObject;
-                if (go != null) return go;
-            }
-        }
-
-        var it = so.GetIterator();
-        bool enterChildren = true;
-        while (it.NextVisible(enterChildren))
-        {
-            enterChildren = false;
-            if (it.propertyType != SerializedPropertyType.ObjectReference) continue;
-
-            var go = it.objectReferenceValue as GameObject;
-            if (go != null) return go;
-        }
-
-        return null;
+        return names[typeProperty.enumValueIndex].Replace(" ", string.Empty);
     }
 
-    // Uses Unity's project-window preview renderer (AssetPreview) for perfect framing.
-    private static byte[] GetPrefabPreviewPng(GameObject prefab, int width, int height)
+    private static GameObject ResolvePrefab(UnityEngine.Object option)
     {
-        if (prefab == null) return null;
-
-        AssetPreview.SetPreviewTextureCacheSize(2048);
-
-        Texture2D previewTex = null;
-
-        // AssetPreview is async; poll briefly.
-        const int maxTries = 80;
-        for (int i = 0; i < maxTries; i++)
-        {
-            previewTex = AssetPreview.GetAssetPreview(prefab);
-            if (previewTex != null) break;
-
-            if (i > 20)
-            {
-                // lower fidelity fallback
-                previewTex = AssetPreview.GetMiniThumbnail(prefab) as Texture2D;
-                if (previewTex != null) break;
-            }
-
-            Thread.Sleep(25);
-        }
-
-        if (previewTex == null)
+        if (option == null)
             return null;
 
-        // Normalize to requested size (previews vary)
-        var scaled = ScaleTexture(previewTex, width, height);
+        string typeName = GetOptionTypeName(option);
+        SerializedObject serialized = new SerializedObject(option);
 
-        // Ensure truly transparent pixels stay transparent (no halo background)
-        ClearNearTransparentPixels(scaled, 0.02f);
+        if (typeName == "Hat")
+            return GetGameObjectReference(serialized, "hatPrefab");
+        if (typeName == "Jacket")
+            return GetGameObjectReference(serialized, "jacketPrefab");
+        if (typeName == "Gloves")
+            return GetGameObjectReference(serialized, "glovePrefab");
+        if (typeName == "Boots")
+            return GetGameObjectReference(serialized, "bootPrefab");
+        if (typeName == "Accessory")
+            return GetGameObjectReference(serialized, "accessoryPrefab");
+        if (typeName == "Skis")
+            return ResolvePrefabFromGearProfile(GetObjectReference(serialized, "gearProfile"), "ski");
+        if (typeName == "Poles")
+            return ResolvePrefabFromGearProfile(GetObjectReference(serialized, "gearProfile"), "pole");
 
-        var bytes = scaled.EncodeToPNG();
-        UnityEngine.Object.DestroyImmediate(scaled);
-        return bytes;
+        return FindFirstGameObjectReference(serialized);
     }
 
-    private static Texture2D ScaleTexture(Texture2D src, int w, int h)
+    private static GameObject ResolvePrefabFromGearProfile(UnityEngine.Object gearProfile, string preferredKind)
     {
-        var rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
-        var prev = RenderTexture.active;
+        if (gearProfile == null)
+            return null;
 
-        Graphics.Blit(src, rt);
-        RenderTexture.active = rt;
+        SerializedObject serialized = new SerializedObject(gearProfile);
+        string[] preferredProperties = preferredKind == "ski"
+            ? new[] { "skisPrefab", "skiPrefab", "prefab", "modelPrefab", "visualPrefab" }
+            : new[] { "polesPrefab", "polePrefab", "prefab", "modelPrefab", "visualPrefab" };
 
-        var dst = new Texture2D(w, h, TextureFormat.RGBA32, false);
-        dst.ReadPixels(new Rect(0, 0, w, h), 0, 0);
-        dst.Apply(false, false);
-
-        RenderTexture.active = prev;
-        RenderTexture.ReleaseTemporary(rt);
-        return dst;
-    }
-
-    private static void ClearNearTransparentPixels(Texture2D tex, float alphaCutoff)
-    {
-        if (tex == null) return;
-
-        var pixels = tex.GetPixels32();
-        byte cut = (byte)(alphaCutoff * 255f);
-
-        for (int i = 0; i < pixels.Length; i++)
+        for (int i = 0; i < preferredProperties.Length; i++)
         {
-            if (pixels[i].a <= cut)
-                pixels[i] = new Color32(0, 0, 0, 0);
+            GameObject prefab = GetGameObjectReference(serialized, preferredProperties[i]);
+            if (prefab != null)
+                return prefab;
         }
 
-        tex.SetPixels32(pixels);
-        tex.Apply(false, false);
+        return FindFirstGameObjectReference(serialized);
+    }
+
+    private static UnityEngine.Object GetObjectReference(SerializedObject serialized, string propertyName)
+    {
+        if (serialized == null || string.IsNullOrEmpty(propertyName))
+            return null;
+
+        SerializedProperty property = serialized.FindProperty(propertyName);
+        if (property == null || property.propertyType != SerializedPropertyType.ObjectReference)
+            return null;
+
+        return property.objectReferenceValue;
+    }
+
+    private static GameObject GetGameObjectReference(SerializedObject serialized, string propertyName)
+    {
+        return GetObjectReference(serialized, propertyName) as GameObject;
+    }
+
+    private static GameObject FindFirstGameObjectReference(SerializedObject serialized)
+    {
+        if (serialized == null)
+            return null;
+
+        SerializedProperty iterator = serialized.GetIterator();
+        bool enterChildren = true;
+        while (iterator.NextVisible(enterChildren))
+        {
+            enterChildren = false;
+            if (iterator.propertyType != SerializedPropertyType.ObjectReference)
+                continue;
+
+            GameObject prefab = iterator.objectReferenceValue as GameObject;
+            if (prefab != null)
+                return prefab;
+        }
+
+        return null;
+    }
+
+    private static void AssignSprite(UnityEngine.Object option, string path)
+    {
+        if (option == null || string.IsNullOrEmpty(path))
+            return;
+
+        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        if (sprite == null)
+        {
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        if (sprite == null)
+        {
+            Debug.LogWarning("[CustomizationIconGenerator] Failed to load generated Sprite at: " + path, option);
+            return;
+        }
+
+        SerializedObject serialized = new SerializedObject(option);
+        SerializedProperty iconProperty = serialized.FindProperty("icon");
+        if (iconProperty == null || iconProperty.propertyType != SerializedPropertyType.ObjectReference)
+        {
+            Debug.LogWarning("[CustomizationIconGenerator] " + option.name + " does not expose an object-reference 'icon' property.", option);
+            return;
+        }
+
+        Undo.RecordObject(option, "Assign Generated Customization Icon");
+        iconProperty.objectReferenceValue = sprite;
+        serialized.ApplyModifiedProperties();
+        EditorUtility.SetDirty(option);
+        AssetDatabase.SaveAssets();
+    }
+
+    private static string SanitizeFileName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "Icon";
+
+        char[] invalid = Path.GetInvalidFileNameChars();
+        for (int i = 0; i < invalid.Length; i++)
+            value = value.Replace(invalid[i], '_');
+
+        return value.Replace(" ", "_");
     }
 }
 #endif

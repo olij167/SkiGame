@@ -1,0 +1,1814 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &1
+MonoBehaviour:
+  m_ObjectHideFlags: 53
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: 
+  m_EditorClassIdentifier: PungentFunk.Utilities.Editor:PungentFunk.Utilities.Editor.Core.Help:PungentBugReportStorage
+  savedDrafts:
+  - id: d718eb814da549dd88bdb0485051a72d
+    createdUtc: 2026-05-20T03:37:56.5339133Z
+    status: Saved local bug report draft.
+    payload:
+      schemaVersion: 1.1
+      title: 'Issue: Utilities Browser welcome feedback'
+      details: hfhfhfhfhfhfhfhfhffhhf
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T03:37:56.5336008Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: 
+      includeDiagnostics: 1
+      includeConsoleSummary: 1
+      contactEmail: 
+      email: 
+      contactDiscord: 
+      diagnosticsSummary: 'Unity: 6000.4.4f1
+
+        Platform: Windows 11  (10.0.26200)
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+        Source
+        window: Utilities Browser'
+      recentExceptionSummary: Console summary collection is scaffolded. Future implementation
+        should include an opt-in, sanitized recent exception summary only.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - saved draft locally.
+      parentLocalId: 
+      parentRemoteReportId: 
+  queuedReports:
+  - id: f775311967064e66a652783f4cd32a9f
+    createdUtc: 2026-05-20T03:21:02.1766456Z
+    status: Queued locally; relay delivery was not completed.
+    payload:
+      schemaVersion: 1.1
+      title: Test Report
+      details: Lets see if this baby works!
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T03:21:01.4168405Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: 
+      includeDiagnostics: 1
+      includeConsoleSummary: 1
+      contactEmail: olij167@gmail.com
+      email: 
+      contactDiscord: stinkov
+      diagnosticsSummary: 'Unity: 6000.4.4f1
+
+        Platform: Windows 11  (10.0.26200)
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+        Source
+        window: Utilities Browser'
+      recentExceptionSummary: Console summary collection is scaffolded. Future implementation
+        should include an opt-in, sanitized recent exception summary only.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 
+      parentRemoteReportId: 
+  - id: 100dad29257b48bfa2faa10f35a9d940
+    createdUtc: 2026-05-20T03:21:22.1015595Z
+    status: Queued locally; relay delivery was not completed.
+    payload:
+      schemaVersion: 1.1
+      title: Test Report
+      details: Lets see if this baby works!
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T03:21:22.1015595Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: 
+      includeDiagnostics: 1
+      includeConsoleSummary: 1
+      contactEmail: olij167@gmail.com
+      email: 
+      contactDiscord: stinkov
+      diagnosticsSummary: 'Unity: 6000.4.4f1
+
+        Platform: Windows 11  (10.0.26200)
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+        Source
+        window: Utilities Browser'
+      recentExceptionSummary: Console summary collection is scaffolded. Future implementation
+        should include an opt-in, sanitized recent exception summary only.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 
+      parentRemoteReportId: 
+  - id: ac04311a3cbe41ad939bbb33364f9c10
+    createdUtc: 2026-05-20T03:21:24.3411662Z
+    status: Queued locally; relay delivery was not completed.
+    payload:
+      schemaVersion: 1.1
+      title: Test Report
+      details: Lets see if this baby works!
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T03:21:24.0218868Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: 
+      includeDiagnostics: 1
+      includeConsoleSummary: 1
+      contactEmail: olij167@gmail.com
+      email: 
+      contactDiscord: stinkov
+      diagnosticsSummary: 'Unity: 6000.4.4f1
+
+        Platform: Windows 11  (10.0.26200)
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+        Source
+        window: Utilities Browser'
+      recentExceptionSummary: Console summary collection is scaffolded. Future implementation
+        should include an opt-in, sanitized recent exception summary only.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 
+      parentRemoteReportId: 
+  - id: 26ca0609a36e429fbdab975777e3c9d3
+    createdUtc: 2026-05-20T03:22:10.1706693Z
+    status: Queued locally; relay delivery was not completed.
+    payload:
+      schemaVersion: 1.1
+      title: 'Issue: Utilities Browser welcome feedback'
+      details: hhhhhhhhhhhhhhhhhhhh
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T03:22:09.8471622Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: 
+      includeDiagnostics: 1
+      includeConsoleSummary: 1
+      contactEmail: 
+      email: 
+      contactDiscord: 
+      diagnosticsSummary: 'Unity: 6000.4.4f1
+
+        Platform: Windows 11  (10.0.26200)
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+        Source
+        window: Utilities Browser'
+      recentExceptionSummary: Console summary collection is scaffolded. Future implementation
+        should include an opt-in, sanitized recent exception summary only.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 
+      parentRemoteReportId: 
+  - id: dac4754895da482fa28237e3d6d4519c
+    createdUtc: 2026-05-20T03:38:02.9064668Z
+    status: Queued locally; relay delivery was not completed.
+    payload:
+      schemaVersion: 1.1
+      title: 'Issue: Utilities Browser welcome feedback'
+      details: hfhfhfhfhfhfhfhfhffhhf
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T03:38:02.1098187Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: 
+      includeDiagnostics: 1
+      includeConsoleSummary: 1
+      contactEmail: 
+      email: 
+      contactDiscord: 
+      diagnosticsSummary: 'Unity: 6000.4.4f1
+
+        Platform: Windows 11  (10.0.26200)
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+        Source
+        window: Utilities Browser'
+      recentExceptionSummary: Console summary collection is scaffolded. Future implementation
+        should include an opt-in, sanitized recent exception summary only.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 
+      parentRemoteReportId: 
+  - id: 43aaf4d917c1463f8bf96e5e16a80347
+    createdUtc: 2026-05-20T04:56:05.2188125Z
+    status: Queued locally; relay delivery was not completed.
+    payload:
+      schemaVersion: 1.1
+      title: 'Support request: Utilities Browser welcome feedback Copy'
+      details: '## Bug report
+
+
+        Testing the features yo!
+
+
+        ## Context
+
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+'
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T04:56:04.2524733Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 1
+      includeConsoleSummary: 1
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: 
+      diagnosticsSummary: 'Unity: 6000.4.4f1
+
+        Platform: Windows 11  (10.0.26200)
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+        Source
+        window: Utilities Browser'
+      recentExceptionSummary: Console summary collection is scaffolded. Future implementation
+        should include an opt-in, sanitized recent exception summary only.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 
+      parentRemoteReportId: 
+  - id: 138903ca3f734c78857a51a3b706885d
+    createdUtc: 2026-05-20T04:56:38.0165563Z
+    status: Queued locally; relay delivery was not completed.
+    payload:
+      schemaVersion: 1.1
+      title: 'Support request: Utilities Browser welcome feedback'
+      details: '## Bug report
+
+
+        Testing the features yo!
+
+
+        ## Context
+
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+'
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T04:56:37.5848988Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 1
+      includeConsoleSummary: 1
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: 
+      diagnosticsSummary: 'Unity: 6000.4.4f1
+
+        Platform: Windows 11  (10.0.26200)
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+        Source
+        window: Utilities Browser'
+      recentExceptionSummary: Console summary collection is scaffolded. Future implementation
+        should include an opt-in, sanitized recent exception summary only.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 
+      parentRemoteReportId: 
+  - id: c84d08b3cca84f859b798435672b8908
+    createdUtc: 2026-05-20T04:56:50.8839169Z
+    status: Queued locally; relay delivery was not completed.
+    payload:
+      schemaVersion: 1.1
+      title: 'Support request: Utilities Browser welcome feedback'
+      details: '## Bug report
+
+
+        Testing the features yo!
+
+
+        ## Context
+
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+'
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T04:56:50.4251223Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 1
+      includeConsoleSummary: 1
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: 
+      diagnosticsSummary: 'Unity: 6000.4.4f1
+
+        Platform: Windows 11  (10.0.26200)
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+        Source
+        window: Utilities Browser'
+      recentExceptionSummary: Console summary collection is scaffolded. Future implementation
+        should include an opt-in, sanitized recent exception summary only.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 
+      parentRemoteReportId: 
+  - id: 9dbdcf62cf4d47e4b9441751003ef597
+    createdUtc: 2026-05-20T05:13:17.3088810Z
+    status: Queued locally; relay delivery was not completed.
+    payload:
+      schemaVersion: 1.1
+      title: 'Support request: Utilities Browser welcome feedback Copy'
+      details: '## Bug report
+
+
+        Testing the features yo!
+
+
+        ## Context
+
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+'
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T05:13:16.2996806Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 1
+      includeConsoleSummary: 1
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: 
+      diagnosticsSummary: 'Unity: 6000.4.4f1
+
+        Platform: Windows 11  (10.0.26200)
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+        Source
+        window: Utilities Browser'
+      recentExceptionSummary: Console summary collection is scaffolded. Future implementation
+        should include an opt-in, sanitized recent exception summary only.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 
+      parentRemoteReportId: 
+  - id: 22ad8dc7114f47b2bc5d96e3160e930a
+    createdUtc: 2026-05-20T05:13:25.1666935Z
+    status: Queued locally; relay delivery was not completed.
+    payload:
+      schemaVersion: 1.1
+      title: 'Support request: Utilities Browser welcome feedback Copy'
+      details: '## Bug report
+
+
+        Testing the features yo!
+
+
+        ## Context
+
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+'
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T05:13:24.7302532Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 1
+      includeConsoleSummary: 1
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: 
+      diagnosticsSummary: 'Unity: 6000.4.4f1
+
+        Platform: Windows 11  (10.0.26200)
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+        Source
+        window: Utilities Browser'
+      recentExceptionSummary: Console summary collection is scaffolded. Future implementation
+        should include an opt-in, sanitized recent exception summary only.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 
+      parentRemoteReportId: 
+  - id: bf22477d787740219e5dd416bd41468c
+    createdUtc: 2026-05-20T05:13:40.9889201Z
+    status: Queued locally; relay delivery was not completed.
+    payload:
+      schemaVersion: 1.1
+      title: 'Re: Support request: Utilities Browser welcome feedback'
+      details: 'This is an automatic follow-up to request archival of the original
+        support request.
+
+
+        Original local ID: 31707198eeaa43249ee4e9462ed49798
+
+
+        Please
+        archive/close the original support ticket on the backend/support side.'
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T05:13:40.4894014Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 0
+      includeConsoleSummary: 0
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: 
+      diagnosticsSummary: Diagnostics not included.
+      recentExceptionSummary: Console summary not included.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 31707198eeaa43249ee4e9462ed49798
+      parentRemoteReportId: 
+  - id: 74279ef6bf6e42c1ae78f0eca6a5bbb4
+    createdUtc: 2026-05-20T05:14:30.8043275Z
+    status: Queued locally; relay delivery was not completed.
+    payload:
+      schemaVersion: 1.1
+      title: 'Support request: Utilities Browser welcome feedback'
+      details: '## Bug report
+
+
+        I hope this mofo works yo!
+
+
+        ## Context
+
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+'
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T05:14:30.3720001Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 1
+      includeConsoleSummary: 1
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: 
+      diagnosticsSummary: 'Unity: 6000.4.4f1
+
+        Platform: Windows 11  (10.0.26200)
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+        Source
+        window: Utilities Browser'
+      recentExceptionSummary: Console summary collection is scaffolded. Future implementation
+        should include an opt-in, sanitized recent exception summary only.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 
+      parentRemoteReportId: 
+  - id: 1eda4c71eab94e18bf4219aef1c285ee
+    createdUtc: 2026-05-20T05:14:46.5934598Z
+    status: Queued locally; relay delivery was not completed.
+    payload:
+      schemaVersion: 1.1
+      title: 'Support request: Utilities Browser welcome feedback'
+      details: '## Bug report
+
+
+        I hope this mofo works yo!
+
+
+        ## Context
+
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+'
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T05:14:46.1614751Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 0
+      includeConsoleSummary: 0
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: 
+      diagnosticsSummary: Diagnostics not included.
+      recentExceptionSummary: Console summary not included.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 
+      parentRemoteReportId: 
+  - id: fe837b3cf19548b99a20a71cad6bdc6e
+    createdUtc: 2026-05-20T10:33:54.4218129Z
+    status: Queued locally; relay delivery was not completed.
+    payload:
+      schemaVersion: 1.1
+      title: 'Support request: Notes header'
+      details: '## Bug report
+
+
+        Describe what happened, what you expected,
+        and any steps that help reproduce or understand it.
+
+
+        ## Context
+
+
+        Utility:
+        tooltip-notes
+
+        Topic: tooltip-notes/overview/overview
+
+'
+      category: 0
+      severity: 4
+      categoryLabel: Bug Report
+      severityLabel: DataLoss
+      utilityId: tooltip-notes
+      sectionId: overview
+      topicId: overview
+      contextLabel: Notes header
+      contextPath: tooltip-notes/overview/overview
+      sourceWindow: Quick Help Tray
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T10:33:54.4218129Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 0
+      includeConsoleSummary: 0
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: leslie#1493
+      diagnosticsSummary: Diagnostics not included.
+      recentExceptionSummary: Console summary not included.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 
+      parentRemoteReportId: 
+  supportRequests:
+  - noteId: 31707198eeaa43249ee4e9462ed49798
+    state: 2
+    category: 0
+    severity: 1
+    contactEmail: olij167@gmail.com
+    contactDiscord: leslie#1493
+    includeDiagnostics: 1
+    includeConsoleSummary: 1
+    remoteReportId: 
+    sentUtc: 
+    parentNoteId: 
+    parentRemoteReportId: 
+    lastError: 'Relay failed; queued locally. ProtocolError (403): HTTP/1.1 403 Forbidden
+      {"ok":false,"message":"Rate limit check failed."}'
+    lastStatus: Relay failed; queued locally.
+    updatedUtc: 2026-05-20T10:30:45.3123678Z
+    context:
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      selectedContextId: 
+      selectedContextLabel: 
+      sourcePath: 
+      sourceLine: 0
+      generatedEntryId: 
+    queuedPayload:
+      schemaVersion: 1.1
+      title: 'Support request: Utilities Browser welcome feedback'
+      details: '## Bug report
+
+
+        Testing the features yo!
+
+
+        ## Context
+
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+'
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T04:56:50.4251223Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 1
+      includeConsoleSummary: 1
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: 
+      diagnosticsSummary: 'Unity: 6000.4.4f1
+
+        Platform: Windows 11  (10.0.26200)
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+        Source
+        window: Utilities Browser'
+      recentExceptionSummary: Console summary collection is scaffolded. Future implementation
+        should include an opt-in, sanitized recent exception summary only.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 
+      parentRemoteReportId: 
+  - noteId: 7aa80ca624ab488aa57229344ad576ac
+    state: 2
+    category: 0
+    severity: 1
+    contactEmail: olij167@gmail.com
+    contactDiscord: leslie#1493
+    includeDiagnostics: 1
+    includeConsoleSummary: 1
+    remoteReportId: 
+    sentUtc: 
+    parentNoteId: 
+    parentRemoteReportId: 
+    lastError: 'Relay failed; queued locally. ProtocolError (403): HTTP/1.1 403 Forbidden
+      {"ok":false,"message":"Rate limit check failed."}'
+    lastStatus: Relay failed; queued locally.
+    updatedUtc: 2026-05-20T10:30:45.3123678Z
+    context:
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      selectedContextId: 
+      selectedContextLabel: 
+      sourcePath: 
+      sourceLine: 0
+      generatedEntryId: 
+    queuedPayload:
+      schemaVersion: 1.1
+      title: 'Support request: Utilities Browser welcome feedback Copy'
+      details: '## Bug report
+
+
+        Testing the features yo!
+
+
+        ## Context
+
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+'
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T05:13:24.7302532Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 1
+      includeConsoleSummary: 1
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: 
+      diagnosticsSummary: 'Unity: 6000.4.4f1
+
+        Platform: Windows 11  (10.0.26200)
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+        Source
+        window: Utilities Browser'
+      recentExceptionSummary: Console summary collection is scaffolded. Future implementation
+        should include an opt-in, sanitized recent exception summary only.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 
+      parentRemoteReportId: 
+  - noteId: 0a133fa939ce4b5f90a51c31423946e8
+    state: 2
+    category: 0
+    severity: 1
+    contactEmail: olij167@gmail.com
+    contactDiscord: leslie#1493
+    includeDiagnostics: 0
+    includeConsoleSummary: 0
+    remoteReportId: 
+    sentUtc: 
+    parentNoteId: 31707198eeaa43249ee4e9462ed49798
+    parentRemoteReportId: 
+    lastError: 'Relay failed; queued locally. ProtocolError (403): HTTP/1.1 403 Forbidden
+      {"ok":false,"message":"Rate limit check failed."}'
+    lastStatus: Relay failed; queued locally.
+    updatedUtc: 2026-05-20T10:30:45.3123678Z
+    context:
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      selectedContextId: 
+      selectedContextLabel: 
+      sourcePath: 
+      sourceLine: 0
+      generatedEntryId: 
+    queuedPayload:
+      schemaVersion: 1.1
+      title: 'Re: Support request: Utilities Browser welcome feedback'
+      details: 'This is an automatic follow-up to request archival of the original
+        support request.
+
+
+        Original local ID: 31707198eeaa43249ee4e9462ed49798
+
+
+        Please
+        archive/close the original support ticket on the backend/support side.'
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T05:13:40.4894014Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 0
+      includeConsoleSummary: 0
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: 
+      diagnosticsSummary: Diagnostics not included.
+      recentExceptionSummary: Console summary not included.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Wix relay / Discord webhook - queued locally; send failed or
+        was deferred.
+      parentLocalId: 31707198eeaa43249ee4e9462ed49798
+      parentRemoteReportId: 
+  - noteId: 16f6b9454d824ebcb505107bc1028383
+    state: 3
+    category: 0
+    severity: 1
+    contactEmail: olij167@gmail.com
+    contactDiscord: leslie#1493
+    includeDiagnostics: 1
+    includeConsoleSummary: 1
+    remoteReportId: 6866a28c-bd80-437a-91b8-2caac6c88540
+    sentUtc: 2026-05-20T05:17:14.8372487Z
+    parentNoteId: 
+    parentRemoteReportId: 
+    lastError: 
+    lastStatus: 'Bug report sent. ID: 6866a28c-bd80-437a-91b8-2caac6c88540'
+    updatedUtc: 2026-05-20T10:30:45.3123678Z
+    context:
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      selectedContextId: 
+      selectedContextLabel: 
+      sourcePath: 
+      sourceLine: 0
+      generatedEntryId: 
+    queuedPayload:
+      schemaVersion: 1.1
+      title: 'Support request: Utilities Browser welcome feedback'
+      details: '## Bug report
+
+
+        I hope this mofo works yo!
+
+
+        ## Context
+
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+'
+      category: 0
+      severity: 1
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T05:17:11.6745042Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 1
+      includeConsoleSummary: 1
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: 
+      diagnosticsSummary: 'Unity: 6000.4.4f1
+
+        Platform: Windows 11  (10.0.26200)
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+        Source
+        window: Utilities Browser'
+      recentExceptionSummary: Console summary collection is scaffolded. Future implementation
+        should include an opt-in, sanitized recent exception summary only.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Submitting to Wix relay...
+      parentLocalId: 
+      parentRemoteReportId: 
+  - noteId: 69e10fc61eef48649c5e30e2348e4c90
+    state: 3
+    category: 5
+    severity: 3
+    contactEmail: olij167@gmail.com
+    contactDiscord: leslie#1493
+    includeDiagnostics: 1
+    includeConsoleSummary: 1
+    remoteReportId: 971b80ce-704e-4379-9210-c133e3b460c0
+    sentUtc: 2026-05-20T07:14:14.3983513Z
+    parentNoteId: 
+    parentRemoteReportId: 
+    lastError: 
+    lastStatus: 'Bug report sent. ID: 971b80ce-704e-4379-9210-c133e3b460c0'
+    updatedUtc: 2026-05-20T10:30:45.3123678Z
+    context:
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      selectedContextId: 
+      selectedContextLabel: 
+      sourcePath: 
+      sourceLine: 0
+      generatedEntryId: 
+    queuedPayload:
+      schemaVersion: 1.1
+      title: 'Support request: Utilities Browser welcome feedback'
+      details: '## Bug report
+
+
+        URGENT TEST.
+
+
+        ## Context
+
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+'
+      category: 5
+      severity: 3
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T07:14:12.7639679Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 1
+      includeConsoleSummary: 1
+      contactEmail: 
+      email: 
+      contactDiscord: 
+      diagnosticsSummary: 'Unity: 6000.4.4f1
+
+        Platform: Windows 11  (10.0.26200)
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+        Source
+        window: Utilities Browser'
+      recentExceptionSummary: Console summary collection is scaffolded. Future implementation
+        should include an opt-in, sanitized recent exception summary only.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Submitting to Wix relay...
+      parentLocalId: 
+      parentRemoteReportId: 
+  - noteId: 9f2cf10869ce41ec9f91e7f65bf43d14
+    state: 3
+    category: 9
+    severity: 4
+    contactEmail: olij167@gmail.com
+    contactDiscord: leslie#1493
+    includeDiagnostics: 0
+    includeConsoleSummary: 0
+    remoteReportId: b3452b97-9e7b-4d75-8791-01a68339abe8
+    sentUtc: 2026-05-20T07:15:04.6181964Z
+    parentNoteId: 69e10fc61eef48649c5e30e2348e4c90
+    parentRemoteReportId: 971b80ce-704e-4379-9210-c133e3b460c0
+    lastError: 
+    lastStatus: 'Bug report sent. ID: b3452b97-9e7b-4d75-8791-01a68339abe8'
+    updatedUtc: 2026-05-20T10:30:45.3123678Z
+    context:
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      selectedContextId: 
+      selectedContextLabel: 
+      sourcePath: 
+      sourceLine: 0
+      generatedEntryId: 
+    queuedPayload:
+      schemaVersion: 1.1
+      title: 'Re: Support request: Utilities Browser welcome feedback'
+      details: 'Follow-up for support request 69e10fc61eef48649c5e30e2348e4c90 /
+        remote 971b80ce-704e-4379-9210-c133e3b460c0.
+
+
+        ## Update
+
+
+        First
+        one wasn''t marked urgent - lets try again'
+      category: 9
+      severity: 4
+      categoryLabel: 
+      severityLabel: 
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T07:15:03.2838817Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 0
+      includeConsoleSummary: 0
+      contactEmail: 
+      email: 
+      contactDiscord: 
+      diagnosticsSummary: Diagnostics not included.
+      recentExceptionSummary: Console summary not included.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Submitting to Wix relay...
+      parentLocalId: 69e10fc61eef48649c5e30e2348e4c90
+      parentRemoteReportId: 971b80ce-704e-4379-9210-c133e3b460c0
+  - noteId: 2995a454c4d941fa87d33035ab7a4f23
+    state: 3
+    category: 0
+    severity: 4
+    contactEmail: olij167@gmail.com
+    contactDiscord: leslie#1493
+    includeDiagnostics: 0
+    includeConsoleSummary: 0
+    remoteReportId: 86505df1-c334-49d6-941a-bb38f1c1cee8
+    sentUtc: 2026-05-20T10:30:54.0436352Z
+    parentNoteId: 
+    parentRemoteReportId: 
+    lastError: 
+    lastStatus: 'Bug report sent. ID: 86505df1-c334-49d6-941a-bb38f1c1cee8'
+    updatedUtc: 2026-05-20T10:30:54.0588377Z
+    context:
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      selectedContextId: 
+      selectedContextLabel: 
+      sourcePath: 
+      sourceLine: 0
+      generatedEntryId: 
+    queuedPayload:
+      schemaVersion: 1.1
+      title: 'Support request: Utilities Browser welcome feedback'
+      details: '## Bug report
+
+
+        Describe what happened, what you expected,
+        and any steps that help reproduce or understand it.
+
+
+        ## Context
+
+
+        Utility:
+        utilities-browser
+
+        Topic: utilities-browser/welcome/bug-reporting
+
+'
+      category: 0
+      severity: 4
+      categoryLabel: Bug Report
+      severityLabel: DataLoss
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T10:30:52.3526220Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 0
+      includeConsoleSummary: 0
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: leslie#1493
+      diagnosticsSummary: Diagnostics not included.
+      recentExceptionSummary: Console summary not included.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Submitting to Wix relay...
+      parentLocalId: 
+      parentRemoteReportId: 
+  - noteId: b8c5006e066246e7bb473b23d7e9cb67
+    state: 3
+    category: 6
+    severity: 0
+    contactEmail: olij167@gmail.com
+    contactDiscord: leslie#1493
+    includeDiagnostics: 0
+    includeConsoleSummary: 0
+    remoteReportId: e2484e2d-9d75-4b2d-991d-9d877f7fe174
+    sentUtc: 2026-05-20T10:31:22.3831219Z
+    parentNoteId: 2995a454c4d941fa87d33035ab7a4f23
+    parentRemoteReportId: 86505df1-c334-49d6-941a-bb38f1c1cee8
+    lastError: 
+    lastStatus: 'Bug report sent. ID: e2484e2d-9d75-4b2d-991d-9d877f7fe174'
+    updatedUtc: 2026-05-20T10:31:22.4006345Z
+    context:
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      selectedContextId: 
+      selectedContextLabel: 
+      sourcePath: 
+      sourceLine: 0
+      generatedEntryId: 
+    queuedPayload:
+      schemaVersion: 1.1
+      title: 'Re: Support request: Utilities Browser welcome feedback'
+      details: 'Follow-up for support request 2995a454c4d941fa87d33035ab7a4f23 /
+        remote 86505df1-c334-49d6-941a-bb38f1c1cee8.
+
+
+        ## Update
+
+
+'
+      category: 6
+      severity: 0
+      categoryLabel: Feature Request
+      severityLabel: Low
+      utilityId: utilities-browser
+      sectionId: welcome
+      topicId: bug-reporting
+      contextLabel: Utilities Browser welcome feedback
+      contextPath: Utilities Browser > Welcome > Bug Reports
+      sourceWindow: Utilities Browser
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T10:31:21.2230144Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 0
+      includeConsoleSummary: 0
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: leslie#1493
+      diagnosticsSummary: Diagnostics not included.
+      recentExceptionSummary: Console summary not included.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Submitting to Wix relay...
+      parentLocalId: 2995a454c4d941fa87d33035ab7a4f23
+      parentRemoteReportId: 86505df1-c334-49d6-941a-bb38f1c1cee8
+  - noteId: faff446eb8a2429e9b79b6bfb4b30bfe
+    state: 3
+    category: 0
+    severity: 4
+    contactEmail: olij167@gmail.com
+    contactDiscord: leslie#1493
+    includeDiagnostics: 0
+    includeConsoleSummary: 0
+    remoteReportId: e4b2c199-8e5f-4c17-8d8c-1c045fafd4cb
+    sentUtc: 2026-05-20T10:34:02.8166007Z
+    parentNoteId: 
+    parentRemoteReportId: 
+    lastError: 
+    lastStatus: 'Bug report sent. ID: e4b2c199-8e5f-4c17-8d8c-1c045fafd4cb'
+    updatedUtc: 2026-05-20T10:34:02.8315791Z
+    context:
+      utilityId: tooltip-notes
+      sectionId: overview
+      topicId: overview
+      contextLabel: Notes header
+      contextPath: tooltip-notes/overview/overview
+      sourceWindow: Quick Help Tray
+      helpTab: 
+      selectedContextId: 
+      selectedContextLabel: 
+      sourcePath: 
+      sourceLine: 0
+      generatedEntryId: 
+    queuedPayload:
+      schemaVersion: 1.1
+      title: 'Support request: Notes header'
+      details: '## Bug report
+
+
+        Describe what happened, what you expected,
+        and any steps that help reproduce or understand it.
+
+
+        ## Context
+
+
+        Utility:
+        tooltip-notes
+
+        Topic: tooltip-notes/overview/overview
+
+'
+      category: 0
+      severity: 4
+      categoryLabel: Bug Report
+      severityLabel: DataLoss
+      utilityId: tooltip-notes
+      sectionId: overview
+      topicId: overview
+      contextLabel: Notes header
+      contextPath: tooltip-notes/overview/overview
+      sourceWindow: Quick Help Tray
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T10:34:01.2151719Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 0
+      includeConsoleSummary: 0
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: leslie#1493
+      diagnosticsSummary: Diagnostics not included.
+      recentExceptionSummary: Console summary not included.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Submitting to Wix relay...
+      parentLocalId: 
+      parentRemoteReportId: 
+  - noteId: 27a8196685f843c9bd2e6137a9888b20
+    state: 3
+    category: 0
+    severity: 1
+    contactEmail: olij167@gmail.com
+    contactDiscord: leslie#1493
+    includeDiagnostics: 0
+    includeConsoleSummary: 0
+    remoteReportId: 0bd1a98e-e7dd-4f40-8848-78fd06734f2b
+    sentUtc: 2026-05-20T10:34:17.0040638Z
+    parentNoteId: faff446eb8a2429e9b79b6bfb4b30bfe
+    parentRemoteReportId: e4b2c199-8e5f-4c17-8d8c-1c045fafd4cb
+    lastError: 
+    lastStatus: 'Bug report sent. ID: 0bd1a98e-e7dd-4f40-8848-78fd06734f2b'
+    updatedUtc: 2026-05-20T10:34:17.0145761Z
+    context:
+      utilityId: tooltip-notes
+      sectionId: overview
+      topicId: overview
+      contextLabel: Notes header
+      contextPath: tooltip-notes/overview/overview
+      sourceWindow: Quick Help Tray
+      helpTab: 
+      selectedContextId: 
+      selectedContextLabel: 
+      sourcePath: 
+      sourceLine: 0
+      generatedEntryId: 
+    queuedPayload:
+      schemaVersion: 1.1
+      title: 'Re: Support request: Notes header'
+      details: 'This is an automatic follow-up to request archival of the original
+        support request.
+
+
+        Original local ID: faff446eb8a2429e9b79b6bfb4b30bfe
+
+        Original
+        remote ID: e4b2c199-8e5f-4c17-8d8c-1c045fafd4cb
+
+
+        Please archive/close
+        the original support ticket on the backend/support side.'
+      category: 0
+      severity: 1
+      categoryLabel: Bug Report
+      severityLabel: Normal
+      utilityId: tooltip-notes
+      sectionId: overview
+      topicId: overview
+      contextLabel: Notes header
+      contextPath: tooltip-notes/overview/overview
+      sourceWindow: Quick Help Tray
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T10:34:15.9496490Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 0
+      includeConsoleSummary: 0
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: leslie#1493
+      diagnosticsSummary: Diagnostics not included.
+      recentExceptionSummary: Console summary not included.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Submitting to Wix relay...
+      parentLocalId: faff446eb8a2429e9b79b6bfb4b30bfe
+      parentRemoteReportId: e4b2c199-8e5f-4c17-8d8c-1c045fafd4cb
+  - noteId: a5acc8145dd242af8f12444fa061eee4
+    state: 3
+    category: 6
+    severity: 1
+    contactEmail: olij167@gmail.com
+    contactDiscord: leslie#1493
+    includeDiagnostics: 0
+    includeConsoleSummary: 0
+    remoteReportId: afa96b90-64fc-484a-aae4-4624e9ce33c3
+    sentUtc: 2026-05-20T10:40:23.5855348Z
+    parentNoteId: 
+    parentRemoteReportId: 
+    lastError: 
+    lastStatus: 'Bug report sent. ID: afa96b90-64fc-484a-aae4-4624e9ce33c3'
+    updatedUtc: 2026-05-20T10:40:23.5952896Z
+    context:
+      utilityId: tooltip-notes
+      sectionId: overview
+      topicId: overview
+      contextLabel: Notes header
+      contextPath: tooltip-notes/overview/overview
+      sourceWindow: Quick Help Tray
+      helpTab: 
+      selectedContextId: 
+      selectedContextLabel: 
+      sourcePath: 
+      sourceLine: 0
+      generatedEntryId: 
+    queuedPayload:
+      schemaVersion: 1.1
+      title: 'Support request: Notes header'
+      details: '## Feature Request
+
+
+        Oh boy, I sure would like this feature:
+        wehfiufp;elgbkjdmjsdhbvlk;fsujdf;kl
+
+
+
+        ## Context
+
+
+        Utility:
+        tooltip-notes
+
+        Topic: tooltip-notes/overview/overview
+
+        -
+        [ ]
+
+
+        ## New Section
+
+'
+      category: 6
+      severity: 1
+      categoryLabel: Feature Request
+      severityLabel: Normal
+      utilityId: tooltip-notes
+      sectionId: overview
+      topicId: overview
+      contextLabel: Notes header
+      contextPath: tooltip-notes/overview/overview
+      sourceWindow: Quick Help Tray
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T10:40:21.9059022Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 0
+      includeConsoleSummary: 0
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: leslie#1493
+      diagnosticsSummary: Diagnostics not included.
+      recentExceptionSummary: Console summary not included.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Submitting to Wix relay...
+      parentLocalId: 
+      parentRemoteReportId: 
+  - noteId: 76cc496a8e234ffd9f1206eae05957b2
+    state: 3
+    category: 6
+    severity: 1
+    contactEmail: olij167@gmail.com
+    contactDiscord: leslie#1493
+    includeDiagnostics: 0
+    includeConsoleSummary: 0
+    remoteReportId: 8974ec8f-fed1-4a84-a267-581971ada694
+    sentUtc: 2026-05-20T10:42:49.4003292Z
+    parentNoteId: 
+    parentRemoteReportId: 
+    lastError: 
+    lastStatus: 'Bug report sent. ID: 8974ec8f-fed1-4a84-a267-581971ada694'
+    updatedUtc: 2026-05-20T10:42:49.4110880Z
+    context:
+      utilityId: tooltip-notes
+      sectionId: overview
+      topicId: overview
+      contextLabel: Notes header
+      contextPath: tooltip-notes/overview/overview
+      sourceWindow: Quick Help Tray
+      helpTab: 
+      selectedContextId: 
+      selectedContextLabel: 
+      sourcePath: 
+      sourceLine: 0
+      generatedEntryId: 
+    queuedPayload:
+      schemaVersion: 1.1
+      title: 'Support request: Notes header'
+      details: '## Bug report
+
+
+        Describe what happened, what you expected,
+        and any steps that help reproduce or understand it.
+
+
+        ## Context
+
+
+        Utility:
+        tooltip-notes
+
+        Topic: tooltip-notes/overview/overview
+
+'
+      category: 6
+      severity: 1
+      categoryLabel: Feature Request
+      severityLabel: Normal
+      utilityId: tooltip-notes
+      sectionId: overview
+      topicId: overview
+      contextLabel: Notes header
+      contextPath: tooltip-notes/overview/overview
+      sourceWindow: Quick Help Tray
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T10:42:47.6975311Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 0
+      includeConsoleSummary: 0
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: leslie#1493
+      diagnosticsSummary: Diagnostics not included.
+      recentExceptionSummary: Console summary not included.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Submitting to Wix relay...
+      parentLocalId: 
+      parentRemoteReportId: 
+  - noteId: ec97fcac299945b7b3b3e15a80ead2e9
+    state: 3
+    category: 0
+    severity: 4
+    contactEmail: olij167@gmail.com
+    contactDiscord: leslie#1493
+    includeDiagnostics: 0
+    includeConsoleSummary: 0
+    remoteReportId: ec6c825f-9331-4c1c-9af5-e36e538f8989
+    sentUtc: 2026-05-20T10:43:02.4343408Z
+    parentNoteId: 76cc496a8e234ffd9f1206eae05957b2
+    parentRemoteReportId: 8974ec8f-fed1-4a84-a267-581971ada694
+    lastError: 
+    lastStatus: 'Bug report sent. ID: ec6c825f-9331-4c1c-9af5-e36e538f8989'
+    updatedUtc: 2026-05-20T10:43:02.4512820Z
+    context:
+      utilityId: tooltip-notes
+      sectionId: overview
+      topicId: overview
+      contextLabel: Notes header
+      contextPath: tooltip-notes/overview/overview
+      sourceWindow: Quick Help Tray
+      helpTab: 
+      selectedContextId: 
+      selectedContextLabel: 
+      sourcePath: 
+      sourceLine: 0
+      generatedEntryId: 
+    queuedPayload:
+      schemaVersion: 1.1
+      title: 'Re: Support request: Notes header'
+      details: 'Follow-up for support request 76cc496a8e234ffd9f1206eae05957b2 /
+        remote 8974ec8f-fed1-4a84-a267-581971ada694.
+
+
+        ## Update
+
+
+'
+      category: 0
+      severity: 4
+      categoryLabel: Bug Report
+      severityLabel: DataLoss
+      utilityId: tooltip-notes
+      sectionId: overview
+      topicId: overview
+      contextLabel: Notes header
+      contextPath: tooltip-notes/overview/overview
+      sourceWindow: Quick Help Tray
+      helpTab: 
+      packageVersion: PungentFunk Utilities local editor package
+      unityVersion: 6000.4.4f1
+      editorPlatform: Windows 11  (10.0.26200)
+      timestampUtc: 2026-05-20T10:43:01.3132643Z
+      anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+      installId: bfd95fda47854744b18398f3e60dda02
+      includeDiagnostics: 0
+      includeConsoleSummary: 0
+      contactEmail: olij167@gmail.com
+      email: olij167@gmail.com
+      contactDiscord: leslie#1493
+      diagnosticsSummary: Diagnostics not included.
+      recentExceptionSummary: Console summary not included.
+      backendEndpoint: https://www.pungentfunk.net/_functions/bugReport
+      backendStatus: Submitting to Wix relay...
+      parentLocalId: 76cc496a8e234ffd9f1206eae05957b2
+      parentRemoteReportId: 8974ec8f-fed1-4a84-a267-581971ada694
+  lastEndpointUrl: https://www.pungentfunk.net/_functions/bugReport
+  anonymousInstallId: bfd95fda47854744b18398f3e60dda02
+  defaultContactEmail: olij167@gmail.com
+  defaultContactDiscord: leslie#1493
+  lastReportTimestampUtc: 2026-05-20T10:43:02.4270855Z
+  lastSubmitStatus: 'Bug report sent. ID: ec6c825f-9331-4c1c-9af5-e36e538f8989'
+  lastSuccessfulReportId: ec6c825f-9331-4c1c-9af5-e36e538f8989
+  lastSubmitError: 
+  backendEnabled: 1
+  scaffoldAcknowledged: 1
+  relayDefaultsInitialized: 1

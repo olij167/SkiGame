@@ -14,16 +14,35 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NpcQuestOfferSO
   questDefinition: {fileID: 11400000, guid: 2d3a8f3c1b2749e7a6c14a1c0f6b3210, type: 2}
   offerTitle: Beginner Ski Lesson
+  questLineId: 
+  offerPriority: 0
   offerDialogue: Ready for your first lesson? We'll start with skating, leaning,
     turning, and getting your first pass.
-  acceptedDialogue: Great. Start by moving around me, then I'll send you toward
-    the resort.
-  inProgressDialogue: Keep working through the basics. Move, turn, brake, then
-    check in at the resort.
+  acceptedDialogue: Great. Start by moving around me, then I'll send you toward the
+    resort.
+  inProgressDialogue: Keep working through the basics. Move, turn, brake, then check
+    in at the resort.
   completedDialogue: Nice. You know enough to start exploring safely.
   turnInDialogue: That's your first lesson done. Come back when you want to learn
     faster movement.
+  replayDialogue: Need a refresher on the basics?
+  ambientDialogueBankOverride: {fileID: 11400000, guid: 481414fbc9a79164bb13a43546a66d39, type: 2}
+  availableAmbientTopic: instructor_pre_lesson
+  inProgressAmbientTopic: tutorialProgress
+  readyToTurnInAmbientTopic: tutorialReady
+  completedAmbientTopic: tutorialComplete
+  replayAmbientTopic: tutorialReplay
+  blockedAmbientTopic: tutorialBlocked
+  ambientWeight: 1
+  ambientCooldown: 8
   requiredCompletedQuests: []
   blockedByCompletedQuests: []
+  showWhenAvailable: 1
+  showWhenInProgress: 0
+  showWhenReadyToTurnIn: 1
+  showWhenCompleted: 0
+  replayable: 0
+  hideIfQuestAccepted: 1
+  hideIfQuestCompleted: 1
   autoTrackOnAccept: 1
   showNavigationTarget: 1

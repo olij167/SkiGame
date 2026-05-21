@@ -1,0 +1,202 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &1
+MonoBehaviour:
+  m_ObjectHideFlags: 53
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7fae562007ebcab43b2f9a39b6156c03, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PungentFunk.Utilities.Editor::PungentFunk.Utilities.Editor.ProjectAudit.PungentTokenDatabase
+  tokens:
+  - id: f93e229baf024c1a8d14998791f33eab
+    key: playerName
+    displayName: Player Name
+    description: Example user/player name
+    previewValue: Libby
+    category: Default
+    tags: []
+    examples:
+    - '{playerName}'
+    required: 0
+    deprecated: 0
+    replacementKey: 
+    archived: 0
+    developerOnly: 0
+    createdUtc: 2026-05-07T06:03:05.9496330Z
+    updatedUtc: 2026-05-11T06:03:05.7345430Z
+    allowedContext: 
+    documentationNoteId: 
+    source: default
+  - id: ffc397f2258844639b27ae640229c4ce
+    key: objectName
+    displayName: Object Name
+    description: Selected object or target name
+    previewValue: Crate
+    category: Default
+    tags: []
+    examples:
+    - '{objectName}'
+    required: 0
+    deprecated: 0
+    replacementKey: 
+    archived: 0
+    developerOnly: 0
+    createdUtc: 2026-05-07T06:03:05.9496330Z
+    updatedUtc: 2026-05-07T06:24:10.3249643Z
+    allowedContext: 
+    documentationNoteId: 
+    source: default
+  - id: 3fcefdd39eb54db3b969e1ae30d561cd
+    key: locationName
+    displayName: Location Name
+    description: Location / anchor label
+    previewValue: Workshop
+    category: Default
+    tags: []
+    examples:
+    - '{locationName}'
+    required: 0
+    deprecated: 0
+    replacementKey: 
+    archived: 0
+    developerOnly: 0
+    createdUtc: 2026-05-07T06:03:05.9496330Z
+    updatedUtc: 2026-05-07T06:24:15.9246334Z
+    allowedContext: 
+    documentationNoteId: 
+    source: default
+  - id: 2990115855c645a4b181f26dcf704563
+    key: newToken
+    displayName: New Token
+    description: 
+    previewValue: TESTTTTTTTT
+    category: General
+    tags: []
+    examples: []
+    required: 0
+    deprecated: 1
+    replacementKey: locationName
+    archived: 0
+    developerOnly: 0
+    createdUtc: 2026-05-07T06:20:07.6834860Z
+    updatedUtc: 2026-05-07T06:26:45.9547281Z
+    allowedContext: 
+    documentationNoteId: 
+    source: 
+  - id: 0d82efa9857e45ab8bd05e5b9048d0f4
+    key: player
+    displayName: Player
+    description: 
+    previewValue: player
+    category: General
+    tags: []
+    examples: []
+    required: 0
+    deprecated: 0
+    replacementKey: 
+    archived: 0
+    developerOnly: 0
+    createdUtc: 2026-05-07T06:28:05.5601527Z
+    updatedUtc: 2026-05-07T06:28:05.5601527Z
+    allowedContext: 
+    documentationNoteId: 
+    source: 
+  - id: 1f06bae9aa4346b3b5f7ecddbdee91f3
+    key: playerGearLoadout
+    displayName: Player Gear Loadout
+    description: 
+    previewValue: playerGearLoadout
+    category: General
+    tags: []
+    examples: []
+    required: 0
+    deprecated: 0
+    replacementKey: 
+    archived: 0
+    developerOnly: 0
+    createdUtc: 2026-05-09T22:53:50.2994641Z
+    updatedUtc: 2026-05-09T22:53:50.2994641Z
+    allowedContext: 
+    documentationNoteId: 
+    source: 
+  bindings:
+  - id: 5cfedf97cabc49798a99096ecd375e7b
+    tokenKey: player
+    label: Player
+    targetType: 2
+    assetGuid: 
+    sceneObjectGlobalId: GlobalObjectId_V1-2-8ed2bd9abb959ac49876eb58549af039-891564543262492690-702498603
+    componentType: UnityEngine.GameObject
+    componentInstanceId: GlobalObjectId_V1-2-8ed2bd9abb959ac49876eb58549af039-891564543262492690-702498603
+    propertyPath: 
+    scriptPath: 
+    noteId: 
+    auditIssueCode: 
+    futureUtilityId: 
+    utilityId: 
+    externalPath: 
+    createdUtc: 2026-05-07T06:28:08.1034152Z
+    updatedUtc: 2026-05-07T06:28:08.1034152Z
+    archived: 0
+    tags: []
+  - id: 5fed044b544342a6afc272d598a505c9
+    tokenKey: playerGearLoadout
+    label: Gear Loadout
+    targetType: 5
+    assetGuid: 
+    sceneObjectGlobalId: GlobalObjectId_V1-2-8ed2bd9abb959ac49876eb58549af039-5130916524721657879-702498603
+    componentType: SkiController
+    componentInstanceId: GlobalObjectId_V1-2-8ed2bd9abb959ac49876eb58549af039-5130916524721657879-702498603
+    propertyPath: gearLoadout
+    scriptPath: 
+    noteId: 
+    auditIssueCode: 
+    futureUtilityId: 
+    utilityId: 
+    externalPath: 
+    createdUtc: 2026-05-09T22:53:53.1710526Z
+    updatedUtc: 2026-05-09T22:53:53.1710526Z
+    archived: 0
+    tags: []
+  categories: []
+  scanSettings:
+    projectScanMode: 0
+    showLikelyCandidates: 1
+    showPossibleCandidates: 1
+    showUnlikelyCandidates: 1
+    reportLikelyUnknownsAsWarnings: 1
+    scanOnlyOptInMarkedFiles: 0
+    ignoreOptOutMarkedFiles: 1
+    likelyThreshold: 70
+    possibleThreshold: 40
+    includePathHints:
+    - Dialogue
+    - Dialog
+    - Localization
+    - Locale
+    - Localisation
+    - Notes
+    - Narrative
+    - Quests
+    - Quest
+    - Content
+    - Text
+    - UI/Text
+    excludePathHints:
+    - Library
+    - Temp
+    - /obj/
+    - /bin/
+    - Packages
+    - package-lock
+    - Generated
+    - AutoGenerated
+    ignoredTokenKeys: []
+    ignoredSourcePaths: []
+    ignoredCandidateHashes: []
+  lastSavedUtc: 2026-05-11T06:03:05.7345430Z

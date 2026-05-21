@@ -10,6 +10,7 @@ public sealed class NpcTalkInteractable : MonoBehaviour, IWorldInteractionPrompt
     [SerializeField] private NpcSkierProfile skierProfile;
     [SerializeField] private NpcGenericInteractionProfileSO genericInteractionProfile;
     [SerializeField] private NpcDialogueAgent dialogueAgent;
+    [SerializeField] private NpcDialogueSequencePlayer sequencePlayer;
     [SerializeField] private NpcQuestGiver questGiver;
 
     [Header("Input")]
@@ -31,6 +32,7 @@ public sealed class NpcTalkInteractable : MonoBehaviour, IWorldInteractionPrompt
     [SerializeField] private bool registerOnlyWhileNearby = true;
     [SerializeField] private bool tapInteractCyclesNextOffer = true;
     [SerializeField] private float postConfirmInputLockoutSeconds = 0.25f;
+    [SerializeField] private bool logQuestInteractionDebug;
 
     private GameObject _playerRootInTrigger;
     private bool _enterArmed;
@@ -38,9 +40,11 @@ public sealed class NpcTalkInteractable : MonoBehaviour, IWorldInteractionPrompt
     private bool _genericPromptRollPassed = true;
     private float _nextInteractionAllowedTime;
     private float _postConfirmLockoutUntil;
-    private float _interactHeld;
-    private bool _interactPressedTracking;
-    private bool _confirmInputConsumed;
+    private bool _interactPressActive;
+    private float _interactPressStartTime;
+    private bool _interactConsumed;
+    private bool _waitingForReleaseAfterConfirm;
+    private int _selectedOfferIndexAtInteractPress;
 
     private void Reset()
     {
@@ -55,6 +59,8 @@ public sealed class NpcTalkInteractable : MonoBehaviour, IWorldInteractionPrompt
             skierProfile = GetComponent<NpcSkierProfile>();
         if (dialogueAgent == null)
             dialogueAgent = GetComponent<NpcDialogueAgent>();
+        if (sequencePlayer == null)
+            sequencePlayer = GetComponent<NpcDialogueSequencePlayer>();
         if (questGiver == null)
             questGiver = GetComponent<NpcQuestGiver>();
         if (interactionAreaTrigger == null)
@@ -90,6 +96,12 @@ public sealed class NpcTalkInteractable : MonoBehaviour, IWorldInteractionPrompt
         if (_playerRootInTrigger == null)
             return;
 
+        if (sequencePlayer != null && sequencePlayer.IsPlaying)
+        {
+            HandleDialogueSequenceInput();
+            return;
+        }
+
         if (questGiver != null && questGiver.HasActiveOfferSession)
         {
             HandleQuestOfferInput();
@@ -119,8 +131,8 @@ public sealed class NpcTalkInteractable : MonoBehaviour, IWorldInteractionPrompt
         if (!interact.enabled)
             interact.Enable();
 
-        bool interactPressed = interact.IsPressed();
-        bool sameAsNext = ActionsShareBinding(interactAction, nextOfferAction);
+        bool interactPressed = IsActionHeld(interact);
+        bool sameAsNext = IsSameAction(interactAction, nextOfferAction);
         bool nextPressedThisFrame = !sameAsNext && nextOfferAction != null && nextOfferAction.action != null && nextOfferAction.action.WasPressedThisFrame();
         bool interactPressedThisFrame = interact.WasPressedThisFrame();
         bool interactReleasedThisFrame = interact.WasReleasedThisFrame();
@@ -143,38 +155,88 @@ public sealed class NpcTalkInteractable : MonoBehaviour, IWorldInteractionPrompt
 
         if (interactPressedThisFrame)
         {
-            _interactPressedTracking = true;
-            _interactHeld = 0f;
-            _confirmInputConsumed = false;
-            return;
+            _interactPressActive = true;
+            _interactPressStartTime = Time.unscaledTime;
+            _interactConsumed = false;
+            _waitingForReleaseAfterConfirm = false;
+            _selectedOfferIndexAtInteractPress = questGiver.CurrentSelectedOfferIndex;
+            LogQuestDebug($"Interact press started on offer index {_selectedOfferIndexAtInteractPress}.");
         }
 
-        if (_interactPressedTracking && interactPressed)
+        if (_interactPressActive && interactPressed && !_interactConsumed)
         {
-            _interactHeld += Time.unscaledDeltaTime;
-            if (_interactHeld >= holdToConfirmSeconds)
+            float heldDuration = Time.unscaledTime - _interactPressStartTime;
+            if (heldDuration >= holdToConfirmSeconds)
             {
-                _confirmInputConsumed = true;
-                _interactPressedTracking = false;
-                _interactHeld = 0f;
-                var result = questGiver.ConfirmSelectedOffer();
-                _postConfirmLockoutUntil = Time.unscaledTime + postConfirmInputLockoutSeconds;
-                HandleQuestConfirmResult(result);
-                return;
+                _interactConsumed = true;
+                _waitingForReleaseAfterConfirm = true;
+                LogQuestDebug($"Hold threshold reached at {heldDuration:0.000}s for offer index {_selectedOfferIndexAtInteractPress}.");
+                ConfirmQuestOfferSelection(_selectedOfferIndexAtInteractPress);
             }
         }
 
         if (interactReleasedThisFrame)
         {
-            bool wasTap = !_confirmInputConsumed && _interactHeld < holdToConfirmSeconds;
+            float heldDuration = Time.unscaledTime - _interactPressStartTime;
+            bool consumed = _interactConsumed || _waitingForReleaseAfterConfirm;
+            LogQuestDebug($"Interact released after {heldDuration:0.000}s. Consumed={consumed}.");
             ResetQuestOfferInteractionState();
 
-            if (wasTap && tapInteractCyclesNextOffer)
+            if (consumed)
+                return;
+
+            if (heldDuration >= holdToConfirmSeconds)
             {
+                LogQuestDebug($"Release path confirming stored offer index {_selectedOfferIndexAtInteractPress}.");
+                ConfirmQuestOfferSelection(_selectedOfferIndexAtInteractPress);
+                return;
+            }
+
+            if (tapInteractCyclesNextOffer)
+            {
+                LogQuestDebug("Tap detected, cycling next offer.");
                 questGiver.CycleOffer(1);
                 RefreshQuestOfferBubble();
             }
         }
+    }
+
+    private void HandleDialogueSequenceInput()
+    {
+        if (Time.unscaledTime < _postConfirmLockoutUntil || sequencePlayer == null)
+            return;
+
+        bool previousPressed = previousOfferAction != null && previousOfferAction.action != null && previousOfferAction.action.WasPressedThisFrame();
+        bool nextPressed = nextOfferAction != null && nextOfferAction.action != null && nextOfferAction.action.WasPressedThisFrame();
+        if (sequencePlayer.HasActiveChoice)
+        {
+            if (previousPressed)
+            {
+                sequencePlayer.CycleChoice(-1);
+                return;
+            }
+
+            if (nextPressed)
+            {
+                sequencePlayer.CycleChoice(1);
+                return;
+            }
+        }
+
+        if (interactAction == null || interactAction.action == null)
+            return;
+
+        var interact = interactAction.action;
+        if (!interact.enabled)
+            interact.Enable();
+
+        if (!interact.WasPressedThisFrame())
+            return;
+
+        if (sequencePlayer.HasActiveChoice)
+            sequencePlayer.Choose(sequencePlayer.CurrentChoiceIndex);
+        else
+            sequencePlayer.Continue();
     }
 
     private void HandleTalkInput()
@@ -192,22 +254,20 @@ public sealed class NpcTalkInteractable : MonoBehaviour, IWorldInteractionPrompt
             if (!pressed)
                 _enterArmed = true;
 
-            _interactPressedTracking = false;
-            _interactHeld = 0f;
+            _interactPressActive = false;
             return;
         }
 
         if (!pressed)
         {
-            _interactPressedTracking = false;
-            _interactHeld = 0f;
+            _interactPressActive = false;
             return;
         }
 
-        if (!_interactPressedTracking)
+        if (!_interactPressActive)
         {
-            _interactPressedTracking = true;
-            _interactHeld = 0f;
+            _interactPressActive = true;
+            _interactPressStartTime = Time.unscaledTime;
 
             if (!requireHoldForTalk)
                 TriggerTalk();
@@ -217,10 +277,9 @@ public sealed class NpcTalkInteractable : MonoBehaviour, IWorldInteractionPrompt
 
         if (requireHoldForTalk)
         {
-            _interactHeld += Time.unscaledDeltaTime;
-            if (_interactHeld >= holdToConfirmSeconds)
+            if (Time.unscaledTime - _interactPressStartTime >= holdToConfirmSeconds)
             {
-                _interactHeld = -999f;
+                _interactPressStartTime = float.PositiveInfinity;
                 TriggerTalk();
             }
         }
@@ -268,22 +327,31 @@ public sealed class NpcTalkInteractable : MonoBehaviour, IWorldInteractionPrompt
             return;
         }
 
-        dialogueAgent.Presenter.UpdateQuestOffer(new NpcDialogueBubblePresenter.NpcQuestOfferBubbleViewData
+        var content = new NpcDialogueBubbleContent
         {
-            npcName = data.npcName,
-            badgeText = data.badgeText,
-            questTitle = data.questTitle,
-            stateText = data.stateText,
+            kind = NpcDialogueBubbleContentKind.Card,
+            lifetimeMode = NpcDialogueBubbleLifetimeMode.PersistentUntilHidden,
+            speakerName = data.npcName,
+            titleText = data.questTitle,
             bodyText = data.bodyText,
-            indexText = data.totalOffers > 1 ? $"{data.selectedIndex + 1}/{data.totalOffers}" : string.Empty,
-            canCycle = data.canCycle,
-            canConfirm = data.canConfirm,
-            previousBindingText = GetBindingDisplay(previousOfferAction, "-"),
-            nextBindingText = GetBindingDisplay(nextOfferAction != null ? nextOfferAction : interactAction, "-"),
-            confirmBindingText = GetBindingDisplay(interactAction, "-"),
-            confirmVerb = data.confirmVerb,
-            confirmText = data.confirmText
-        });
+            metaText = ComposeMetaText(data),
+            controlsText = ComposeControlsText(data),
+            errorText = data.errorText,
+            errorUntil = data.errorUntil,
+            showSpeaker = !string.IsNullOrWhiteSpace(data.npcName),
+            importance = NpcDialogueImportance.Quest,
+            styleOverride = null,
+            context = new DialogueContext
+            {
+                npcName = data.npcName,
+                audience = NpcDialogueAudience.Player,
+                importanceOverride = NpcDialogueImportance.Quest
+            },
+            inputActions = NpcDialogueDirector.Instance != null ? NpcDialogueDirector.Instance.InputActions : null,
+            priority = 1000
+        };
+
+        dialogueAgent.Presenter.UpdateContent(content);
     }
 
     private void HideQuestOfferBubble()
@@ -306,7 +374,7 @@ public sealed class NpcTalkInteractable : MonoBehaviour, IWorldInteractionPrompt
         if (registerOnlyWhileNearby && ShouldAllowPrompt())
             RegisterPrompt();
 
-        if (autoBeginQuestSessionOnEnter && questGiver != null && questGiver.BeginOfferSession())
+        if (autoBeginQuestSessionOnEnter && questGiver != null && !questGiver.HasSequenceForCurrentOffer() && questGiver.BeginOfferSession())
         {
             RefreshQuestOfferBubble();
         }
@@ -433,9 +501,11 @@ public sealed class NpcTalkInteractable : MonoBehaviour, IWorldInteractionPrompt
 
     private void ResetQuestOfferInteractionState()
     {
-        _interactPressedTracking = false;
-        _interactHeld = 0f;
-        _confirmInputConsumed = false;
+        _interactPressActive = false;
+        _interactPressStartTime = 0f;
+        _interactConsumed = false;
+        _waitingForReleaseAfterConfirm = false;
+        _selectedOfferIndexAtInteractPress = 0;
     }
 
     private void HandleQuestConfirmResult(NpcQuestGiver.NpcQuestConfirmResult result)
@@ -486,6 +556,110 @@ public sealed class NpcTalkInteractable : MonoBehaviour, IWorldInteractionPrompt
         return a != null && b != null && a.action != null && b.action != null && a.action.id == b.action.id;
     }
 
+    private static bool IsSameAction(InputActionReference a, InputActionReference b)
+    {
+        return ActionsShareBinding(a, b);
+    }
+
+    private void ConfirmQuestOfferSelection(int offerIndex)
+    {
+        if (questGiver == null)
+        {
+            LogQuestDebug("Confirm requested, but no quest giver is assigned.");
+            return;
+        }
+
+        if (!questGiver.HasActiveOfferSession)
+        {
+            LogQuestDebug("Confirm requested, but there is no active offer session.");
+            return;
+        }
+
+        float heldDuration = Time.unscaledTime - _interactPressStartTime;
+        LogQuestDebug($"Confirming offer index {offerIndex} after {heldDuration:0.000}s.");
+        var result = questGiver.ConfirmOfferAtIndex(offerIndex);
+        LogQuestDebug($"Confirm result: {result}.");
+        _postConfirmLockoutUntil = Time.unscaledTime + postConfirmInputLockoutSeconds;
+        HandleQuestConfirmResult(result);
+    }
+
+    private string ComposeMetaText(NpcQuestGiver.NpcQuestOfferViewData data)
+    {
+        string meta = string.Empty;
+        AppendSegment(ref meta, data.badgeText);
+        if (data.totalOffers > 1)
+            AppendSegment(ref meta, $"{data.selectedIndex + 1} / {data.totalOffers}");
+        AppendSegment(ref meta, data.stateText);
+        return meta;
+    }
+
+    private string ComposeControlsText(NpcQuestGiver.NpcQuestOfferViewData data)
+    {
+        string interactBinding = GetBindingDisplay(interactAction, "-");
+        string previousBinding = GetBindingDisplay(previousOfferAction, "-");
+        string nextBinding = GetBindingDisplay(nextOfferAction != null ? nextOfferAction : interactAction, "-");
+        bool sameAsNext = IsSameAction(interactAction, nextOfferAction) || nextOfferAction == null;
+
+        string controls = string.Empty;
+        if (data.canConfirm && !string.IsNullOrWhiteSpace(data.confirmText))
+            AppendSegment(ref controls, $"{interactBinding} {data.confirmText}", "    ");
+
+        if (data.canCycle)
+        {
+            if (sameAsNext && tapInteractCyclesNextOffer)
+            {
+                AppendSegment(ref controls, $"Tap {interactBinding} Next", "    ");
+            }
+            else
+            {
+                AppendSegment(ref controls, $"{previousBinding} Previous", "    ");
+                AppendSegment(ref controls, $"{nextBinding} Next", "    ");
+            }
+        }
+
+        return controls;
+    }
+
+    private static void AppendSegment(ref string target, string value, string separator = " • ")
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+
+        target = string.IsNullOrWhiteSpace(target)
+            ? value.Trim()
+            : target + separator + value.Trim();
+    }
+
+    private void LogQuestDebug(string message)
+    {
+        if (!logQuestInteractionDebug)
+            return;
+
+        Debug.Log($"[NpcTalkInteractable] {name}: {message}", this);
+    }
+
+    private static bool IsActionHeld(InputAction action)
+    {
+        if (action == null)
+            return false;
+
+        if (action.IsPressed())
+            return true;
+
+        if (action.activeControl != null)
+        {
+            try
+            {
+                return action.ReadValue<float>() > 0.5f;
+            }
+            catch
+            {
+            }
+        }
+
+        return false;
+    }
+
     private static string GetBindingDisplay(InputActionReference actionReference, string fallback)
     {
         if (actionReference == null || actionReference.action == null)
@@ -528,6 +702,8 @@ public sealed class NpcTalkInteractable : MonoBehaviour, IWorldInteractionPrompt
     }
 
     public bool IsPromptAvailable => _playerRootInTrigger != null && ShouldAllowPrompt();
+    public bool IsPlayerInInteraction => _playerRootInTrigger != null;
+    public bool IsActivelyInteracting => (questGiver != null && questGiver.HasActiveOfferSession) || (sequencePlayer != null && sequencePlayer.IsPlaying);
     public string PromptActionText => "Interact";
 
     public string PromptDescriptionText
@@ -548,4 +724,21 @@ public sealed class NpcTalkInteractable : MonoBehaviour, IWorldInteractionPrompt
     public float PromptHoldDuration => holdToConfirmSeconds;
     public Vector3 PromptWorldPosition => interactionAreaTrigger != null ? interactionAreaTrigger.bounds.center : transform.position;
     public int PromptPriority => promptPriority;
+
+    private void OnValidate()
+    {
+        if (identity == null)
+            identity = GetComponent<NpcIdentity>();
+        if (dialogueAgent == null)
+            dialogueAgent = GetComponent<NpcDialogueAgent>();
+        if (sequencePlayer == null)
+            sequencePlayer = GetComponent<NpcDialogueSequencePlayer>();
+        if (questGiver == null)
+            questGiver = GetComponent<NpcQuestGiver>();
+        if (interactionAreaTrigger == null)
+            interactionAreaTrigger = GetComponent<Collider>();
+
+        if (questGiver != null && interactAction == null)
+            Debug.LogWarning($"[{nameof(NpcTalkInteractable)}] {name} has a quest giver but no interact action.", this);
+    }
 }

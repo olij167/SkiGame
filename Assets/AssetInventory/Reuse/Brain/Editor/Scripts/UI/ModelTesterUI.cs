@@ -35,12 +35,17 @@ namespace Brain
         private CancellationTokenSource _cts;
         private string _customPrompt;
         private string _imagePath;
+        private Action<string> _onCustomPromptChanged;
+        private bool _customPromptSeeded;
 
-        public static ModelTesterUI ShowWindow(string imagePath)
+        public static ModelTesterUI ShowWindow(string imagePath, string initialCustomPrompt = null, Action<string> onCustomPromptChanged = null)
         {
             ModelTesterUI ui = GetWindow<ModelTesterUI>("AI Model Tester");
             ui.minSize = new Vector2(800, 600);
             ui._imagePath = imagePath;
+            ui._onCustomPromptChanged = onCustomPromptChanged;
+            ui._customPrompt = string.IsNullOrEmpty(initialCustomPrompt) ? null : initialCustomPrompt;
+            ui._customPromptSeeded = true;
             ui.Init();
             return ui;
         }
@@ -83,6 +88,7 @@ namespace Brain
             _scroll = Vector2.zero;
             _isRunning = false;
             _cts = null;
+            if (!_customPromptSeeded) _customPrompt = null;
         }
 
         private void OnEnable() => Init();
@@ -200,6 +206,7 @@ namespace Brain
                 EditorGUI.EndDisabledGroup();
                 EditorGUILayout.BeginVertical(GUILayout.Width(40), GUILayout.MaxHeight(150));
                 GUILayout.FlexibleSpace();
+                EditorGUI.BeginChangeCheck();
                 if (_customPrompt == null)
                 {
                     if (GUILayout.Button("Customize", GUILayout.ExpandWidth(false)))
@@ -214,17 +221,23 @@ namespace Brain
                         _customPrompt = null;
                     }
                 }
+                bool toggled = EditorGUI.EndChangeCheck();
                 GUILayout.FlexibleSpace();
                 EditorGUILayout.EndVertical();
 
+                bool edited = false;
                 if (_customPrompt != null)
                 {
                     EditorGUILayout.BeginVertical();
                     EditorGUILayout.LabelField("Custom", EditorStyles.centeredGreyMiniLabel);
+                    EditorGUI.BeginChangeCheck();
                     _customPrompt = EditorGUILayout.TextArea(_customPrompt);
+                    edited = EditorGUI.EndChangeCheck();
                     EditorGUILayout.EndVertical();
                 }
                 EditorGUILayout.EndHorizontal();
+
+                if (toggled || edited) _onCustomPromptChanged?.Invoke(_customPrompt);
             }
             EditorGUILayout.Space();
             EditorGUILayout.EndFoldoutHeaderGroup();
@@ -309,7 +322,9 @@ namespace Brain
                 List<CaptionResult> results = await CaptionEngine.CaptionImages(
                     new List<string> {imagePath},
                     new List<string> {prompt},
-                    model.Name);
+                    model.Name,
+                    null,
+                    _cts?.Token ?? default);
                 float endTime = Time.realtimeSinceStartup;
 
                 string caption = results?.FirstOrDefault()?.caption ?? string.Empty;

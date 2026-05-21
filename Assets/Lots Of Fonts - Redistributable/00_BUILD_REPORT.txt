@@ -1,0 +1,26 @@
+Build report
+============
+Source archive: C:\Users\olij1\Downloads\font_redistribution_pack_builder_kit\font_redistribution_pack_builder_kit\Lots of fonts.zip
+Output archive: C:\Users\olij1\Downloads\font_redistribution_pack_builder_kit\font_redistribution_pack_builder_kit\Lots_Of_Fonts_Redistributable.zip
+Font files copied: 123
+Local license/readme files copied: 122
+Missing manifest entries: 0
+
+Copied by license:
+- 1001Fonts FFC: 2
+- 1001Fonts FFC / 100% Free: 1
+- 1001Fonts Free For Commercial Use License (FFC): 23
+- 1001Fonts free for commercial use: 1
+- Apache License 2.0: 19
+- Creative Commons Attribution / OFL depending on source version: 1
+- Creative Commons Attribution-ShareAlike 4.0: 4
+- Creative Commons Zero (CC0): 5
+- Custom freeware / 1001Fonts free for commercial use: 6
+- Design Science License: 2
+- Free for personal and commercial use: 1
+- Freeware: 1
+- Freeware / 100% free: 1
+- Freeware / commercial use allowed: 1
+- Freeware; free for personal or commercial use: 1
+- GPL and OFL dual license: 1
+- SIL Open Font License 1.1: 53

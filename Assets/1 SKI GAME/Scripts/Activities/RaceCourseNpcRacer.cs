@@ -170,7 +170,15 @@ public sealed class RaceCourseNpcRacer : MonoBehaviour, ISkiInputSource
         _startHoldRotation = transform.rotation;
 
         if (skiController != null)
+        {
+            skiController.AcceptPlayerInput = false;
             skiController.SetExternalInputSource(this);
+        }
+
+        if (walkingController != null)
+        {
+            walkingController.AcceptPlayerInput = false;
+        }
     }
 
     public void StopRace()

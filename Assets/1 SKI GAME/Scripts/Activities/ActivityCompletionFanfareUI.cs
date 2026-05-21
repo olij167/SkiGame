@@ -24,6 +24,7 @@ namespace SkiGame.UI
             RescueSuccess,
             RescueFailure,
             Cancelled,
+            QuestAccepted,
             QuestStageAdvanced,
             QuestCompleted,
             CustomDebug,
@@ -265,6 +266,7 @@ namespace SkiGame.UI
             UnbindQuestDirector();
 
             _boundQuestDirector = director;
+            _boundQuestDirector.OnQuestAccepted += HandleQuestAccepted;
             _boundQuestDirector.OnQuestStageAdvanced += HandleQuestStageAdvanced;
             _boundQuestDirector.OnQuestCompleted += HandleQuestCompleted;
         }
@@ -274,6 +276,7 @@ namespace SkiGame.UI
             if (_boundQuestDirector == null)
                 return;
 
+            _boundQuestDirector.OnQuestAccepted -= HandleQuestAccepted;
             _boundQuestDirector.OnQuestStageAdvanced -= HandleQuestStageAdvanced;
             _boundQuestDirector.OnQuestCompleted -= HandleQuestCompleted;
             _boundQuestDirector = null;
@@ -350,6 +353,17 @@ namespace SkiGame.UI
                 FanfareStateId.QuestStageAdvanced,
                 BuildQuestStageAdvancedHeadline(definition, runtimeState),
                 BuildQuestStageAdvancedDetail(definition, runtimeState));
+        }
+
+        private void HandleQuestAccepted(QuestDefinitionSO definition, QuestRuntimeState runtimeState)
+        {
+            if (definition == null)
+                return;
+
+            Enqueue(
+                FanfareStateId.QuestAccepted,
+                "QUEST STARTED",
+                BuildQuestAcceptedDetail(definition));
         }
 
         private void HandleQuestCompleted(QuestDefinitionSO definition, QuestRuntimeState runtimeState)
@@ -734,6 +748,12 @@ namespace SkiGame.UI
                 2.15f);
 
             EnsureStyle(
+                FanfareStateId.QuestAccepted,
+                new Color(0.62f, 0.86f, 1f, 1f),
+                new Color(0.96f, 0.99f, 1f, 0.98f),
+                2.25f);
+
+            EnsureStyle(
                 FanfareStateId.QuestStageAdvanced,
                 new Color(0.42f, 0.84f, 1f, 1f),
                 new Color(0.96f, 0.99f, 1f, 0.98f),
@@ -821,6 +841,10 @@ namespace SkiGame.UI
 
                 case FanfareStateId.QuestFocused:
                     Enqueue(stateId, "LIFT BASICS", "Now that you have a pass, use the lift to move uphill instead of hiking or skating back up.");
+                    break;
+
+                case FanfareStateId.QuestAccepted:
+                    Enqueue(stateId, "QUEST STARTED", "Lift Basics");
                     break;
 
                 case FanfareStateId.QuestStageAdvanced:
@@ -962,6 +986,20 @@ namespace SkiGame.UI
             return definition.stages != null && definition.stages.Count > 1
                 ? $"STAGE {completedStageIndex + 1} COMPLETE"
                 : "QUEST PROGRESS";
+        }
+
+        private static string BuildQuestAcceptedDetail(QuestDefinitionSO definition)
+        {
+            if (definition == null)
+                return "Quest accepted.";
+
+            if (!string.IsNullOrWhiteSpace(definition.title))
+                return definition.title.Trim();
+
+            if (!string.IsNullOrWhiteSpace(definition.description))
+                return definition.description.Trim();
+
+            return "Quest accepted.";
         }
 
         private static string BuildQuestStageAdvancedDetail(QuestDefinitionSO definition, QuestRuntimeState runtimeState)

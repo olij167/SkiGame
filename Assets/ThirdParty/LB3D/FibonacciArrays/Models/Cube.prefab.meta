@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 654ad28694739d5418709f3f07449ec7
+timeCreated: 1505252581
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 101245
+  packageName: 'Fibonacci Arrays [Optimal Spacing Script]'
+  packageVersion: 1.2.0
+  assetPath: Assets/ThirdParty/LB3D/FibonacciArrays/Models/Cube.prefab
+  uploadId: 395887

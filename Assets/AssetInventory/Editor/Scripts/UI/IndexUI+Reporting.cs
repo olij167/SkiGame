@@ -580,12 +580,13 @@ namespace AssetInventory
             }
 
             // load all selected items but count each only once
+            HashSet<int> seen = new HashSet<int>();
             foreach (int id in ids)
             {
-                GatherTreeChildren(id, _selectedReportEntries, ReportTreeModel);
+                GatherTreeChildren(id, _selectedReportEntries, seen, ReportTreeModel);
             }
             // Filter to only include actual packages (any depth), not folders or file nodes
-            _selectedReportEntries = _selectedReportEntries.Where(a => _reportPackageTreeIds.Contains(a.TreeId)).Distinct().ToList();
+            _selectedReportEntries = _selectedReportEntries.Where(a => _reportPackageTreeIds.Contains(a.TreeId)).ToList();
 
             _reportBulkTags.Clear();
             _selectedReportEntries.ForEach(info => info.PackageTags?.ForEach(t =>

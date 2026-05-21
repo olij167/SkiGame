@@ -203,6 +203,7 @@ namespace AssetInventory
         private float _assetTreeSelectionTotalCosts;
         private float _assetTreeSelectionStoreCosts;
         private readonly Dictionary<string, Tuple<int, Color>> _assetBulkTags = new Dictionary<string, Tuple<int, Color>>();
+        private int _selectionGeneration;
         private int _packageDetailsTab;
         private bool _metadataEditMode;
         private int _packageInspectorTab;
@@ -586,7 +587,7 @@ namespace AssetInventory
                     EditorGUILayout.LabelField("Organization", EditorStyles.boldLabel, GUILayout.Width(labelWidth - 2));
                     if (GUILayout.Button(CommonUIStyles.Content(info.OriginalLocation), CommonUIStyles.wrappedLinkLabel, GUILayout.ExpandWidth(true)))
                     {
-                        Application.OpenURL(info.GetAMOrganizationUrl());
+                        AI.OpenURL(info.GetAMOrganizationUrl());
                     }
                     GUILayout.EndHorizontal();
                 });
@@ -597,7 +598,7 @@ namespace AssetInventory
                     EditorGUILayout.LabelField("Project", EditorStyles.boldLabel, GUILayout.Width(labelWidth - 2));
                     if (GUILayout.Button(CommonUIStyles.Content(info.ToAsset().GetRootAsset().DisplayName), CommonUIStyles.wrappedLinkLabel, GUILayout.ExpandWidth(true)))
                     {
-                        Application.OpenURL(info.GetAMProjectUrl());
+                        AI.OpenURL(info.GetAMProjectUrl());
                     }
                     GUILayout.EndHorizontal();
                 });
@@ -610,7 +611,7 @@ namespace AssetInventory
                         EditorGUILayout.LabelField("Collection", EditorStyles.boldLabel, GUILayout.Width(labelWidth - 2));
                         if (GUILayout.Button(CommonUIStyles.Content(info.GetDisplayName()), CommonUIStyles.wrappedLinkLabel, GUILayout.ExpandWidth(true)))
                         {
-                            Application.OpenURL(info.GetAMCollectionUrl());
+                            AI.OpenURL(info.GetAMCollectionUrl());
                         }
                         GUILayout.EndHorizontal();
                     });
@@ -651,7 +652,7 @@ namespace AssetInventory
                             {
                                 if (GUILayout.Button(CommonUIStyles.Content("?", "Changelog"), GUILayout.Width(20)))
                                 {
-                                    Application.OpenURL(changeLogURL);
+                                    AI.OpenURL(changeLogURL);
                                 }
                             }
                         }
@@ -726,7 +727,7 @@ namespace AssetInventory
                         EditorGUILayout.LabelField("License", EditorStyles.boldLabel, GUILayout.Width(labelWidth - 2));
                         if (GUILayout.Button(CommonUIStyles.Content(info.License), CommonUIStyles.wrappedLinkLabel, GUILayout.ExpandWidth(true)))
                         {
-                            Application.OpenURL(info.LicenseLocation);
+                            AI.OpenURL(info.LicenseLocation);
                         }
                         GUILayout.EndHorizontal();
                     }
@@ -1100,7 +1101,7 @@ namespace AssetInventory
                                         string changeLogURL = info.GetChangeLogURL(info.TargetPackageVersion());
                                         if (!string.IsNullOrWhiteSpace(changeLogURL) && GUILayout.Button(CommonUIStyles.Content("?", "Changelog"), GUILayout.Width(20)))
                                         {
-                                            Application.OpenURL(changeLogURL);
+                                            AI.OpenURL(changeLogURL);
                                         }
                                         EditorGUILayout.EndHorizontal();
                                     });
@@ -1562,7 +1563,7 @@ namespace AssetInventory
                             case MetadataDefinition.DataType.Url:
                                 if (GUILayout.Button(metaInfo.StringValue?.Replace("https://", "").Replace("www.", ""), EditorStyles.linkLabel))
                                 {
-                                    Application.OpenURL(metaInfo.StringValue);
+                                    AI.OpenURL(metaInfo.StringValue);
                                 }
                                 break;
 
@@ -1710,7 +1711,7 @@ namespace AssetInventory
                         {
                             if (GUILayout.Button((string.IsNullOrWhiteSpace(dependency.name) ? dependency.location : dependency.name) + "*", CommonUIStyles.wrappedButton))
                             {
-                                Application.OpenURL(dependency.location);
+                                AI.OpenURL(dependency.location);
                             }
                         }
                     }
@@ -1788,7 +1789,7 @@ namespace AssetInventory
                         if (Event.current.button == 0)
                         {
                             // open URL in browser
-                            Application.OpenURL(media.GetUrl());
+                            AI.OpenURL(media.GetUrl());
                         }
                         else
                         {
@@ -2877,7 +2878,13 @@ namespace AssetInventory
             {
                 if (GUILayout.Button(CommonUIStyles.Content("Open Package Locations...")))
                 {
-                    bulkAssets.Where(info => info.ParentId <= 0).ForEach(info => { EditorUtility.RevealInFinder(info.GetLocation(true)); });
+                    IEnumerable<AssetInfo> assetInfos = bulkAssets.Where(info => info.ParentId <= 0);
+                    bool show = true;
+                    if (assetInfos.Count() > AI.Config.massOpenWarnThreshold)
+                    {
+                        show = EditorUtility.DisplayDialog("Open Locations", $"You are about to open {assetInfos.Count()} locations. This may take a while and will open a lot of windows.\n\nDo you want to continue?", "Continue", "Cancel");
+                    }
+                    if (show) assetInfos.ForEach(info => { EditorUtility.RevealInFinder(info.GetLocation(true)); });
                 }
             });
 
@@ -3658,29 +3665,59 @@ namespace AssetInventory
             }
 
             // load all selected items but count each only once
+            HashSet<int> seen = new HashSet<int>();
             foreach (int id in ids)
             {
-                GatherTreeChildren(id, _selectedTreeAssets, AssetTreeModel);
+                GatherTreeChildren(id, _selectedTreeAssets, seen, AssetTreeModel);
             }
-            _selectedTreeAssets = _selectedTreeAssets.Distinct().ToList();
 
             _assetBulkTags.Clear();
 
-            // initialize download status
-            AI.RegisterSelection(_selectedTreeAssets);
+            // initialize download status, debounce for bulk selections to avoid expensive re-initialization on rapid clicks
+            if (_selectedTreeAssets.Count <= 1)
+            {
+                AI.RegisterSelection(_selectedTreeAssets);
+            }
+            else
+            {
+                int generation = ++_selectionGeneration;
+                EditorApplication.delayCall += () =>
+                {
+                    if (_selectionGeneration == generation) AI.RegisterSelection(_selectedTreeAssets);
+                };
+            }
 
             // merge tags
             _selectedTreeAssets.ForEach(info => info.PackageTags?.ForEach(t =>
             {
-                if (!_assetBulkTags.ContainsKey(t.Name)) _assetBulkTags.Add(t.Name, new Tuple<int, Color>(0, t.GetColor()));
-                _assetBulkTags[t.Name] = new Tuple<int, Color>(_assetBulkTags[t.Name].Item1 + 1, _assetBulkTags[t.Name].Item2);
+                if (_assetBulkTags.TryGetValue(t.Name, out Tuple<int, Color> existing))
+                {
+                    _assetBulkTags[t.Name] = new Tuple<int, Color>(existing.Item1 + 1, existing.Item2);
+                }
+                else
+                {
+                    _assetBulkTags.Add(t.Name, new Tuple<int, Color>(1, t.GetColor()));
+                }
             }));
 
-            _assetTreeSubPackageCount = _selectedTreeAssets.Count(a => a.ParentId > 0);
-            _assetTreeSelectionSize = _selectedTreeAssets.Where(a => a.ParentId == 0).Sum(a => a.PackageSize);
-            _assetTreeSelectionTotalCosts = _selectedTreeAssets.Where(a => a.ParentId == 0).Sum(a => a.GetPrice());
-            _assetTreeSelectionStoreCosts = _selectedTreeAssets.Where(a => a.ParentId == 0 && a.AssetSource == Asset.Source.AssetStorePackage)
-                .Sum(a => a.GetPrice());
+            _assetTreeSubPackageCount = 0;
+            _assetTreeSelectionSize = 0;
+            _assetTreeSelectionTotalCosts = 0;
+            _assetTreeSelectionStoreCosts = 0;
+            foreach (AssetInfo a in _selectedTreeAssets)
+            {
+                if (a.ParentId > 0)
+                {
+                    _assetTreeSubPackageCount++;
+                }
+                else
+                {
+                    _assetTreeSelectionSize += a.PackageSize;
+                    float price = a.GetPrice();
+                    _assetTreeSelectionTotalCosts += price;
+                    if (a.AssetSource == Asset.Source.AssetStorePackage) _assetTreeSelectionStoreCosts += price;
+                }
+            }
 
             // refresh metadata automatically for single selections
             if (_selectedTreeAsset != null && AI.Config.autoRefreshMetadata && _selectedTreeAsset.ForeignId > 0 && (DateTime.Now - _selectedTreeAsset.LastOnlineRefresh).TotalHours >= AI.Config.metadataTimeout)
@@ -3706,21 +3743,47 @@ namespace AssetInventory
 
             _assetBulkTags.Clear();
 
-            // initialize download status
-            AI.RegisterSelection(_selectedTreeAssets);
+            // initialize download status, debounce for bulk selections to avoid expensive re-initialization on rapid clicks
+            if (_selectedTreeAssets.Count <= 1)
+            {
+                AI.RegisterSelection(_selectedTreeAssets);
+            }
+            else
+            {
+                int generation = ++_selectionGeneration;
+                EditorApplication.delayCall += () =>
+                {
+                    if (_selectionGeneration == generation) AI.RegisterSelection(_selectedTreeAssets);
+                };
+            }
 
             // merge tags
             _selectedTreeAssets.ForEach(info => info.PackageTags?.ForEach(t =>
             {
-                if (!_assetBulkTags.ContainsKey(t.Name)) _assetBulkTags.Add(t.Name, new Tuple<int, Color>(0, t.GetColor()));
-                _assetBulkTags[t.Name] = new Tuple<int, Color>(_assetBulkTags[t.Name].Item1 + 1, _assetBulkTags[t.Name].Item2);
+                if (_assetBulkTags.TryGetValue(t.Name, out Tuple<int, Color> existing))
+                {
+                    _assetBulkTags[t.Name] = new Tuple<int, Color>(existing.Item1 + 1, existing.Item2);
+                }
+                else
+                {
+                    _assetBulkTags.Add(t.Name, new Tuple<int, Color>(1, t.GetColor()));
+                }
             }));
 
             _assetTreeSubPackageCount = 0;
-            _assetTreeSelectionSize = _selectedTreeAssets.Where(a => a.ParentId == 0).Sum(a => a.PackageSize);
-            _assetTreeSelectionTotalCosts = _selectedTreeAssets.Where(a => a.ParentId == 0).Sum(a => a.GetPrice());
-            _assetTreeSelectionStoreCosts = _selectedTreeAssets.Where(a => a.ParentId == 0 && a.AssetSource == Asset.Source.AssetStorePackage)
-                .Sum(a => a.GetPrice());
+            _assetTreeSelectionSize = 0;
+            _assetTreeSelectionTotalCosts = 0;
+            _assetTreeSelectionStoreCosts = 0;
+            foreach (AssetInfo a in _selectedTreeAssets)
+            {
+                if (a.ParentId == 0)
+                {
+                    _assetTreeSelectionSize += a.PackageSize;
+                    float price = a.GetPrice();
+                    _assetTreeSelectionTotalCosts += price;
+                    if (a.AssetSource == Asset.Source.AssetStorePackage) _assetTreeSelectionStoreCosts += price;
+                }
+            }
         }
 
         private void LoadMediaOnDemand(AssetInfo info)

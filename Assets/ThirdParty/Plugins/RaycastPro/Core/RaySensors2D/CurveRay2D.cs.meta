@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 8c0395d96da278d459953d1aefaf3b04
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {fileID: 2800000, guid: 6c9c102474828144495a37bf29beb3d9, type: 3}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 214714
+  packageName: RaycastPro
+  packageVersion: 1.1.5
+  assetPath: Assets/ThirdParty/Plugins/RaycastPro/Core/RaySensors2D/CurveRay2D.cs
+  uploadId: 840452

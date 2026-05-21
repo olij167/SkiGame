@@ -1,0 +1,30 @@
+Font license audit note
+=======================
+Font file: Mordred.ttf
+Original archive path: mordred/Mordred.ttf
+Resolved zip entry: Lots of fonts/mordred/Mordred.ttf
+Grouped family: Mordred
+Internal family: Mordred
+Full name: Mordred
+Style: Regular
+
+Audit status: Commercial-free use
+License basis: 1001Fonts Free For Commercial Use License (FFC)
+Recommendation: OK for commercial use
+Evidence: bundled 1001Fonts EULA / readme
+Source/local file from audit: local 1001fonts-*-eula.txt
+Generic/official license URL used by builder: https://www.1001fonts.com/licenses/ffc.html
+
+Notes:
+Allows personal and commercial use; do not sell/publish the font files as a standalone font product.
+
+Embedded font metadata:
+- License description: 
+- License URL: 
+- Copyright: Copyright (c) Typographer Mediengestaltung, 2000. All rights reserved. Designed by Paul Reid.
+
+Copied local license/readme files:
+- Lots Of Fonts - Redistributable/Commercial-Free Redistribution/1001Fonts Free For Commercial Use License (FFC)/Mordred/SOURCE_LICENSES/1001fonts-mordred-eula.txt
+- Lots Of Fonts - Redistributable/Commercial-Free Redistribution/1001Fonts Free For Commercial Use License (FFC)/Mordred/SOURCE_LICENSES/1001fonts-mordred-eula.txt.meta
+
+This file is generated from an audit manifest. It is not legal advice.

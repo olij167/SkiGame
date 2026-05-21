@@ -1,0 +1,29 @@
+Font license audit note
+=======================
+Font file: {ogrejuice}2.ttf
+Original archive path: {ogrejuice}2.ttf
+Resolved zip entry: Lots of fonts/{ogrejuice}2.ttf
+Grouped family: {ogrejuice}
+Internal family: {ogrejuice}
+Full name: {ogrejuice}
+Style: Regular
+
+Audit status: Commercial-free use
+License basis: 1001Fonts free for commercial use
+Recommendation: OK for commercial use
+Evidence: 1001Fonts
+Source/local file from audit: https://www.1001fonts.com/ogrejuice-font.html
+Generic/official license URL used by builder: https://www.1001fonts.com/licenses/ffc.html
+
+Notes:
+Listed free for personal and commercial use.
+
+Embedded font metadata:
+- License description: 
+- License URL: 
+- Copyright: Typeface © <your company>. 2003. All Rights Reserved
+
+Copied local license/readme files:
+- None found near the original font file. Use the license URL/evidence above for manual verification.
+
+This file is generated from an audit manifest. It is not legal advice.

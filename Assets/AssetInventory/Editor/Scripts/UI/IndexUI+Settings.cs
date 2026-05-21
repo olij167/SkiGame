@@ -1078,6 +1078,12 @@ namespace AssetInventory
                     AI.Config.aiPause = EditorGUILayout.DelayedFloatField(AI.Config.aiPause, GUILayout.Width(50));
                     EditorGUILayout.LabelField("seconds", EditorStyles.miniLabel);
                     GUILayout.EndHorizontal();
+
+                    GUILayout.BeginHorizontal();
+                    EditorGUILayout.LabelField(CommonUIStyles.Content("Request Timeout", "Cancel an individual AI request after this many seconds (e.g. when a model takes too long to load). Set to 0 to disable. The global Stop button always works regardless of this setting."), EditorStyles.boldLabel, GUILayout.Width(labelWidth));
+                    AI.Config.aiTimeout = Mathf.Max(0, EditorGUILayout.DelayedIntField(AI.Config.aiTimeout, GUILayout.Width(50)));
+                    EditorGUILayout.LabelField(AI.Config.aiTimeout == 0 ? "seconds (off)" : "seconds", EditorStyles.miniLabel);
+                    GUILayout.EndHorizontal();
                 }
 
                 GUILayout.BeginHorizontal();
@@ -1107,7 +1113,7 @@ namespace AssetInventory
                         EditorGUILayout.HelpBox("This backend requires installing the Blip-Caption tool. It is free of charge and the guide can be found under the GitHub link below (Python, pipx, blip).", MessageType.Info);
                         if (GUILayout.Button("Salesforce Blip through Blip-Caption tool (local, free)", CommonUIStyles.wrappedLinkLabel, GUILayout.ExpandWidth(true)))
                         {
-                            Application.OpenURL("https://github.com/simonw/blip-caption");
+                            AI.OpenURL("https://github.com/simonw/blip-caption");
                         }
                         GUILayout.EndVertical();
                         GUILayout.EndHorizontal();
@@ -1200,9 +1206,14 @@ namespace AssetInventory
                             }
                             if (GUILayout.Button("Model Catalog", CommonUIStyles.wrappedLinkLabel, GUILayout.ExpandWidth(false)))
                             {
-                                Application.OpenURL(Intelligence.OLLAMA_LIBRARY);
+                                AI.OpenURL(Intelligence.OLLAMA_LIBRARY);
                             }
                             GUILayout.EndVertical();
+                            GUILayout.EndHorizontal();
+
+                            GUILayout.BeginHorizontal();
+                            EditorGUILayout.LabelField(CommonUIStyles.Content("Batch Size", "Number of requests to send to Ollama in parallel (1 = sequential, 2-4 recommended). Match this to the OLLAMA_NUM_PARALLEL environment variable on the Ollama server (default 4); requests beyond that just queue server-side."), EditorStyles.boldLabel, GUILayout.Width(labelWidth));
+                            AI.Config.ollamaParallelRequests = EditorGUILayout.DelayedIntField(AI.Config.ollamaParallelRequests, GUILayout.Width(50));
                             GUILayout.EndHorizontal();
                         }
                         else
@@ -1215,7 +1226,7 @@ namespace AssetInventory
                             if (GUILayout.Button("Refresh", GUILayout.ExpandWidth(false))) Intelligence.RefreshOllama();
                             if (GUILayout.Button("Ollama Website", CommonUIStyles.wrappedLinkLabel, GUILayout.ExpandWidth(false)))
                             {
-                                Application.OpenURL(Intelligence.OLLAMA_WEBSITE);
+                                AI.OpenURL(Intelligence.OLLAMA_WEBSITE);
                             }
                             GUILayout.EndHorizontal();
                             GUILayout.EndVertical();
@@ -1276,7 +1287,7 @@ namespace AssetInventory
                                 }
                                 if (GUILayout.Button("LM Studio Website", EditorStyles.linkLabel, GUILayout.ExpandWidth(false)))
                                 {
-                                    Application.OpenURL(Intelligence.LMSTUDIO_WEBSITE);
+                                    AI.OpenURL(Intelligence.LMSTUDIO_WEBSITE);
                                 }
                             }
                             GUILayout.EndVertical();
@@ -1297,7 +1308,7 @@ namespace AssetInventory
                             if (GUILayout.Button("Refresh", GUILayout.ExpandWidth(false))) Intelligence.RefreshLMStudio();
                             if (GUILayout.Button("LM Studio Website", EditorStyles.linkLabel, GUILayout.ExpandWidth(false)))
                             {
-                                Application.OpenURL(Intelligence.LMSTUDIO_WEBSITE);
+                                AI.OpenURL(Intelligence.LMSTUDIO_WEBSITE);
                             }
                             GUILayout.EndHorizontal();
                             GUILayout.EndVertical();
@@ -1322,7 +1333,7 @@ namespace AssetInventory
                         EditorGUI.BeginDisabledGroup(!Intelligence.IsOllamaInstalled || Intelligence.LoadingModels);
                         if (GUILayout.Button("Model Tester...", GUILayout.ExpandWidth(false)))
                         {
-                            ModelTesterUI.ShowWindow(GetTestImageFolder());
+                            ModelTesterUI.ShowWindow(GetTestImageFolder(), AI.Config.aiCustomPrompt, OnModelTesterPromptChanged);
                         }
                         EditorGUI.EndDisabledGroup();
 #endif
@@ -1332,7 +1343,7 @@ namespace AssetInventory
                         EditorGUI.BeginDisabledGroup(!Intelligence.IsLMStudioInstalled || Intelligence.LoadingLMStudioModels);
                         if (GUILayout.Button("Model Tester...", GUILayout.ExpandWidth(false)))
                         {
-                            ModelTesterUI.ShowWindow(GetTestImageFolder());
+                            ModelTesterUI.ShowWindow(GetTestImageFolder(), AI.Config.aiCustomPrompt, OnModelTesterPromptChanged);
                         }
                         EditorGUI.EndDisabledGroup();
                     }
@@ -1411,6 +1422,39 @@ namespace AssetInventory
                     if (GUILayout.Button("Disable", GUILayout.ExpandWidth(false))) EditorUtils.AddDefine(AI.DEFINE_SYMBOL_HIDE_PROJECT_TOOLBAR);
                 }
                 GUILayout.EndHorizontal();
+
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Browser", EditorStyles.largeLabel);
+
+                EditorGUI.BeginChangeCheck();
+                GUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField(CommonUIStyles.Content("Open Links With", "Select which browser to use when opening URLs from Asset Inventory."), EditorStyles.boldLabel, GUILayout.Width(labelWidth));
+                AI.Config.browserType = EditorGUILayout.Popup(AI.Config.browserType, _browserTypeOptions, GUILayout.Width(200));
+                GUILayout.EndHorizontal();
+
+                if (AI.Config.browserType == 1)
+                {
+                    GUILayout.BeginHorizontal();
+                    EditorGUILayout.LabelField(CommonUIStyles.Content("Browser Application", "Full path to the browser executable to use for opening links."), EditorStyles.boldLabel, GUILayout.Width(labelWidth));
+                    AI.Config.customBrowserPath = EditorGUILayout.TextField(AI.Config.customBrowserPath, GUILayout.ExpandWidth(true));
+                    if (GUILayout.Button("Browse...", GUILayout.ExpandWidth(false)))
+                    {
+#if UNITY_EDITOR_OSX
+                        string path = EditorUtility.OpenFilePanel("Select Browser Application", "/Applications", "app");
+#elif UNITY_EDITOR_LINUX
+                        string path = EditorUtility.OpenFilePanel("Select Browser Application", "/usr/bin", "");
+#else
+                        string path = EditorUtility.OpenFilePanel("Select Browser Application", "C:\\Program Files", "exe");
+#endif
+                        if (!string.IsNullOrEmpty(path))
+                        {
+                            AI.Config.customBrowserPath = path;
+                            AI.SaveConfig();
+                        }
+                    }
+                    GUILayout.EndHorizontal();
+                }
+                if (EditorGUI.EndChangeCheck()) AI.SaveConfig();
 
                 EndIndentBlock();
             }
@@ -2069,6 +2113,12 @@ namespace AssetInventory
             menu.ShowAsContext();
         }
 
+        private void OnModelTesterPromptChanged(string prompt)
+        {
+            AI.Config.aiCustomPrompt = string.IsNullOrEmpty(prompt) ? null : prompt;
+            AI.SaveConfig();
+        }
+
         private async void TestCaptioning()
         {
             _captionTestRunning = true;
@@ -2084,7 +2134,7 @@ namespace AssetInventory
             {
                 modelName = AI.Config.lmStudioModel;
             }
-            List<CaptionResult> captionResult = await CaptionCreator.CaptionImage(new List<string> {absolutePath}, modelName);
+            List<CaptionResult> captionResult = await CaptionCreator.CaptionImage(new List<string> {absolutePath}, modelName, AI.Actions.CancellationToken);
             _captionTest = captionResult?.FirstOrDefault()?.caption;
             if (string.IsNullOrWhiteSpace(_captionTest))
             {

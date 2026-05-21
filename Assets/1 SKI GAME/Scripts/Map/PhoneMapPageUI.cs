@@ -7830,7 +7830,9 @@ namespace SkiGame.Map.UI
 
             if (config != null && !string.IsNullOrWhiteSpace(requiredPassId))
             {
-                string currentPassId = config.GetPassIdForLevel(manager != null ? manager.CurrentLevel : 0);
+                string currentPassId = manager != null && manager.CurrentLevel >= 0
+                    ? manager.GetCurrentPassId()
+                    : string.Empty;
                 return !string.IsNullOrWhiteSpace(currentPassId) &&
                        config.PassGrantsAccessTo(currentPassId, requiredPassId);
             }

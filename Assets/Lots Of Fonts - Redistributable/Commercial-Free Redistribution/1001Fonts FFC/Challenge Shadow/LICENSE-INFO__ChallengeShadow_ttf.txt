@@ -1,0 +1,30 @@
+Font license audit note
+=======================
+Font file: ChallengeShadow.ttf
+Original archive path: challenge/ChallengeShadow.ttf
+Resolved zip entry: Lots of fonts/challenge/ChallengeShadow.ttf
+Grouped family: Challenge Shadow
+Internal family: Challenge Shadow
+Full name: Challenge Shadow
+Style: Regular
+
+Audit status: Commercial-free use
+License basis: 1001Fonts FFC
+Recommendation: OK for commercial use
+Evidence: bundled 1001Fonts EULA
+Source/local file from audit: local 1001fonts-challenge-eula.txt
+Generic/official license URL used by builder: https://www.1001fonts.com/licenses/ffc.html
+
+Notes:
+No additional notes.
+
+Embedded font metadata:
+- License description: 
+- License URL: 
+- Copyright: Copyright (c) Typographer Mediengestaltung, 2000. All rights reserved.
+
+Copied local license/readme files:
+- Lots Of Fonts - Redistributable/Commercial-Free Redistribution/1001Fonts FFC/Challenge Shadow/SOURCE_LICENSES/1001fonts-challenge-eula.txt
+- Lots Of Fonts - Redistributable/Commercial-Free Redistribution/1001Fonts FFC/Challenge Shadow/SOURCE_LICENSES/1001fonts-challenge-eula.txt.meta
+
+This file is generated from an audit manifest. It is not legal advice.

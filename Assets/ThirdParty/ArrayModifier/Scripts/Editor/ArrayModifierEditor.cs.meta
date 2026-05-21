@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 47465b9d19149174eb0ac18aa0d839d9
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 231462
+  packageName: Easy Array Modifier
+  packageVersion: 1.0
+  assetPath: Assets/ThirdParty/ArrayModifier/Scripts/Editor/ArrayModifierEditor.cs
+  uploadId: 522576

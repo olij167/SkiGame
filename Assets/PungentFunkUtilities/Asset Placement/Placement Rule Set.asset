@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b008c99dfc07b4b4690124aaa2512f59, type: 3}
+  m_Name: Placement Rule Set
+  m_EditorClassIdentifier: PungentFunk.Utilities.Runtime::PungentFunk.Utilities.Placement.PungentPlacementRuleSetSO
+  surfaceMask:
+    serializedVersion: 2
+    m_Bits: 64
+  raycastStartHeight: 100
+  raycastDistance: 250
+  requireSurfaceHit: 1
+  surfaceOffset: 0
+  restrictHeight: 0
+  heightRange: {x: -1000, y: 1000}
+  restrictSlope: 0
+  slopeRange: {x: 0, y: 45}
+  minimumSpacing: 1
+  enforceMinimumSpacing: 1
+  rejectColliderOverlap: 0
+  overlapMask:
+    serializedVersion: 2
+    m_Bits: 64
+  overlapPadding: {x: 0, y: 0, z: 0}
+  ignoreTriggerColliders: 1
+  heatmap: {fileID: 0}
+  useHeatmap: 0
+  invertHeatmap: 0
+  heatmapThreshold: 0.15
+  heatmapProbabilityInfluence: 1
+  heatmapWorldRect:
+    serializedVersion: 2
+    x: -25
+    y: -25
+    width: 50
+    height: 50
+  useEntrySurfaceAlignment: 1
+  fallbackSurfaceAlignment: 2
+  addPlacementMarker: 1
+  createGroupObject: 1
+  generatedObjectPrefix: Placed

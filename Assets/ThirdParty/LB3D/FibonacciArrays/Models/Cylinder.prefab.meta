@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: c712fb05126efea448f3c7649af203b5
+timeCreated: 1505878818
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 101245
+  packageName: 'Fibonacci Arrays [Optimal Spacing Script]'
+  packageVersion: 1.2.0
+  assetPath: Assets/ThirdParty/LB3D/FibonacciArrays/Models/Cylinder.prefab
+  uploadId: 395887

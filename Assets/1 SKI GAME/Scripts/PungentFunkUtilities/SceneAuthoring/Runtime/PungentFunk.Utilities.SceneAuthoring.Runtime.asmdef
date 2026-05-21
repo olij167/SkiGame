@@ -1,0 +1,15 @@
+{
+    "name": "PungentFunk.Utilities.SceneAuthoring.Runtime",
+    "references": [
+        "PungentFunk.Utilities.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

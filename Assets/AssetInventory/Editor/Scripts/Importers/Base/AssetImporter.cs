@@ -233,7 +233,17 @@ namespace AssetInventory
             // remove files again, no need to wait
             if (asset != null && !asset.KeepExtracted)
             {
-                Task _ = Task.Run(() => Directory.Delete(tempPath, true));
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        Directory.Delete(tempPath, true);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"Could not clean up work folder '{tempPath}': {e.Message}");
+                    }
+                });
             }
         }
 
@@ -545,13 +555,13 @@ namespace AssetInventory
                 // Fall back to full Unity audio loading for unsupported formats (MP3, tracker formats, etc.)
                 // or when header parsing fails (corrupt/non-standard files)
                 string contentFile = asset.AssetSource != Asset.Source.Directory ? await Assets.EnsureMaterialized(asset, info) : file;
+                AudioClip clip = null;
                 try
                 {
-                    AudioClip clip = await AssetUtils.LoadAudioFromFile(contentFile);
+                    clip = await AssetUtils.LoadAudioFromFile(contentFile);
                     if (clip != null)
                     {
                         info.Length = clip.length;
-                        clip.UnloadAudioData();
                     }
                 }
                 catch
@@ -559,6 +569,14 @@ namespace AssetInventory
                     if (AI.Config.LogAudioParsing)
                     {
                         Debug.LogWarning($"Audio file '{Path.GetFileName(file)}' from {info} seems to have incorrect format.");
+                    }
+                }
+                finally
+                {
+                    if (clip != null)
+                    {
+                        clip.UnloadAudioData();
+                        UnityEngine.Object.DestroyImmediate(clip);
                     }
                 }
             }

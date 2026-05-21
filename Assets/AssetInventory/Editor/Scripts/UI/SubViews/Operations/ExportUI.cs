@@ -1049,7 +1049,7 @@ namespace AssetInventory
                                     string command = "python";
 #endif
                                     IOUtils.ExecuteCommand(command, "-m http.server 8000", env.publishFolder, false, true);
-                                    Application.OpenURL("http://localhost:8000" + (!string.IsNullOrWhiteSpace(curTemplate.entryPath) ? $"/{curTemplate.entryPath}" : ""));
+                                    AI.OpenURL("http://localhost:8000" + (!string.IsNullOrWhiteSpace(curTemplate.entryPath) ? $"/{curTemplate.entryPath}" : ""));
                                 }
                                 GUILayout.EndHorizontal();
                             }

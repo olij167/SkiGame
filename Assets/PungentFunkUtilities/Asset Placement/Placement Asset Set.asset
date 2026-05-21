@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67e2ebb00530ee24086f477e5b1d2509, type: 3}
+  m_Name: Placement Asset Set
+  m_EditorClassIdentifier: PungentFunk.Utilities.Runtime::PungentFunk.Utilities.Placement.PungentPlacementAssetSetSO
+  displayName: Placement Asset Set
+  notes: 
+  entries:
+  - prefab: {fileID: 891564543262492690, guid: f5ecc4122e23f6e41a31ac2e97687deb, type: 3}
+    displayNameOverride: Player
+    weight: 1
+    scaleRange: {x: 1, y: 1}
+    uniformScale: 1
+    nonUniformScaleMin: {x: 1, y: 1, z: 1}
+    nonUniformScaleMax: {x: 1, y: 1, z: 1}
+    randomYaw: 1
+    yawRange: {x: 0, y: 360}
+    fixedEulerOffset: {x: 0, y: 0, z: 0}
+    positionOffset: {x: 0, y: 0, z: 0}
+    surfaceAlignment: 2
+    footprint:
+      useFootprint: 1
+      size: {x: 1293, y: 1997}
+      pivot: {x: 0, y: 0}
+      cellSize: 1
+      rotateWithObject: 1
+      boundsPadding: {x: 0, y: 0, z: 0}
+    categories: 14
+    placementTags:
+      tags: []
+  - prefab: {fileID: 154894592666884878, guid: 987bca5e358e8d94cb558fbfe632a1f2, type: 3}
+    displayNameOverride: NPC Skier
+    weight: 1
+    scaleRange: {x: 1, y: 1}
+    uniformScale: 1
+    nonUniformScaleMin: {x: 1, y: 1, z: 1}
+    nonUniformScaleMax: {x: 1, y: 1, z: 1}
+    randomYaw: 1
+    yawRange: {x: 0, y: 360}
+    fixedEulerOffset: {x: 0, y: 0, z: 0}
+    positionOffset: {x: 0, y: 0, z: 0}
+    surfaceAlignment: 2
+    footprint:
+      useFootprint: 1
+      size: {x: 1428, y: 1446}
+      pivot: {x: 0, y: 0}
+      cellSize: 1
+      rotateWithObject: 1
+      boundsPadding: {x: 0, y: 0, z: 0}
+    categories: 14
+    placementTags:
+      tags: []

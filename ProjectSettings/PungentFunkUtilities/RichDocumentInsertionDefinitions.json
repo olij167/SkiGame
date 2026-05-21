@@ -1,0 +1,145 @@
+{
+    "schemaVersion": 1,
+    "lastSavedUtc": "2026-05-12T05:12:05.9580681Z",
+    "definitions": [
+        {
+            "id": "custom-chip",
+            "displayName": "Custom Chip",
+            "category": "Custom",
+            "syntaxAlias": "Custom Chip",
+            "renderMode": 0,
+            "tintHex": "8E7CC3",
+            "defaultText": "",
+            "validationHint": "",
+            "defaultBindingKind": "",
+            "builtIn": false,
+            "archived": false,
+            "fields": [],
+            "repeatableElements": []
+        },
+        {
+            "id": "custom-insertion",
+            "displayName": "Rehehehhehe",
+            "category": "Custom",
+            "syntaxAlias": "Custom Insertion",
+            "renderMode": 10,
+            "tintHex": "6FA8DC",
+            "defaultText": "this one works better 😃",
+            "validationHint": "hhh",
+            "defaultBindingKind": "",
+            "builtIn": false,
+            "archived": false,
+            "fields": [
+                {
+                    "key": "bool",
+                    "displayName": "Boolean test",
+                    "fieldKind": 30,
+                    "defaultValue": "false",
+                    "placeholder": "",
+                    "enumOptions": [],
+                    "required": true,
+                    "multiline": false
+                },
+                {
+                    "key": "num",
+                    "displayName": "Num test",
+                    "fieldKind": 20,
+                    "defaultValue": "420",
+                    "placeholder": "",
+                    "enumOptions": [],
+                    "required": false,
+                    "multiline": false
+                },
+                {
+                    "key": "ref",
+                    "displayName": "Ref test",
+                    "fieldKind": 50,
+                    "defaultValue": "",
+                    "placeholder": "",
+                    "enumOptions": [],
+                    "required": true,
+                    "multiline": false
+                },
+                {
+                    "key": "long",
+                    "displayName": "long text test",
+                    "fieldKind": 10,
+                    "defaultValue": "thi shiii shoould be looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong",
+                    "placeholder": "",
+                    "enumOptions": [],
+                    "required": false,
+                    "multiline": false
+                },
+                {
+                    "key": "enum",
+                    "displayName": "enum test",
+                    "fieldKind": 40,
+                    "defaultValue": "am I a dropdown? Can you extend my options? who knows?",
+                    "placeholder": "",
+                    "enumOptions": [],
+                    "required": false,
+                    "multiline": false
+                },
+                {
+                    "key": "text",
+                    "displayName": "basic ass text test",
+                    "fieldKind": 0,
+                    "defaultValue": "yep, i am text",
+                    "placeholder": "",
+                    "enumOptions": [],
+                    "required": false,
+                    "multiline": false
+                }
+            ],
+            "repeatableElements": [
+                {
+                    "key": "repeat",
+                    "displayName": "repeatable test",
+                    "addButtonLabel": "Another One.",
+                    "fields": [
+                        {
+                            "key": "num",
+                            "displayName": "num?",
+                            "fieldKind": 20,
+                            "defaultValue": "num.",
+                            "placeholder": "",
+                            "enumOptions": [],
+                            "required": false,
+                            "multiline": true
+                        },
+                        {
+                            "key": "long",
+                            "displayName": "long?",
+                            "fieldKind": 10,
+                            "defaultValue": "loooong....",
+                            "placeholder": "",
+                            "enumOptions": [],
+                            "required": false,
+                            "multiline": true
+                        },
+                        {
+                            "key": "bool",
+                            "displayName": "bool?",
+                            "fieldKind": 30,
+                            "defaultValue": "booolean.",
+                            "placeholder": "",
+                            "enumOptions": [],
+                            "required": false,
+                            "multiline": true
+                        },
+                        {
+                            "key": "ref",
+                            "displayName": "Ref?",
+                            "fieldKind": 50,
+                            "defaultValue": "ref....",
+                            "placeholder": "",
+                            "enumOptions": [],
+                            "required": false,
+                            "multiline": true
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

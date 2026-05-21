@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c80a4d443a25b874b86488ae0f09fec3
+timeCreated: 1506123677
+licenseType: Store
+DefaultImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 101245
+  packageName: 'Fibonacci Arrays [Optimal Spacing Script]'
+  packageVersion: 1.2.0
+  assetPath: Assets/ThirdParty/LB3D/FibonacciArrays/Scenes/ProductExample.unity
+  uploadId: 395887

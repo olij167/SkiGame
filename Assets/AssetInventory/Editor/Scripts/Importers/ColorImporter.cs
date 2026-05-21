@@ -47,16 +47,16 @@ namespace AssetInventory
 
                 async Task ProcessFile(AssetFile curFile)
                 {
+                    Texture2D texture = null;
                     try
                     {
                         string previewFile = ValidatePreviewFile(curFile, previewFolder);
                         if (string.IsNullOrEmpty(previewFile)) return;
 
-                        Texture2D texture = await AssetUtils.LoadLocalTexture(previewFile, false);
+                        texture = await AssetUtils.LoadLocalTexture(previewFile, false);
                         if (texture != null)
                         {
                             curFile.Hue = ImageUtils.GetHue(texture);
-                            UnityEngine.Object.DestroyImmediate(texture);
                             Persist(curFile);
                         }
                         else
@@ -67,6 +67,7 @@ namespace AssetInventory
                     }
                     finally
                     {
+                        if (texture != null) UnityEngine.Object.DestroyImmediate(texture);
                         semaphore.Release();
                     }
                 }

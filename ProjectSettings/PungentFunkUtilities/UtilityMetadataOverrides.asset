@@ -1,0 +1,3689 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &1
+MonoBehaviour:
+  m_ObjectHideFlags: 53
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6a6ebf29524d174d98f6ff34f947439, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PungentFunk.Utilities.Editor::PungentFunk.Utilities.Editor.Core.PungentUtilityMetadataOverrides
+  _overrides:
+  - utilityId: add-placement-socket
+    overrideDisplayName: 0
+    displayName: Add Placement Socket
+    overrideUtilityType: 0
+    utilityType: Action
+    overrideAreaCategory: 0
+    areaCategory: scene-authoring
+    overrideModule: 0
+    module: Asset Placement
+    overrideDescription: 0
+    description: Add a placement socket component to the selected scene GameObject(s).
+    overrideMenuPath: 0
+    menuPath: GameObject/PungentFunk Utilities/Add Placement Socket
+    overrideTags: 0
+    tags:
+    - placement
+    - socket
+    - selection
+    - scene
+    - action
+    overrideSortOrder: 0
+    sortOrder: 2
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 0
+    packageStatus: Experimental
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 1
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - scene-authoring
+    - asset-production
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 1
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: add-scene-gizmo-source
+    overrideDisplayName: 0
+    displayName: Add Scene Gizmo Source
+    overrideUtilityType: 0
+    utilityType: Action
+    overrideAreaCategory: 0
+    areaCategory: scene-authoring
+    overrideModule: 0
+    module: Gizmos
+    overrideDescription: 0
+    description: Add a generic scene gizmo source component to the selected GameObject(s).
+    overrideMenuPath: 0
+    menuPath: GameObject/PungentFunk Utilities/Add Scene Gizmo Source
+    overrideTags: 0
+    tags:
+    - gizmo
+    - scene
+    - source
+    - selection
+    - action
+    overrideSortOrder: 0
+    sortOrder: 22
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 0
+    packageStatus: Experimental
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 1
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - scene-authoring
+    - debug-diagnostics
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 1
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: asset-placement-lab
+    overrideDisplayName: 0
+    displayName: Asset Placement Lab
+    overrideUtilityType: 0
+    utilityType: Placement
+    overrideAreaCategory: 0
+    areaCategory: scene-authoring
+    overrideModule: 0
+    module: Asset Placement
+    overrideDescription: 0
+    description: Workspace for reusable scene asset placement, scatter, grid, socket,
+      group, validation, and modular assembly workflows.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Asset Placement/Asset Placement Lab
+    overrideTags: 0
+    tags:
+    - placement
+    - scatter
+    - grid
+    - socket
+    - asset
+    - brush
+    - scene
+    overrideSortOrder: 0
+    sortOrder: 0
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 1
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 1
+    overridePackageStatus: 1
+    packageStatus: In Progress
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Scene Authoring / Placement
+    overridePackageTier: 0
+    packageTier: 1
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Placement sets
+    - Surface alignment
+    - Scene navigation
+    - Spatial paths
+    - Spatial areas
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds:
+    - surface-align
+    - path-authoring-toolkit
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - scene-authoring
+    - asset-production
+    - generation-design
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: audio-catalog-coverage
+    overrideDisplayName: 0
+    displayName: Audio Catalog Coverage
+    overrideUtilityType: 0
+    utilityType: Coverage
+    overrideAreaCategory: 0
+    areaCategory: audio-authoring
+    overrideModule: 0
+    module: Catalog Coverage
+    overrideDescription: 0
+    description: Audit reusable audio catalog coverage and identify missing or incomplete
+      audio mappings.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Audio/Audio Catalog Coverage
+    overrideTags: 0
+    tags:
+    - audio
+    - coverage
+    - catalog
+    - cue
+    - scan
+    overrideSortOrder: 0
+    sortOrder: 20
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 0
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: In Progress
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - audio-authoring
+    - audit-validation
+    - scanning-coverage
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: audio-setup-coverage
+    overrideDisplayName: 0
+    displayName: Audio Setup Coverage
+    overrideUtilityType: 0
+    utilityType: Coverage
+    overrideAreaCategory: 0
+    areaCategory: audio-authoring
+    overrideModule: 0
+    module: Setup Coverage
+    overrideDescription: 0
+    description: Validate reusable audio setup coverage profiles against scenes,
+      prefabs, fields, and assets.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Audio/Audio Setup Coverage
+    overrideTags: 0
+    tags:
+    - audio
+    - coverage
+    - profile
+    - scan
+    overrideSortOrder: 0
+    sortOrder: 10
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 0
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: In Progress
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 1
+    categoryFacets:
+    - scene-authoring
+    - audio-authoring
+    - audit-validation
+    - scanning-coverage
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: board-editor
+    overrideDisplayName: 0
+    displayName: Board / Whiteboard / Node Graph
+    overrideUtilityType: 0
+    utilityType: Board / Graph
+    overrideAreaCategory: 0
+    areaCategory: documentation-planning
+    overrideModule: 0
+    module: Board / Graph
+    overrideDescription: 0
+    description: Spatial board editor for planning cards, authoring references, relationship
+      edges, groups, and whiteboard-style node maps.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk Utilities/Board & Graph/Board Editor
+    overrideTags: 0
+    tags:
+    - board
+    - whiteboard
+    - node graph
+    - graph
+    - canvas
+    - planning
+    - dependencies
+    - quest flow
+    - audit follow-up
+    - authoring references
+    - feature test checklist
+    overrideSortOrder: 0
+    sortOrder: 46
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Experimental
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.board
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Board / Graph / Visualization
+    overridePackageTier: 0
+    packageTier: 1
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Enable the Board / Graph / Visualization extension package.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: Board Editor requires the Authoring Data Foundation.
+      Rich documents, data sheets, audit, token, and help links degrade gracefully
+      when those providers are absent.
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - board-whiteboard
+    - board-editor
+    - whiteboard-canvas
+    - node-graph-authoring
+    - board-authoring-provider
+    overrideRequiredPackageIds: 0
+    requiredPackageIds:
+    - core
+    - authoring-core
+    overrideOptionalPackageIds: 0
+    optionalPackageIds:
+    - rich-documents
+    - project-audit
+    - data-sheet
+    - token-system
+    - help-documentation
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds:
+    - utilities-browser
+    - qa-checklist-utility
+    - tooltip-notes
+    - documentation-links
+    - coverage-matrix
+    - token-validator
+    - help-browser
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - generation-design
+    - audit-validation
+    - documentation-planning
+    - scanning-coverage
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: bulk-rename
+    overrideDisplayName: 0
+    displayName: Bulk Rename
+    overrideUtilityType: 0
+    utilityType: Renaming
+    overrideAreaCategory: 0
+    areaCategory: batch-repair
+    overrideModule: 0
+    module: Batch Authoring
+    overrideDescription: 0
+    description: Rename selected scene objects using shared patterns and numbering
+      rules.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Project Audit and Authoring/Bulk Rename
+    overrideTags: 0
+    tags:
+    - rename
+    - selection
+    - scene
+    overrideSortOrder: 0
+    sortOrder: 40
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Stable
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Scene Authoring / Placement
+    overridePackageTier: 0
+    packageTier: 1
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Placement sets
+    - Surface alignment
+    - Scene navigation
+    - Spatial paths
+    - Spatial areas
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 1
+    categoryFacets:
+    - appearance-styling
+    - scene-authoring
+    - batch-repair
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: calendar-clock
+    overrideDisplayName: 0
+    displayName: Calendar Clock
+    overrideUtilityType: 0
+    utilityType: Environment
+    overrideAreaCategory: 0
+    areaCategory: generation-design
+    overrideModule: 0
+    module: Time & Weather
+    overrideDescription: 0
+    description: Configure in-game days, months, years, seasons, sunrise/sunset,
+      sun/moon output, and date-based sequence triggers.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Environment Simulation/Calendar Clock
+    overrideTags: 0
+    tags:
+    - calendar
+    - clock
+    - time
+    - day
+    - month
+    - year
+    - season
+    - sun
+    - sequencing
+    overrideSortOrder: 0
+    sortOrder: 26
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 0
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: In Progress
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Core
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Utility launcher
+    - Help browser
+    - Theme controls
+    - Tool settings
+    - Shared checklists
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds:
+    - environment-simulation
+    - weather-utility
+    - delta-time-controller
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - scene-authoring
+    - generation-design
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: category-reference-membership
+    overrideDisplayName: 0
+    displayName: Category Reference / Membership
+    overrideUtilityType: 0
+    utilityType: Developer Tool
+    overrideAreaCategory: 0
+    areaCategory: core-workflow
+    overrideModule: 0
+    module: Registry Metadata
+    overrideDescription: 0
+    description: Review stable category IDs, edit display overrides, and manage utility
+      category facets.
+    overrideMenuPath: 0
+    menuPath: Developer popup
+    overrideTags: 0
+    tags:
+    - category
+    - facets
+    - membership
+    - developer
+    - metadata
+    overrideSortOrder: 0
+    sortOrder: 37
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Stable
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds:
+    - utilities-browser
+    - utility-metadata-editor
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - core-workflow
+    - documentation-planning
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 2
+    overrideVisibility: 0
+    visibility: 2
+  - utilityId: component-tuning-copy
+    overrideDisplayName: 0
+    displayName: Component Matcher
+    overrideUtilityType: 0
+    utilityType: Authoring
+    overrideAreaCategory: 0
+    areaCategory: batch-repair
+    overrideModule: 0
+    module: Component Tools
+    overrideDescription: 0
+    description: Copy serialized tuning values from matching source components to
+      target components with dry-run support.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Project Audit and Authoring/Component Tuning Copy
+    overrideTags: 0
+    tags:
+    - component
+    - copy
+    - tuning
+    - serialized
+    overrideSortOrder: 0
+    sortOrder: 10
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Experimental
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 1
+    categoryFacets:
+    - scene-authoring
+    - audit-validation
+    - batch-repair
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: coverage-matrix
+    overrideDisplayName: 0
+    displayName: Coverage Matrix
+    overrideUtilityType: 0
+    utilityType: Coverage
+    overrideAreaCategory: 0
+    areaCategory: audit-validation
+    overrideModule: 0
+    module: Coverage
+    overrideDescription: 0
+    description: Define expected authoring dimensions and inspect coverage gaps,
+      duplicates, and notes across assets or manual entries.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Project Audit and Authoring/Coverage Matrix
+    overrideTags: 0
+    tags:
+    - coverage
+    - matrix
+    - audit
+    - gaps
+    overrideSortOrder: 0
+    sortOrder: 60
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 0
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: In Progress
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - audit-validation
+    - documentation-planning
+    - scanning-coverage
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: data-sheet-editor
+    overrideDisplayName: 0
+    displayName: Data Sheet Editor
+    overrideUtilityType: 0
+    utilityType: Data Sheet
+    overrideAreaCategory: 0
+    areaCategory: documentation-planning
+    overrideModule: 0
+    module: Structured Data
+    overrideDescription: 0
+    description: Create, edit, validate, import, and export structured authoring
+      tables with shared Authoring references.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Data Sheets/Data Sheet Editor
+    overrideTags: 0
+    tags:
+    - data sheet
+    - spreadsheet
+    - table
+    - csv
+    - token
+    - dialogue
+    - quest
+    - inventory
+    - checklist
+    - authoring
+    overrideSortOrder: 0
+    sortOrder: 65
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Experimental
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.datasheet
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Spreadsheet / Data Sheet
+    overridePackageTier: 0
+    packageTier: 1
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Data tables
+    - Sheet review
+    - Structured export
+    - Batch editing
+    - CSV import/export
+    - Authoring references
+    - Checklist definition sheets
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds:
+    - coverage-matrix
+    - token-validator
+    - tooltip-notes
+    - documentation-links
+    - qa-checklist-utility
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - audit-validation
+    - documentation-planning
+    - scanning-coverage
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: debug-control
+    overrideDisplayName: 0
+    displayName: Debug Controller
+    overrideUtilityType: 0
+    utilityType: Debugging
+    overrideAreaCategory: 0
+    areaCategory: debug-diagnostics
+    overrideModule: 0
+    module: Debugging
+    overrideDescription: 0
+    description: Discover debug flags, gizmos, scheduled actions, and reflected component
+      state across the scene.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Debug/Debug Control Center
+    overrideTags: 0
+    tags:
+    - debug
+    - gizmo
+    - reflection
+    - scene
+    overrideSortOrder: 0
+    sortOrder: 10
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 0
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 1
+    overridePackageStatus: 0
+    packageStatus: Stable
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 1
+    categoryFacets:
+    - scene-authoring
+    - audit-validation
+    - debug-diagnostics
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: delta-time-controller
+    overrideDisplayName: 0
+    displayName: Delta Time Controller
+    overrideUtilityType: 0
+    utilityType: Environment
+    overrideAreaCategory: 0
+    areaCategory: generation-design
+    overrideModule: 0
+    module: Time & Weather
+    overrideDescription: 0
+    description: Control pause, slow motion, fast-forward, and opt-in channel scales
+      for gameplay, UI, physics, animation, clock, and weather systems.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Environment Simulation/Delta Time
+    overrideTags: 0
+    tags:
+    - delta time
+    - time scale
+    - pause
+    - slow motion
+    - fast forward
+    - channel
+    overrideSortOrder: 0
+    sortOrder: 28
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 0
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: In Progress
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Core
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Utility launcher
+    - Help browser
+    - Theme controls
+    - Tool settings
+    - Shared checklists
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds:
+    - environment-simulation
+    - calendar-clock
+    - weather-utility
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - scene-authoring
+    - generation-design
+    - debug-diagnostics
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: design-validation-audit
+    overrideDisplayName: 0
+    displayName: Project Audit
+    overrideUtilityType: 0
+    utilityType: Audit
+    overrideAreaCategory: 0
+    areaCategory: core-workflow
+    overrideModule: 0
+    module: Internal
+    overrideDescription: 0
+    description: Validate registered utilities, window layout signals, menu taxonomy,
+      CreateAssetMenu roots, namespaces, and asmdef readiness against the design
+      bible.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Core/Design Validation Audit
+    overrideTags: 0
+    tags:
+    - audit
+    - architecture
+    - layout
+    - validation
+    - package
+    - design bible
+    - internal
+    overrideSortOrder: 0
+    sortOrder: 15
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 0
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Stable
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 1
+    categoryFacets:
+    - core-workflow
+    - audit-validation
+    - documentation-planning
+    - scanning-coverage
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: documentation-links
+    overrideDisplayName: 0
+    displayName: Documentation Links
+    overrideUtilityType: 0
+    utilityType: Documentation
+    overrideAreaCategory: 1
+    areaCategory: documentation-planning
+    overrideModule: 0
+    module: Documentation
+    overrideDescription: 0
+    description: Assign current and backlog documentation links to registered utilities.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Core/Documentation Links
+    overrideTags: 0
+    tags:
+    - documentation
+    - docs
+    - links
+    - metadata
+    - planning
+    overrideSortOrder: 0
+    sortOrder: 30
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 0
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Stable
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Documentation and Authoring
+    overridePackageTier: 0
+    packageTier: 1
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Tooltip notes
+    - Documentation links
+    - Authoring notes
+    - Serialized editing
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 1
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - core-workflow
+    - documentation-planning
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 1
+    itemKind: 0
+    overrideVisibility: 1
+    visibility: 0
+  - utilityId: editor-style-explorer
+    overrideDisplayName: 0
+    displayName: Editor Style Explorer
+    overrideUtilityType: 0
+    utilityType: Developer Tool
+    overrideAreaCategory: 0
+    areaCategory: appearance-styling
+    overrideModule: 0
+    module: Style Diagnostics
+    overrideDescription: 0
+    description: Inspect built-in GUIStyle names and test session-only text/style
+      mappings for editor chrome.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Core/Appearance/Editor Style Explorer
+    overrideTags: 0
+    tags:
+    - style
+    - gui style
+    - uss
+    - fonts
+    - developer
+    - diagnostics
+    overrideSortOrder: 0
+    sortOrder: 35
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 0
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: In Progress
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 1
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - core-workflow
+    - appearance-styling
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 1
+    itemKind: 0
+    overrideVisibility: 1
+    visibility: 0
+  - utilityId: environment-simulation
+    overrideDisplayName: 0
+    displayName: Environment Simulation
+    overrideUtilityType: 0
+    utilityType: Environment
+    overrideAreaCategory: 0
+    areaCategory: generation-design
+    overrideModule: 0
+    module: Time & Weather
+    overrideDescription: 0
+    description: Author and preview game-agnostic calendar clocks, weather states,
+      forecasts, environmental outputs, and delta-time channels.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Environment Simulation/Environment Simulation Workbench
+    overrideTags: 0
+    tags:
+    - environment
+    - time
+    - weather
+    - calendar
+    - clock
+    - season
+    - delta time
+    - forecast
+    - wind
+    overrideSortOrder: 0
+    sortOrder: 25
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 0
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 1
+    overridePackageStatus: 1
+    packageStatus: In Progress
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Core
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Utility launcher
+    - Help browser
+    - Theme controls
+    - Tool settings
+    - Shared checklists
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds:
+    - calendar-clock
+    - weather-utility
+    - delta-time-controller
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - scene-authoring
+    - generation-design
+    - ui-input-feedback
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: fast-travel-sceneview-to-selection
+    overrideDisplayName: 0
+    displayName: Fast Travel SceneView To Selection
+    overrideUtilityType: 0
+    utilityType: Action
+    overrideAreaCategory: 0
+    areaCategory: scene-authoring
+    overrideModule: 0
+    module: Navigation
+    overrideDescription: 0
+    description: Frame the Scene View camera around the current scene selection.
+    overrideMenuPath: 0
+    menuPath: GameObject/PungentFunk Utilities/Fast Travel SceneView To Selection
+    overrideTags: 0
+    tags:
+    - scene
+    - navigation
+    - frame
+    - selection
+    - action
+    overrideSortOrder: 0
+    sortOrder: 21
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 0
+    packageStatus: Stable
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 1
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - scene-authoring
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 1
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: font-preview
+    overrideDisplayName: 0
+    displayName: Font Preview
+    overrideUtilityType: 0
+    utilityType: Preview
+    overrideAreaCategory: 0
+    areaCategory: appearance-styling
+    overrideModule: 0
+    module: Font Assets
+    overrideDescription: 0
+    description: Preview fonts and font assets with cached editor previews.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Asset Preview and Export/Font Preview
+    overrideTags: 0
+    tags:
+    - font
+    - preview
+    - asset
+    overrideSortOrder: 0
+    sortOrder: 10
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Experimental
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Asset Production
+    overridePackageTier: 0
+    packageTier: 1
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Prefab icons
+    - Prefab export
+    - Font previews
+    - Texture array baking
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - appearance-styling
+    - asset-production
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: input-prompt-icon-library
+    overrideDisplayName: 0
+    displayName: Input Prompt Icon Library Populator
+    overrideUtilityType: 0
+    utilityType: Input Prompts
+    overrideAreaCategory: 1
+    areaCategory: asset-production
+    overrideModule: 0
+    module: Input Prompts
+    overrideDescription: 0
+    description: Populate input prompt icon libraries by serialized field names without
+      a project-specific compile dependency.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/UI and Feedback/Input Prompts/Populate Input Prompt
+      Icon Library
+    overrideTags: 0
+    tags:
+    - input
+    - icons
+    - library
+    - ui
+    - feedback
+    overrideSortOrder: 0
+    sortOrder: 10
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 1
+    overridePackageStatus: 1
+    packageStatus: In Progress
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 1
+    categoryFacets:
+    - scene-authoring
+    - asset-production
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: name-generator
+    overrideDisplayName: 0
+    displayName: Name Generator
+    overrideUtilityType: 0
+    utilityType: Naming
+    overrideAreaCategory: 0
+    areaCategory: generation-design
+    overrideModule: 0
+    module: Names
+    overrideDescription: 0
+    description: Generate names from reusable name-list assets and pattern presets.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Content Generation/Name Generator
+    overrideTags: 0
+    tags:
+    - name
+    - generation
+    - asset
+    - content
+    overrideSortOrder: 0
+    sortOrder: 20
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 0
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 1
+    overridePackageStatus: 1
+    packageStatus: Experimental
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Content Generation
+    overridePackageTier: 0
+    packageTier: 1
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Name generation
+    - Content helpers
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - generation-design
+    - documentation-planning
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: open-minimized-utilities-tray
+    overrideDisplayName: 0
+    displayName: Open Minimized Utilities Tray
+    overrideUtilityType: 0
+    utilityType: Action
+    overrideAreaCategory: 0
+    areaCategory: core-workflow
+    overrideModule: 0
+    module: Workflow
+    overrideDescription: 0
+    description: Open the minimized utilities popup/tray without changing the current
+      window layout.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Core/Minimized Utilities
+    overrideTags: 0
+    tags:
+    - minimized
+    - tray
+    - popup
+    - restore
+    - workflow
+    - action
+    overrideSortOrder: 0
+    sortOrder: 22
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Stable
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds:
+    - utility-tray
+    - utilities-browser
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - core-workflow
+    - batch-repair
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 1
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: palette-designer
+    overrideDisplayName: 0
+    displayName: Palette Designer
+    overrideUtilityType: 0
+    utilityType: Palette
+    overrideAreaCategory: 0
+    areaCategory: appearance-styling
+    overrideModule: 0
+    module: Colour
+    overrideDescription: 0
+    description: Create, generate, analyze, save, and apply reusable colour palettes.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Colour/Palette Designer
+    overrideTags: 0
+    tags:
+    - palette
+    - colour
+    - color
+    - harmony
+    - contrast
+    - swatch
+    - generation
+    overrideSortOrder: 0
+    sortOrder: 10
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 1
+    overridePackageStatus: 1
+    packageStatus: Stable
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Appearance / Colour / Texture
+    overridePackageTier: 0
+    packageTier: 1
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Palette design
+    - Procedural textures
+    - Editor styles
+    - Visual diagnostics
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - appearance-styling
+    - generation-design
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: path-authoring-toolkit
+    overrideDisplayName: 0
+    displayName: Area Authoring Toolkit
+    overrideUtilityType: 0
+    utilityType: Path
+    overrideAreaCategory: 0
+    areaCategory: scene-authoring
+    overrideModule: 0
+    module: Path Authoring
+    overrideDescription: 0
+    description: Reusable path handle helpers, validation, sampling, and scene overlay
+      utilities for path-based editor tools.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Scene Workflow/Path Authoring Toolkit
+    overrideTags: 0
+    tags:
+    - path
+    - waypoint
+    - handles
+    - authoring
+    overrideSortOrder: 0
+    sortOrder: 30
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 1
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 0
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: In Progress
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - scene-authoring
+    - generation-design
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: populate-default-input-prompt-library
+    overrideDisplayName: 0
+    displayName: Populate Default Input Prompt Library
+    overrideUtilityType: 0
+    utilityType: Action
+    overrideAreaCategory: 0
+    areaCategory: ui-input-feedback
+    overrideModule: 0
+    module: Input Prompts
+    overrideDescription: 0
+    description: Find and populate the default InputPromptIconLibrary asset if one
+      exists in the project.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/UI and Feedback/Input Prompts/Populate Default Input
+      Prompt Library
+    overrideTags: 0
+    tags:
+    - input
+    - icons
+    - default
+    - library
+    - action
+    overrideSortOrder: 0
+    sortOrder: 12
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 0
+    packageStatus: Experimental
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 1
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - asset-production
+    - ui-input-feedback
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 1
+    overrideVisibility: 1
+    visibility: 1
+  - utilityId: populate-selected-input-prompt-library
+    overrideDisplayName: 0
+    displayName: Populate Selected Input Prompt Library
+    overrideUtilityType: 0
+    utilityType: Action
+    overrideAreaCategory: 0
+    areaCategory: ui-input-feedback
+    overrideModule: 0
+    module: Input Prompts
+    overrideDescription: 0
+    description: Populate the currently selected InputPromptIconLibrary-style asset
+      from matching sprite filenames.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/UI and Feedback/Input Prompts/Populate Selected Input
+      Prompt Library
+    overrideTags: 0
+    tags:
+    - input
+    - icons
+    - selected
+    - library
+    - action
+    overrideSortOrder: 0
+    sortOrder: 11
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 0
+    packageStatus: Experimental
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 1
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - asset-production
+    - ui-input-feedback
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 1
+    overrideVisibility: 1
+    visibility: 1
+  - utilityId: prefab-asset-exporter
+    overrideDisplayName: 0
+    displayName: Prefab Asset Exporter
+    overrideUtilityType: 0
+    utilityType: Export
+    overrideAreaCategory: 0
+    areaCategory: asset-production
+    overrideModule: 0
+    module: Prefab Assets
+    overrideDescription: 0
+    description: Duplicate meshes, materials, and textures used by a prefab into
+      an export-ready folder.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Asset Preview and Export/Prefab Asset Exporter
+    overrideTags: 0
+    tags:
+    - prefab
+    - export
+    - asset
+    overrideSortOrder: 0
+    sortOrder: 30
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Placeholder
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - asset-production
+    - batch-repair
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: prefab-icon-generator
+    overrideDisplayName: 0
+    displayName: Prefab Icon Generator
+    overrideUtilityType: 0
+    utilityType: Preview
+    overrideAreaCategory: 0
+    areaCategory: asset-production
+    overrideModule: 0
+    module: Prefab Assets
+    overrideDescription: 0
+    description: Generate icon textures for prefab assets.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Asset Preview and Export/Prefab Icon Generator
+    overrideTags: 0
+    tags:
+    - prefab
+    - icon
+    - preview
+    - asset
+    overrideSortOrder: 0
+    sortOrder: 20
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: In Progress
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - appearance-styling
+    - asset-production
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: qa-checklist-utility
+    overrideDisplayName: 0
+    displayName: Checklist Utility
+    overrideUtilityType: 0
+    utilityType: Checklist
+    overrideAreaCategory: 0
+    areaCategory: documentation-planning
+    overrideModule: 0
+    module: Checklists
+    overrideDescription: 0
+    description: Run package, project, and imported checklists with pass, partial,
+      fail, notes, guidance prompts, shared JSON definitions, and result export.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Project Audit and Authoring/Checklist Utility
+    overrideTags: 0
+    tags:
+    - qa
+    - checklist
+    - test
+    - validation
+    - manual test
+    - data sheet
+    - rich document
+    - board
+    - graph
+    - json
+    - results
+    overrideSortOrder: 0
+    sortOrder: 66
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Experimental
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Core
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Utility launcher
+    - Help browser
+    - Theme controls
+    - Tool settings
+    - Shared checklists
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds:
+    - data-sheet-editor
+    - coverage-matrix
+    - tooltip-notes
+    - token-validator
+    - board-editor
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - audit-validation
+    - documentation-planning
+    - scanning-coverage
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: reference-assignment-scanner
+    overrideDisplayName: 0
+    displayName: Reference Assignment Scanner
+    overrideUtilityType: 0
+    utilityType: Scanner
+    overrideAreaCategory: 0
+    areaCategory: audit-validation
+    overrideModule: 0
+    module: Reference Repair
+    overrideDescription: 0
+    description: Scan scene objects for missing assignable component references and
+      optionally apply candidates.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Project Audit and Authoring/Reference Assignment
+      Scanner
+    overrideTags: 0
+    tags:
+    - reference
+    - assignment
+    - scanner
+    - scene
+    overrideSortOrder: 0
+    sortOrder: 20
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: In Progress
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - scene-authoring
+    - audit-validation
+    - batch-repair
+    - scanning-coverage
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: save-selected-prefab-with-mesh-assets
+    overrideDisplayName: 0
+    displayName: Save Selected as Prefab With Mesh Assets
+    overrideUtilityType: 0
+    utilityType: Action
+    overrideAreaCategory: 0
+    areaCategory: asset-production
+    overrideModule: 0
+    module: Prefab Assets
+    overrideDescription: 0
+    description: Save the selected scene root as a prefab and extract generated mesh
+      assets into the chosen project folder.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Asset Preview and Export/Save Selected As Prefab
+      With Mesh Assets
+    overrideTags: 0
+    tags:
+    - prefab
+    - mesh
+    - export
+    - selected
+    - action
+    overrideSortOrder: 0
+    sortOrder: 31
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 0
+    packageStatus: Stable
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 1
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - asset-production
+    - batch-repair
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 1
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: scene-gizmo-browser
+    overrideDisplayName: 0
+    displayName: Scene Gizmo Browser
+    overrideUtilityType: 0
+    utilityType: Gizmo
+    overrideAreaCategory: 0
+    areaCategory: scene-authoring
+    overrideModule: 0
+    module: Gizmos
+    overrideDescription: 0
+    description: Inspect and manage generic scene gizmo sources in the open scene.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Scene Workflow/Scene Gizmo Browser
+    overrideTags: 0
+    tags:
+    - gizmo
+    - scene
+    - debug
+    - visualization
+    overrideSortOrder: 0
+    sortOrder: 20
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 1
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: In Progress
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - scene-authoring
+    - debug-diagnostics
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: scene-issue-scanner
+    overrideDisplayName: 0
+    displayName: Scene Issue Scanner
+    overrideUtilityType: 0
+    utilityType: Scanner
+    overrideAreaCategory: 0
+    areaCategory: audit-validation
+    overrideModule: 0
+    module: Scene Validation
+    overrideDescription: 0
+    description: Scan loaded scenes manually or participate in the Design Validation
+      Audit shared scene pass for missing scripts, broken renderer assets, duplicate
+      scene services, and advisory scene-health findings.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Project Audit and Authoring/Scene Issue Scanner
+    overrideTags: 0
+    tags:
+    - scene
+    - issue
+    - scanner
+    - missing script
+    - material
+    - camera
+    - audit
+    overrideSortOrder: 0
+    sortOrder: 35
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 0
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Stable
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.audit
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Audit / Validation / Scanning
+    overridePackageTier: 0
+    packageTier: 1
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Reference scans
+    - Scene health
+    - Coverage matrix
+    - Token checks
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds:
+    - terrain-usage-scanner
+    - reference-assignment-scanner
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - scene-authoring
+    - audit-validation
+    - scanning-coverage
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: scene-navigation
+    overrideDisplayName: 0
+    displayName: Scene Navigation
+    overrideUtilityType: 0
+    utilityType: Navigation
+    overrideAreaCategory: 0
+    areaCategory: scene-authoring
+    overrideModule: 0
+    module: Navigation
+    overrideDescription: 0
+    description: Create scene waypoints, fast travel the SceneView, and optionally
+      track objects by configurable conditions.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Scene Workflow/Scene Navigation
+    overrideTags: 0
+    tags:
+    - scene
+    - navigation
+    - waypoint
+    - tracking
+    - focus
+    overrideSortOrder: 0
+    sortOrder: 10
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 1
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Experimental
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - scene-authoring
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: surface-align
+    overrideDisplayName: 0
+    displayName: Surface Align Tool
+    overrideUtilityType: 0
+    utilityType: Alignment
+    overrideAreaCategory: 0
+    areaCategory: scene-authoring
+    overrideModule: 0
+    module: Placement Assist
+    overrideDescription: 0
+    description: Align selected scene objects to collider surfaces with optional
+      rotation and preview behaviour.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Asset Placement/Surface Align Tool
+    overrideTags: 0
+    tags:
+    - surface
+    - align
+    - terrain
+    - placement
+    - scene
+    overrideSortOrder: 0
+    sortOrder: 10
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 1
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Experimental
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Scene Authoring / Placement
+    overridePackageTier: 0
+    packageTier: 1
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Placement sets
+    - Surface alignment
+    - Scene navigation
+    - Spatial paths
+    - Spatial areas
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - scene-authoring
+    - batch-repair
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: terrain-usage-scanner
+    overrideDisplayName: 0
+    displayName: Terrain Usage Scanner
+    overrideUtilityType: 0
+    utilityType: Scanner
+    overrideAreaCategory: 0
+    areaCategory: audit-validation
+    overrideModule: 0
+    module: Terrain Assets
+    overrideDescription: 0
+    description: Find Terrain and TerrainData usage across scenes and assets.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Project Audit and Authoring/Terrain Usage Scanner
+    overrideTags: 0
+    tags:
+    - terrain
+    - scan
+    - asset
+    - scene
+    overrideSortOrder: 0
+    sortOrder: 30
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 0
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Stable
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Audit / Validation / Scanning
+    overridePackageTier: 0
+    packageTier: 1
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Reference scans
+    - Scene health
+    - Coverage matrix
+    - Token checks
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - scene-authoring
+    - asset-production
+    - audit-validation
+    - scanning-coverage
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: texture-array-baker
+    overrideDisplayName: 0
+    displayName: Texture Array Baker
+    overrideUtilityType: 0
+    utilityType: Baking
+    overrideAreaCategory: 0
+    areaCategory: asset-production
+    overrideModule: 0
+    module: Texture Assets
+    overrideDescription: 0
+    description: Bake selected textures or material texture properties into Texture2DArray
+      assets with fallback slices and preview support.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Texture/Texture Array Baker
+    overrideTags: 0
+    tags:
+    - texture
+    - array
+    - material
+    - bake
+    - asset
+    overrideSortOrder: 0
+    sortOrder: 20
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Placeholder
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Asset Production
+    overridePackageTier: 0
+    packageTier: 1
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Prefab icons
+    - Prefab export
+    - Font previews
+    - Texture array baking
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - asset-production
+    - batch-repair
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: theme-customizer
+    overrideDisplayName: 0
+    displayName: Utility Window Theme
+    overrideUtilityType: 0
+    utilityType: Theme
+    overrideAreaCategory: 0
+    areaCategory: appearance-styling
+    overrideModule: 0
+    module: Appearance
+    overrideDescription: 0
+    description: Browse presets, tune typography and panels, and optionally generate
+      experimental Unity editor USS skin files.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Core/Appearance/Utility Window Theme
+    overrideTags: 0
+    tags:
+    - theme
+    - appearance
+    - style
+    - skin
+    overrideSortOrder: 0
+    sortOrder: 10
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 0
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 1
+    overridePackageStatus: 1
+    packageStatus: Experimental
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Core
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Utility launcher
+    - Help browser
+    - Theme controls
+    - Tool settings
+    - Shared checklists
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - core-workflow
+    - appearance-styling
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: token-validator
+    overrideDisplayName: 0
+    displayName: Token Validator
+    overrideUtilityType: 0
+    utilityType: Validator
+    overrideAreaCategory: 0
+    areaCategory: audit-validation
+    overrideModule: 0
+    module: Text Validation
+    overrideDescription: 0
+    description: Define reusable brace tokens, link tokens to editor targets, and
+      validate text, assets, notes, and token bindings.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Project Audit and Authoring/Token Validator
+    overrideTags: 0
+    tags:
+    - token
+    - validator
+    - notes
+    - text
+    - audit
+    - metadata
+    - binding
+    overrideSortOrder: 0
+    sortOrder: 70
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 0
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Experimental
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Audit / Validation / Scanning
+    overridePackageTier: 0
+    packageTier: 1
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Reference scans
+    - Scene health
+    - Coverage matrix
+    - Token checks
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 1
+    categoryFacets:
+    - appearance-styling
+    - audit-validation
+    - documentation-planning
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: tooltip-notes
+    overrideDisplayName: 0
+    displayName: Notepad
+    overrideUtilityType: 0
+    utilityType: Notes
+    overrideAreaCategory: 0
+    areaCategory: documentation-planning
+    overrideModule: 0
+    module: Notes
+    overrideDescription: 0
+    description: Track utility notes, future features, audit follow-ups, and project
+      annotations in a searchable roadmap workspace.
+    overrideMenuPath: 0
+    menuPath: Tools/PungentFunk/Project Audit and Authoring/Notes & Roadmap
+    overrideTags: 0
+    tags:
+    - notes
+    - roadmap
+    - tooltip
+    - documentation
+    - audit
+    - planning
+    - future features
+    overrideSortOrder: 0
+    sortOrder: 50
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 1
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Stable
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: PungentFunk Utilities Documentation and Authoring
+    overridePackageTier: 0
+    packageTier: 1
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: Configure an install route in Developer Mode if this package is
+      distributed separately.
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities:
+    - Tooltip notes
+    - Documentation links
+    - Authoring notes
+    - Serialized editing
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds: []
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 1
+    categoryFacets:
+    - appearance-styling
+    - audit-validation
+    - documentation-planning
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 0
+    overrideVisibility: 0
+    visibility: 0
+  - utilityId: utility-metadata-editor
+    overrideDisplayName: 0
+    displayName: Utility Metadata Editor
+    overrideUtilityType: 0
+    utilityType: Developer Tool
+    overrideAreaCategory: 0
+    areaCategory: core-workflow
+    overrideModule: 0
+    module: Registry Metadata
+    overrideDescription: 0
+    description: Edit project-local metadata overrides for utility and action cards.
+    overrideMenuPath: 0
+    menuPath: Developer popup
+    overrideTags: 0
+    tags:
+    - metadata
+    - registry
+    - cards
+    - developer
+    - visibility
+    overrideSortOrder: 0
+    sortOrder: 36
+    overrideSupportsSceneOverlay: 0
+    supportsSceneOverlay: 0
+    overrideSupportsContextMenu: 0
+    supportsContextMenu: 1
+    overrideSupportsSelection: 0
+    supportsSelection: 0
+    overrideIsLabHub: 0
+    isLabHub: 0
+    overridePackageStatus: 1
+    packageStatus: Stable
+    overridePackageId: 0
+    packageId: com.pungentfunk.utilities.core
+    overridePackageDisplayName: 0
+    packageDisplayName: 
+    overridePackageTier: 0
+    packageTier: 0
+    overrideAssetStoreUrl: 0
+    assetStoreUrl: 
+    overridePackageManagerId: 0
+    packageManagerId: 
+    overrideImportPackagePath: 0
+    importPackagePath: 
+    overrideInstallHint: 0
+    installHint: 
+    overrideMissingDependencyMessage: 0
+    missingDependencyMessage: 
+    overrideDocumentationTopicId: 0
+    documentationTopicId: 
+    overrideProvidedCapabilities: 0
+    providedCapabilities: []
+    overrideRequiredPackageIds: 0
+    requiredPackageIds: []
+    overrideOptionalPackageIds: 0
+    optionalPackageIds: []
+    overrideRelatedUtilityIds: 0
+    relatedUtilityIds:
+    - utilities-browser
+    overrideParentUtilityId: 0
+    parentUtilityId: 
+    overrideBrowserPriority: 0
+    browserPriority: 0
+    overrideBrowserRole: 0
+    browserRole: 0
+    overrideBrowserProminence: 0
+    browserProminence: 1
+    overrideBrowserTags: 0
+    browserTags: []
+    overrideAccessoryUtilityIds: 0
+    accessoryUtilityIds: []
+    overrideActionIds: 0
+    actionIds: []
+    overrideCategoryFacets: 0
+    categoryFacets:
+    - core-workflow
+    - documentation-planning
+    overrideShowInUtilitiesBrowser: 0
+    showInUtilitiesBrowser: 1
+    overrideItemKind: 0
+    itemKind: 2
+    overrideVisibility: 0
+    visibility: 2

@@ -113,7 +113,7 @@ public sealed class NpcAppearancePresetApplier : MonoBehaviour
 
         return new AppearanceSelectionData
         {
-            skinPatternOption = activePreset.skinPatternOption,
+            skinPatternOption = null,
             skinColor = activePreset.skinColor,
             eyeOption = activePreset.eyeOption,
             eyeColor = activePreset.eyeColor,
@@ -187,12 +187,8 @@ public sealed class NpcAppearancePresetApplier : MonoBehaviour
 
     private void ApplySkin(AppearanceSelectionData data)
     {
-        var skinPattern = ResolvePatternTexture(data.skinPatternOption, null);
-        if (skinPattern != null)
-            customizer.SetSkinPatternTexture(skinPattern);
-        else if (data.skinPatternOption != null && data.skinPatternOption.customizerIndex >= 0)
-            customizer.SetSkinTexture(data.skinPatternOption.customizerIndex);
-
+        // NPC appearance presets and generated NPC data should only apply skin colour.
+        // Skin pattern/texture is intentionally left as the character prefab/default.
         customizer.SetSkinColor(data.skinColor);
     }
 

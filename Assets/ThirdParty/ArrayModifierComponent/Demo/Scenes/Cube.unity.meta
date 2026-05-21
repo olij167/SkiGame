@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: cd7ae435d747a7b4c861e1a95a5df098
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 176485
+  packageName: Array Modifier Component
+  packageVersion: 1.0
+  assetPath: Assets/ThirdParty/ArrayModifierComponent/Demo/Scenes/Cube.unity
+  uploadId: 384610

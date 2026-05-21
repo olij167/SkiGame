@@ -43,8 +43,7 @@ namespace AssetInventory
                         ConverterContainerId.BuiltInToURP
                         , new List<ConverterId>
                         {
-                            ConverterId.Material,
-                            ConverterId.ReadonlyMaterial
+                            ConverterId.Material
                         }
                         , ConverterFilter.Inclusive
                     );
@@ -81,7 +80,7 @@ namespace AssetInventory
                 List<Type> converterTypes = (List<Type>)filterMethod.Invoke(null, new object[]
                 {
                     ConverterContainerId.BuiltInToURP,
-                    new List<ConverterId> {ConverterId.Material, ConverterId.ReadonlyMaterial},
+                    new List<ConverterId> {ConverterId.Material},
                     ConverterFilter.Inclusive
                 });
 

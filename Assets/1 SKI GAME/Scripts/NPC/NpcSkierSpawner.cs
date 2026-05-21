@@ -100,6 +100,23 @@ public class NpcSkierSpawner : MonoBehaviour
     [Tooltip("Relative spawn selection weight for run spawn contexts.")]
     [SerializeField] private float runWeight = 0.35f;
 
+    [Header("Social Population")]
+    [SerializeField] private bool useSocialAnchorsForSpawning = true;
+    [SerializeField] private float socialAnchorHotspotRadius = 450f;
+    [SerializeField] private float socialAnchorWeight = 0.45f;
+    [SerializeField] private float poiWeight = 0.35f;
+    [SerializeField] private float resortHubWeight = 0.4f;
+    [SerializeField] private float playerVicinityWeight = 0.25f;
+    [SerializeField, Min(0)] private int minimumActorsNearActiveSocialAnchor = 2;
+    [SerializeField, Min(0)] private int minimumActorsNearMajorPoi = 3;
+    [SerializeField] private float playerVicinitySpawnMinDistance = 45f;
+    [SerializeField] private float playerVicinitySpawnMaxDistance = 180f;
+    [SerializeField] private bool allowNonHiddenDistantSpawnsNearPOI;
+    [SerializeField] private bool preferSpawnsWithDestinationTowardPlayerArea = true;
+    [SerializeField] private bool autoEnsureSocialComponentsOnSpawnedNpcs = true;
+    [SerializeField] private float socialLoiterDurationSeconds = 45f;
+    [SerializeField] private SocialPopulationProfileSO[] socialPopulationProfiles;
+
     [Header("Cluster Illusion")]
     [Tooltip("If enabled, newly spawned NPCs may appear in small groups instead of only one at a time.")]
     [SerializeField] private bool useSpawnClusters = true;
@@ -254,6 +271,452 @@ public class NpcSkierSpawner : MonoBehaviour
         }
     }
 
+    [ContextMenu("Print Population Debug State")]
+    public void PrintPopulationDebugState()
+    {
+        if (player == null && Camera.main != null)
+            player = Camera.main.transform;
+
+        int active = 0;
+        for (int i = 0; i < _pool.Count; i++)
+        {
+            if (_pool[i] != null && _pool[i].gameObject.activeSelf)
+                active++;
+        }
+
+        NpcSocialAnchor nearestAnchor = FindNearestSocialAnchor();
+        Debug.Log(
+            $"[{nameof(NpcSkierSpawner)}] {name}\n" +
+            $"pool={_pool.Count} active={active} target={targetActiveCount} borrowed={_borrowedNpcs.Count} player={(player != null ? player.name : "none")}\n" +
+            $"socialEnabled={useSocialAnchorsForSpawning} registeredAnchors={NpcSocialDirector.RegisteredAnchors.Count} minActorsNearAnchor={minimumActorsNearActiveSocialAnchor}\n" +
+            $"nearestAnchor={(nearestAnchor != null ? nearestAnchor.DisplayName : "none")}\n" +
+            BuildIntentPopulationSummary(),
+            this);
+    }
+
+    [ContextMenu("Force Populate Nearest Social Anchor")]
+    public void ForcePopulateNearestSocialAnchor()
+    {
+        NpcSocialAnchor anchor = FindNearestSocialAnchor();
+        if (anchor == null)
+        {
+            Debug.LogWarning($"[{nameof(NpcSkierSpawner)}] No social anchor found near player.", this);
+            return;
+        }
+
+        ForcePopulateSocialAnchor(anchor);
+    }
+
+    [ContextMenu("Print Population + Intent Debug State")]
+    public void PrintPopulationAndIntentDebugState()
+    {
+        PrintPopulationDebugState();
+    }
+
+    [ContextMenu("Force Spawn Flow-Through NPC")]
+    public void ForceSpawnFlowThroughNpc()
+    {
+        if (player == null && Camera.main != null)
+            player = Camera.main.transform;
+
+        if (player == null)
+            return;
+
+        Vector3 offset = player.forward * Random.Range(45f, 90f) + player.right * Random.Range(-35f, 35f);
+        Vector3 position = player.position + offset + Vector3.up * spawnHeightOffset;
+        Quaternion rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(player.position - position, Vector3.up).normalized, Vector3.up);
+        NpcSkierBrain npc = GetNextInactiveNpc(position);
+        if (npc == null)
+            return;
+
+        npc.gameObject.SetActive(true);
+        npc.ConfigurePlayerFocus(player);
+        npc.WakeFromPool(position, rotation);
+        npc.BeginGenericIntent(NpcGenericActivityIntent.TraverseToNearbyArea, null, "Spawner forced flow-through NPC");
+    }
+
+    [ContextMenu("Force Populate Balanced Nearby Anchors")]
+    public void ForcePopulateBalancedNearbyAnchors()
+    {
+        TryMaintainActiveSocialAnchorPopulation(Mathf.Max(1, maxNewActivationsPerRefresh));
+    }
+
+    [ContextMenu("Force Populate Nearby POIs")]
+    public void ForcePopulateNearbyPois()
+    {
+        ForcePopulateNearestSocialAnchor();
+    }
+
+    public void ForcePopulateSocialAnchor(NpcSocialAnchor anchor)
+    {
+        if (anchor == null)
+            return;
+
+        int desired = ResolveDesiredSocialActorCount(anchor);
+        PopulateSocialAnchor(anchor, desired, force: true);
+    }
+
+    public int PopulateSocialAnchor(NpcSocialAnchor anchor, int desiredActorCount, bool force = false)
+    {
+        return PopulateSocialAnchor(anchor, desiredActorCount, int.MaxValue, force);
+    }
+
+    private int PopulateSocialAnchor(NpcSocialAnchor anchor, int desiredActorCount, int spawnBudget, bool force = false)
+    {
+        if (!useSocialAnchorsForSpawning && !force)
+            return 0;
+
+        if (anchor == null || desiredActorCount <= 0 || spawnBudget <= 0)
+            return 0;
+
+        if (!anchor.AllowPopulationRequests && !force)
+            return 0;
+
+        if (player == null && Camera.main != null)
+            player = Camera.main.transform;
+
+        if (player != null && Vector3.Distance(player.position, anchor.Center.position) > socialAnchorHotspotRadius && !force)
+            return 0;
+
+        var nearbyActors = new List<NpcSocialActor>();
+        anchor.CollectNearbyActors(nearbyActors);
+        if (!force && !anchor.AllowOvercrowding && nearbyActors.Count >= anchor.HardMaxActors)
+            return 0;
+
+        if (!force)
+            desiredActorCount = Mathf.Min(desiredActorCount, anchor.HardMaxActors);
+
+        int needed = Mathf.Max(0, desiredActorCount - nearbyActors.Count);
+        int spawned = 0;
+        NpcSocialGroupSO socialGroup = ChoosePopulationSocialGroup(anchor);
+
+        needed = Mathf.Min(needed, spawnBudget);
+
+        for (int i = 0; i < needed; i++)
+        {
+            if (!TryBuildSocialSpawnPose(anchor, i, out Vector3 position, out Quaternion rotation))
+                break;
+
+            if (!TryBorrowNpc(position, rotation, out NpcSkierBrain npc) || npc == null)
+                break;
+
+            NpcSocialActor actor = EnsureSocialActorForNpc(npc);
+            ApplySocialGroupMetadata(actor, socialGroup);
+            ApplySocialGroupAppearance(npc, socialGroup);
+            npc.BeginSocialLoiter(anchor, socialGroup, socialLoiterDurationSeconds);
+            spawned++;
+        }
+
+        Debug.Log($"[{nameof(NpcSkierSpawner)}] Populated anchor '{anchor.DisplayName}'. existing={nearbyActors.Count} desired={desiredActorCount} spawned={spawned}", anchor);
+        return spawned;
+    }
+
+    private int TryMaintainActiveSocialAnchorPopulation(int spawnBudget)
+    {
+        if (!useSocialAnchorsForSpawning || player == null || spawnBudget <= 0)
+            return 0;
+
+        int spawned = 0;
+        var anchors = NpcSocialDirector.RegisteredAnchors;
+        for (int i = 0; i < anchors.Count && spawned < spawnBudget; i++)
+        {
+            NpcSocialAnchor anchor = anchors[i];
+            if (!IsSocialAnchorPopulationCandidate(anchor))
+                continue;
+
+            int desired = ResolveDesiredSocialActorCount(anchor);
+            spawned += PopulateSocialAnchor(anchor, desired, spawnBudget - spawned);
+        }
+
+        if (spawned > 0)
+            return spawned;
+
+#if UNITY_2023_1_OR_NEWER
+        var sceneAnchors = FindObjectsByType<NpcSocialAnchor>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+#else
+        var sceneAnchors = FindObjectsOfType<NpcSocialAnchor>();
+#endif
+        for (int i = 0; i < sceneAnchors.Length && spawned < spawnBudget; i++)
+        {
+            NpcSocialAnchor anchor = sceneAnchors[i];
+            if (!IsSocialAnchorPopulationCandidate(anchor))
+                continue;
+
+            int desired = ResolveDesiredSocialActorCount(anchor);
+            spawned += PopulateSocialAnchor(anchor, desired, spawnBudget - spawned);
+        }
+
+        return spawned;
+    }
+
+    private bool IsSocialAnchorPopulationCandidate(NpcSocialAnchor anchor)
+    {
+        if (anchor == null || !anchor.isActiveAndEnabled || player == null || !anchor.AllowPopulationRequests)
+            return false;
+
+        float distance = Vector3.Distance(player.position, anchor.Center.position);
+        if (distance > socialAnchorHotspotRadius)
+            return false;
+
+        SocialPopulationProfileSO profile = ResolvePopulationProfile(anchor.AnchorType);
+        float activation = profile != null ? profile.ActivationRadius : anchor.ActivationRadius;
+        if (activation > 0f && distance > activation)
+            return false;
+
+        return anchor.AllowNpcToNpcExchanges || anchor.AllowSoloBarks;
+    }
+
+    private NpcSocialAnchor FindNearestSocialAnchor()
+    {
+        if (player == null && Camera.main != null)
+            player = Camera.main.transform;
+
+        if (player == null)
+            return null;
+
+        NpcSocialAnchor best = null;
+        float bestSqr = socialAnchorHotspotRadius * socialAnchorHotspotRadius;
+        var anchors = NpcSocialDirector.RegisteredAnchors;
+        for (int i = 0; i < anchors.Count; i++)
+        {
+            NpcSocialAnchor anchor = anchors[i];
+            if (anchor == null)
+                continue;
+
+            float sqr = (anchor.Center.position - player.position).sqrMagnitude;
+            if (sqr <= bestSqr)
+            {
+                bestSqr = sqr;
+                best = anchor;
+            }
+        }
+
+        if (best != null || anchors.Count > 0)
+            return best;
+
+#if UNITY_2023_1_OR_NEWER
+        var sceneAnchors = FindObjectsByType<NpcSocialAnchor>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+#else
+        var sceneAnchors = FindObjectsOfType<NpcSocialAnchor>();
+#endif
+        for (int i = 0; i < sceneAnchors.Length; i++)
+        {
+            NpcSocialAnchor anchor = sceneAnchors[i];
+            if (anchor == null)
+                continue;
+
+            float sqr = (anchor.Center.position - player.position).sqrMagnitude;
+            if (sqr <= bestSqr)
+            {
+                bestSqr = sqr;
+                best = anchor;
+            }
+        }
+
+        return best;
+    }
+
+    private int ResolveDesiredSocialActorCount(NpcSocialAnchor anchor)
+    {
+        if (anchor != null && anchor.DesiredMaxActorsOverride >= 0)
+            return Random.Range(anchor.ResolveSoftMinActors(), anchor.ResolveSoftMaxActors() + 1);
+
+        SocialPopulationProfileSO profile = ResolvePopulationProfile(anchor != null ? anchor.AnchorType : NpcSocialAnchorType.Generic);
+        if (profile != null)
+            return Mathf.Min(Random.Range(profile.DesiredMinActors, profile.DesiredMaxActors + 1), anchor != null ? anchor.HardMaxActors : int.MaxValue);
+
+        return Mathf.Max(minimumActorsNearActiveSocialAnchor, minimumActorsNearMajorPoi);
+    }
+
+    private string BuildIntentPopulationSummary()
+    {
+        int genericActive = 0;
+        int socialLoiter = 0;
+        int skiing = 0;
+        int ridingLift = 0;
+        int leaving = 0;
+
+        for (int i = 0; i < _pool.Count; i++)
+        {
+            NpcSkierBrain npc = _pool[i];
+            if (npc == null || !npc.gameObject.activeSelf)
+                continue;
+
+            if (npc.IsGenericIntentActive)
+                genericActive++;
+
+            switch (npc.CurrentGenericIntent)
+            {
+                case NpcGenericActivityIntent.SocialLoiter:
+                case NpcGenericActivityIntent.VisitKiosk:
+                case NpcGenericActivityIntent.WatchRace:
+                case NpcGenericActivityIntent.RestAtLodge:
+                case NpcGenericActivityIntent.VisitMedic:
+                case NpcGenericActivityIntent.ViewpointPause:
+                case NpcGenericActivityIntent.PracticeTrick:
+                    socialLoiter++;
+                    break;
+                case NpcGenericActivityIntent.SkiRun:
+                case NpcGenericActivityIntent.TraverseToNearbyArea:
+                case NpcGenericActivityIntent.IdleWander:
+                    skiing++;
+                    break;
+                case NpcGenericActivityIntent.RideLift:
+                case NpcGenericActivityIntent.QueueAtLift:
+                    ridingLift++;
+                    break;
+                case NpcGenericActivityIntent.LeaveArea:
+                    leaving++;
+                    break;
+            }
+        }
+
+        return $"intents active={genericActive} ski/traverse={skiing} social/poi={socialLoiter} lift={ridingLift} leaving={leaving}";
+    }
+
+    private SocialPopulationProfileSO ResolvePopulationProfile(NpcSocialAnchorType anchorType)
+    {
+        if (socialPopulationProfiles == null)
+            return null;
+
+        for (int i = 0; i < socialPopulationProfiles.Length; i++)
+        {
+            if (socialPopulationProfiles[i] != null && socialPopulationProfiles[i].AnchorType == anchorType)
+                return socialPopulationProfiles[i];
+        }
+
+        return null;
+    }
+
+    private bool TryBuildSocialSpawnPose(NpcSocialAnchor anchor, int index, out Vector3 position, out Quaternion rotation)
+    {
+        position = anchor != null ? anchor.Center.position : transform.position;
+        rotation = Quaternion.identity;
+        if (anchor == null)
+            return false;
+
+        SocialPopulationProfileSO profile = ResolvePopulationProfile(anchor.AnchorType);
+        float minRadius = profile != null ? profile.SpawnRadiusMin : playerVicinitySpawnMinDistance * 0.2f;
+        float maxRadius = profile != null ? profile.SpawnRadiusMax : playerVicinitySpawnMaxDistance * 0.2f;
+        maxRadius = Mathf.Max(minRadius + 0.1f, maxRadius);
+
+        Vector2 random = Random.insideUnitCircle.normalized * Random.Range(minRadius, maxRadius);
+        if (random.sqrMagnitude <= 0.001f)
+            random = Vector2.right * minRadius;
+
+        Vector3 center = anchor.Center.position;
+        position = center + new Vector3(random.x, 0f, random.y) + Vector3.up * spawnHeightOffset;
+        position = SnapSocialSpawnToGround(position, center.y);
+
+        Vector3 forward = player != null
+            ? Vector3.ProjectOnPlane(player.position - position, Vector3.up)
+            : Vector3.ProjectOnPlane(center - position, Vector3.up);
+        if (forward.sqrMagnitude <= 0.001f)
+            forward = anchor.Center.forward;
+
+        rotation = Quaternion.LookRotation(forward.normalized, Vector3.up);
+        return true;
+    }
+
+    private static Vector3 SnapSocialSpawnToGround(Vector3 position, float fallbackY)
+    {
+        Vector3 origin = position + Vector3.up * 20f;
+        if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 80f, ~0, QueryTriggerInteraction.Ignore))
+            return hit.point + Vector3.up * 0.35f;
+
+        position.y = fallbackY + 0.35f;
+        return position;
+    }
+
+    private NpcSocialGroupSO ChoosePopulationSocialGroup(NpcSocialAnchor anchor)
+    {
+        SocialPopulationProfileSO profile = ResolvePopulationProfile(anchor != null ? anchor.AnchorType : NpcSocialAnchorType.Generic);
+        NpcSocialGroupSO[] preferred = profile != null ? profile.PreferredGroups : null;
+        if (preferred != null && preferred.Length > 0)
+            return preferred[Random.Range(0, preferred.Length)];
+
+        if (anchor != null && anchor.AllowedGroups != null && anchor.AllowedGroups.Count > 0)
+            return anchor.AllowedGroups[Random.Range(0, anchor.AllowedGroups.Count)];
+
+        return null;
+    }
+
+    private void ApplySocialGroupMetadata(NpcSocialActor actor, NpcSocialGroupSO group)
+    {
+        if (actor == null || group == null)
+            return;
+
+        actor.AddSocialTags(group.SocialTags);
+        if (actor.DialogueAgent == null || group.DialogueBanks == null || group.DialogueBanks.Count == 0)
+            return;
+
+        NpcDialogueBankSO bank = group.DialogueBanks[Random.Range(0, group.DialogueBanks.Count)];
+        if (bank != null)
+            actor.DialogueAgent.SetDialogueBank(bank);
+    }
+
+    private void ApplySocialGroupAppearance(NpcSkierBrain npc, NpcSocialGroupSO group)
+    {
+        if (npc == null || group == null)
+            return;
+
+        if (npc.TryGetComponent(out NpcIdentity identity) && identity.IsAuthored && identity.PreserveAuthoredAppearance)
+            return;
+
+        if (group.AppearanceProfile != null)
+        {
+            var generator = npc.GetComponent<NpcSkierAppearanceGenerator>();
+            if (generator == null)
+                generator = npc.GetComponentInChildren<NpcSkierAppearanceGenerator>(true);
+
+            if (generator == null)
+            {
+                Debug.LogWarning($"[{nameof(NpcSkierSpawner)}] Social NPC '{npc.name}' has no {nameof(NpcSkierAppearanceGenerator)} for group appearance.", npc);
+                return;
+            }
+
+            var profile = npc.GetComponent<NpcSkierProfile>();
+            generator.ApplyRandomAppearance(profile, group.AppearanceProfile);
+            return;
+        }
+
+        if (group.AppearancePresets == null || group.AppearancePresets.Count == 0)
+            return;
+
+        var validPresets = new List<NpcAppearancePresetSO>();
+        for (int i = 0; i < group.AppearancePresets.Count; i++)
+        {
+            if (group.AppearancePresets[i] != null)
+                validPresets.Add(group.AppearancePresets[i]);
+        }
+
+        if (validPresets.Count == 0)
+            return;
+
+        var applier = npc.GetComponent<NpcAppearancePresetApplier>();
+        if (applier == null)
+            applier = npc.gameObject.AddComponent<NpcAppearancePresetApplier>();
+
+        applier.ApplyData(NpcAppearancePresetApplier.BuildDataFromPreset(validPresets[Random.Range(0, validPresets.Count)]));
+    }
+
+    private NpcSocialActor EnsureSocialActorForNpc(NpcSkierBrain npc)
+    {
+        if (!autoEnsureSocialComponentsOnSpawnedNpcs || npc == null)
+            return npc != null ? npc.GetComponent<NpcSocialActor>() : null;
+
+        if (npc.TryGetComponent<NpcSocialActor>(out var existing))
+            return existing;
+
+        if (!npc.TryGetComponent<NpcDialogueAgent>(out _))
+        {
+            Debug.LogWarning($"[{nameof(NpcSkierSpawner)}] Spawned NPC '{npc.name}' has no NpcDialogueAgent; not auto-adding NpcSocialActor.", npc);
+            return null;
+        }
+
+        return npc.gameObject.AddComponent<NpcSocialActor>();
+    }
+
     [ContextMenu("Initialize Pool")]
     public void InitializePool()
     {
@@ -394,6 +857,14 @@ public class NpcSkierSpawner : MonoBehaviour
         }
 
         int desired = Mathf.Min(targetActiveCount, _pool.Count);
+        if (useSocialAnchorsForSpawning)
+        {
+            int socialBudget = forceActivateToTarget
+                ? Mathf.Max(1, maxNewActivationsPerRefresh)
+                : Mathf.Max(1, Mathf.Min(maxNewActivationsPerRefresh, desired - activeCount + minimumActorsNearActiveSocialAnchor));
+            activeCount += TryMaintainActiveSocialAnchorPopulation(socialBudget);
+        }
+
         if (!forceActivateToTarget && activeCount >= desired)
             return;
 
@@ -445,6 +916,9 @@ public class NpcSkierSpawner : MonoBehaviour
             {
                 continue;
             }
+
+            if (!npc.CanBeBorrowedForSocialPopulation())
+                continue;
 
             return npc;
         }

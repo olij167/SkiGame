@@ -1,0 +1,42 @@
+{
+  "name": "unity-editor-engineering",
+  "version": "0.1.0",
+  "description": "Unity Editor engineering strategy for designing extensions that integrate deeply with Unity's built-in systems, packages, pipelines, and native UX.",
+  "author": {
+    "name": "Pungent Funk Utilities"
+  },
+  "homepage": "https://www.foundations.unity.com/",
+  "license": "MIT",
+  "keywords": [
+    "unity",
+    "unity-editor",
+    "editor-scripting",
+    "package-manager",
+    "unity-registry",
+    "unitycsreference",
+    "ui-toolkit",
+    "imgui",
+    "inspector",
+    "tooling",
+    "ux"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Unity Editor Engineering",
+    "shortDescription": "Senior Unity Editor extension design across built-in systems, packages, and UX.",
+    "longDescription": "A Unity Editor engineering plugin for interpreting tool design briefs, mining built-in Unity interfaces for proven design patterns, mapping Unity's built-in and released package registries, and designing editor extensions that integrate before inventing. It pairs local offline Unity documentation with Unity Editor Foundations, Unity package documentation, UnityCsReference, package samples, and the installed universal design principle plugins.",
+    "developerName": "Pungent Funk Utilities",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://www.foundations.unity.com/",
+    "defaultPrompt": [
+      "Turn this brief into a Unity editor design.",
+      "Find built-in Unity systems to integrate.",
+      "Analyse this Unity interface pattern."
+    ],
+    "brandColor": "#111827"
+  }
+}

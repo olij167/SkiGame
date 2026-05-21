@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: d6f973885f9d7bb4fa5f0345d13cc69a
+timeCreated: 1505540810
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 101245
+  packageName: 'Fibonacci Arrays [Optimal Spacing Script]'
+  packageVersion: 1.2.0
+  assetPath: Assets/ThirdParty/LB3D/FibonacciArrays/Scripts/FibonacciArray.cs
+  uploadId: 395887

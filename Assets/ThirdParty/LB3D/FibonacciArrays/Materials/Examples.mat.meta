@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 872e7aebaf0779549aacba09f4a9aa32
+timeCreated: 1505782139
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 101245
+  packageName: 'Fibonacci Arrays [Optimal Spacing Script]'
+  packageVersion: 1.2.0
+  assetPath: Assets/ThirdParty/LB3D/FibonacciArrays/Materials/Examples.mat
+  uploadId: 395887

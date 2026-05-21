@@ -783,7 +783,15 @@ namespace AssetInventory
             switch (opt.SelectedPreviewFilter)
             {
                 case 2: // has preview
-                    wheres.Add("AssetFile.PreviewState in (1, 2, 3)"); // Provided, Redo, Custom
+                    // skip "has preview" filter for types that never generate previews
+                    bool isNonPreviewableType = rawType != null
+                        && Enum.TryParse(rawType, out AI.AssetGroup previewGroup)
+                        && ((previewGroup is AI.AssetGroup.Scripts or AI.AssetGroup.Libraries or AI.AssetGroup.Documents or AI.AssetGroup.Shaders)
+                            || (previewGroup is AI.AssetGroup.Scenes && !AI.Config.generateScenePreviews));
+                    if (!isNonPreviewableType)
+                    {
+                        wheres.Add("AssetFile.PreviewState in (1, 2, 3)"); // Provided, Redo, Custom
+                    }
                     break;
                 case 3: // no preview
                     wheres.Add("AssetFile.PreviewState not in (1, 2, 3)"); // not Provided, Redo, Custom

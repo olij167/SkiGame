@@ -34,6 +34,18 @@ public class NpcSkierBrain : MonoBehaviour
         HubLoiter
     }
 
+    private enum LiftNpcBoardingPhase
+    {
+        None,
+        MovingToStage,
+        MovingToQueueEntry,
+        JoiningQueue,
+        WaitingInQueue,
+        BoardingCarrier,
+        Riding,
+        Finished
+    }
+
     [Header("References")]
     [SerializeField] private SkiController skiController;
     [SerializeField] private WalkingController walkingController;
@@ -67,6 +79,17 @@ public class NpcSkierBrain : MonoBehaviour
     [SerializeField] private float liftDetachDistance = 6f;
     [SerializeField] private float boardingTimeout = 12f;
     [SerializeField] private float respawnCooldown = 1.25f;
+
+    [Header("Generic Activity Lifecycle")]
+    [SerializeField] private bool useGenericActivityLifecycle = true;
+    [SerializeField] private Vector2 skiRunIntentDurationRange = new Vector2(35f, 160f);
+    [SerializeField] private Vector2 liftIntentDurationRange = new Vector2(45f, 220f);
+    [SerializeField] private Vector2 traverseIntentDurationRange = new Vector2(18f, 70f);
+    [SerializeField] private float genericIntentRepeatPenalty = 0.35f;
+    [SerializeField] private float genericAnchorRepeatPenalty = 0.15f;
+    [SerializeField] private float socialConversationReactionMin = 2f;
+    [SerializeField] private float socialConversationReactionMax = 8f;
+    [SerializeField] private float flowThroughMovementBiasAfterLoiter = 0.35f;
 
     [Header("Hub Loiter")]
     [SerializeField] private float hubDetectRadius = 65f;
@@ -114,6 +137,9 @@ public class NpcSkierBrain : MonoBehaviour
     [SerializeField] private float localFailureRecoveryDelay = 3f;
     [SerializeField] private float softWalkFailurePauseMin = 0.9f;
     [SerializeField] private float softWalkFailurePauseMax = 2f;
+    [SerializeField] private LayerMask npcGroundSnapLayers = 0;
+    [SerializeField] private float skiModeStrictAirborneGrace = 1.1f;
+    [SerializeField] private float skiModeFloatingGroundGap = 3f;
 
     [Header("Walk Stability")]
     [SerializeField] private float walkUprightLerpSpeed = 10f;
@@ -132,8 +158,21 @@ public class NpcSkierBrain : MonoBehaviour
 
     private BrainState _state = BrainState.Uninitialized;
     private IntentKind _intentKind = IntentKind.None;
+    private NpcGenericActivityIntent _currentGenericIntent = NpcGenericActivityIntent.None;
+    private NpcGenericActivityIntent _previousGenericIntent = NpcGenericActivityIntent.None;
 
     private float _stateUntil;
+    private float _currentIntentStartedAt;
+    private float _currentIntentMinDuration;
+    private float _currentIntentMaxDuration;
+    private float _currentIntentExpiresAt;
+    private Vector3 _currentIntentTargetPosition;
+    private UnityEngine.Object _currentIntentTargetObject;
+    private NpcSocialAnchor _currentIntentTargetAnchor;
+    private NpcSocialAnchor _previousAnchor;
+    private float _previousAnchorCooldownUntil;
+    private string _lastDecisionReason = "Uninitialized";
+    private bool _suppressNextIntentRepeatPenalty;
     private float _boardingAbortTime;
     private float _nextLiftInputTime;
     private float _nextRespawnAllowedTime;
@@ -142,12 +181,19 @@ public class NpcSkierBrain : MonoBehaviour
     private float _walkingRecoveryUntil;
     private float _nextLookAroundTime;
     private float _nextHubShuffleTime;
+    private float _skiModeStrictAirborneSince = -1f;
+    private readonly RaycastHit[] _groundSnapHits = new RaycastHit[16];
+    private static int _npcLayer = -2;
+    private static int _playerLayer = -2;
 
     private SkiRunLine _currentRun;
     private LiftLine _currentLift;
     private Vector3 _currentBroadTarget;
     private Vector3 _currentLiftApproachPoint;
     private Vector3 _currentLiftStagePoint;
+    private LiftBoardGate _preferredBoardGate;
+    private LiftNpcBoardingPhase _liftBoardingPhase = LiftNpcBoardingPhase.None;
+    private string _lastBoardingFailureReason = "none";
     private SkiRunLine _lastRun;
     private readonly List<SkiRunLine> _recentRuns = new();
     private readonly List<Transform> _hubAnchors = new();
@@ -156,6 +202,10 @@ public class NpcSkierBrain : MonoBehaviour
     private int _boardingRetryCount;
     private bool _initialized;
     private bool _spectatorCrowdActive;
+    private bool _socialLoiterActive;
+    private float _socialLoiterUntil;
+    private NpcSocialAnchor _socialLoiterAnchor;
+    private NpcSocialGroupSO _socialLoiterGroup;
     private Vector3 _spectatorAnchorPosition;
     private Quaternion _spectatorAnchorRotation;
     private Vector3 _spectatorForward;
@@ -170,17 +220,125 @@ public class NpcSkierBrain : MonoBehaviour
     private SpawnContextHint _pendingSpawnHint = SpawnContextHint.None;
     private Vector3 _pendingHintWorldPoint;
     private readonly List<LiftBoardGate> _liftGateBuffer = new();
+    private readonly List<GenericIntentCandidate> _genericIntentCandidates = new();
+    private readonly List<NpcSocialAnchor> _genericAnchorCandidates = new();
     private float _lastPoolSleepTime = -999f;
     private Vector3 _lastPoolSleepPosition;
+
+    private bool _genericBehaviourPausedByDefinedCharacter;
+
+    public void PauseGenericBehaviourForDefinedCharacter()
+    {
+        _genericBehaviourPausedByDefinedCharacter = true;
+
+        pathAgent?.Stop();
+        locomotion?.SetInputEnabled(false);
+        locomotion?.ClearRecoveryRequests();
+        walkingController?.ClearExternalMove();
+
+        _currentRun = null;
+        _currentLift = null;
+        _preferredBoardGate = null;
+        _liftBoardingPhase = LiftNpcBoardingPhase.None;
+        _lastBoardingFailureReason = "Defined character paused generic behaviour";
+        _intentKind = IntentKind.None;
+        ClearGenericIntent("Defined character paused generic behaviour", rememberPrevious: false);
+        _state = BrainState.Waiting;
+    }
 
     public float LastPoolSleepTime => _lastPoolSleepTime;
     public Vector3 LastPoolSleepPosition => _lastPoolSleepPosition;
     public bool IsSpectatorCrowdActive => _spectatorCrowdActive;
+    public bool IsSocialLoitering => _socialLoiterActive;
+    public bool IsGenericIntentActive => _currentGenericIntent != NpcGenericActivityIntent.None;
+    public NpcGenericActivityIntent CurrentGenericIntent => _currentGenericIntent;
+    public NpcGenericActivityIntent PreviousGenericIntent => _previousGenericIntent;
+    public NpcSocialAnchor PreviousGenericIntentTargetAnchor => _previousAnchor;
+    public float PreviousGenericIntentAnchorCooldownUntil => _previousAnchorCooldownUntil;
+
+    private struct GenericIntentCandidate
+    {
+        public NpcGenericActivityIntent intent;
+        public float weight;
+        public NpcSocialAnchor anchor;
+        public UnityEngine.Object targetObject;
+        public Vector3 targetPosition;
+        public string reason;
+    }
+
+    public bool CanBeBorrowedForSocialPopulation()
+    {
+        if (TryGetComponent(out NpcDefinedCharacterBehaviour definedBehaviour))
+            return definedBehaviour.AllowPopulationBorrowing;
+
+        if (TryGetComponent(out NpcIdentity identity) && identity.IsAuthored)
+            return false;
+
+        return true;
+    }
+
+    public bool CanBeginSocialLoiter()
+    {
+        if (TryGetComponent(out NpcDefinedCharacterBehaviour definedBehaviour))
+            return definedBehaviour.AllowSocialLoiter;
+
+        return true;
+    }
+
+    [ContextMenu("Print NPC Movement Debug State")]
+    public void PrintNpcMovementDebugState()
+    {
+        CacheRefs();
+
+        Vector3 velocity = body != null ? body.linearVelocity : (skiController != null ? skiController.Velocity : Vector3.zero);
+        Vector3 groundNormal = skiController != null && skiController.GroundNormal.sqrMagnitude > 0.0001f
+            ? skiController.GroundNormal.normalized
+            : Vector3.up;
+        float slopeAngle = Vector3.Angle(groundNormal, Vector3.up);
+        Vector3 target = ResolveCurrentDebugTarget();
+        float targetDistance = target.sqrMagnitude > 0.0001f
+            ? Vector3.Distance(transform.position, target)
+            : -1f;
+        string skiGroundGap = skiController != null ? skiController.LastMeasuredGroundGap.ToString("0.00") : "n/a";
+        string skiGroundRefresh = skiController != null ? skiController.LastGroundRefreshSource : "n/a";
+
+        Debug.Log(
+            $"[{nameof(NpcSkierBrain)}] Movement Debug: {name}\n" +
+            $"state={_state} intent={_intentKind} genericIntent={_currentGenericIntent} previousGeneric={_previousGenericIntent} initialized={_initialized} active={gameObject.activeSelf}\n" +
+            $"genericTarget={(_currentIntentTargetAnchor != null ? _currentIntentTargetAnchor.DisplayName : _currentIntentTargetObject != null ? _currentIntentTargetObject.name : _currentIntentTargetPosition.ToString())} genericExpiresIn={Mathf.Max(0f, _currentIntentExpiresAt - Time.time):0.0}s decision={_lastDecisionReason}\n" +
+            $"liftPhase={_liftBoardingPhase} preferredGate={(_preferredBoardGate != null ? _preferredBoardGate.name : "none")} boardingRetries={_boardingRetryCount} lastBoardingFailure={_lastBoardingFailureReason}\n" +
+            $"socialLoiter={_socialLoiterActive} socialAnchor={(_socialLoiterAnchor != null ? _socialLoiterAnchor.DisplayName : "none")} socialGroup={(_socialLoiterGroup != null ? _socialLoiterGroup.DisplayName : "none")} spectator={_spectatorCrowdActive}\n" +
+            $"run={(_currentRun != null ? _currentRun.name : "none")} lift={(_currentLift != null ? _currentLift.name : "none")} hub={(_currentHubAnchor != null ? _currentHubAnchor.name : "none")}\n" +
+            $"skiGrounded={(skiController != null && skiController.IsRiderGrounded)} skiPhysicsGrounded={(skiController != null && skiController.IsPhysicsGrounded)} stacked={(skiController != null && skiController.IsStacked)} grinding={(skiController != null && skiController.IsGrinding)}\n" +
+            $"bodyNearGround={(skiController != null && skiController.IsBodyNearGround)} skiPlausible={(skiController != null && skiController.IsSkiContactPlausibleForBody)} groundGap={skiGroundGap} groundRefresh={skiGroundRefresh}\n" +
+            $"walkMode={(walkingController != null && walkingController.IsWalkingMode)} walkGrounded={(walkingController != null && walkingController.IsWalkGrounded)} riderPose={(walkingController != null && walkingController.IsRiderPoseActive)}\n" +
+            $"groundNormal={groundNormal} slope={slopeAngle:0.0} velocity={velocity} speed={velocity.magnitude:0.00}\n" +
+            $"locomotionInput={(locomotion != null && locomotion.InputEnabled)} wantsWalkRecovery={(locomotion != null && locomotion.WantsWalkingRecovery)} pathHasDestination={(pathAgent != null && pathAgent.HasDestination)} pathStuck={(pathAgent != null && pathAgent.IsStuck)}\n" +
+            $"target={target} targetDistance={(targetDistance >= 0f ? targetDistance.ToString("0.0") : "none")} currentBroadTarget={_currentBroadTarget} liftApproach={_currentLiftApproachPoint}",
+            this);
+    }
 
     private void Awake()
     {
+        CacheCharacterLayers();
         CacheRefs();
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        WarnIfLayerMaskContains(npcGroundSnapLayers, "Default", "NpcSkierBrain.npcGroundSnapLayers should only include Ground.");
+        WarnIfLayerMaskContains(npcGroundSnapLayers, "NPC", "NpcSkierBrain.npcGroundSnapLayers should not include NPC.");
+        WarnIfLayerMaskContains(npcGroundSnapLayers, "Player", "NpcSkierBrain.npcGroundSnapLayers should not include Player.");
+    }
+
+    private void WarnIfLayerMaskContains(LayerMask mask, string layerName, string message)
+    {
+        int layer = LayerMask.NameToLayer(layerName);
+        if (layer >= 0 && (mask.value & (1 << layer)) != 0)
+            Debug.LogWarning($"[{nameof(NpcSkierBrain)}] {message}", this);
+    }
+#endif
 
     private void Start()
     {
@@ -268,8 +426,18 @@ public class NpcSkierBrain : MonoBehaviour
         if (randomizeAppearanceOnStart && appearanceGenerator != null && !preserveAuthoredAppearance)
             appearanceGenerator.ApplyRandomAppearance(profile);
 
-        if (skiController != null && locomotion != null)
-            skiController.SetExternalInputSource(locomotion);
+        if (skiController != null)
+        {
+            if (locomotion != null)
+                skiController.SetExternalInputSource(locomotion);
+
+            skiController.AcceptPlayerInput = false;
+        }
+
+        if (walkingController != null)
+        {
+            walkingController.AcceptPlayerInput = false;
+        }
 
         if (skiController != null)
             skiController.OnStacked += HandleStacked;
@@ -311,21 +479,129 @@ public class NpcSkierBrain : MonoBehaviour
         locomotion?.SetInputEnabled(false);
         locomotion?.ClearRecoveryRequests();
         locomotion?.SuppressRespawnRequests(0f);
+
+        Quaternion spectatorRotation = Quaternion.LookRotation(_spectatorForward, Vector3.up);
+        ResetBodyForStationaryNpcMode(_spectatorAnchorPosition, spectatorRotation, clearStack: true);
+
         walkingController?.ClearExternalMove();
         walkingController?.SetWalkPresentationKeepsSkisEquipped(true);
         walkingController?.ForceEnterWalkMode();
         sorenessMeter?.ResetSoreness();
 
+        if (body != null)
+        {
+            body.linearVelocity = Vector3.zero;
+            body.angularVelocity = Vector3.zero;
+        }
+
         _currentRun = null;
         _currentLift = null;
+        _preferredBoardGate = null;
+        _liftBoardingPhase = LiftNpcBoardingPhase.None;
+        _lastBoardingFailureReason = "Pool sleep";
         _intentKind = IntentKind.None;
         _state = BrainState.Waiting;
-        transform.SetPositionAndRotation(_spectatorAnchorPosition, Quaternion.LookRotation(_spectatorForward, Vector3.up));
     }
 
     public void EndSpectatorCrowd()
     {
         ResumeFromSpectatorCrowd(immediateIntent: false);
+    }
+
+    public void BeginSocialLoiter(NpcSocialAnchor anchor, NpcSocialGroupSO group, float duration)
+    {
+        if (anchor == null || !CanBeginSocialLoiter())
+            return;
+
+        Vector3 center = anchor.Center != null ? anchor.Center.position : anchor.transform.position;
+        Vector3 facing = playerFocus != null
+            ? Vector3.ProjectOnPlane(playerFocus.position - center, Vector3.up)
+            : transform.forward;
+        if (facing.sqrMagnitude <= 0.0001f)
+            facing = transform.forward;
+
+        _socialLoiterActive = true;
+        _socialLoiterUntil = Time.time + Mathf.Max(1f, duration);
+        _socialLoiterAnchor = anchor;
+        _socialLoiterGroup = group;
+        StampGenericIntent(
+            NpcGenericActivityIntent.SocialLoiter,
+            Mathf.Min(duration, Mathf.Max(1f, duration * 0.25f)),
+            Mathf.Max(1f, duration),
+            anchor.Center.position,
+            anchor,
+            anchor,
+            $"Social loiter at {anchor.DisplayName}");
+        BeginSpectatorCrowd(center, Quaternion.LookRotation(facing.normalized, Vector3.up), facing.normalized);
+    }
+
+    public void NotifySocialConversationCompleted(NpcSocialAnchor anchor, NpcSocialGroupSO group, bool forceLeave)
+    {
+        if (!_socialLoiterActive || anchor == null || _socialLoiterAnchor != anchor)
+            return;
+
+        _previousAnchor = anchor;
+        _previousAnchorCooldownUntil = Time.time + Mathf.Max(0f, anchor.RevisitCooldownSeconds);
+
+        if (!CanUseGenericLifecycle())
+            return;
+
+        float reaction = Random.Range(
+            Mathf.Max(0.1f, socialConversationReactionMin),
+            Mathf.Max(socialConversationReactionMin, socialConversationReactionMax));
+
+        if (forceLeave)
+        {
+            _socialLoiterUntil = Mathf.Min(_socialLoiterUntil, Time.time + ScaleFastForwardDelay(reaction));
+            _lastDecisionReason = $"Conversation completed at {anchor.DisplayName}; leaving after reaction pause.";
+        }
+        else
+        {
+            _socialLoiterUntil = Mathf.Min(_socialLoiterUntil, Time.time + ScaleFastForwardDelay(reaction + Random.Range(4f, 12f)));
+            _lastDecisionReason = $"Conversation completed at {anchor.DisplayName}; staying briefly.";
+        }
+    }
+
+    private Vector3 ResolveCurrentDebugTarget()
+    {
+        if (_socialLoiterActive && _socialLoiterAnchor != null)
+            return _socialLoiterAnchor.Center.position;
+
+        if (pathAgent != null && pathAgent.HasDestination)
+            return pathAgent.Destination;
+
+        if (_intentKind == IntentKind.LiftThenRun)
+            return _currentLiftApproachPoint;
+
+        if (_currentBroadTarget.sqrMagnitude > 0.0001f)
+            return _currentBroadTarget;
+
+        if (_currentRun != null)
+            return GetBroadRunTarget(_currentRun);
+
+        if (_currentHubAnchor != null)
+            return _currentHubAnchor.position;
+
+        return Vector3.zero;
+    }
+
+    public void ResumeFromSocialLoiter()
+    {
+        if (!_socialLoiterActive)
+            return;
+
+        NpcSocialAnchor completedAnchor = _socialLoiterAnchor;
+
+        _socialLoiterActive = false;
+        _socialLoiterAnchor = null;
+        _socialLoiterGroup = null;
+
+        // Clear the stationary spectator wrapper only.
+        ResumeFromSpectatorCrowd(immediateIntent: false);
+
+        CompleteCurrentIntent(completedAnchor != null
+            ? $"Social loiter finished at {completedAnchor.DisplayName}"
+            : "Social loiter finished");
     }
 
     public void ResumeFromSpectatorCrowd(bool immediateIntent = true)
@@ -334,6 +610,12 @@ public class NpcSkierBrain : MonoBehaviour
             return;
 
         _spectatorCrowdActive = false;
+        if (_socialLoiterActive)
+        {
+            _socialLoiterActive = false;
+            _socialLoiterAnchor = null;
+            _socialLoiterGroup = null;
+        }
         walkingController?.ClearExternalMove();
         walkingController?.SetWalkPresentationKeepsSkisEquipped(false);
 
@@ -356,6 +638,7 @@ public class NpcSkierBrain : MonoBehaviour
         _currentLift = null;
         _intentKind = IntentKind.None;
         _pendingSpawnHint = SpawnContextHint.None;
+        ClearGenericIntent("Pool sleep", rememberPrevious: false);
         _state = BrainState.Waiting;
         _respawnSuppressedUntil = 0f;
         _walkingRecoveryUntil = 0f;
@@ -363,8 +646,12 @@ public class NpcSkierBrain : MonoBehaviour
         _boardingRetryCount = 0;
         _currentHubAnchor = null;
         _spectatorCrowdActive = false;
+        _socialLoiterActive = false;
+        _socialLoiterAnchor = null;
+        _socialLoiterGroup = null;
         _lastPoolSleepTime = Time.time;
         _lastPoolSleepPosition = transform.position;
+        _skiModeStrictAirborneSince = -1f;
     }
 
     public void SetSpawnContextHint(SpawnContextHint hint, Vector3 worldPoint)
@@ -375,16 +662,63 @@ public class NpcSkierBrain : MonoBehaviour
 
     public void WakeFromPool(Vector3 position, Quaternion rotation)
     {
-        transform.SetPositionAndRotation(position, rotation);
+        CacheRefs();
 
         pathAgent?.Stop();
         walkingController?.ClearExternalMove();
+
+        if (walkingController != null)
+            walkingController.SetWalkPresentationKeepsSkisEquipped(false);
+
         locomotion?.SetInputEnabled(false);
         locomotion?.ClearRecoveryRequests();
         locomotion?.SuppressRespawnRequests(0f);
+
         sorenessMeter?.ResetSoreness();
-        _respawnSuppressedUntil = Time.time + ScaleFastForwardDelay(1.5f);
+
+        _spectatorCrowdActive = false;
+        _socialLoiterActive = false;
+        _socialLoiterAnchor = null;
+        _socialLoiterGroup = null;
+
+        _currentRun = null;
+        _currentLift = null;
+        _preferredBoardGate = null;
+        _liftBoardingPhase = LiftNpcBoardingPhase.None;
+        _lastBoardingFailureReason = "Wake from pool";
+        _currentHubAnchor = null;
+        ClearGenericIntent("Wake from pool", rememberPrevious: false);
+
+        _currentBroadTarget = Vector3.zero;
+        _currentLiftApproachPoint = Vector3.zero;
+        _currentLiftStagePoint = Vector3.zero;
+
+        _intentKind = IntentKind.None;
+        _state = BrainState.Waiting;
+
+        _liftStageReached = false;
+        _boardingRetryCount = 0;
+        _postLiftRunJoinUntil = 0f;
         _walkingRecoveryUntil = 0f;
+        _respawnSuppressedUntil = Time.time + ScaleFastForwardDelay(1.5f);
+        _skiModeStrictAirborneSince = -1f;
+
+        if (skiController != null)
+        {
+            skiController.TeleportToSpawn(position, rotation, snapToGround: true);
+
+            if (locomotion != null)
+                skiController.SetExternalInputSource(locomotion);
+
+            skiController.AcceptPlayerInput = false;
+        }
+        else
+        {
+            ResetBodyForStationaryNpcMode(position, rotation, clearStack: true);
+        }
+
+        if (walkingController != null)
+            walkingController.AcceptPlayerInput = false;
 
         if (!_initialized)
             InitializeNow();
@@ -397,11 +731,29 @@ public class NpcSkierBrain : MonoBehaviour
         if (!_initialized)
             return;
 
+        if (_genericBehaviourPausedByDefinedCharacter)
+            return;
+
+        if (_socialLoiterActive && Time.time >= _socialLoiterUntil)
+        {
+            ResumeFromSocialLoiter();
+            return;
+        }
+
         if (_spectatorCrowdActive)
         {
             TickSpectatorCrowd();
             return;
         }
+
+        if (ShouldRerollIntent())
+        {
+            ExpireCurrentIntent("Generic intent expired or stalled");
+            return;
+        }
+
+        if (CheckStrictSkiModeAirborneGuard())
+            return;
 
         switch (_state)
         {
@@ -448,6 +800,125 @@ public class NpcSkierBrain : MonoBehaviour
         if (body == null) body = GetComponent<Rigidbody>();
         if (playerFocus == null && Camera.main != null)
             playerFocus = Camera.main.transform;
+    }
+
+    private static void CacheCharacterLayers()
+    {
+        if (_npcLayer == -2)
+            _npcLayer = LayerMask.NameToLayer("NPC");
+
+        if (_playerLayer == -2)
+            _playerLayer = LayerMask.NameToLayer("Player");
+    }
+
+    private bool IsOwnCollider(Collider c)
+    {
+        if (c == null)
+            return false;
+
+        if (body != null && c.attachedRigidbody == body)
+            return true;
+
+        if (c.transform == transform || c.transform.IsChildOf(transform))
+            return true;
+
+        return false;
+    }
+
+    private bool IsCharacterLayer(Collider c)
+    {
+        if (c == null)
+            return false;
+
+        CacheCharacterLayers();
+        int layer = c.gameObject.layer;
+        return (_npcLayer >= 0 && layer == _npcLayer) ||
+               (_playerLayer >= 0 && layer == _playerLayer);
+    }
+
+    private LayerMask EffectiveNpcGroundSnapLayers()
+    {
+        if (npcGroundSnapLayers.value != 0)
+            return npcGroundSnapLayers;
+
+        int groundLayer = LayerMask.NameToLayer("Ground");
+        return groundLayer >= 0 ? (LayerMask)(1 << groundLayer) : (LayerMask)0;
+    }
+
+    private bool TryGetGroundSnapHit(Vector3 candidate, out RaycastHit bestHit)
+    {
+        Vector3 rayOrigin = candidate + Vector3.up * 25f;
+        LayerMask mask = EffectiveNpcGroundSnapLayers();
+        int count = Physics.RaycastNonAlloc(rayOrigin, Vector3.down, _groundSnapHits, 60f, mask, QueryTriggerInteraction.Ignore);
+
+        bestHit = default;
+        float bestDistance = float.PositiveInfinity;
+        bool found = false;
+
+        for (int i = 0; i < count; i++)
+        {
+            RaycastHit hit = _groundSnapHits[i];
+            Collider c = hit.collider;
+            if (c == null || IsOwnCollider(c) || IsCharacterLayer(c))
+                continue;
+
+            if ((mask.value & (1 << c.gameObject.layer)) == 0)
+                continue;
+
+            if (hit.distance < bestDistance)
+            {
+                bestDistance = hit.distance;
+                bestHit = hit;
+                found = true;
+            }
+        }
+
+        return found;
+    }
+
+    private bool CheckStrictSkiModeAirborneGuard()
+    {
+        if (skiController == null || walkingController == null)
+            return false;
+
+        bool skiingState = _state == BrainState.SkiingAmbient || _state == BrainState.SkiingRun;
+        if (!skiingState || walkingController.IsWalkingMode || skiController.IsStacked)
+        {
+            _skiModeStrictAirborneSince = -1f;
+            return false;
+        }
+
+        bool safelySupported = skiController.IsPhysicsGrounded || skiController.IsGrinding;
+        if (safelySupported)
+        {
+            _skiModeStrictAirborneSince = -1f;
+            return false;
+        }
+
+        float gap = skiController.LastMeasuredGroundGap;
+        if ((float.IsNaN(gap) || float.IsInfinity(gap)) && TryGetGroundSnapHit(transform.position, out RaycastHit hit))
+            gap = Mathf.Max(0f, transform.position.y - hit.point.y);
+
+        bool clearlyFloating = float.IsNaN(gap) || float.IsInfinity(gap) || gap >= skiModeFloatingGroundGap;
+        if (!clearlyFloating)
+        {
+            _skiModeStrictAirborneSince = -1f;
+            return false;
+        }
+
+        if (_skiModeStrictAirborneSince < 0f)
+        {
+            _skiModeStrictAirborneSince = Time.time;
+            return false;
+        }
+
+        if (Time.time - _skiModeStrictAirborneSince < ScaleFastForwardDelay(skiModeStrictAirborneGrace))
+            return false;
+
+        Vector3 recoveryPoint = SnapPointToGround(transform.position, transform.position.y);
+        HandleMobilityFailure(recoveryPoint);
+        _skiModeStrictAirborneSince = -1f;
+        return true;
     }
 
     public void SetVisibleFastForwardMultiplier(float multiplier)
@@ -548,6 +1019,24 @@ public class NpcSkierBrain : MonoBehaviour
 
     private void TickSpectatorCrowd()
     {
+        if (skiController != null && skiController.IsStacked)
+        {
+            Vector3 forwardHint = _spectatorForward.sqrMagnitude > 0.0001f
+                ? _spectatorForward
+                : transform.forward;
+
+            skiController.ResetStackStateSilently(snapUpright: true, forwardHint: forwardHint);
+            skiController.ReleaseStackSkiVisualOverridesAndSnap(snapToNeutralPose: true);
+            skiController.ResetVisualPoseForWalkModeHandoff();
+
+            if (body != null)
+            {
+                body.freezeRotation = true;
+                body.linearVelocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+            }
+        }
+
         bool keepSkisEquipped = ShouldKeepSkisEquippedForSpectator();
         walkingController?.SetWalkPresentationKeepsSkisEquipped(keepSkisEquipped);
         walkingController?.ForceEnterWalkMode();
@@ -597,10 +1086,258 @@ public class NpcSkierBrain : MonoBehaviour
         Vector3 grounded = SnapPointToGround(transform.position, _spectatorAnchorPosition.y);
         grounded.y += hop;
 
-        transform.SetPositionAndRotation(grounded, Quaternion.Slerp(transform.rotation, desiredRotation, 10f * Time.deltaTime));
+        Quaternion correctedRotation = Quaternion.Slerp(transform.rotation, desiredRotation, 10f * Time.deltaTime);
+
+        if (body != null && !body.isKinematic)
+        {
+            Vector3 velocity = body.linearVelocity;
+            velocity.y = 0f;
+
+            // Keep only a very small planar carry so old fall/slide velocity cannot survive into loiter mode.
+            Vector3 planar = Vector3.ProjectOnPlane(velocity, Vector3.up);
+            body.linearVelocity = planar * 0.15f;
+            body.angularVelocity = Vector3.zero;
+
+            body.position = grounded;
+            body.rotation = correctedRotation;
+        }
+
+        transform.SetPositionAndRotation(grounded, correctedRotation);
     }
 
     private void PickNextIntent()
+    {
+        if (CanUseGenericLifecycle())
+        {
+            ChooseNextGenericIntent("Pick next activity");
+            return;
+        }
+
+        BeginMountainTravelIntent();
+    }
+
+    public void ChooseNextGenericIntent(string reason)
+    {
+        if (!CanUseGenericLifecycle())
+        {
+            _lastDecisionReason = $"Generic lifecycle blocked: {reason}";
+            BeginMountainTravelIntent();
+            return;
+        }
+
+        BuildGenericIntentCandidates(reason);
+        if (_genericIntentCandidates.Count == 0)
+        {
+            BeginGenericIntent(NpcGenericActivityIntent.SkiRun, null, reason + " fallback");
+            return;
+        }
+
+        float total = 0f;
+        for (int i = 0; i < _genericIntentCandidates.Count; i++)
+            total += Mathf.Max(0f, _genericIntentCandidates[i].weight);
+
+        if (total <= 0.001f)
+        {
+            BeginGenericIntent(NpcGenericActivityIntent.SkiRun, null, reason + " zero weight fallback");
+            return;
+        }
+
+        float roll = Random.value * total;
+        GenericIntentCandidate selected = _genericIntentCandidates[_genericIntentCandidates.Count - 1];
+        for (int i = 0; i < _genericIntentCandidates.Count; i++)
+        {
+            roll -= Mathf.Max(0f, _genericIntentCandidates[i].weight);
+            if (roll <= 0f)
+            {
+                selected = _genericIntentCandidates[i];
+                break;
+            }
+        }
+
+        BeginGenericIntent(selected.intent, selected, selected.reason);
+    }
+
+    public void BeginGenericIntent(NpcGenericActivityIntent intent, object context = null, string reason = "")
+    {
+        GenericIntentCandidate candidate = context is GenericIntentCandidate typed
+            ? typed
+            : new GenericIntentCandidate { intent = intent, weight = 1f, reason = reason };
+
+        if (candidate.intent == NpcGenericActivityIntent.None)
+            candidate.intent = intent;
+
+        if ((candidate.intent == NpcGenericActivityIntent.TraverseToNearbyArea ||
+             candidate.intent == NpcGenericActivityIntent.IdleWander) &&
+            candidate.targetPosition.sqrMagnitude <= 0.0001f)
+        {
+            candidate.targetPosition = SampleNearbyFlowTarget();
+        }
+
+        Vector2 range = ResolveGenericIntentDurationRange(candidate.intent);
+        StampGenericIntent(
+            candidate.intent,
+            range.x,
+            range.y,
+            candidate.targetPosition,
+            candidate.targetObject,
+            candidate.anchor,
+            string.IsNullOrWhiteSpace(reason) ? candidate.reason : reason);
+
+        switch (candidate.intent)
+        {
+            case NpcGenericActivityIntent.SocialLoiter:
+            case NpcGenericActivityIntent.VisitKiosk:
+            case NpcGenericActivityIntent.WatchRace:
+            case NpcGenericActivityIntent.RestAtLodge:
+            case NpcGenericActivityIntent.VisitMedic:
+            case NpcGenericActivityIntent.ViewpointPause:
+            case NpcGenericActivityIntent.PracticeTrick:
+                if (candidate.anchor == null)
+                    candidate.anchor = ChooseAnchorCandidate(ResolvePreferredAnchorType(candidate.intent));
+                if (candidate.anchor != null)
+                {
+                    BeginSocialLoiter(candidate.anchor, null, Random.Range(range.x, range.y));
+                    return;
+                }
+                BeginMountainTravelIntent();
+                return;
+
+            case NpcGenericActivityIntent.RideLift:
+            case NpcGenericActivityIntent.QueueAtLift:
+                BeginLiftIntent(candidate.intent == NpcGenericActivityIntent.QueueAtLift ? "QueueAtLift intent" : "RideLift intent");
+                return;
+
+            case NpcGenericActivityIntent.TraverseToNearbyArea:
+            case NpcGenericActivityIntent.IdleWander:
+                if (candidate.targetPosition.sqrMagnitude > 0.0001f)
+                {
+                    if (ShouldUseWalkingSupportTo(candidate.targetPosition))
+                        BeginWalkingSupport(candidate.targetPosition);
+                    else
+                        BeginAmbientSki(candidate.targetPosition);
+                    return;
+                }
+                BeginMountainTravelIntent();
+                return;
+
+            case NpcGenericActivityIntent.LeaveArea:
+                if (NpcSkierSpawner.Instance != null && CanLeaveAreaNow())
+                {
+                    DespawnToPool("Generic intent LeaveArea");
+                    return;
+                }
+                BeginGenericIntent(NpcGenericActivityIntent.TraverseToNearbyArea, null, "LeaveArea deferred because NPC is still relevant");
+                return;
+
+            case NpcGenericActivityIntent.SkiRun:
+            default:
+                BeginMountainTravelIntent(preferLift: false);
+                return;
+        }
+    }
+
+    public void CompleteCurrentIntent(string reason)
+    {
+        ClearGenericIntent(reason, rememberPrevious: true);
+
+        if (_initialized && CanUseGenericLifecycle() && !_spectatorCrowdActive && !_socialLoiterActive)
+            ChooseNextGenericIntent(reason);
+    }
+
+    public void ExpireCurrentIntent(string reason)
+    {
+        ClearGenericIntent(reason, rememberPrevious: true);
+
+        if (_initialized && CanUseGenericLifecycle() && !_spectatorCrowdActive && !_socialLoiterActive)
+            ChooseNextGenericIntent(reason);
+    }
+
+    public bool ShouldRerollIntent()
+    {
+        if (!CanUseGenericLifecycle() || _currentGenericIntent == NpcGenericActivityIntent.None)
+            return false;
+
+        if (_state == BrainState.Recovering || _state == BrainState.BoardingLift || _state == BrainState.RidingLift)
+            return false;
+
+        if (Time.time < _currentIntentStartedAt + ScaleFastForwardDelay(_currentIntentMinDuration))
+            return false;
+
+        if (Time.time >= _currentIntentExpiresAt)
+            return true;
+
+        return pathAgent != null && pathAgent.IsStuck;
+    }
+
+    [ContextMenu("Print Generic Intent Debug State")]
+    public void PrintGenericIntentDebugState()
+    {
+        Debug.Log(BuildGenericIntentDebugString(), this);
+    }
+
+    [ContextMenu("Force Choose New Generic Intent")]
+    public void ForceChooseNewGenericIntent()
+    {
+        ExpireCurrentIntent("Designer forced new generic intent");
+    }
+
+    [ContextMenu("Force Intent: SocialLoiter")]
+    public void ForceIntentSocialLoiter()
+    {
+        BeginGenericIntent(NpcGenericActivityIntent.SocialLoiter, null, "Designer forced SocialLoiter");
+    }
+
+    [ContextMenu("Force Intent: SkiRun")]
+    public void ForceIntentSkiRun()
+    {
+        BeginGenericIntent(NpcGenericActivityIntent.SkiRun, null, "Designer forced SkiRun");
+    }
+
+    [ContextMenu("Force Intent: VisitKiosk")]
+    public void ForceIntentVisitKiosk()
+    {
+        BeginGenericIntent(NpcGenericActivityIntent.VisitKiosk, null, "Designer forced VisitKiosk");
+    }
+
+    [ContextMenu("Force Intent: RideLift")]
+    public void ForceIntentRideLift()
+    {
+        BeginGenericIntent(NpcGenericActivityIntent.RideLift, null, "Designer forced RideLift");
+    }
+
+    [ContextMenu("Force Intent: QueueAtLift")]
+    public void ForceIntentQueueAtLift()
+    {
+        BeginGenericIntent(NpcGenericActivityIntent.QueueAtLift, null, "Designer forced QueueAtLift");
+    }
+
+    [ContextMenu("Force Complete Current Intent")]
+    public void ForceCompleteCurrentIntent()
+    {
+        CompleteCurrentIntent("Designer forced complete");
+    }
+
+    [ContextMenu("Force Replan Lift Route")]
+    public void ForceReplanLiftRoute()
+    {
+        BeginLiftIntent("Designer forced lift route replan");
+    }
+
+    [ContextMenu("Print Lift Boarding Debug State")]
+    public void PrintLiftBoardingDebugState()
+    {
+        Debug.Log(BuildLiftBoardingDebugString(), this);
+    }
+
+    [ContextMenu("Print Full NPC Behaviour Debug State")]
+    public void PrintFullNpcBehaviourDebugState()
+    {
+        PrintNpcMovementDebugState();
+        PrintGenericIntentDebugState();
+        PrintLiftBoardingDebugState();
+    }
+
+    private void BeginMountainTravelIntent(bool preferLift = false)
     {
         if (TryBuildHintedIntent())
         {
@@ -622,9 +1359,11 @@ public class NpcSkierBrain : MonoBehaviour
 
         bool canJoinRunDirect = CanJoinRunDirectly(_currentRun);
 
-        if (_currentLift != null && ShouldPreferLiftForRun(_currentLift, _currentBroadTarget))
+        if (_currentLift != null && (preferLift || ShouldPreferLiftForRun(_currentLift, _currentBroadTarget)))
         {
             _intentKind = IntentKind.LiftThenRun;
+            _preferredBoardGate = ResolvePreferredBoardGate(_currentLift);
+            _liftBoardingPhase = LiftNpcBoardingPhase.MovingToStage;
             _currentLiftStagePoint = ResolveLiftStagePoint(_currentLift);
             _currentLiftApproachPoint = _currentLiftStagePoint;
 
@@ -652,6 +1391,419 @@ public class NpcSkierBrain : MonoBehaviour
             BeginAmbientSki(_currentBroadTarget);
     }
 
+    private bool CanLeaveAreaNow()
+    {
+        if (!CanBeBorrowedForSocialPopulation())
+            return false;
+
+        Transform focus = ResolvePlayerFocus();
+        if (focus != null && Vector3.Distance(transform.position, focus.position) < 180f)
+            return false;
+
+        Camera cam = Camera.main;
+        if (cam != null && TryGetVisibilityBounds(out Bounds bounds))
+        {
+            Plane[] planes = GeometryUtility.CalculateFrustumPlanes(cam);
+            if (GeometryUtility.TestPlanesAABB(planes, bounds))
+                return false;
+        }
+
+        return true;
+    }
+
+    private void BeginLiftIntent(string reason)
+    {
+        if (liftRider == null)
+        {
+            _lastBoardingFailureReason = "No LiftRider on NPC";
+            BeginMountainTravelIntent(preferLift: false);
+            return;
+        }
+
+        _currentLift = ChooseLiftForIntent();
+        if (_currentLift == null)
+        {
+            _lastBoardingFailureReason = "No valid lift found for intent";
+            BeginMountainTravelIntent(preferLift: false);
+            return;
+        }
+
+        _preferredBoardGate = ResolvePreferredBoardGate(_currentLift);
+        _currentRun = ChooseRunNearLiftTop(_currentLift);
+        _currentBroadTarget = _currentRun != null ? GetBroadRunTarget(_currentRun) : (_currentLift.topStation != null ? _currentLift.topStation.position : _currentLift.bottomStation.position);
+        _currentLiftStagePoint = ResolveLiftStagePoint(_currentLift);
+        _currentLiftApproachPoint = _preferredBoardGate != null
+            ? _preferredBoardGate.GetNpcEntryPosition()
+            : ResolveLiftApproachPoint(_currentLift);
+        _liftStageReached = false;
+        _boardingRetryCount = 0;
+        _intentKind = IntentKind.LiftThenRun;
+        _liftBoardingPhase = LiftNpcBoardingPhase.MovingToStage;
+        _lastBoardingFailureReason = $"Planning lift route: {reason}";
+        _suppressNextIntentRepeatPenalty = true;
+
+        if (ShouldUseWalkingSupportTo(_currentLiftStagePoint) ||
+            Vector3.Distance(transform.position, _currentLiftStagePoint) > broadLiftApproachRadius)
+            BeginWalkingSupport(_currentLiftStagePoint);
+        else
+            BeginAmbientSki(_currentLiftStagePoint);
+    }
+
+    private LiftLine ChooseLiftForIntent()
+    {
+        if (availableLifts == null || availableLifts.Count == 0)
+            return null;
+
+        LiftLine best = null;
+        float bestScore = float.NegativeInfinity;
+
+        for (int i = 0; i < availableLifts.Count; i++)
+        {
+            LiftLine lift = availableLifts[i];
+            if (lift == null || lift.bottomStation == null || lift.topStation == null)
+                continue;
+
+            float verticalGain = lift.topStation.position.y - lift.bottomStation.position.y;
+            if (verticalGain < minimumLiftVerticalGain * 0.35f)
+                continue;
+
+            LiftBoardGate gate = ResolvePreferredBoardGate(lift);
+            float approach = Vector3.Distance(transform.position, gate != null ? gate.GetNpcEntryPosition() : lift.bottomStation.position);
+            float topToRun = 0f;
+            SkiRunLine run = ChooseRunNearLiftTop(lift);
+            if (run != null)
+                topToRun = Vector3.Distance(lift.topStation.position, GetBroadRunTarget(run));
+
+            float gateScore = gate != null ? 60f : 0f;
+            float distanceScore = Mathf.Clamp(180f - approach, -120f, 180f) * 0.25f;
+            float runScore = run != null ? Mathf.Clamp(160f - topToRun, -80f, 160f) * 0.2f : -20f;
+            float score = gateScore + distanceScore + runScore + verticalGain * 0.08f + Random.Range(-4f, 4f);
+
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = lift;
+            }
+        }
+
+        return best;
+    }
+
+    private bool CanUseGenericLifecycle()
+    {
+        if (!useGenericActivityLifecycle || _genericBehaviourPausedByDefinedCharacter)
+            return false;
+
+        if (TryGetComponent(out NpcDefinedCharacterBehaviour definedBehaviour))
+            return definedBehaviour.AllowGenericSkiBrain;
+
+        if (TryGetComponent(out NpcIdentity identity) && identity.IsAuthored)
+            return false;
+
+        return true;
+    }
+
+    private void StampGenericIntent(
+        NpcGenericActivityIntent intent,
+        float minDuration,
+        float maxDuration,
+        Vector3 targetPosition,
+        UnityEngine.Object targetObject,
+        NpcSocialAnchor targetAnchor,
+        string reason)
+    {
+        if (_currentGenericIntent != NpcGenericActivityIntent.None && _currentGenericIntent != intent)
+            _previousGenericIntent = _currentGenericIntent;
+
+        if (_currentIntentTargetAnchor != null && _currentIntentTargetAnchor != targetAnchor)
+        {
+            _previousAnchor = _currentIntentTargetAnchor;
+            _previousAnchorCooldownUntil = Time.time + Mathf.Max(0f, _currentIntentTargetAnchor.RevisitCooldownSeconds);
+        }
+
+        _currentGenericIntent = intent;
+        _currentIntentStartedAt = Time.time;
+        _currentIntentMinDuration = Mathf.Max(0.1f, minDuration);
+        _currentIntentMaxDuration = Mathf.Max(_currentIntentMinDuration, maxDuration);
+        _currentIntentExpiresAt = Time.time + ScaleFastForwardDelay(Random.Range(_currentIntentMinDuration, _currentIntentMaxDuration));
+        _currentIntentTargetPosition = targetPosition;
+        _currentIntentTargetObject = targetObject;
+        _currentIntentTargetAnchor = targetAnchor;
+        _lastDecisionReason = string.IsNullOrWhiteSpace(reason) ? $"Started {intent}" : reason;
+    }
+
+    private void ClearGenericIntent(string reason, bool rememberPrevious)
+    {
+        if (rememberPrevious && _currentGenericIntent != NpcGenericActivityIntent.None)
+            _previousGenericIntent = _currentGenericIntent;
+
+        if (rememberPrevious && _currentIntentTargetAnchor != null)
+        {
+            _previousAnchor = _currentIntentTargetAnchor;
+            _previousAnchorCooldownUntil = Time.time + Mathf.Max(0f, _currentIntentTargetAnchor.RevisitCooldownSeconds);
+        }
+
+        _currentGenericIntent = NpcGenericActivityIntent.None;
+        _currentIntentStartedAt = 0f;
+        _currentIntentMinDuration = 0f;
+        _currentIntentMaxDuration = 0f;
+        _currentIntentExpiresAt = 0f;
+        _currentIntentTargetPosition = Vector3.zero;
+        _currentIntentTargetObject = null;
+        _currentIntentTargetAnchor = null;
+        _lastDecisionReason = string.IsNullOrWhiteSpace(reason) ? "Cleared generic intent" : reason;
+    }
+
+    private void BuildGenericIntentCandidates(string reason)
+    {
+        _genericIntentCandidates.Clear();
+
+        float social = profile != null ? profile.Socialness : 0.5f;
+        float explore = profile != null ? profile.ExplorationWeight : 0.5f;
+        float lift = profile != null ? profile.LiftUseWeight : 0.6f;
+        float race = profile != null ? profile.RaceInterest : 0.25f;
+        float trick = profile != null ? profile.TrickInterest : 0.25f;
+        bool afterLoiter = IsLoiterLikeIntent(_previousGenericIntent);
+        float movementBoost = afterLoiter ? 1f + Mathf.Max(0f, flowThroughMovementBiasAfterLoiter) : 1f;
+        float loiterDamping = afterLoiter ? Mathf.Clamp01(1f - flowThroughMovementBiasAfterLoiter) : 1f;
+
+        AddGenericIntentCandidate(NpcGenericActivityIntent.SkiRun, (1.1f + GetLiftLapBias() * 0.25f) * movementBoost, null, null, Vector3.zero, reason);
+        AddGenericIntentCandidate(NpcGenericActivityIntent.RideLift, lift * movementBoost, null, null, Vector3.zero, reason);
+        AddGenericIntentCandidate(NpcGenericActivityIntent.TraverseToNearbyArea, explore * 0.45f * movementBoost, null, null, SampleNearbyFlowTarget(), reason);
+        AddGenericIntentCandidate(NpcGenericActivityIntent.IdleWander, (profile != null ? profile.IdleWanderWeight : 0.15f) * movementBoost, null, null, SampleNearbyFlowTarget(), reason);
+        AddGenericIntentCandidate(NpcGenericActivityIntent.LeaveArea, profile != null ? profile.LeaveAreaWeight : 0.08f, null, null, Vector3.zero, reason);
+
+        AddBestAnchorCandidate(NpcGenericActivityIntent.SocialLoiter, social * loiterDamping, null, reason);
+        AddBestAnchorCandidate(NpcGenericActivityIntent.VisitKiosk, (profile != null ? profile.KioskVisitWeight : 0.2f) * loiterDamping, NpcSocialAnchorType.Kiosk, reason);
+        AddBestAnchorCandidate(NpcGenericActivityIntent.WatchRace, race * loiterDamping, NpcSocialAnchorType.RaceStart, reason);
+        AddBestAnchorCandidate(NpcGenericActivityIntent.RestAtLodge, (profile != null ? profile.LodgeRestWeight : 0.2f) * loiterDamping, NpcSocialAnchorType.Lodge, reason);
+        AddBestAnchorCandidate(NpcGenericActivityIntent.VisitMedic, (profile != null ? profile.MedicVisitWeight : 0.05f) * loiterDamping, NpcSocialAnchorType.MedicTent, reason);
+        AddBestAnchorCandidate(NpcGenericActivityIntent.ViewpointPause, (profile != null ? profile.ViewpointPauseWeight : 0.25f) * loiterDamping, NpcSocialAnchorType.Viewpoint, reason);
+        AddBestAnchorCandidate(NpcGenericActivityIntent.ViewpointPause, (profile != null ? profile.ViewpointPauseWeight : 0.25f) * 0.75f * loiterDamping, NpcSocialAnchorType.RunOverlook, reason);
+        AddBestAnchorCandidate(NpcGenericActivityIntent.PracticeTrick, trick * loiterDamping, NpcSocialAnchorType.TerrainPark, reason);
+
+        _suppressNextIntentRepeatPenalty = false;
+    }
+
+    private void AddGenericIntentCandidate(
+        NpcGenericActivityIntent intent,
+        float baseWeight,
+        NpcSocialAnchor anchor,
+        UnityEngine.Object targetObject,
+        Vector3 targetPosition,
+        string reason)
+    {
+        float weight = Mathf.Max(0f, baseWeight);
+        if (!_suppressNextIntentRepeatPenalty && intent == _previousGenericIntent)
+            weight *= Mathf.Clamp01(genericIntentRepeatPenalty);
+
+        if (anchor != null)
+        {
+            float anchorWeight = anchor.GetCandidateWeightForActor(GetComponent<NpcSocialActor>(), this);
+            weight *= anchorWeight;
+
+            if (anchor == _previousAnchor && Time.time < _previousAnchorCooldownUntil)
+                weight *= Mathf.Clamp01(genericAnchorRepeatPenalty);
+        }
+
+        if (weight <= 0.001f)
+            return;
+
+        _genericIntentCandidates.Add(new GenericIntentCandidate
+        {
+            intent = intent,
+            weight = weight,
+            anchor = anchor,
+            targetObject = targetObject != null ? targetObject : anchor,
+            targetPosition = targetPosition.sqrMagnitude > 0.0001f ? targetPosition : anchor != null ? anchor.Center.position : Vector3.zero,
+            reason = $"{reason}: {intent} weight={weight:0.00}" + (anchor != null ? $" anchor={anchor.DisplayName} crowd={anchor.GetCrowdingScore():0.00}" : string.Empty)
+        });
+    }
+
+    private static bool IsLoiterLikeIntent(NpcGenericActivityIntent intent)
+    {
+        switch (intent)
+        {
+            case NpcGenericActivityIntent.SocialLoiter:
+            case NpcGenericActivityIntent.VisitKiosk:
+            case NpcGenericActivityIntent.WatchRace:
+            case NpcGenericActivityIntent.RestAtLodge:
+            case NpcGenericActivityIntent.VisitMedic:
+            case NpcGenericActivityIntent.ViewpointPause:
+            case NpcGenericActivityIntent.PracticeTrick:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private void AddBestAnchorCandidate(NpcGenericActivityIntent intent, float baseWeight, NpcSocialAnchorType? requiredType, string reason)
+    {
+        if (baseWeight <= 0.001f)
+            return;
+
+        NpcSocialAnchor anchor = ChooseAnchorCandidate(requiredType);
+        if (anchor == null)
+            return;
+
+        AddGenericIntentCandidate(intent, baseWeight, anchor, anchor, anchor.Center.position, reason);
+    }
+
+    private NpcSocialAnchorType? ResolvePreferredAnchorType(NpcGenericActivityIntent intent)
+    {
+        switch (intent)
+        {
+            case NpcGenericActivityIntent.VisitKiosk:
+                return NpcSocialAnchorType.Kiosk;
+            case NpcGenericActivityIntent.WatchRace:
+                return NpcSocialAnchorType.RaceStart;
+            case NpcGenericActivityIntent.RestAtLodge:
+                return NpcSocialAnchorType.Lodge;
+            case NpcGenericActivityIntent.VisitMedic:
+                return NpcSocialAnchorType.MedicTent;
+            case NpcGenericActivityIntent.PracticeTrick:
+                return NpcSocialAnchorType.TerrainPark;
+            case NpcGenericActivityIntent.ViewpointPause:
+                return Random.value < 0.5f ? NpcSocialAnchorType.Viewpoint : NpcSocialAnchorType.RunOverlook;
+            default:
+                return null;
+        }
+    }
+
+    private NpcSocialAnchor ChooseAnchorCandidate(NpcSocialAnchorType? requiredType)
+    {
+        _genericAnchorCandidates.Clear();
+        var anchors = NpcSocialDirector.RegisteredAnchors;
+        for (int i = 0; i < anchors.Count; i++)
+        {
+            NpcSocialAnchor anchor = anchors[i];
+            if (anchor == null || !anchor.isActiveAndEnabled)
+                continue;
+
+            if (requiredType.HasValue && anchor.AnchorType != requiredType.Value)
+                continue;
+
+            if (!anchor.HasAvailableCapacity())
+                continue;
+
+            _genericAnchorCandidates.Add(anchor);
+        }
+
+        if (_genericAnchorCandidates.Count == 0)
+            return null;
+
+        NpcSocialActor actor = GetComponent<NpcSocialActor>();
+        float total = 0f;
+        for (int i = 0; i < _genericAnchorCandidates.Count; i++)
+        {
+            NpcSocialAnchor anchor = _genericAnchorCandidates[i];
+            float distance = Vector3.Distance(transform.position, anchor.Center.position);
+            total += anchor.GetCandidateWeightForActor(actor, this) / Mathf.Max(1f, distance / 40f);
+        }
+
+        if (total <= 0.001f)
+            return null;
+
+        float roll = Random.value * total;
+        for (int i = 0; i < _genericAnchorCandidates.Count; i++)
+        {
+            NpcSocialAnchor anchor = _genericAnchorCandidates[i];
+            float distance = Vector3.Distance(transform.position, anchor.Center.position);
+            roll -= anchor.GetCandidateWeightForActor(actor, this) / Mathf.Max(1f, distance / 40f);
+            if (roll <= 0f)
+                return anchor;
+        }
+
+        return _genericAnchorCandidates[_genericAnchorCandidates.Count - 1];
+    }
+
+    private Vector2 ResolveGenericIntentDurationRange(NpcGenericActivityIntent intent)
+    {
+        switch (intent)
+        {
+            case NpcGenericActivityIntent.SocialLoiter:
+            case NpcGenericActivityIntent.VisitKiosk:
+                return profile != null ? profile.SocialLoiterDurationRange : new Vector2(20f, 90f);
+            case NpcGenericActivityIntent.WatchRace:
+            case NpcGenericActivityIntent.ViewpointPause:
+                return profile != null ? profile.ViewpointPauseDurationRange : new Vector2(8f, 25f);
+            case NpcGenericActivityIntent.RestAtLodge:
+            case NpcGenericActivityIntent.VisitMedic:
+                return profile != null ? profile.LodgeRestDurationRange : new Vector2(30f, 120f);
+            case NpcGenericActivityIntent.PracticeTrick:
+                return profile != null ? profile.PracticeTrickDurationRange : new Vector2(10f, 40f);
+            case NpcGenericActivityIntent.IdleWander:
+                return profile != null ? profile.IdleWanderDurationRange : new Vector2(8f, 30f);
+            case NpcGenericActivityIntent.RideLift:
+            case NpcGenericActivityIntent.QueueAtLift:
+                return NormalizeRange(liftIntentDurationRange, 45f, 220f);
+            case NpcGenericActivityIntent.TraverseToNearbyArea:
+            case NpcGenericActivityIntent.LeaveArea:
+                return NormalizeRange(traverseIntentDurationRange, 18f, 70f);
+            default:
+                return NormalizeRange(skiRunIntentDurationRange, 35f, 160f);
+        }
+    }
+
+    private Vector3 SampleNearbyFlowTarget()
+    {
+        Transform focus = ResolvePlayerFocus();
+        Vector3 origin = focus != null ? focus.position : transform.position;
+        Vector2 offset = Random.insideUnitCircle.normalized * Random.Range(45f, 180f);
+        if (offset.sqrMagnitude <= 0.001f)
+            offset = Vector2.right * 60f;
+
+        return SnapPointToGround(origin + new Vector3(offset.x, 0f, offset.y), origin.y);
+    }
+
+    private string BuildGenericIntentDebugString()
+    {
+        float elapsed = _currentGenericIntent != NpcGenericActivityIntent.None ? Time.time - _currentIntentStartedAt : 0f;
+        float expiresIn = _currentGenericIntent != NpcGenericActivityIntent.None ? Mathf.Max(0f, _currentIntentExpiresAt - Time.time) : 0f;
+        string target = _currentIntentTargetAnchor != null
+            ? _currentIntentTargetAnchor.DisplayName
+            : _currentIntentTargetObject != null ? _currentIntentTargetObject.name : _currentIntentTargetPosition.ToString();
+
+        return
+            $"[{nameof(NpcSkierBrain)}] Generic Intent Debug: {name}\n" +
+            $"genericAllowed={CanUseGenericLifecycle()} blockedByDefined={_genericBehaviourPausedByDefinedCharacter} current={_currentGenericIntent} previous={_previousGenericIntent}\n" +
+            $"state={_state} lowLevelIntent={_intentKind} elapsed={elapsed:0.0}s min={_currentIntentMinDuration:0.0}s max={_currentIntentMaxDuration:0.0}s expiresIn={expiresIn:0.0}s\n" +
+            $"target={target} targetPos={_currentIntentTargetPosition} previousAnchor={(_previousAnchor != null ? _previousAnchor.DisplayName : "none")} anchorCooldown={Mathf.Max(0f, _previousAnchorCooldownUntil - Time.time):0.0}s\n" +
+            BuildLiftBoardingDebugString() + "\n" +
+            $"lastDecision={_lastDecisionReason}";
+    }
+
+    private string BuildLiftBoardingDebugString()
+    {
+        LiftBoardGate gate = _preferredBoardGate != null ? _preferredBoardGate : (_currentLift != null ? ResolvePreferredBoardGate(_currentLift) : null);
+        Vector3 stage = _currentLiftStagePoint;
+        Vector3 queue = gate != null && liftRider != null ? gate.GetQueueTargetPosition(liftRider) : _currentLiftApproachPoint;
+        Vector3 board = gate != null && gate.boardingPoint != null ? gate.boardingPoint.position : queue;
+
+        float stageDist = stage.sqrMagnitude > 0.0001f ? Vector3.Distance(transform.position, stage) : -1f;
+        float queueDist = queue.sqrMagnitude > 0.0001f ? Vector3.Distance(transform.position, queue) : -1f;
+        float boardDist = board.sqrMagnitude > 0.0001f ? Vector3.Distance(transform.position, board) : -1f;
+        bool queued = gate != null && liftRider != null && gate.IsQueued(liftRider);
+        int queueIndex = gate != null && liftRider != null ? gate.GetQueueIndex(liftRider) : -1;
+        bool inside = gate != null && liftRider != null && gate.IsRiderInsideTrigger(liftRider);
+        bool carrierReady = gate != null && liftRider != null && gate.HasCarrierReadyFor(liftRider);
+
+        return
+            $"liftPhase={_liftBoardingPhase} lift={(_currentLift != null ? _currentLift.name : "none")} gate={(gate != null ? gate.name : "none")} nearbyGate={(liftRider != null && liftRider.NearbyBoardGate != null ? liftRider.NearbyBoardGate.name : "none")}\n" +
+            $"stageDist={stageDist:0.00} queueDist={queueDist:0.00} boardDist={boardDist:0.00} insideTrigger={inside} queued={queued} queueIndex={queueIndex} head={(gate != null && liftRider != null && gate.IsHeadOfQueue(liftRider))}\n" +
+            $"attached={(liftRider != null && liftRider.IsAttached)} carrier={(liftRider != null && liftRider.CurrentCarrier != null ? liftRider.CurrentCarrier.name : "none")} carrierReady={carrierReady} retries={_boardingRetryCount} lastBoardingFailure={_lastBoardingFailureReason}";
+    }
+
+    private static Vector2 NormalizeRange(Vector2 range, float fallbackMin, float fallbackMax)
+    {
+        float min = Mathf.Max(0.1f, Mathf.Min(range.x, range.y));
+        float max = Mathf.Max(min, Mathf.Max(range.x, range.y));
+        if (max <= 0.1f)
+            return new Vector2(fallbackMin, Mathf.Max(fallbackMin, fallbackMax));
+
+        return new Vector2(min, max);
+    }
+
     private bool TryBuildHintedIntent()
     {
         switch (_pendingSpawnHint)
@@ -663,6 +1815,8 @@ public class NpcSkierBrain : MonoBehaviour
                         return false;
 
                     _currentLift = lift;
+                    _preferredBoardGate = ResolvePreferredBoardGate(lift);
+                    _liftBoardingPhase = LiftNpcBoardingPhase.MovingToStage;
                     _currentLiftStagePoint = ResolveLiftStagePoint(lift);
                     _currentLiftApproachPoint = _currentLiftStagePoint;
                     _currentRun = ChooseRunNearLiftTop(lift);
@@ -684,6 +1838,8 @@ public class NpcSkierBrain : MonoBehaviour
                 {
                     LiftLine lift = FindNearestLift(_pendingHintWorldPoint, requireBottom: false);
                     _currentLift = lift;
+                    _preferredBoardGate = null;
+                    _liftBoardingPhase = LiftNpcBoardingPhase.Finished;
                     _currentRun = lift != null ? ChooseRunNearLiftTop(lift) : ChooseRunForProfile();
                     if (_currentRun == null)
                         return false;
@@ -810,6 +1966,7 @@ public class NpcSkierBrain : MonoBehaviour
                 if (stageDistance <= liftStageArrivalDistance)
                 {
                     _liftStageReached = true;
+                    _liftBoardingPhase = LiftNpcBoardingPhase.MovingToQueueEntry;
                     _currentLiftApproachPoint = ResolveLiftApproachPoint(_currentLift);
                 }
             }
@@ -893,6 +2050,7 @@ public class NpcSkierBrain : MonoBehaviour
                 maxPause += profile.ScenicPauseBias01 * 1.5f;
             }
 
+            ClearGenericIntent("Completed ski run", rememberPrevious: true);
             EnterWaiting(Random.Range(minPause, maxPause));
         }
     }
@@ -914,10 +2072,12 @@ public class NpcSkierBrain : MonoBehaviour
             {
                 _currentLiftStagePoint = ResolveLiftStagePoint(_currentLift);
                 _currentLiftApproachPoint = _currentLiftStagePoint;
+                _liftBoardingPhase = LiftNpcBoardingPhase.MovingToStage;
             }
             else
             {
                 _currentLiftApproachPoint = ResolveLiftApproachPoint(_currentLift);
+                _liftBoardingPhase = LiftNpcBoardingPhase.MovingToQueueEntry;
             }
 
             target = _currentLiftApproachPoint;
@@ -936,6 +2096,7 @@ public class NpcSkierBrain : MonoBehaviour
                 if (!_liftStageReached)
                 {
                     _liftStageReached = true;
+                    _liftBoardingPhase = LiftNpcBoardingPhase.MovingToQueueEntry;
                     _currentLiftApproachPoint = ResolveLiftApproachPoint(_currentLift);
                     BeginWalkingSupport(_currentLiftApproachPoint);
                 }
@@ -969,6 +2130,7 @@ public class NpcSkierBrain : MonoBehaviour
 
         _boardingAbortTime = Time.time + ScaleFastForwardDelay(boardingTimeout);
         _nextLiftInputTime = 0f;
+        _liftBoardingPhase = LiftNpcBoardingPhase.JoiningQueue;
         _state = BrainState.BoardingLift;
     }
 
@@ -988,37 +2150,54 @@ public class NpcSkierBrain : MonoBehaviour
         }
 
         LiftBoardGate preferredGate = ResolvePreferredBoardGate(_currentLift);
+        _preferredBoardGate = preferredGate;
         LiftBoardGate gate = liftRider.NearbyBoardGate != null ? liftRider.NearbyBoardGate : preferredGate;
         if (gate == null)
         {
+            _lastBoardingFailureReason = "No preferred or nearby lift gate";
             HandleBoardingFailure();
             return;
         }
 
-        _currentLiftApproachPoint = gate.GetQueueTargetPosition(liftRider);
-        bool inGateTrigger = liftRider.NearbyBoardGate == gate;
+        _currentLiftApproachPoint = gate.IsQueued(liftRider)
+            ? gate.GetQueueTargetPosition(liftRider)
+            : gate.GetNpcEntryPosition();
+        bool inGateTrigger = gate.IsRiderInsideTrigger(liftRider) || liftRider.NearbyBoardGate == gate;
         bool isQueued = gate.IsQueued(liftRider);
         float distance = Vector3.Distance(transform.position, _currentLiftApproachPoint);
+        float gateDistance = gate.DistanceToBoardingOrQueueTarget(liftRider);
 
-        if (!inGateTrigger)
+        if (!isQueued && !inGateTrigger && gateDistance > gate.NpcQueueJoinRadius)
         {
-            BeginWalkingSupport(_currentLiftApproachPoint);
+            _liftBoardingPhase = LiftNpcBoardingPhase.MovingToQueueEntry;
+            MoveTowardLiftBoardingPoint(_currentLiftApproachPoint);
             return;
         }
 
         if (!isQueued)
         {
+            _liftBoardingPhase = LiftNpcBoardingPhase.JoiningQueue;
             isQueued = gate.TryJoinQueue(liftRider);
-            if (!isQueued && (distance > walkArrivalDistance || !IsWithinGateCatchArea(gate)))
+            if (!isQueued && (gateDistance > Mathf.Max(walkArrivalDistance, gate.NpcQueueJoinRadius) || !IsWithinGateCatchArea(gate)))
             {
-                BeginWalkingSupport(_currentLiftApproachPoint);
+                _lastBoardingFailureReason = $"TryJoinQueue failed. inTrigger={inGateTrigger} gateDistance={gateDistance:0.00}";
+                MoveTowardLiftBoardingPoint(_currentLiftApproachPoint);
                 return;
             }
         }
 
-        if (distance > liftBoardDistance * 1.75f || !IsWithinGateCatchArea(gate))
+        _currentLiftApproachPoint = gate.GetQueueTargetPosition(liftRider);
+        distance = Vector3.Distance(transform.position, _currentLiftApproachPoint);
+
+        if (isQueued)
+            _liftBoardingPhase = gate.IsHeadOfQueue(liftRider) ? LiftNpcBoardingPhase.BoardingCarrier : LiftNpcBoardingPhase.WaitingInQueue;
+
+        float queueArrivalDistance = gate.IsHeadOfQueue(liftRider)
+            ? Mathf.Max(walkArrivalDistance, liftBoardCommitDistance)
+            : walkArrivalDistance;
+        if (distance > queueArrivalDistance)
         {
-            BeginWalkingSupport(_currentLiftApproachPoint);
+            MoveTowardLiftBoardingPoint(_currentLiftApproachPoint);
             return;
         }
 
@@ -1027,15 +2206,24 @@ public class NpcSkierBrain : MonoBehaviour
 
         if (Time.time >= _boardingAbortTime)
         {
+            _lastBoardingFailureReason = $"Boarding timeout. queued={isQueued} head={gate.IsHeadOfQueue(liftRider)} carrierReady={gate.HasCarrierReadyFor(liftRider)} dist={distance:0.00} gateDist={gateDistance:0.00}";
             HandleBoardingFailure();
             return;
         }
 
-        if (Time.time >= _nextLiftInputTime)
+        if (!liftRider.IsNpcRider() && Time.time >= _nextLiftInputTime)
         {
             _nextLiftInputTime = Time.time + ScaleFastForwardDelay(0.15f);
             liftRider.SetLiftInput(true, true);
         }
+    }
+
+    private void MoveTowardLiftBoardingPoint(Vector3 target)
+    {
+        if (pathAgent != null && pathAgent.HasDestination && Vector3.Distance(pathAgent.Destination, target) <= 0.25f)
+            return;
+
+        BeginWalkingSupport(target);
     }
 
     private void TickRidingLift()
@@ -1050,6 +2238,7 @@ public class NpcSkierBrain : MonoBehaviour
 
         if (liftRider.IsAttached)
         {
+            _liftBoardingPhase = LiftNpcBoardingPhase.Riding;
             bool chairMode = _currentLift.carrierPrefab != null &&
                              _currentLift.carrierPrefab.mode == LiftCarrierMode.Chair;
 
@@ -1068,17 +2257,33 @@ public class NpcSkierBrain : MonoBehaviour
         }
 
         _postLiftRunJoinUntil = Time.time + postLiftRunJoinGraceSeconds;
+        _liftBoardingPhase = LiftNpcBoardingPhase.Finished;
+        _lastBoardingFailureReason = "Lift ride completed";
 
         if (_currentRun != null)
             BeginAmbientSki(GetBroadRunTarget(_currentRun));
         else
+        {
+            if (_currentGenericIntent == NpcGenericActivityIntent.RideLift ||
+                _currentGenericIntent == NpcGenericActivityIntent.QueueAtLift)
+            {
+                CompleteCurrentIntent("Rode lift");
+                return;
+            }
+
             BeginAmbientSki(_currentBroadTarget);
+        }
     }
 
     private void HandleStacked(SkiController.StackEventInfo info)
     {
         if (!_initialized || skiController == null)
             return;
+
+        if (_spectatorCrowdActive || _socialLoiterActive)
+        {
+            ResumeFromSpectatorCrowd(immediateIntent: false);
+        }
 
         locomotion?.SetInputEnabled(false);
         pathAgent?.Stop();
@@ -1282,7 +2487,8 @@ public class NpcSkierBrain : MonoBehaviour
             return false;
 
         Vector3 queueTarget = gate.GetQueueTargetPosition(liftRider);
-        return Vector3.Distance(transform.position, queueTarget) <= Mathf.Max(liftBoardCommitDistance, walkArrivalDistance + 0.35f) &&
+        return Vector3.Distance(transform.position, queueTarget) <= Mathf.Max(liftBoardCommitDistance, walkArrivalDistance + 0.35f, gate.NpcQueueJoinRadius) ||
+               gate.DistanceToBoardingOrQueueTarget(liftRider) <= gate.NpcQueueJoinRadius ||
                IsWithinGateCatchArea(gate);
     }
 
@@ -1304,6 +2510,7 @@ public class NpcSkierBrain : MonoBehaviour
         {
             _boardingRetryCount++;
             _liftStageReached = true;
+            _liftBoardingPhase = LiftNpcBoardingPhase.MovingToQueueEntry;
             _currentLiftApproachPoint = ResolveLiftRetryPoint(_currentLift, _boardingRetryCount);
             BeginWalkingSupport(_currentLiftApproachPoint);
             return;
@@ -1311,9 +2518,17 @@ public class NpcSkierBrain : MonoBehaviour
 
         _boardingRetryCount = 0;
         _liftStageReached = false;
+        _liftBoardingPhase = LiftNpcBoardingPhase.None;
 
         if (_currentLift != null && _currentLift.bottomStation != null)
             _currentHubAnchor = _currentLift.bottomStation;
+
+        if (_currentGenericIntent == NpcGenericActivityIntent.RideLift ||
+            _currentGenericIntent == NpcGenericActivityIntent.QueueAtLift)
+        {
+            ExpireCurrentIntent($"Lift boarding failed: {_lastBoardingFailureReason}");
+            return;
+        }
 
         EnterWaiting(Random.Range(hubPauseMin, hubPauseMax));
     }
@@ -1814,8 +3029,7 @@ public class NpcSkierBrain : MonoBehaviour
 
     private Vector3 SnapPointToGround(Vector3 candidate, float fallbackY)
     {
-        Vector3 rayOrigin = candidate + Vector3.up * 25f;
-        if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, 60f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+        if (TryGetGroundSnapHit(candidate, out RaycastHit hit))
             return hit.point + Vector3.up * 0.05f;
 
         candidate.y = fallbackY;
@@ -1829,7 +3043,9 @@ public class NpcSkierBrain : MonoBehaviour
 
         LiftBoardGate gate = ResolvePreferredBoardGate(lift);
         if (gate != null)
-            return gate.GetQueueTargetPosition(liftRider);
+            return liftRider != null && gate.IsQueued(liftRider)
+                ? gate.GetQueueTargetPosition(liftRider)
+                : gate.GetNpcEntryPosition();
 
         Vector3 station = lift.bottomStation.position;
 
@@ -1908,5 +3124,39 @@ public class NpcSkierBrain : MonoBehaviour
             fwd = Vector3.forward;
 
         return fwd.normalized;
+    }
+
+    private void ResetBodyForStationaryNpcMode(Vector3 position, Quaternion rotation, bool clearStack = true)
+    {
+        CacheRefs();
+
+        if (skiController != null && clearStack)
+        {
+            Vector3 forwardHint = Vector3.ProjectOnPlane(rotation * Vector3.forward, Vector3.up);
+            if (forwardHint.sqrMagnitude <= 0.0001f)
+                forwardHint = transform.forward;
+
+            skiController.ResetStackStateSilently(snapUpright: true, forwardHint: forwardHint.normalized);
+            skiController.ReleaseStackSkiVisualOverridesAndSnap(snapToNeutralPose: true);
+            skiController.ResetVisualPoseForWalkModeHandoff();
+        }
+
+        if (body == null)
+            body = GetComponent<Rigidbody>();
+
+        if (body != null)
+        {
+            body.isKinematic = false;
+            body.detectCollisions = true;
+            body.freezeRotation = true;
+            body.linearVelocity = Vector3.zero;
+            body.angularVelocity = Vector3.zero;
+            body.position = position;
+            body.rotation = rotation;
+            body.WakeUp();
+        }
+
+        transform.SetPositionAndRotation(position, rotation);
+        Physics.SyncTransforms();
     }
 }

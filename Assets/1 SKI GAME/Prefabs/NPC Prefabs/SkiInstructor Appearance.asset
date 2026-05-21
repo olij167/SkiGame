@@ -17,7 +17,7 @@ MonoBehaviour:
   eyeOption: {fileID: 11400000, guid: 70e4fdabfbf330542a6679d2b3f932c8, type: 2}
   eyeColor: {r: 0.81568635, g: 0.1254902, b: 0.5647059, a: 1}
   eyeOutlineColor: {r: 0.5647059, g: 0.81568635, b: 0.1254902, a: 1}
-  hatOption: {fileID: 11400000, guid: f93410f5309154b428da0e9fc44e1edc, type: 2}
+  hatOption: {fileID: 11400000, guid: 9e1d510b9efc74743b94c8b0ccf0d7d5, type: 2}
   hatColor: {r: 0.5647059, g: 0.8156863, b: 0.1254902, a: 1}
   hatPatternOption: {fileID: 0}
   legacyHatPattern: {fileID: 0}

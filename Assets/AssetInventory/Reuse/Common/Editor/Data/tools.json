@@ -39,7 +39,7 @@
             "description": "A comprehensive mock data generation library for Unity. Generate names, emails, dates, series data and more.",
             "assetStoreLink": "https://u3d.as/3WYh",
             "webLink": "https://www.wetzold.com/tools",
-            "packageName": "com.wetzold.mockmagic",
+            "packageName": "com.wetzold.mock-magic",
             "isPublic": true
         },
         {

@@ -1,0 +1,587 @@
+{
+    "projects": [
+        {
+            "id": "f9e5d89bd592464ab59aca31352f2a49",
+            "title": "Texture Project",
+            "createdUtc": "2026-05-19 07:37:15Z",
+            "updatedUtc": "2026-05-19 07:37:29Z",
+            "archived": false,
+            "activeIterationId": "42178a7b5e444732a305b3cd1c164763",
+            "intent": 0,
+            "iterations": [
+                {
+                    "id": "42178a7b5e444732a305b3cd1c164763",
+                    "parentId": "",
+                    "label": "Viewed Texture 2",
+                    "createdUtc": "2026-05-19 07:37:29Z",
+                    "sourceWorkflow": 0,
+                    "settings": {
+                        "width": 512,
+                        "height": 512,
+                        "textureFormat": 4,
+                        "mipChain": true,
+                        "linear": false,
+                        "candidateCount": 9,
+                        "tilePreview": true,
+                        "generateSeamless": true,
+                        "wrapStampsAcrossEdges": true,
+                        "toroidalSpacing": true,
+                        "seamRepairStrength": 0.18000000715255738,
+                        "edgeMatchWeight": 0.6499999761581421,
+                        "seamScoreThreshold": 0.8199999928474426,
+                        "constraintCoverageMin01": 0.23999999463558198,
+                        "constraintCoverageMax01": 0.6200000047683716,
+                        "constraintContrastMin01": 0.3799999952316284,
+                        "constraintContrastMax01": 0.949999988079071,
+                        "constraintScaleMin01": 0.05999999865889549,
+                        "constraintScaleMax01": 0.41999998688697817,
+                        "constraintSortMode": 0,
+                        "randomness01": 0.8259999752044678,
+                        "lockedInfluence01": 0.17399999499320985,
+                        "generationPatternVariety01": 1.0,
+                        "generationDensityMin": 204,
+                        "generationDensityMax": 432,
+                        "generationRadiusMin01": 0.003000000026077032,
+                        "generationRadiusMax01": 0.14000000059604646,
+                        "generationIntensityMin": 0.07999999821186066,
+                        "generationIntensityMax": 1.3799999952316285,
+                        "generationContrastMin": 1.0,
+                        "generationContrastMax": 4.199999809265137,
+                        "colorMode": 2,
+                        "paletteMode": 0,
+                        "backgroundColor": {
+                            "r": 0.0,
+                            "g": 0.0,
+                            "b": 0.0,
+                            "a": 1.0
+                        },
+                        "foregroundColor": {
+                            "r": 1.0,
+                            "g": 1.0,
+                            "b": 1.0,
+                            "a": 1.0
+                        },
+                        "gradient": {
+                            "serializedVersion": "2",
+                            "key0": {
+                                "r": 0.0,
+                                "g": 0.0,
+                                "b": 0.0,
+                                "a": 1.0
+                            },
+                            "key1": {
+                                "r": 1.0,
+                                "g": 1.0,
+                                "b": 1.0,
+                                "a": 1.0
+                            },
+                            "key2": {
+                                "r": 0.0,
+                                "g": 0.0,
+                                "b": 0.0,
+                                "a": 0.0
+                            },
+                            "key3": {
+                                "r": 0.0,
+                                "g": 0.0,
+                                "b": 0.0,
+                                "a": 0.0
+                            },
+                            "key4": {
+                                "r": 0.0,
+                                "g": 0.0,
+                                "b": 0.0,
+                                "a": 0.0
+                            },
+                            "key5": {
+                                "r": 0.0,
+                                "g": 0.0,
+                                "b": 0.0,
+                                "a": 0.0
+                            },
+                            "key6": {
+                                "r": 0.0,
+                                "g": 0.0,
+                                "b": 0.0,
+                                "a": 0.0
+                            },
+                            "key7": {
+                                "r": 0.0,
+                                "g": 0.0,
+                                "b": 0.0,
+                                "a": 0.0
+                            },
+                            "ctime0": 0,
+                            "ctime1": 65535,
+                            "ctime2": 0,
+                            "ctime3": 0,
+                            "ctime4": 0,
+                            "ctime5": 0,
+                            "ctime6": 0,
+                            "ctime7": 0,
+                            "atime0": 0,
+                            "atime1": 65535,
+                            "atime2": 0,
+                            "atime3": 0,
+                            "atime4": 0,
+                            "atime5": 0,
+                            "atime6": 0,
+                            "atime7": 0,
+                            "m_Mode": 0,
+                            "m_ColorSpace": -1,
+                            "m_NumColorKeys": 2,
+                            "m_NumAlphaKeys": 2
+                        },
+                        "outputOpacity": 1.0,
+                        "inputMin": 0.0,
+                        "inputMax": 1.0,
+                        "gamma": 1.0,
+                        "contrast": 1.149999976158142,
+                        "brightness": 0.0,
+                        "autoBalance": true,
+                        "autoBalanceStrength": 1.0,
+                        "threshold": 0.0,
+                        "invert": false,
+                        "blur": 0.0,
+                        "sharpen": 0.0
+                    },
+                    "bases": [
+                        {
+                            "name": "Base 4",
+                            "enabled": true,
+                            "weight": 0.8773808479309082,
+                            "blendMode": 1,
+                            "generation": {
+                                "width": 512,
+                                "height": 512,
+                                "textureFormat": 4,
+                                "mipChain": true,
+                                "linear": false,
+                                "seed": 1664992080,
+                                "randomizeSeedOnGenerate": false,
+                                "pattern": 3,
+                                "count": 254,
+                                "minSpacing01": 0.06387633830308914,
+                                "globalJitter01": 0.3624792695045471,
+                                "generateSeamless": false,
+                                "wrapStampsAcrossEdges": true,
+                                "toroidalSpacing": true,
+                                "stampShape": 1,
+                                "radiusMin01": 0.006104907486587763,
+                                "radiusMax01": 0.057912155985832217,
+                                "intensityMin": 0.21745727956295014,
+                                "intensityMax": 0.7169033288955689,
+                                "contrast": 3.0934150218963625,
+                                "edgeFalloff": 0.3266869783401489,
+                                "ringThickness01": 0.21144498884677888,
+                                "rotationJitterDegrees": {
+                                    "x": 0.0,
+                                    "y": 0.0
+                                },
+                                "blendMode": 1,
+                                "colorMode": 0,
+                                "backgroundColor": {
+                                    "r": 0.0,
+                                    "g": 0.0,
+                                    "b": 0.0,
+                                    "a": 1.0
+                                },
+                                "foregroundColor": {
+                                    "r": 1.0,
+                                    "g": 1.0,
+                                    "b": 1.0,
+                                    "a": 1.0
+                                },
+                                "gradient": {
+                                    "serializedVersion": "2",
+                                    "key0": {
+                                        "r": 0.0,
+                                        "g": 0.0,
+                                        "b": 0.0,
+                                        "a": 1.0
+                                    },
+                                    "key1": {
+                                        "r": 1.0,
+                                        "g": 1.0,
+                                        "b": 1.0,
+                                        "a": 1.0
+                                    },
+                                    "key2": {
+                                        "r": 0.0,
+                                        "g": 0.0,
+                                        "b": 0.0,
+                                        "a": 0.0
+                                    },
+                                    "key3": {
+                                        "r": 0.0,
+                                        "g": 0.0,
+                                        "b": 0.0,
+                                        "a": 0.0
+                                    },
+                                    "key4": {
+                                        "r": 0.0,
+                                        "g": 0.0,
+                                        "b": 0.0,
+                                        "a": 0.0
+                                    },
+                                    "key5": {
+                                        "r": 0.0,
+                                        "g": 0.0,
+                                        "b": 0.0,
+                                        "a": 0.0
+                                    },
+                                    "key6": {
+                                        "r": 0.0,
+                                        "g": 0.0,
+                                        "b": 0.0,
+                                        "a": 0.0
+                                    },
+                                    "key7": {
+                                        "r": 0.0,
+                                        "g": 0.0,
+                                        "b": 0.0,
+                                        "a": 0.0
+                                    },
+                                    "ctime0": 0,
+                                    "ctime1": 65535,
+                                    "ctime2": 0,
+                                    "ctime3": 0,
+                                    "ctime4": 0,
+                                    "ctime5": 0,
+                                    "ctime6": 0,
+                                    "ctime7": 0,
+                                    "atime0": 0,
+                                    "atime1": 65535,
+                                    "atime2": 0,
+                                    "atime3": 0,
+                                    "atime4": 0,
+                                    "atime5": 0,
+                                    "atime6": 0,
+                                    "atime7": 0,
+                                    "m_Mode": 0,
+                                    "m_ColorSpace": -1,
+                                    "m_NumColorKeys": 2,
+                                    "m_NumAlphaKeys": 2
+                                },
+                                "backgroundValue": 0.0,
+                                "outputOpacity": 1.0,
+                                "cellsX": 10,
+                                "cellsY": 17,
+                                "cellJitter01": 0.12581424415111543,
+                                "hexRadius01": 0.0894436314702034,
+                                "hexJitter01": 0.15688881278038026,
+                                "hexPointyTop": true,
+                                "poissonRadius01": 0.04507455974817276,
+                                "poissonAttempts": 30,
+                                "poissonHardCap": 0,
+                                "densityMap": {
+                                    "instanceID": 0
+                                },
+                                "densityChannel": 4,
+                                "densityCurve": {
+                                    "serializedVersion": "2",
+                                    "m_Curve": [
+                                        {
+                                            "serializedVersion": "3",
+                                            "time": 0.0,
+                                            "value": 0.0,
+                                            "inSlope": 0.0,
+                                            "outSlope": 1.0,
+                                            "tangentMode": 0,
+                                            "weightedMode": 0,
+                                            "inWeight": 0.0,
+                                            "outWeight": 0.0
+                                        },
+                                        {
+                                            "serializedVersion": "3",
+                                            "time": 1.0,
+                                            "value": 1.0,
+                                            "inSlope": 1.0,
+                                            "outSlope": 0.0,
+                                            "tangentMode": 0,
+                                            "weightedMode": 0,
+                                            "inWeight": 0.0,
+                                            "outWeight": 0.0
+                                        }
+                                    ],
+                                    "m_PreInfinity": 2,
+                                    "m_PostInfinity": 2,
+                                    "m_RotationOrder": 4
+                                },
+                                "densityTiling": {
+                                    "x": 1.0,
+                                    "y": 1.0
+                                },
+                                "densityOffset": {
+                                    "x": 0.0,
+                                    "y": 0.0
+                                },
+                                "densitySampling": 0,
+                                "densityThreshold01": 0.20000000298023225,
+                                "polarRings": 8,
+                                "polarSpokesPerRing": 36,
+                                "polarRingStep01": 0.10000000149011612,
+                                "polarRadialJitter01": 0.20000000298023225,
+                                "polarAngularJitter01": 0.10000000149011612,
+                                "stampTexture": {
+                                    "instanceID": 0
+                                },
+                                "stampTextureChannel": 4,
+                                "invertStampTexture": false,
+                                "stampTextureSampling": 0,
+                                "stampTextureTiling": 1.0
+                            },
+                            "locks": {
+                                "seed": false,
+                                "pattern": false,
+                                "density": false,
+                                "stamp": false,
+                                "patternSpecific": false,
+                                "source": false,
+                                "blend": false
+                            },
+                            "useBakedValues": false,
+                            "bakedWidth": 0,
+                            "bakedHeight": 0,
+                            "bakedValues": [],
+                            "guidanceMode": 0,
+                            "guideStrength01": 1.0,
+                            "similarityTarget01": 0.550000011920929,
+                            "userRating": 3,
+                            "preserveStructure": false,
+                            "preserveDensity": false,
+                            "preserveScale": false,
+                            "preserveDetail": false,
+                            "preserveTone": false,
+                            "preserveColourOrPalette": false,
+                            "preserveStampShape": false,
+                            "preserveBlendOrder": false,
+                            "preserveSeam": false
+                        },
+                        {
+                            "name": "Base 3",
+                            "enabled": true,
+                            "weight": 0.48610132932662966,
+                            "blendMode": 3,
+                            "generation": {
+                                "width": 512,
+                                "height": 512,
+                                "textureFormat": 4,
+                                "mipChain": true,
+                                "linear": false,
+                                "seed": 905659695,
+                                "randomizeSeedOnGenerate": false,
+                                "pattern": 2,
+                                "count": 167,
+                                "minSpacing01": 0.04157872870564461,
+                                "globalJitter01": 0.3927571773529053,
+                                "generateSeamless": false,
+                                "wrapStampsAcrossEdges": true,
+                                "toroidalSpacing": true,
+                                "stampShape": 3,
+                                "radiusMin01": 0.00799534935504198,
+                                "radiusMax01": 0.08342649042606354,
+                                "intensityMin": 0.35561707615852358,
+                                "intensityMax": 1.0328108072280884,
+                                "contrast": 4.146964073181152,
+                                "edgeFalloff": 0.09554841369390488,
+                                "ringThickness01": 0.23537880182266236,
+                                "rotationJitterDegrees": {
+                                    "x": 0.0,
+                                    "y": 0.0
+                                },
+                                "blendMode": 1,
+                                "colorMode": 0,
+                                "backgroundColor": {
+                                    "r": 0.0,
+                                    "g": 0.0,
+                                    "b": 0.0,
+                                    "a": 1.0
+                                },
+                                "foregroundColor": {
+                                    "r": 1.0,
+                                    "g": 1.0,
+                                    "b": 1.0,
+                                    "a": 1.0
+                                },
+                                "gradient": {
+                                    "serializedVersion": "2",
+                                    "key0": {
+                                        "r": 0.0,
+                                        "g": 0.0,
+                                        "b": 0.0,
+                                        "a": 1.0
+                                    },
+                                    "key1": {
+                                        "r": 1.0,
+                                        "g": 1.0,
+                                        "b": 1.0,
+                                        "a": 1.0
+                                    },
+                                    "key2": {
+                                        "r": 0.0,
+                                        "g": 0.0,
+                                        "b": 0.0,
+                                        "a": 0.0
+                                    },
+                                    "key3": {
+                                        "r": 0.0,
+                                        "g": 0.0,
+                                        "b": 0.0,
+                                        "a": 0.0
+                                    },
+                                    "key4": {
+                                        "r": 0.0,
+                                        "g": 0.0,
+                                        "b": 0.0,
+                                        "a": 0.0
+                                    },
+                                    "key5": {
+                                        "r": 0.0,
+                                        "g": 0.0,
+                                        "b": 0.0,
+                                        "a": 0.0
+                                    },
+                                    "key6": {
+                                        "r": 0.0,
+                                        "g": 0.0,
+                                        "b": 0.0,
+                                        "a": 0.0
+                                    },
+                                    "key7": {
+                                        "r": 0.0,
+                                        "g": 0.0,
+                                        "b": 0.0,
+                                        "a": 0.0
+                                    },
+                                    "ctime0": 0,
+                                    "ctime1": 65535,
+                                    "ctime2": 0,
+                                    "ctime3": 0,
+                                    "ctime4": 0,
+                                    "ctime5": 0,
+                                    "ctime6": 0,
+                                    "ctime7": 0,
+                                    "atime0": 0,
+                                    "atime1": 65535,
+                                    "atime2": 0,
+                                    "atime3": 0,
+                                    "atime4": 0,
+                                    "atime5": 0,
+                                    "atime6": 0,
+                                    "atime7": 0,
+                                    "m_Mode": 0,
+                                    "m_ColorSpace": -1,
+                                    "m_NumColorKeys": 2,
+                                    "m_NumAlphaKeys": 2
+                                },
+                                "backgroundValue": 0.0,
+                                "outputOpacity": 1.0,
+                                "cellsX": 13,
+                                "cellsY": 9,
+                                "cellJitter01": 0.4521711766719818,
+                                "hexRadius01": 0.06690310686826706,
+                                "hexJitter01": 0.44011422991752627,
+                                "hexPointyTop": true,
+                                "poissonRadius01": 0.01418163999915123,
+                                "poissonAttempts": 30,
+                                "poissonHardCap": 0,
+                                "densityMap": {
+                                    "instanceID": 0
+                                },
+                                "densityChannel": 4,
+                                "densityCurve": {
+                                    "serializedVersion": "2",
+                                    "m_Curve": [
+                                        {
+                                            "serializedVersion": "3",
+                                            "time": 0.0,
+                                            "value": 0.0,
+                                            "inSlope": 0.0,
+                                            "outSlope": 1.0,
+                                            "tangentMode": 0,
+                                            "weightedMode": 0,
+                                            "inWeight": 0.0,
+                                            "outWeight": 0.0
+                                        },
+                                        {
+                                            "serializedVersion": "3",
+                                            "time": 1.0,
+                                            "value": 1.0,
+                                            "inSlope": 1.0,
+                                            "outSlope": 0.0,
+                                            "tangentMode": 0,
+                                            "weightedMode": 0,
+                                            "inWeight": 0.0,
+                                            "outWeight": 0.0
+                                        }
+                                    ],
+                                    "m_PreInfinity": 2,
+                                    "m_PostInfinity": 2,
+                                    "m_RotationOrder": 4
+                                },
+                                "densityTiling": {
+                                    "x": 1.0,
+                                    "y": 1.0
+                                },
+                                "densityOffset": {
+                                    "x": 0.0,
+                                    "y": 0.0
+                                },
+                                "densitySampling": 0,
+                                "densityThreshold01": 0.20000000298023225,
+                                "polarRings": 7,
+                                "polarSpokesPerRing": 33,
+                                "polarRingStep01": 0.10000000149011612,
+                                "polarRadialJitter01": 0.20000000298023225,
+                                "polarAngularJitter01": 0.10000000149011612,
+                                "stampTexture": {
+                                    "instanceID": 0
+                                },
+                                "stampTextureChannel": 4,
+                                "invertStampTexture": false,
+                                "stampTextureSampling": 0,
+                                "stampTextureTiling": 1.0
+                            },
+                            "locks": {
+                                "seed": false,
+                                "pattern": false,
+                                "density": false,
+                                "stamp": false,
+                                "patternSpecific": false,
+                                "source": false,
+                                "blend": false
+                            },
+                            "useBakedValues": false,
+                            "bakedWidth": 0,
+                            "bakedHeight": 0,
+                            "bakedValues": [],
+                            "guidanceMode": 0,
+                            "guideStrength01": 1.0,
+                            "similarityTarget01": 0.550000011920929,
+                            "userRating": 3,
+                            "preserveStructure": false,
+                            "preserveDensity": false,
+                            "preserveScale": false,
+                            "preserveDetail": false,
+                            "preserveTone": false,
+                            "preserveColourOrPalette": false,
+                            "preserveStampShape": false,
+                            "preserveBlendOrder": false,
+                            "preserveSeam": false
+                        }
+                    ],
+                    "width": 512,
+                    "height": 512,
+                    "coverage01": 0.3128852844238281,
+                    "contrast01": 1.0,
+                    "seamScore01": 0.9999997019767761,
+                    "flagged": false,
+                    "archived": false,
+                    "exported": false,
+                    "exportedAssetPath": ""
+                }
+            ]
+        }
+    ]
+}

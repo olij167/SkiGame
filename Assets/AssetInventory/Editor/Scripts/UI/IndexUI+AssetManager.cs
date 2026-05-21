@@ -25,7 +25,7 @@ namespace AssetInventory
             EditorGUILayout.LabelField("Cloud Dashboard", EditorStyles.boldLabel, GUILayout.Width(labelWidth));
             if (GUILayout.Button("Open", CommonUIStyles.wrappedLinkLabel, GUILayout.ExpandWidth(false)))
             {
-                Application.OpenURL(AI.CLOUD_HOME_URL);
+                AI.OpenURL(AI.CLOUD_HOME_URL);
             }
             GUILayout.EndHorizontal();
 

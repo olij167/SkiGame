@@ -1,0 +1,30 @@
+Font license audit note
+=======================
+Font file: ArimaMadurai-Light.ttf
+Original archive path: arima-madurai/ArimaMadurai-Light.ttf
+Resolved zip entry: Lots of fonts/arima-madurai/ArimaMadurai-Light.ttf
+Grouped family: Arima Madurai
+Internal family: Arima Madurai
+Full name: Arima Madurai Light
+Style: Light
+
+Audit status: Commercial-free use
+License basis: SIL Open Font License 1.1
+Recommendation: OK for commercial use
+Evidence: embedded metadata / bundled OFL / Google Fonts / 1001Fonts
+Source/local file from audit: local metadata or bundled OFL; https://openfontlicense.org/; https://fonts.google.com/faq
+Generic/official license URL used by builder: https://openfontlicense.org/open-font-license-official-text/
+
+Notes:
+OFL permits commercial use and redistribution/bundling subject to OFL terms; do not sell the font by itself.
+
+Embedded font metadata:
+- License description: This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: http://scripts.sil.org/OFL
+- License URL: http://scripts.sil.org/OFL
+- Copyright: Copyright 2015 The Arima Project Authors (info@ndiscovered.com)
+
+Copied local license/readme files:
+- Lots Of Fonts - Redistributable/Commercial-Free Redistribution/SIL Open Font License 1.1/Arima Madurai/SOURCE_LICENSES/OFL.txt
+- Lots Of Fonts - Redistributable/Commercial-Free Redistribution/SIL Open Font License 1.1/Arima Madurai/SOURCE_LICENSES/OFL.txt.meta
+
+This file is generated from an audit manifest. It is not legal advice.

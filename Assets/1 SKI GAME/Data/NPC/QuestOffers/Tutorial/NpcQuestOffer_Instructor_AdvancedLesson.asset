@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NpcQuestOfferSO
   questDefinition: {fileID: 11400000, guid: 8c1f6e2d4b3a47f9a5c2d1e6b7f8091a, type: 2}
   offerTitle: Advanced Ski Lesson
+  questLineId: 
+  offerPriority: 0
   offerDialogue: Advanced lesson? I'll check your stops and air control first, then
     we'll move into tricks and map navigation.
   acceptedDialogue: Show me control first. After that, we'll focus on style and planning.
@@ -21,7 +23,25 @@ MonoBehaviour:
   completedDialogue: Good work. You're ready for more demanding routes and activities.
   turnInDialogue: Advanced lesson complete. Expert lessons focus on activities and
     rescue work.
-  requiredCompletedQuests: []
+  replayDialogue: 
+  ambientDialogueBankOverride: {fileID: 11400000, guid: 481414fbc9a79164bb13a43546a66d39, type: 2}
+  availableAmbientTopic: instructor_pre_lesson
+  inProgressAmbientTopic: tutorialProgress
+  readyToTurnInAmbientTopic: tutorialReady
+  completedAmbientTopic: tutorialComplete
+  replayAmbientTopic: tutorialReplay
+  blockedAmbientTopic: tutorialBlocked
+  ambientWeight: 1
+  ambientCooldown: 8
+  requiredCompletedQuests:
+  - {fileID: 11400000, guid: 5e7b1d4f9a2c43c8b1d6e7f8091a2b3c, type: 2}
   blockedByCompletedQuests: []
+  showWhenAvailable: 1
+  showWhenInProgress: 0
+  showWhenReadyToTurnIn: 1
+  showWhenCompleted: 0
+  replayable: 0
+  hideIfQuestAccepted: 1
+  hideIfQuestCompleted: 1
   autoTrackOnAccept: 1
   showNavigationTarget: 1

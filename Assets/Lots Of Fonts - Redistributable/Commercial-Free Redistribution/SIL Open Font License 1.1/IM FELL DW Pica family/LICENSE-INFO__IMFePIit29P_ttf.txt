@@ -1,0 +1,29 @@
+Font license audit note
+=======================
+Font file: IMFePIit29P.ttf
+Original archive path: IMFe/IMFePIit29P.ttf
+Resolved zip entry: Lots of fonts/IMFe/IMFePIit29P.ttf
+Grouped family: IM FELL DW Pica family
+Internal family: IM FELL DW Pica
+Full name: IM FELL DW Pica Italic
+Style: Italic
+
+Audit status: Commercial-free use
+License basis: SIL Open Font License 1.1
+Recommendation: OK for commercial use
+Evidence: embedded metadata / bundled OFL / Google Fonts / 1001Fonts
+Source/local file from audit: local metadata or bundled OFL; https://openfontlicense.org/; https://fonts.google.com/faq
+Generic/official license URL used by builder: https://openfontlicense.org/open-font-license-official-text/
+
+Notes:
+OFL permits commercial use and redistribution/bundling subject to OFL terms; do not sell the font by itself.
+
+Embedded font metadata:
+- License description: This Font Software is licensed under the SIL Open Font License, Version 1.1.
+- License URL: http://scripts.sil.org/OFL
+- Copyright: © 2007 Igino Marini (www.iginomarini.com) With Reserved Font Name IM FELL DW Pica Italic
+
+Copied local license/readme files:
+- None found near the original font file. Use the license URL/evidence above for manual verification.
+
+This file is generated from an audit manifest. It is not legal advice.

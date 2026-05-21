@@ -413,7 +413,14 @@ namespace AssetInventory
 
                     if (batchTasks.Count > 0)
                     {
-                        await Task.WhenAll(batchTasks);
+                        try
+                        {
+                            await Task.WhenAll(batchTasks);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogError($"Preview batch failed: {e.Message}");
+                        }
                     }
 
                     // Let the editor breathe between batches

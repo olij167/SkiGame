@@ -1,0 +1,192 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78f60e84cf6c47f99eb9c744ba1f1757, type: 3}
+  m_Name: LiftAttendant NpcDialogueBank
+  m_EditorClassIdentifier: Assembly-CSharp::NpcDialogueBankSO
+  lines:
+  - id: ambient1
+    topic: lift.ambient
+    trigger: 1
+    audience: 0
+    priority: 20
+    weight: 1
+    text: A {requiredPassName} Pass is needed to ride this lift
+    duration: 4
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 0
+    styleOverride: {fileID: 0}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: ambient2
+    topic: lift.ambient
+    trigger: 1
+    audience: 0
+    priority: 20
+    weight: 1
+    text: How soon until your {requiredPassName} Pass expires? press {input:Toggle}
+      and open the Ski Pass panel to keep track
+    duration: 8
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 0
+    styleOverride: {fileID: 0}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: ambient3
+    topic: lift.ambient
+    trigger: 1
+    audience: 0
+    priority: 20
+    weight: 1
+    text: Welcome to {liftName}, {stationName}. Please have a valid {requiredPassName}
+      Pass ready to board
+    duration: 6
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 1
+    preferImportantStyle: 0
+    importance: 0
+    styleOverride: {fileID: 0}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: ambient4
+    topic: lift.ambient
+    trigger: 1
+    audience: 0
+    priority: 20
+    weight: 1
+    text: If you need to renew your {requiredPassName} Pass head to the nearby lift
+      pass kiosk
+    duration: 6
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 1
+    preferImportantStyle: 0
+    importance: 0
+    styleOverride: {fileID: 0}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: ambient5
+    topic: lift.ambient
+    trigger: 1
+    audience: 0
+    priority: 20
+    weight: 1
+    text: Head's up, your {currentPassName} expires {passExpiry}
+    duration: 6
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 1
+    preferImportantStyle: 0
+    importance: 0
+    styleOverride: {fileID: 0}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: liftExpired
+    topic: lift.pass_expired
+    trigger: 10
+    audience: 0
+    priority: 30
+    weight: 1
+    text: your {requiredPassName} has expired. If you wanna ride this lift go renew
+      it at the kiosk
+    duration: 10
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 1
+    preferImportantStyle: 1
+    importance: 4
+    styleOverride: {fileID: 0}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: liftDeclined
+    topic: lift.no_pass
+    trigger: 9
+    audience: 0
+    priority: 30
+    weight: 1
+    text: 'you need a {requiredPassName} to ride this lift. You can buy one over
+      at the kiosk. '
+    duration: 10
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 1
+    preferImportantStyle: 1
+    importance: 4
+    styleOverride: {fileID: 0}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: liftAllowed
+    topic: lift.allowed
+    trigger: 8
+    audience: 0
+    priority: 30
+    weight: 1
+    text: Good luck up there!
+    duration: 4
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 1
+    preferImportantStyle: 1
+    importance: 1
+    styleOverride: {fileID: 0}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: liftAllowed2
+    topic: lift.allowed
+    trigger: 8
+    audience: 0
+    priority: 30
+    weight: 1
+    text: Heads up, your {currentPassName} pass expires in {passExpiry}.
+    duration: 4
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 1
+    preferImportantStyle: 1
+    importance: 1
+    styleOverride: {fileID: 0}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  allowTriggerFallbackWhenTopicMissing: 0

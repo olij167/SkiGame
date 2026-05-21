@@ -137,6 +137,8 @@ namespace AssetInventory
         public bool showBackupSettings;
         public bool showAISettings;
         public bool showUISettings;
+        public int browserType; // 0 = system default, 1 = custom
+        public string customBrowserPath;
         public bool showLocationSettings;
         public bool showPreviewSettings;
         public bool showAdvancedSettings;
@@ -196,12 +198,14 @@ namespace AssetInventory
         public int aiBackend = 1; // 0 - Blip, 1 = Ollama, 2 = LM Studio
         public bool aiContinueOnEmpty;
         public float aiPause;
+        public int aiTimeout = 120; // per-request timeout in seconds; 0 = no timeout
         public int aiMinSize = 32; // minimum size for AI processing, in pixels, upscales otherwise
         public int aiMaxCaptionLength = 200; // some model outputs are extremely long and cause crashes
         public string aiCustomPrompt;
 
         public string ollamaModel = "qwen2.5vl:7b";
         public string ollamaServiceUrl = Intelligence.OLLAMA_SERVICE_URL;
+        public int ollamaParallelRequests = 4; // Matches Ollama's default OLLAMA_NUM_PARALLEL
 
         public string lmStudioModel = "qwen/qwen2.5-vl-7b";
         public string lmStudioServiceUrl = Intelligence.LMSTUDIO_SERVICE_URL;

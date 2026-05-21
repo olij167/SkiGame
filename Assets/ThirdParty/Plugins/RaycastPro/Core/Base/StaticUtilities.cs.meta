@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: dc396e51066b41c7adc17bd11a81ee0f
+timeCreated: 1766748959
+AssetOrigin:
+  serializedVersion: 1
+  productId: 214714
+  packageName: RaycastPro
+  packageVersion: 1.1.5
+  assetPath: Assets/ThirdParty/Plugins/RaycastPro/Core/Base/StaticUtilities.cs
+  uploadId: 840452

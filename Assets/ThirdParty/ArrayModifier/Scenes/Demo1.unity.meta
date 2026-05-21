@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: ad953b91ee4d34149b1e0bef95b56d88
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 231462
+  packageName: Easy Array Modifier
+  packageVersion: 1.0
+  assetPath: Assets/ThirdParty/ArrayModifier/Scenes/Demo1.unity
+  uploadId: 522576

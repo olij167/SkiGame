@@ -123,7 +123,7 @@ namespace AssetInventory
                 EditorGUI.BeginDisabledGroup(_info.GetChangeLogURL(version) == null);
                 if (GUILayout.Button(CommonUIStyles.Content("?", "Changelog"), GUILayout.Width(20)))
                 {
-                    Application.OpenURL(_info.GetChangeLogURL(version));
+                    AI.OpenURL(_info.GetChangeLogURL(version));
                 }
                 EditorGUI.EndDisabledGroup();
                 if (attributes.Count > 0) GUILayout.Label(string.Join(", ", attributes));

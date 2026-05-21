@@ -3,7 +3,7 @@ using UnityEngine;
 namespace SkiGame.Progression
 {
     [DisallowMultipleComponent]
-    public sealed class QuestContextProvider : MonoBehaviour
+    public sealed class QuestContextProvider : MonoBehaviour, IDialogueContextProvider
     {
         [SerializeField] private QuestSignalBus signalBus;
         [SerializeField] private SkiController skiController;
@@ -68,6 +68,36 @@ namespace SkiGame.Progression
             ResolveReferences();
             string normalized = QuestSignalBus.NormalizeKey(key);
             return signalBus != null ? signalBus.ReadText(normalized) : string.Empty;
+        }
+
+        public bool TryGetDialogueValue(string key, DialogueContext context, out string value)
+        {
+            value = string.Empty;
+            string normalized = QuestSignalBus.NormalizeKey(key);
+            switch (normalized)
+            {
+                case "soreness":
+                    value = ReadFloat("player.soreness").ToString("0.##");
+                    return true;
+                case "sorenesspercent":
+                    value = $"{Mathf.RoundToInt(ReadFloat("player.soreness") * 100f)}%";
+                    return true;
+                case "questtitle":
+                    value = !string.IsNullOrWhiteSpace(context.questTitle)
+                        ? context.questTitle
+                        : context.questDefinition != null ? context.questDefinition.title : string.Empty;
+                    return !string.IsNullOrWhiteSpace(value);
+                case "queststage":
+                    if (context.questDefinition != null && context.questState != null)
+                    {
+                        var stage = context.questDefinition.GetStage(context.questState.currentStageIndex);
+                        value = stage != null ? string.IsNullOrWhiteSpace(stage.title) ? stage.id : stage.title : string.Empty;
+                    }
+                    return !string.IsNullOrWhiteSpace(value);
+                default:
+                    value = ReadString(normalized);
+                    return !string.IsNullOrWhiteSpace(value);
+            }
         }
 
         private void ResolveReferences()

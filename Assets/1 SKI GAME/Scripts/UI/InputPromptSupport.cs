@@ -240,35 +240,34 @@ namespace SkiGame.UI
             if (action == null)
                 return 0;
 
-            int fallback = -1;
-
-            for (int i = 0; i < action.bindings.Count; i++)
+            for (int p = 0; p < partNames.Length; p++)
             {
-                var binding = action.bindings[i];
-                if (!binding.isPartOfComposite || string.IsNullOrWhiteSpace(binding.name))
+                string partName = partNames[p];
+                if (string.IsNullOrWhiteSpace(partName))
                     continue;
 
-                bool matchesPart = false;
-                for (int p = 0; p < partNames.Length; p++)
+                int fallback = -1;
+                for (int i = 0; i < action.bindings.Count; i++)
                 {
-                    if (string.Equals(binding.name, partNames[p], StringComparison.OrdinalIgnoreCase))
-                    {
-                        matchesPart = true;
-                        break;
-                    }
+                    var binding = action.bindings[i];
+                    if (!binding.isPartOfComposite || string.IsNullOrWhiteSpace(binding.name))
+                        continue;
+
+                    if (!string.Equals(binding.name, partName.Trim(), StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (fallback < 0)
+                        fallback = i;
+
+                    if (IsKeyboardMouseBinding(binding))
+                        return i;
                 }
 
-                if (!matchesPart)
-                    continue;
-
-                if (fallback < 0)
-                    fallback = i;
-
-                if (IsKeyboardMouseBinding(binding))
-                    return i;
+                if (fallback >= 0)
+                    return fallback;
             }
 
-            return fallback >= 0 ? fallback : FindPrimaryBindingIndex(action);
+            return FindPrimaryBindingIndex(action);
         }
 
         public static string BuildSignature(IReadOnlyList<InputPromptToken> tokens)
@@ -432,7 +431,7 @@ namespace SkiGame.UI
 
                 int payloadStart = tokenStart + openToken.Length;
                 string payload = text.Substring(payloadStart, tokenEnd - payloadStart);
-                builder.Append(ResolveBindingPlaceholderPayload(payload, inputActions));
+                builder.Append(ResolveInputPlaceholderPayload(inputActions, payload));
 
                 searchIndex = tokenEnd + 1;
                 tokenStart = text.IndexOf(openToken, searchIndex, StringComparison.OrdinalIgnoreCase);
@@ -444,22 +443,45 @@ namespace SkiGame.UI
             return builder.ToString();
         }
 
-        private static string ResolveBindingPlaceholderPayload(string payload, InputActionAsset inputActions)
+        public static string ResolveInputPlaceholderPayload(InputActionAsset inputActions, string payload, string fallback = null)
         {
             if (string.IsNullOrWhiteSpace(payload))
-                return "-";
+                return string.IsNullOrWhiteSpace(fallback) ? "-" : fallback;
 
-            string[] parts = payload.Split(':');
-            string actionName = parts[0]?.Trim();
+            string trimmedPayload = payload.Trim();
+            string fallbackText = fallback;
+            string actionSegment = trimmedPayload;
+            int colonIndex = trimmedPayload.IndexOf(':');
+            if (colonIndex < 0)
+            {
+                int fallbackSeparator = trimmedPayload.IndexOf('|');
+                if (fallbackSeparator >= 0)
+                {
+                    actionSegment = trimmedPayload[..fallbackSeparator];
+                    fallbackText = trimmedPayload[(fallbackSeparator + 1)..].Trim();
+                }
+            }
+            else
+            {
+                actionSegment = trimmedPayload[..colonIndex];
+            }
+
+            string actionName = actionSegment.Trim();
 
             if (string.IsNullOrWhiteSpace(actionName))
-                return "-";
+                return FirstReadable(fallbackText, trimmedPayload, "-");
 
-            if (parts.Length <= 1)
-                return GetBindingDisplay(inputActions, actionName);
+            var action = FindActionByFriendlyName(inputActions, actionName);
+            if (action == null)
+                return FirstReadable(fallbackText, actionName, trimmedPayload, "-");
+
+            if (colonIndex < 0)
+                return FirstReadable(GetBindingDisplay(action), fallbackText, actionName);
 
             var compositeParts = new List<string>();
-            for (int i = 1; i < parts.Length; i++)
+            string compositePayload = trimmedPayload[(colonIndex + 1)..];
+            string[] parts = compositePayload.Split(':');
+            for (int i = 0; i < parts.Length; i++)
             {
                 string segment = parts[i];
                 if (string.IsNullOrWhiteSpace(segment))
@@ -474,9 +496,34 @@ namespace SkiGame.UI
                 }
             }
 
-            return compositeParts.Count > 0
-                ? GetBindingDisplay(inputActions, actionName, compositeParts.ToArray())
-                : GetBindingDisplay(inputActions, actionName);
+            string display = compositeParts.Count > 0
+                ? GetBindingDisplay(action, compositeParts.ToArray())
+                : GetBindingDisplay(action);
+
+            if (IsReadableBindingDisplay(display))
+                return display;
+
+            string fullActionDisplay = GetBindingDisplay(action);
+            return FirstReadable(fullActionDisplay, fallbackText, actionName);
+        }
+
+        private static bool IsReadableBindingDisplay(string display)
+        {
+            return !string.IsNullOrWhiteSpace(display) && display.Trim() != "-";
+        }
+
+        private static string FirstReadable(params string[] values)
+        {
+            if (values == null)
+                return "-";
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(values[i]) && values[i].Trim() != "-")
+                    return values[i].Trim();
+            }
+
+            return "-";
         }
 
     }

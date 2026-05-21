@@ -4,6 +4,31 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [4.3.1] - 2026-05-07
+
+- Ignore preview state filter for files that cannot have previews (scripts, documents...)
+- Fix custom actions not running at project setup anymore
+- Fix constant scene save popups during URP conversion
+
+## [4.3.0] - 2026-05-05
+
+- Context menu entry to convert an asset retrospectively to current render pipeline using selection-only custom converter
+- Reworked Ollama pipeline
+  - Switch to OllamaSharp
+  - Reduce amount of needed third party libraries and potential to collide with other assets
+  - Support batching (multiple caption requests in parallel)
+  - Reduce network and image preparation overhead
+- Support cancelling AI captioning in-process
+- Speed up bulk selection processing
+- Timeout support for AI caption generation
+- Allow configuring browser to use when opening links
+- More defensive asset handling
+- Warn before opening many package locations at once
+- Fix custom prompt being not persisted anymore
+- Fix memory leak when processing audio
+- Fix grid click/double click scroll issue (customer contribution, thanks!)
+- Fix alt+double click not working anymore in search results
+
 ## [4.2.0] - 2026-04-21
 
 - Unity 6.4, 6.5 & 6.6 compatibility

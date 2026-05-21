@@ -1,0 +1,118 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 836e95faa9c8ea7498ff5d96e16498e8, type: 3}
+  m_Name: Ambient Social Nearby Run DialogueSequence
+  m_EditorClassIdentifier: Assembly-CSharp::NpcDialogueSequenceSO
+  sequenceId: social.nearby_run
+  displayName: Nearby Run Discussion
+  nodes:
+  - nodeId: 1
+    nodeType: 0
+    speakerIdentityId: 
+    speakerRole: A
+    text: Have you been down {nearbyRunName.1} yet?
+    duration: 4
+    waitForPlayerContinue: 0
+    importance: 0
+    styleOverride: {fileID: 0}
+    requirements: []
+    promptText: 
+    choices: []
+    actions: []
+    nextNodeId: 2
+    targetNodeId: 
+    waitSeconds: 0.5
+  - nodeId: 2
+    nodeType: 0
+    speakerIdentityId: 
+    speakerRole: B
+    text: Isn't that a {nearbyRunDifficulty.1}? I'm not sure I could handle that...
+    duration: 4
+    waitForPlayerContinue: 0
+    importance: 0
+    styleOverride: {fileID: 0}
+    requirements: []
+    promptText: 
+    choices: []
+    actions: []
+    nextNodeId: 3
+    targetNodeId: 
+    waitSeconds: 0.5
+  - nodeId: 3
+    nodeType: 0
+    speakerIdentityId: 
+    speakerRole: A
+    text: Not with that attitude you couldn't! Why not just give it a go?
+    duration: 4
+    waitForPlayerContinue: 0
+    importance: 0
+    styleOverride: {fileID: 0}
+    requirements: []
+    promptText: 
+    choices: []
+    actions: []
+    nextNodeId: 4
+    targetNodeId: 
+    waitSeconds: 0.5
+  - nodeId: 4
+    nodeType: 0
+    speakerIdentityId: 
+    speakerRole: B
+    text: I've mostly been going down {nearbyRunName.2}
+    duration: 4
+    waitForPlayerContinue: 0
+    importance: 0
+    styleOverride: {fileID: 0}
+    requirements: []
+    promptText: 
+    choices: []
+    actions: []
+    nextNodeId: 5
+    targetNodeId: 
+    waitSeconds: 0.5
+  - nodeId: 5
+    nodeType: 0
+    speakerIdentityId: 
+    speakerRole: A
+    text: Fair, {nearbyRunName.2} is pretty fun as well!
+    duration: 3
+    waitForPlayerContinue: 0
+    importance: 0
+    styleOverride: {fileID: 0}
+    requirements: []
+    promptText: 
+    choices: []
+    actions: []
+    nextNodeId: end
+    targetNodeId: 
+    waitSeconds: 0.5
+  - nodeId: end
+    nodeType: 5
+    speakerIdentityId: 
+    speakerRole: 
+    text: 
+    duration: 3
+    waitForPlayerContinue: 0
+    importance: 0
+    styleOverride: {fileID: 0}
+    requirements: []
+    promptText: 
+    choices: []
+    actions: []
+    nextNodeId: 
+    targetNodeId: 
+    waitSeconds: 0.5
+  startNodeId: 1
+  canSkip: 1
+  autoCloseOnEnd: 1
+  defaultImportance: 0
+  styleOverride: {fileID: 0}

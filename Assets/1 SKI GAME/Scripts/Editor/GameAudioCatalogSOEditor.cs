@@ -1,5 +1,8 @@
 #if UNITY_EDITOR
 using System;
+using PungentFunk.Utilities.Audio;
+using PungentFunk.Utilities.Editor.Audio;
+using PungentFunk.Utilities.Editor.Theme;
 using SkiGame.Audio;
 using UnityEditor;
 using UnityEngine;
@@ -7,21 +10,23 @@ using UnityEngine;
 [CustomEditor(typeof(GameAudioCatalogSO))]
 public sealed class GameAudioCatalogSOEditor : Editor
 {
-    private const string SelectedCueSessionKey = "SkiGame.Audio.SelectedCueId";
+    private const string LegacySelectedCueSessionKey = "SkiGame.Audio.SelectedCueId";
+    private const string SelectedCueSessionKey = "GenericUtility.AudioCoverage.SelectedCueId";
+    private const string ActiveProfileGuidSessionKey = "GenericUtility.AudioCoverage.ActiveProfileGuid";
 
     private SerializedProperty _cuesProperty;
     private Vector2 _scroll;
-    private GUIStyle _highlightStyle;
+    private AudioCoverageProfileSO _profile;
 
     private void OnEnable()
     {
         _cuesProperty = serializedObject.FindProperty("cues");
+        ResolveProfile();
     }
 
     public override void OnInspectorGUI()
     {
         serializedObject.Update();
-        EnsureStyles();
 
         DrawHeader();
         EditorGUILayout.Space(8f);
@@ -32,47 +37,44 @@ public sealed class GameAudioCatalogSOEditor : Editor
 
     private void DrawHeader()
     {
-        EditorGUILayout.LabelField("Game Audio Catalog", EditorStyles.boldLabel);
-        EditorGUILayout.HelpBox(
-            "This inspector supports focus/highlight from the Audio Coverage window. Use the coverage window to add missing cues, validate entries, and jump directly to a cue row here.",
-            MessageType.Info);
-
-        using (new EditorGUILayout.HorizontalScope())
+        using (new EditorGUILayout.VerticalScope(UtilityWindowTheme.PanelStyle(UtilityWindowTheme.Blue)))
         {
-            if (GUILayout.Button("Sort by Enum"))
+            UtilityWindowTheme.SectionTitle("Game Audio Catalog", UtilityWindowTheme.Blue, _cuesProperty != null && _cuesProperty.isArray ? _cuesProperty.arraySize.ToString() : null);
+            EditorGUILayout.LabelField(
+                "Use Audio Catalog Coverage to validate cue quality and define project-specific component/event bindings through an AudioCoverageProfileSO.",
+                UtilityWindowTheme.MutedMiniLabelStyle);
+
+            using (new EditorGUILayout.HorizontalScope())
             {
-                serializedObject.ApplyModifiedProperties();
-                Undo.RecordObject(target, "Sort Audio Cues");
-                ((GameAudioCatalogSO)target).SortByEnumOrder();
-                EditorUtility.SetDirty(target);
-                serializedObject.Update();
+                if (UtilityWindowTheme.TintedButton("Open Coverage", UtilityWindowTheme.Blue, GUILayout.Width(120f)))
+                    AudioCoverageWindow.Open();
+
+                if (UtilityWindowTheme.TintedButton("Sort", UtilityWindowTheme.Teal, GUILayout.Width(72f)))
+                    MutateCatalog("Sort Audio Cues", catalog => catalog.SortByEnumOrder());
+
+                if (UtilityWindowTheme.TintedButton("Add Missing", UtilityWindowTheme.Green, GUILayout.Width(104f)))
+                    MutateCatalog("Add Missing Audio Cues", catalog => catalog.AddAllMissingCues());
+
+                if (UtilityWindowTheme.TintedButton("Deduplicate", UtilityWindowTheme.Amber, GUILayout.Width(104f)))
+                    MutateCatalog("Remove Duplicate Audio Cues", catalog => catalog.RemoveDuplicateIds(keepFirst: true));
+
+                if (UtilityWindowTheme.TintedButton("Normalize", UtilityWindowTheme.Purple, GUILayout.Width(96f)))
+                    MutateCatalog("Normalize Audio Cue Defaults", catalog => catalog.NormalizeAllDefaults());
             }
 
-            if (GUILayout.Button("Add All Missing"))
+            using (new EditorGUILayout.HorizontalScope())
             {
-                serializedObject.ApplyModifiedProperties();
-                Undo.RecordObject(target, "Add Missing Audio Cues");
-                ((GameAudioCatalogSO)target).AddAllMissingCues();
-                EditorUtility.SetDirty(target);
-                serializedObject.Update();
-            }
+                EditorGUI.BeginChangeCheck();
+                _profile = (AudioCoverageProfileSO)EditorGUILayout.ObjectField(
+                    new GUIContent("Coverage Profile", "Optional profile used to show binding counts beside cue entries."),
+                    _profile,
+                    typeof(AudioCoverageProfileSO),
+                    false);
+                if (EditorGUI.EndChangeCheck() && _profile != null)
+                    SessionState.SetString(ActiveProfileGuidSessionKey, AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(_profile)));
 
-            if (GUILayout.Button("Remove Duplicates"))
-            {
-                serializedObject.ApplyModifiedProperties();
-                Undo.RecordObject(target, "Remove Duplicate Audio Cues");
-                ((GameAudioCatalogSO)target).RemoveDuplicateIds(keepFirst: true);
-                EditorUtility.SetDirty(target);
-                serializedObject.Update();
-            }
-
-            if (GUILayout.Button("Normalize Defaults"))
-            {
-                serializedObject.ApplyModifiedProperties();
-                Undo.RecordObject(target, "Normalize Audio Cue Defaults");
-                ((GameAudioCatalogSO)target).NormalizeAllDefaults();
-                EditorUtility.SetDirty(target);
-                serializedObject.Update();
+                if (GUILayout.Button("Refresh", GUILayout.Width(72f)))
+                    ResolveProfile();
             }
         }
     }
@@ -85,7 +87,7 @@ public sealed class GameAudioCatalogSOEditor : Editor
             return;
         }
 
-        int selectedCueValue = SessionState.GetInt(SelectedCueSessionKey, -1);
+        int selectedCueValue = SessionState.GetInt(SelectedCueSessionKey, SessionState.GetInt(LegacySelectedCueSessionKey, -1));
         int selectedIndex = FindIndexForCueValue(selectedCueValue);
 
         _scroll = EditorGUILayout.BeginScrollView(_scroll);
@@ -102,46 +104,48 @@ public sealed class GameAudioCatalogSOEditor : Editor
                 : GameAudioCueId.None;
 
             bool isHighlighted = i == selectedIndex;
+            Color tint = isHighlighted ? UtilityWindowTheme.Amber : UtilityWindowTheme.Neutral;
 
-            Color previousColor = GUI.backgroundColor;
-            if (isHighlighted)
-                GUI.backgroundColor = new Color(1f, 0.92f, 0.55f, 1f);
-
-            EditorGUILayout.BeginVertical(isHighlighted ? _highlightStyle : EditorStyles.helpBox);
-
-            using (new EditorGUILayout.HorizontalScope())
+            using (new EditorGUILayout.VerticalScope(UtilityWindowTheme.PanelStyle(tint, isHighlighted ? 0.24f : 0.12f, isHighlighted ? 0.14f : 0.06f, 7, 4)))
             {
-                EditorGUILayout.LabelField($"[{i}] {cueId}", EditorStyles.boldLabel);
-
-                GUILayout.FlexibleSpace();
-
-                if (GUILayout.Button("Ping", GUILayout.Width(50f)))
+                using (new EditorGUILayout.HorizontalScope())
                 {
-                    SessionState.SetInt(SelectedCueSessionKey, (int)cueId);
+                    EditorGUILayout.LabelField($"[{i}] {cueId}", UtilityWindowTheme.SectionHeaderStyle);
+                    GUILayout.FlexibleSpace();
+
+                    if (_profile != null)
+                    {
+                        int bindingCount = _profile.CountBindingsForCue(cueId.ToString(), includeIgnored: false);
+                        bool ignored = _profile.IsCueIgnored(cueId.ToString());
+                        UtilityWindowTheme.CountPill(ignored ? "Ignored" : $"Bindings {bindingCount}", bindingCount > 0 ? UtilityWindowTheme.Green : UtilityWindowTheme.Amber, 104f);
+                    }
+
+                    if (GUILayout.Button("Focus", GUILayout.Width(58f)))
+                    {
+                        SessionState.SetInt(SelectedCueSessionKey, (int)cueId);
+                        SessionState.SetInt(LegacySelectedCueSessionKey, (int)cueId);
+                    }
+
+                    if (GUILayout.Button("Remove", GUILayout.Width(72f)))
+                    {
+                        _cuesProperty.DeleteArrayElementAtIndex(i);
+                        break;
+                    }
                 }
 
-                if (GUILayout.Button("Remove", GUILayout.Width(70f)))
-                {
-                    _cuesProperty.DeleteArrayElementAtIndex(i);
-                    EditorGUILayout.EndHorizontal();
-                    EditorGUILayout.EndVertical();
-                    GUI.backgroundColor = previousColor;
-                    break;
-                }
+                EditorGUILayout.PropertyField(idProperty);
+                DrawIfExists(cueProperty, "clips", true);
+                DrawIfExists(cueProperty, "volume", false);
+                DrawIfExists(cueProperty, "pitchRange", false);
+                DrawIfExists(cueProperty, "spatialBlend", false);
+                DrawIfExists(cueProperty, "minDistance", false);
+                DrawIfExists(cueProperty, "maxDistance", false);
+                DrawIfExists(cueProperty, "cooldownSeconds", false);
+                DrawIfExists(cueProperty, "mixerGroup", false);
+
+                if (_profile != null)
+                    DrawCueBindingSummary(cueId);
             }
-
-            EditorGUILayout.PropertyField(idProperty);
-            EditorGUILayout.PropertyField(cueProperty.FindPropertyRelative("clips"), true);
-            EditorGUILayout.PropertyField(cueProperty.FindPropertyRelative("volume"));
-            EditorGUILayout.PropertyField(cueProperty.FindPropertyRelative("pitchRange"));
-            EditorGUILayout.PropertyField(cueProperty.FindPropertyRelative("spatialBlend"));
-            EditorGUILayout.PropertyField(cueProperty.FindPropertyRelative("minDistance"));
-            EditorGUILayout.PropertyField(cueProperty.FindPropertyRelative("maxDistance"));
-            EditorGUILayout.PropertyField(cueProperty.FindPropertyRelative("cooldownSeconds"));
-            EditorGUILayout.PropertyField(cueProperty.FindPropertyRelative("mixerGroup"));
-
-            EditorGUILayout.EndVertical();
-            GUI.backgroundColor = previousColor;
 
             if (isHighlighted)
             {
@@ -157,6 +161,42 @@ public sealed class GameAudioCatalogSOEditor : Editor
         }
 
         EditorGUILayout.EndScrollView();
+    }
+
+    private void DrawCueBindingSummary(GameAudioCueId cueId)
+    {
+        if (_profile == null || cueId == GameAudioCueId.None)
+            return;
+
+        int bindingCount = _profile.CountBindingsForCue(cueId.ToString(), includeIgnored: false);
+        bool ignored = _profile.IsCueIgnored(cueId.ToString());
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            EditorGUILayout.LabelField(
+                ignored
+                    ? "Coverage: ignored by profile."
+                    : bindingCount > 0
+                        ? $"Coverage: {bindingCount} configured binding(s)."
+                        : "Coverage: no profile binding configured.",
+                UtilityWindowTheme.MutedMiniLabelStyle);
+
+            GUILayout.FlexibleSpace();
+
+            if (GUILayout.Button("Edit Bindings", GUILayout.Width(100f)))
+            {
+                SessionState.SetInt(SelectedCueSessionKey, (int)cueId);
+                SessionState.SetInt(LegacySelectedCueSessionKey, (int)cueId);
+                AudioCoverageWindow.Open();
+            }
+        }
+    }
+
+    private void DrawIfExists(SerializedProperty parent, string propertyName, bool includeChildren)
+    {
+        SerializedProperty property = parent.FindPropertyRelative(propertyName);
+        if (property != null)
+            EditorGUILayout.PropertyField(property, includeChildren);
     }
 
     private int FindIndexForCueValue(int selectedCueValue)
@@ -175,15 +215,33 @@ public sealed class GameAudioCatalogSOEditor : Editor
         return -1;
     }
 
-    private void EnsureStyles()
+    private void MutateCatalog(string undoName, Action<GameAudioCatalogSO> action)
     {
-        if (_highlightStyle != null)
+        serializedObject.ApplyModifiedProperties();
+        GameAudioCatalogSO catalog = (GameAudioCatalogSO)target;
+        Undo.RecordObject(catalog, undoName);
+        action?.Invoke(catalog);
+        EditorUtility.SetDirty(catalog);
+        AssetDatabase.SaveAssets();
+        serializedObject.Update();
+    }
+
+    private void ResolveProfile()
+    {
+        string activeGuid = SessionState.GetString(ActiveProfileGuidSessionKey, string.Empty);
+        if (!string.IsNullOrWhiteSpace(activeGuid))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(activeGuid);
+            if (!string.IsNullOrWhiteSpace(path))
+                _profile = AssetDatabase.LoadAssetAtPath<AudioCoverageProfileSO>(path);
+        }
+
+        if (_profile != null)
             return;
 
-        _highlightStyle = new GUIStyle(EditorStyles.helpBox)
-        {
-            padding = new RectOffset(8, 8, 8, 8)
-        };
+        string[] guids = AssetDatabase.FindAssets("t:AudioCoverageProfileSO");
+        if (guids != null && guids.Length > 0)
+            _profile = AssetDatabase.LoadAssetAtPath<AudioCoverageProfileSO>(AssetDatabase.GUIDToAssetPath(guids[0]));
     }
 }
 #endif

@@ -18,6 +18,12 @@ MonoBehaviour:
     on the snow.
   autoAccept: 0
   tutorialQuest: 1
+  completionMode: 0
+  turnInTargetType: 0
+  turnInNpcIdentityId: 
+  turnInGenericArchetypeId: 
+  turnInLocationId: 
+  turnInToOriginalQuestGiver: 0
   stages:
   - id: tutorial.move_and_lean.stage1
     title: Learn Your Weight Shift

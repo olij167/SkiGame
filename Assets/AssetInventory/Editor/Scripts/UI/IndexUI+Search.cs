@@ -444,7 +444,7 @@ namespace AssetInventory
                 }
                 else
                 {
-                    int action = Event.current.alt ? AI.Config.doubleClickAltAction : AI.Config.doubleClickAction;
+                    int action = SGrid.LastClickAlt ? AI.Config.doubleClickAltAction : AI.Config.doubleClickAction;
 
                     switch (action)
                     {
@@ -466,7 +466,11 @@ namespace AssetInventory
 
         private void OnSearchKeyboardSelection(int selectionIndex)
         {
-            SGrid.LimitSelection(_filteredFiles.Count());
+            int count = _filteredFiles.Count();
+            if (count == 0) return;
+
+            SGrid.LimitSelection(count);
+            if (selectionIndex < 0 || selectionIndex >= count) selectionIndex = SGrid.selectionTile;
             _selectedEntry = _filteredFiles.ElementAt(selectionIndex);
             _requireSearchSelectionUpdate = true;
             DisposeAnimTexture();
@@ -1832,7 +1836,7 @@ namespace AssetInventory
                 _selectedEntry.Refresh();
                 Assets.ResolveChildren(_selectedEntry, _assets);
                 AI.GetObserver().SetPrioritized(new List<AssetInfo> {_selectedEntry});
-                _selectedEntry.PackageDownloader.RefreshState();
+                _selectedEntry.PackageDownloader?.RefreshState();
 
                 _selectedEntry.CheckIfInProject();
                 _selectedEntry.IsMaterialized = Assets.IsMaterialized(_selectedEntry.ToAsset(), _selectedEntry);
@@ -2414,7 +2418,11 @@ namespace AssetInventory
                     {
                         UpdateFilteredFiles();
 
-                        _selectedEntry = _filteredFiles.ElementAt(SGrid.selectionTile);
+                        if (_filteredFiles.Any())
+                        {
+                            SGrid.LimitSelection(_filteredFiles.Count());
+                            _selectedEntry = _filteredFiles.ElementAt(SGrid.selectionTile);
+                        }
                         _requireSearchSelectionUpdate = true;
                         StopAnimation();
                     }
@@ -3850,7 +3858,7 @@ namespace AssetInventory
             {
                 if (GUILayout.Button(CommonUIStyles.Content(Path.GetFileName(info.GetPath(true))), CommonUIStyles.wrappedLinkLabel, GUILayout.ExpandWidth(true)))
                 {
-                    Application.OpenURL(info.GetAMAssetUrl());
+                    AI.OpenURL(info.GetAMAssetUrl());
                 }
             }
             else

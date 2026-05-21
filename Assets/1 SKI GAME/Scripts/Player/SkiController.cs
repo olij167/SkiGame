@@ -236,6 +236,21 @@ public class SkiController : MonoBehaviour
     private MaterialPropertyBlock _poleMpb;
 
     [Header("Input Actions")]
+    [SerializeField]
+    private bool acceptPlayerInput = true;
+
+    public bool AcceptPlayerInput
+    {
+        get => acceptPlayerInput;
+        set
+        {
+            acceptPlayerInput = value;
+
+            if (!acceptPlayerInput)
+                ClearRawInputState(clearJumpState: true);
+        }
+    }
+
     [Tooltip("Float action for left leg stance/edge (0..1).")]
     [SerializeField] private InputActionReference leftSkiAction;
 
@@ -313,6 +328,27 @@ public class SkiController : MonoBehaviour
         (leftSkiContact != null && leftSkiContact.HasWallContact) ||
         (rightSkiContact != null && rightSkiContact.HasWallContact);
 
+    private bool HasAnySkiEndGroundContact =>
+    (leftSkiContact != null &&
+     leftSkiContact.HasEndContact &&
+     leftSkiContact.EndContactSign != 0 &&
+     IsRideableNormal(leftSkiContact.ContactNormal)) ||
+    (rightSkiContact != null &&
+     rightSkiContact.HasEndContact &&
+     rightSkiContact.EndContactSign != 0 &&
+     IsRideableNormal(rightSkiContact.ContactNormal));
+
+    private bool HasAnyBaseSkiProbeContact()
+    {
+        return (leftSkiContact != null && leftSkiContact.HasBaseSupportContact) ||
+               (rightSkiContact != null && rightSkiContact.HasBaseSupportContact);
+    }
+
+    private bool HasRealSkiGroundContact()
+    {
+        return HasAnySkiCollisionContact;
+    }
+
     // Grounding/orientation
     private bool _isGrounded;
     private bool _wasGrounded;
@@ -339,6 +375,10 @@ public class SkiController : MonoBehaviour
 
     // Separate from _groundNormal: used only for visual/orientation alignment (pitch/roll).
     private Vector3 _alignNormal = Vector3.up;
+
+    private Vector3 _resolvedSkiSupportNormal = Vector3.up;
+    private float _lastResolvedSkiSupportNormalTime = -999f;
+    private string _lastResolvedSkiSupportNormalSource = "none";
 
     // High-level locomotion state (for debugging and behaviour gating).
     private MovementMode _movementMode = MovementMode.Airborne;
@@ -384,6 +424,14 @@ public class SkiController : MonoBehaviour
     private float _skiEndSlide01;
     private float _lastSkiEndSlideTime = -999f;
     private float _lastStackedSecondaryImpactTime = -999f;
+
+    private float _endContactFlattenRecoveryUntil = -999f;
+    private float _endContactFlattenRecoveryStartedAt = -999f;
+    private Vector3 _endContactFlattenRecoveryNormal = Vector3.up;
+    private int _endContactFlattenRecoverySign;
+
+    private bool _landingEvaluationConsumedForCurrentAirborne;
+    private float _lastEndContactFlattenRecoveryProbeDistance = float.PositiveInfinity;
     // ------------------------------------------------------------------
     // Non-ski body collisions (anti "slide on head")
     //
@@ -396,6 +444,7 @@ public class SkiController : MonoBehaviour
     private Vector3 _nonSkiGroundContactPoint;
     private Vector3 _nonSkiGroundContactNormal;
     private float _nonSkiGroundContactUpDot;
+    private float _lastNonSkiGroundContactTime = -999f;
 
     /// <summary>
     /// Used by external impact/VFX systems to ignore ski collider contacts.
@@ -489,6 +538,11 @@ public class SkiController : MonoBehaviour
     private string _dbgGrindSource;
     private Vector3 _grindNormal = Vector3.up;
     private Vector3 _grindHybridAngularVelocity;
+
+    private readonly Collider[] _grindOverlapBuffer = new Collider[32];
+    private readonly RaycastHit[] _grindHitBuffer = new RaycastHit[32];
+    private string _dbgGrindCandidateSource = "none";
+    private string _dbgGrindRejectReason = "none";
 
     // Per-frame cache to avoid repeated GetComponentInParent calls during probe evaluation.
     private int _grindProviderCacheFrame = -1;
@@ -585,6 +639,60 @@ public class SkiController : MonoBehaviour
     [SerializeField, Range(0f, 90f)]
     private float maxGroundSlopeAngle = 80f;
 
+    [SerializeField] private float maxSkiOnlyGroundedBodyGap = 1.25f;
+
+    [Header("Ground Detection - Ski Fallback")]
+    [SerializeField] private bool useSkiTransformGroundFallback = true;
+    [SerializeField] private float skiTransformFallbackProbeUp = 0.65f;
+    [SerializeField] private float skiTransformFallbackProbeDown = 1.35f;
+    [SerializeField] private float skiTransformFallbackRadius = 0.06f;
+    [SerializeField] private float skiTransformFallbackMaxGap = 0.35f;
+    [SerializeField] private float skiTransformFallbackCoyoteTime = 0.08f;
+    [SerializeField] private float skiEndFallbackMaxGap = 0.55f;
+    [SerializeField] private float skiEndFallbackProbeUp = 0.85f;
+    [SerializeField] private float skiEndFallbackProbeDown = 1.75f;
+    [SerializeField] private float skiEndFallbackRadius = 0.08f;
+    [SerializeField] private float endContactFlattenAngularDamp = 8f;
+
+    private bool _bodyNearGround;
+    private bool _skiContactPlausibleForBody;
+    private float _lastMeasuredGroundGap = float.PositiveInfinity;
+    private string _lastGroundRefreshSource = "none";
+    private Collider _lastGroundProbeAcceptedCollider;
+    private Collider _lastGroundProbeIgnoredCollider;
+    private string _lastGroundProbeIgnoredReason = "none";
+    private float _lastGroundProbeAcceptedDistance = float.PositiveInfinity;
+    private Vector3 _lastGroundProbeAcceptedNormal = Vector3.up;
+    private float _lastSkiTransformFallbackTime = -999f;
+    private Vector3 _lastSkiTransformFallbackNormal = Vector3.up;
+    private float _lastSkiTransformFallbackGap = float.PositiveInfinity;
+    private bool _lastBodyProbeHit;
+    private float _lastBodyProbeDistance = float.PositiveInfinity;
+    private float _lastBodyProbeGap = float.PositiveInfinity;
+    private float _lastBodyProbeAllowedGap;
+    private bool _lastBodyProbeAcceptedButTooFar;
+    private bool _lastSkiFallbackFreshHit;
+    private string _lastSkiFallbackSource = "none";
+    private float _lastSkiFallbackFreshTime = -999f;
+    private string _lastNoseTailLandingSource = "none";
+    private string _lastGroundedFrom = "none";
+    private float _lastRealSupportTime = -999f;
+    private bool _probeOnlyGrounded;
+    private bool _probeOnlyEndGrounded;
+    private float _probeOnlyGroundGap = float.PositiveInfinity;
+    private string _probeOnlyGroundSource = "none";
+    private bool _dbgGroundForceRanLastFixed;
+    private bool _dbgSkateRanLastFixed;
+    private bool _dbgPoleRanLastFixed;
+    private bool _dbgPoseInputActive;
+
+    private readonly RaycastHit[] _groundHitBuffer = new RaycastHit[16];
+    private static int _npcLayer = -2;
+    private static int _playerLayer = -2;
+    public bool IsBodyNearGround => _bodyNearGround;
+    public bool IsSkiContactPlausibleForBody => _skiContactPlausibleForBody;
+    public float LastMeasuredGroundGap => _lastMeasuredGroundGap;
+    public string LastGroundRefreshSource => _lastGroundRefreshSource;
 
     [Header("Ground Normal Smoothing")]
     [Tooltip("How quickly the detected ground normal smooths toward new values when near ground. Higher = snappier, lower = less jitter.")]
@@ -593,6 +701,15 @@ public class SkiController : MonoBehaviour
     [Tooltip("How long (seconds) after leaving ground we still allow 'grounded controls' (turning/stance) to feel responsive.")]
     [SerializeField] private float controlCoyoteTime = 0.08f;
 
+    [Header("Slope Normal Authority")]
+    [Tooltip("How quickly the controller resolves ski support normals from probe/terrain normals while ski collision is active.")]
+    [SerializeField] private float skiSupportNormalResolveSpeed = 22f;
+
+    [Tooltip("How long to retain the last resolved slope normal when collision flickers during landing or one-ski contact.")]
+    [SerializeField] private float skiSupportNormalCacheTime = 0.12f;
+
+    [Tooltip("If ski contact normals are nearly world-up but the terrain ray normal is sloped by at least this many degrees, prefer the terrain ray normal for alignment.")]
+    [SerializeField] private float terrainRayNormalOverrideAngle = 3f;
 
     [Header("Alignment (Anti Tip-Dig)")]
     [Tooltip("Smoothing rate for the visual/alignment normal (used for pitch/roll alignment). Higher = quicker response, lower = steadier.")]
@@ -849,6 +966,45 @@ public class SkiController : MonoBehaviour
     [Tooltip("Maximum grounded pitch bias in degrees while intentionally balancing on ski tips/tails.")]
     [SerializeField] private float tipBalancePitchBias = 9f;
 
+    [Header("Nose / Tail Landing Recovery")]
+    [Tooltip("When a tip/tail landing is too slow or too poorly matched to become a slide, briefly keep ski controls active while forcing the skier to flatten/recover instead of falling into floaty airborne limbo.")]
+    [SerializeField] private bool enableEndContactFlattenRecovery = true;
+
+    [Tooltip("How long a low-speed tip/tail landing can use the explicit flatten/recovery control state.")]
+    [SerializeField] private float endContactFlattenRecoveryDuration = 0.24f;
+
+    [Tooltip("Downward acceleration applied during low-speed tip/tail flatten recovery. This pulls the skier back toward real ski collision instead of hovering on end probes.")]
+    [SerializeField] private float endContactFlattenRecoveryDownAccel = 22f;
+
+    [Tooltip("Damps Rigidbody angular velocity during low-speed tip/tail flatten recovery.")]
+    [SerializeField] private float endContactFlattenRecoveryAngularDamp = 14f;
+
+    [Tooltip("Extra damping applied to velocity away from the terrain normal during flatten recovery.")]
+    [SerializeField] private float endContactFlattenRecoveryAwayDamp = 8f;
+
+    [Tooltip("How much of normal landing velocity projection to apply when a low-speed tip/tail contact is forced to flatten instead of slide.")]
+    [SerializeField, Range(0f, 1f)] private float endContactFlattenRecoveryProjection = 0.35f;
+
+    [Tooltip("Minimum time since leaving ground before tip/tail flatten recovery is allowed. Prevents jump takeoff from being mistaken for a failed landing.")]
+    [SerializeField] private float endContactFlattenRecoveryMinAirTime = 0.10f;
+
+    [Tooltip("If velocity along the contact normal is above this, the skier is moving away from the snow, so flatten recovery is blocked.")]
+    [SerializeField] private float endContactFlattenRecoveryMaxRisingSpeed = 0.05f;
+
+    [Tooltip("After a real jump, suppress tip/tail flatten recovery so it cannot pull the player back down.")]
+    [SerializeField] private float endContactFlattenRecoveryPostJumpSuppressTime = 0.30f;
+
+    [Tooltip("Allows an active end-contact flatten recovery to count as jumpable support. The recovery is cancelled as soon as the jump fires.")]
+    [SerializeField] private bool endContactFlattenRecoveryAllowsJump = true;
+
+    [Tooltip("Maximum current tip/tail probe distance allowed for flatten recovery. Larger hits are prediction only and must not create grounded-style recovery.")]
+    [SerializeField] private float endContactFlattenRecoveryMaxEndProbeDistance = 0.22f;
+
+    [Tooltip("Maximum body probe gap allowed for flatten recovery when the body probe has a valid terrain hit. Prevents 'landing on air' far above the terrain.")]
+    [SerializeField] private float endContactFlattenRecoveryMaxBodyGap = 0.70f;
+
+    [Tooltip("When true, flatten recovery only applies corrective damping/downforce and never enables full ground/skate/pole forces.")]
+    [SerializeField] private bool endContactFlattenRecoveryCorrectiveOnly = true;
 
     [Header("Jump")]
     [Tooltip("Min/Max velocity change applied along the jump direction when jumping.")]
@@ -992,10 +1148,28 @@ public class SkiController : MonoBehaviour
     [SerializeField] private bool useSimpleContactGrinding = true;
 
     [Tooltip("Layers that count as grindable when touched by either ski. These can also be ground layers if large grindable objects should be rideable.")]
-    [SerializeField] private LayerMask grindableLayers = ~0;
+    [SerializeField] private LayerMask grindableLayers = 0;
 
     [Tooltip("Minimum planar speed required before grind contact is tracked as an active grind.")]
     [SerializeField] private float grindMinPlanarSpeed = 0.5f;
+
+    [Tooltip("Radius used to search around each ski/probe for nearby grindable surfaces when direct collision callbacks are not enough.")]
+    [SerializeField] private float grindContactProbeRadius = 0.28f;
+
+    [Tooltip("How far above each ski/probe point the grindable surface spherecast starts.")]
+    [SerializeField] private float grindContactProbeUp = 0.45f;
+
+    [Tooltip("How far below each ski/probe point the grindable surface spherecast searches.")]
+    [SerializeField] private float grindContactProbeDown = 1.25f;
+
+    [Tooltip("When true, standing or moving very slowly on a grindable surface still counts as grind support/control, but trick distance only accumulates while moving.")]
+    [SerializeField] private bool grindAllowsStationaryContactSupport = true;
+
+    [Tooltip("When true, grind detection searches around ski base/tip/tail probe points, not just cached collision contacts.")]
+    [SerializeField] private bool useNearbyGrindableProbeSearch = true;
+
+    [Tooltip("Priority bonus for grindable colliders found near ski probe points. Higher values prefer nearby rails/props over broad terrain contacts.")]
+    [SerializeField] private float nearbyGrindableProbePriority = 0.18f;
 
     [Tooltip("How quickly the grind movement modifier ramps while contact is present or absent.")]
     [SerializeField] private float grindStrengthResponse = 20f;
@@ -1015,6 +1189,28 @@ public class SkiController : MonoBehaviour
 
     [Tooltip("Multiplier applied to slope-parallel gravity while grinding. Slightly above 1 makes grindable surfaces feel slicker without forcing a path.")]
     [SerializeField, Range(0f, 2f)] private float grindSlopeGravityMultiplier = 1.05f;
+
+    [Header("Grinding - Ice Traction")]
+    [Tooltip("How long it takes for player-applied traction to build after entering a grind. Higher values feel icier and less instantly responsive.")]
+    [SerializeField] private float grindTractionBuildTime = 0.65f;
+
+    [Tooltip("Minimum traction available immediately after entering a grind.")]
+    [SerializeField, Range(0f, 1f)] private float grindMinTractionFactor = 0.18f;
+
+    [Tooltip("Multiplier applied to skating impulses while grinding. Lower values make grindables feel slick and low-traction.")]
+    [SerializeField, Range(0f, 1.5f)] private float grindSkateImpulseMultiplier = 0.38f;
+
+    [Tooltip("Multiplier applied to pole push acceleration while grinding.")]
+    [SerializeField, Range(0f, 1.5f)] private float grindPolePushMultiplier = 0.45f;
+
+    [Tooltip("Multiplier applied to pole drag/braking while grinding. Lower values make it take longer to stop.")]
+    [SerializeField, Range(0f, 1f)] private float grindPoleBrakeMultiplier = 0.25f;
+
+    [Tooltip("Small forward traction assist while grinding at low speed. This helps the player start moving on large flat grindables without making grindables feel like normal snow.")]
+    [SerializeField] private float grindLowSpeedDriveAccel = 1.2f;
+
+    [Tooltip("Low-speed grind drive fades out by this planar speed.")]
+    [SerializeField] private float grindLowSpeedDriveMaxSpeed = 4f;
 
     [Header("Grinding - Hybrid Orientation Control")]
     [Tooltip("Extra yaw/orientation authority while grinding. Higher values let the player spin/turn the body more easily while sliding.")]
@@ -1387,6 +1583,32 @@ public class SkiController : MonoBehaviour
     public SkiEndSlideState CurrentSkiEndSlideState => _skiEndSlideState;
     public float CurrentSkiEndSlide01 => _skiEndSlide01;
 
+    public bool IsExplicitNoseTailSlide =>
+        _skiEndSlideState != SkiEndSlideState.None &&
+        _skiEndSlideState != SkiEndSlideState.Mixed;
+
+    public int CurrentSkiEndSlideSign
+    {
+        get
+        {
+            switch (_skiEndSlideState)
+            {
+                case SkiEndSlideState.LeftNose:
+                case SkiEndSlideState.RightNose:
+                case SkiEndSlideState.BothNose:
+                    return 1;
+
+                case SkiEndSlideState.LeftTail:
+                case SkiEndSlideState.RightTail:
+                case SkiEndSlideState.BothTail:
+                    return -1;
+
+                default:
+                    return 0;
+            }
+        }
+    }
+
     public float RawLeanInput => _rawLeanInput;
     public float ForwardLeanInput => _forwardLean;
     public float LeftLegInput => _rawLeftLegInput;
@@ -1558,10 +1780,205 @@ public class SkiController : MonoBehaviour
     public float RawLeftLegInput => _rawLeftLegInput;
 
     public float RawRightLegInput => _rawRightLegInput;
+
+    private bool HasPendingJumpIntent =>
+    _jumpQueued || _jumpHeld || _jumpReleaseQueued;
+
+    private bool IsRecentlyJumpedForEndRecovery()
+    {
+        float suppressTime = Mathf.Max(
+            jumpStickSuppressionTime,
+            endContactFlattenRecoveryPostJumpSuppressTime);
+
+        return (Time.time - _lastJumpTime) <= suppressTime;
+    }
+
+    private void CancelEndContactFlattenRecovery()
+    {
+        _endContactFlattenRecoveryUntil = -999f;
+        _endContactFlattenRecoveryStartedAt = -999f;
+        _endContactFlattenRecoveryNormal = Vector3.up;
+        _endContactFlattenRecoverySign = 0;
+        _lastEndContactFlattenRecoveryProbeDistance = float.PositiveInfinity;
+    }
+
+    private bool TryGetEndContactFlattenRecoveryCandidate(
+        out Vector3 normal,
+        out float bestDistance,
+        out int endSign)
+    {
+        normal = Vector3.zero;
+        bestDistance = float.PositiveInfinity;
+        endSign = 0;
+
+        bool found = false;
+
+        ConsiderEndContactFlattenRecoveryCandidate(leftSkiContact, ref normal, ref bestDistance, ref endSign, ref found);
+        ConsiderEndContactFlattenRecoveryCandidate(rightSkiContact, ref normal, ref bestDistance, ref endSign, ref found);
+
+        if (!found)
+        {
+            normal = _groundNormal.sqrMagnitude > 0.0001f ? _groundNormal.normalized : Vector3.up;
+            return false;
+        }
+
+        normal = normal.sqrMagnitude > 0.0001f
+            ? normal.normalized
+            : (_groundNormal.sqrMagnitude > 0.0001f ? _groundNormal.normalized : Vector3.up);
+
+        return true;
+    }
+
+    private void ConsiderEndContactFlattenRecoveryCandidate(
+        SkiContact contact,
+        ref Vector3 normal,
+        ref float bestDistance,
+        ref int endSign,
+        ref bool found)
+    {
+        if (contact == null || !contact.HasEndContact || contact.EndContactSign == 0)
+            return;
+
+        float d = float.PositiveInfinity;
+
+        if (contact.EndContactSign > 0 && contact.ProbeTipHit)
+            d = contact.ProbeTipDistance;
+        else if (contact.EndContactSign < 0 && contact.ProbeTailHit)
+            d = contact.ProbeTailDistance;
+
+        // Fallback for mixed/noisy frames where the sign is valid but the signed probe
+        // was not the shortest valid probe in the current frame.
+        if (float.IsInfinity(d))
+        {
+            if (contact.ProbeTipHit)
+                d = Mathf.Min(d, contact.ProbeTipDistance);
+            if (contact.ProbeTailHit)
+                d = Mathf.Min(d, contact.ProbeTailDistance);
+        }
+
+        if (float.IsInfinity(d))
+            return;
+
+        if (d >= bestDistance)
+            return;
+
+        Vector3 n = contact.ContactNormal.sqrMagnitude > 0.0001f
+            ? contact.ContactNormal.normalized
+            : (_groundNormal.sqrMagnitude > 0.0001f ? _groundNormal.normalized : Vector3.up);
+
+        bestDistance = d;
+        normal = n;
+        endSign = contact.EndContactSign;
+        found = true;
+    }
+
+    private bool CanStartEndContactFlattenRecovery(Vector3 contactNormal)
+    {
+        if (!enableEndContactFlattenRecovery || _rb == null || _stacked || _grindActive)
+            return false;
+
+        if (HasAnySkiCollisionContact || _hasNonSkiGroundContact)
+            return false;
+
+        if (HasPendingJumpIntent || IsRecentlyJumpedForEndRecovery())
+            return false;
+
+        float airTime = Time.time - _airborneStartTime;
+        if (airTime < Mathf.Max(0f, endContactFlattenRecoveryMinAirTime))
+            return false;
+
+        if (_lastBodyProbeHit &&
+            _lastBodyProbeGap > Mathf.Max(0f, endContactFlattenRecoveryMaxBodyGap))
+            return false;
+
+        if (!TryGetEndContactFlattenRecoveryCandidate(out Vector3 n, out float bestDistance, out _))
+            return false;
+
+        _lastEndContactFlattenRecoveryProbeDistance = bestDistance;
+
+        if (bestDistance > Mathf.Max(0.01f, endContactFlattenRecoveryMaxEndProbeDistance))
+            return false;
+
+        if (contactNormal.sqrMagnitude > 0.0001f)
+            n = contactNormal.normalized;
+
+        float normalSpeed = Vector3.Dot(_rb.linearVelocity, n);
+
+        // Positive normal speed means the player is moving away from the surface.
+        // That is jump/takeoff behaviour, not landing recovery.
+        if (normalSpeed > endContactFlattenRecoveryMaxRisingSpeed)
+            return false;
+
+        return true;
+    }
+
+    private void ValidateEndContactFlattenRecoveryState()
+    {
+        if (_endContactFlattenRecoveryStartedAt < 0f)
+            return;
+
+        if (!enableEndContactFlattenRecovery ||
+            _stacked ||
+            _grindActive ||
+            IsRecentlyJumpedForEndRecovery() ||
+            HasAnySkiCollisionContact ||
+            _hasNonSkiGroundContact ||
+            Time.time > _endContactFlattenRecoveryUntil)
+        {
+            CancelEndContactFlattenRecovery();
+            return;
+        }
+
+        if (_lastBodyProbeHit &&
+            _lastBodyProbeGap > Mathf.Max(0f, endContactFlattenRecoveryMaxBodyGap))
+        {
+            CancelEndContactFlattenRecovery();
+            return;
+        }
+
+        if (!TryGetEndContactFlattenRecoveryCandidate(out Vector3 n, out float bestDistance, out int sign))
+        {
+            CancelEndContactFlattenRecovery();
+            return;
+        }
+
+        _lastEndContactFlattenRecoveryProbeDistance = bestDistance;
+
+        if (bestDistance > Mathf.Max(0.01f, endContactFlattenRecoveryMaxEndProbeDistance))
+        {
+            CancelEndContactFlattenRecovery();
+            return;
+        }
+
+        _endContactFlattenRecoveryNormal = n;
+        _endContactFlattenRecoverySign = sign;
+    }
+
+    private bool IsEndContactFlattenRecoveryActive
+    {
+        get
+        {
+            if (!enableEndContactFlattenRecovery)
+                return false;
+
+            if (_stacked || _grindActive)
+                return false;
+
+            if (IsRecentlyJumpedForEndRecovery())
+                return false;
+
+            if (HasAnySkiCollisionContact || _hasNonSkiGroundContact)
+                return false;
+
+            return _endContactFlattenRecoveryStartedAt > 0f &&
+                   Time.time <= _endContactFlattenRecoveryUntil;
+        }
+    }
+
     /// <summary>
     /// Grounded test used for *controls* (when to use skiing vs air inputs).
     /// This is intentionally more forgiving than the strict physics grounding:
-    /// - Any ski collider contact counts as grounded.
+    /// - Strict physics grounding or active grinding counts as grounded.
     /// - A short coyote window after losing ground keeps you in ski controls
     ///   so tiny gaps / tip chatter don't instantly flip you into air mode.
     /// </summary>
@@ -1576,22 +1993,152 @@ public class SkiController : MonoBehaviour
             if (_grindActive)
                 return true;
 
-            // If we're scraping a wall while airborne, do NOT treat this as grounded for controls.
-            // This prevents anti-tip-dig alignment + ground forces from firing on cliff faces.
-            if (Time.time < _wallContactUntil)
-                return false;
+            if (_skiEndSlideState != SkiEndSlideState.None && HasAnySkiEndGroundContact)
+                return true;
 
-            // Hard grounding: any ski collider currently touching snow.
-            if (HasAnySkiContact)
+            // End-contact flatten recovery is corrective only.
+            // It must not grant full ground/skate/pole force authority.
+            if (!endContactFlattenRecoveryCorrectiveOnly && IsEndContactFlattenRecoveryActive)
                 return true;
 
             // Physics-based grounding from our casts.
             if (_isGrounded)
                 return true;
 
+            // If we're scraping a wall while airborne, do NOT treat this as grounded for controls.
+            // Grounded/ski-plausible contact wins above, so uneven snow cannot be demoted by a wall-ish ski contact.
+            if (Time.time < _wallContactUntil)
+                return false;
+
             // Soft "control coyote": keep ski controls briefly after leaving ground.
             return (Time.time - _lastGroundedTime) <= controlCoyoteTime;
         }
+    }
+
+    private struct SkiGroundFallbackResult
+    {
+        public bool found;
+        public Vector3 point;
+        public Vector3 normal;
+        public float gap;
+        public Collider collider;
+        public bool isEndContact;
+        public int endSign;
+        public string source;
+        public float hitDistance;
+        public bool freshHit;
+    }
+
+    private static string DescribeColliderBrief(Collider c)
+    {
+        if (c == null)
+            return "(none)";
+
+        int layer = c.gameObject.layer;
+        string layerName = LayerMask.LayerToName(layer);
+        return $"{c.name}/{(string.IsNullOrEmpty(layerName) ? layer.ToString() : layerName)}";
+    }
+
+    private static string DescribeSkiProbeState(SkiContact contact)
+    {
+        if (contact == null)
+            return "missing";
+
+        return $"stable={contact.HasStableSupportContact} end={contact.HasEndContact}:{contact.EndContactSign} " +
+               $"baseSupport={contact.HasBaseSupportContact} " +
+               $"base={contact.ProbeBaseHit}:{DescribeColliderBrief(contact.ProbeBaseCollider)} " +
+               $"baseDist={contact.ProbeBaseDistance:0.000} " +
+               $"tip={contact.ProbeTipHit}:{DescribeColliderBrief(contact.ProbeTipCollider)} " +
+               $"tipDist={contact.ProbeTipDistance:0.000} " +
+               $"tail={contact.ProbeTailHit}:{DescribeColliderBrief(contact.ProbeTailCollider)} " +
+               $"tailDist={contact.ProbeTailDistance:0.000} " +
+               $"collisionEnd={contact.HasCollisionEndContact}:{contact.CollisionEndSign}:{DescribeColliderBrief(contact.CollisionEndCollider)} " +
+               $"lastAge={(contact.LastContactTime > 0f ? Time.time - contact.LastContactTime : float.PositiveInfinity):0.000}s";
+    }
+
+    [ContextMenu("Print Grounding Debug State")]
+    public void PrintGroundingDebugState()
+    {
+        Debug.Log(
+            $"[SkiController] Grounding Debug: {name}\n" +
+            $"mode={_movementMode} stacked={_stacked} grind={_grindActive} physicsGrounded={_isGrounded} controlsGrounded={IsGroundedForControls} airborne={IsAirborne}\n" +
+            $"groundedFrom={_lastGroundedFrom} leftCollisionContact={(leftSkiContact != null && leftSkiContact.HasCollisionContact)} rightCollisionContact={(rightSkiContact != null && rightSkiContact.HasCollisionContact)} bodyCollisionContact={_hasNonSkiGroundContact} bodyCollisionAge={(Time.time - _lastNonSkiGroundContactTime):0.000}s collisionCoyoteAge={(Time.time - _lastRealSupportTime):0.000}s explicitSlide={_skiEndSlideState != SkiEndSlideState.None} endFlattenRecovery={IsEndContactFlattenRecoveryActive} endFlattenRemaining={Mathf.Max(0f, _endContactFlattenRecoveryUntil - Time.time):0.000}s endFlattenProbeDist={_lastEndContactFlattenRecoveryProbeDistance:0.000}\n" +
+            $"groundForceRanLastFixed={_dbgGroundForceRanLastFixed} skateRanLastFixed={_dbgSkateRanLastFixed} poleRanLastFixed={_dbgPoleRanLastFixed} poseInputActive={_dbgPoseInputActive} probeOnlyAffectsControl=False\n" +
+            $"bodyNearGround={_bodyNearGround} skiPlausible={_skiContactPlausibleForBody} nearGroundForJump={_nearGroundForJump} groundGap={_lastMeasuredGroundGap:0.000} refresh={_lastGroundRefreshSource}\n" +
+            $"bodyProbeHit={_lastBodyProbeHit} bodyProbeDistance={_lastBodyProbeDistance:0.000} bodyProbeGap={_lastBodyProbeGap:0.000} bodyProbeAllowedGap={_lastBodyProbeAllowedGap:0.000} bodyProbeAcceptedButTooFar={_lastBodyProbeAcceptedButTooFar}\n" +
+            $"probeOnlyGrounded={_probeOnlyGrounded} probeOnlyEndGrounded={_probeOnlyEndGrounded} probeOnlyGap={_probeOnlyGroundGap:0.000} probeOnlySource={_probeOnlyGroundSource} hasStableSkiSupport={HasRealSkiGroundContact()} baseProbe={HasAnyBaseSkiProbeContact()} hasEndContact={HasAnySkiEndGroundContact}\n" +
+            $"groundProbe accepted={DescribeColliderBrief(_lastGroundProbeAcceptedCollider)} acceptedDistance={_lastGroundProbeAcceptedDistance:0.000} acceptedNormal={_lastGroundProbeAcceptedNormal.ToString("F3")} ignored={DescribeColliderBrief(_lastGroundProbeIgnoredCollider)} ignoredReason={_lastGroundProbeIgnoredReason}\n" +
+            $"skiFallback enabled={useSkiTransformGroundFallback} freshHit={_lastSkiFallbackFreshHit} source={_lastSkiFallbackSource} freshAge={(Time.time - _lastSkiFallbackFreshTime):0.000}s lastAge={(Time.time - _lastSkiTransformFallbackTime):0.000}s lastGap={_lastSkiTransformFallbackGap:0.000} lastNormal={_lastSkiTransformFallbackNormal.ToString("F3")}\n" +
+            $"noseTailLandingSource={_lastNoseTailLandingSource} leftCollisionEnd={(leftSkiContact != null && leftSkiContact.HasCollisionEndContact)} leftCollisionEndSign={(leftSkiContact != null ? leftSkiContact.CollisionEndSign : 0)} leftCollisionEndCollider={DescribeColliderBrief(leftSkiContact != null ? leftSkiContact.CollisionEndCollider : null)} rightCollisionEnd={(rightSkiContact != null && rightSkiContact.HasCollisionEndContact)} rightCollisionEndSign={(rightSkiContact != null ? rightSkiContact.CollisionEndSign : 0)} rightCollisionEndCollider={DescribeColliderBrief(rightSkiContact != null ? rightSkiContact.CollisionEndCollider : null)}\n" +
+            $"hasSkiContact={HasAnySkiContact} hasSkiCollision={HasAnySkiCollisionContact} hasSkiWall={HasAnySkiWallContact} wallSuppressRemaining={Mathf.Max(0f, _wallContactUntil - Time.time):0.000}s wallNormal={_wallScrapeNormal}\n" +
+            $"leftGrounded={(leftSkiContact != null && leftSkiContact.IsGrounded)} leftCollision={(leftSkiContact != null && leftSkiContact.HasCollisionContact)} leftWall={(leftSkiContact != null && leftSkiContact.HasWallContact)} leftNormal={(leftSkiContact != null ? leftSkiContact.ContactNormal.ToString("F3") : "none")} leftWallNormal={(leftSkiContact != null ? leftSkiContact.WallContactNormal.ToString("F3") : "none")}\n" +
+            $"leftProbes={DescribeSkiProbeState(leftSkiContact)}\n" +
+            $"rightGrounded={(rightSkiContact != null && rightSkiContact.IsGrounded)} rightCollision={(rightSkiContact != null && rightSkiContact.HasCollisionContact)} rightWall={(rightSkiContact != null && rightSkiContact.HasWallContact)} rightNormal={(rightSkiContact != null ? rightSkiContact.ContactNormal.ToString("F3") : "none")} rightWallNormal={(rightSkiContact != null ? rightSkiContact.WallContactNormal.ToString("F3") : "none")}\n" +
+            $"rightProbes={DescribeSkiProbeState(rightSkiContact)}",
+            this);
+    }
+
+    [ContextMenu("Print Down Raycast Ground Debug")]
+    public void PrintDownRaycastGroundDebug()
+    {
+        Vector3 origin = (_rb != null ? _rb.position : transform.position) + Vector3.up * 3f;
+        int count = Physics.RaycastNonAlloc(origin, Vector3.down, _groundHitBuffer, 8f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+
+        if (count <= 0)
+        {
+            Debug.Log($"[SkiController] Down Raycast Ground Debug: {name}\nno hit from origin={origin}", this);
+            return;
+        }
+
+        RaycastHit nearestRaw = default;
+        float nearestRawDistance = float.PositiveInfinity;
+        RaycastHit nearestAccepted = default;
+        float nearestAcceptedDistance = float.PositiveInfinity;
+        System.Text.StringBuilder rejected = new System.Text.StringBuilder();
+        for (int i = 0; i < count; i++)
+        {
+            RaycastHit hit = _groundHitBuffer[i];
+            if (hit.collider == null)
+                continue;
+
+            if (hit.distance < nearestRawDistance)
+            {
+                nearestRaw = hit;
+                nearestRawDistance = hit.distance;
+            }
+
+            string reason = GetGroundHitRejectReason(hit.collider, hit.normal);
+            if (reason == "accepted")
+            {
+                if (hit.distance < nearestAcceptedDistance)
+                {
+                    nearestAccepted = hit;
+                    nearestAcceptedDistance = hit.distance;
+                }
+            }
+            else
+            {
+                rejected.AppendLine($"rejected={DescribeColliderBrief(hit.collider)} distance={hit.distance:0.000} normal={hit.normal.ToString("F3")} reason={reason}");
+            }
+        }
+
+        if (nearestRaw.collider == null)
+        {
+            Debug.Log($"[SkiController] Down Raycast Ground Debug: {name}\nno valid collider in {count} hits from origin={origin}", this);
+            return;
+        }
+
+        string acceptedLine = nearestAccepted.collider != null
+            ? $"nearestAccepted={DescribeColliderBrief(nearestAccepted.collider)} distance={nearestAccepted.distance:0.000} point={nearestAccepted.point.ToString("F3")} normal={nearestAccepted.normal.ToString("F3")}"
+            : "nearestAccepted=(none)";
+
+        Debug.Log(
+            $"[SkiController] Down Raycast Ground Debug: {name}\n" +
+            $"origin={origin} hitCount={count}\n" +
+            $"nearestRaw={DescribeColliderBrief(nearestRaw.collider)} distance={nearestRaw.distance:0.000} point={nearestRaw.point.ToString("F3")} normal={nearestRaw.normal.ToString("F3")} rejectReason={GetGroundHitRejectReason(nearestRaw.collider, nearestRaw.normal)}\n" +
+            $"{acceptedLine}\n" +
+            rejected.ToString(),
+            this);
     }
 
     // Expose pole contacts for audio / VFX.
@@ -2185,20 +2732,53 @@ public class SkiController : MonoBehaviour
         // Clear transient movement / grounding state.
         _stacked = false;
         _stackRecoveryExternallyLocked = false;
-        _grindActive = false;
-        _grindTime = 0f;
-        _grindStrengthSmoothed = 0f;
+        ResetGrindingState();
         _isGrounded = false;
         _wasGrounded = false;
         _wasControlsGrounded = false;
         _nearGroundForJump = false;
+        _bodyNearGround = false;
+        _skiContactPlausibleForBody = false;
+        _lastMeasuredGroundGap = float.PositiveInfinity;
+        _lastGroundRefreshSource = "teleport-reset";
+        _lastGroundProbeAcceptedCollider = null;
+        _lastGroundProbeIgnoredCollider = null;
+        _lastGroundProbeIgnoredReason = "teleport-reset";
+        _lastGroundProbeAcceptedDistance = float.PositiveInfinity;
+        _lastGroundProbeAcceptedNormal = Vector3.up;
+        _lastSkiTransformFallbackTime = -999f;
+        _lastSkiTransformFallbackNormal = Vector3.up;
+        _lastSkiTransformFallbackGap = float.PositiveInfinity;
+        _lastBodyProbeHit = false;
+        _lastBodyProbeDistance = float.PositiveInfinity;
+        _lastBodyProbeGap = float.PositiveInfinity;
+        _lastBodyProbeAllowedGap = 0f;
+        _lastBodyProbeAcceptedButTooFar = false;
+        _lastSkiFallbackFreshHit = false;
+        _lastSkiFallbackSource = "none";
+        _lastSkiFallbackFreshTime = -999f;
+        _lastNoseTailLandingSource = "none";
+        _lastGroundedFrom = "teleport-reset";
+        _lastRealSupportTime = -999f;
+        _probeOnlyGrounded = false;
+        _probeOnlyEndGrounded = false;
+        _probeOnlyGroundGap = float.PositiveInfinity;
+        _probeOnlyGroundSource = "none";
 
         _wallContactUntil = 0f;
         _wallScrapeNormal = Vector3.zero;
 
         _groundNormal = Vector3.up;
         _alignNormal = Vector3.up;
+        _resolvedSkiSupportNormal = Vector3.up;
+        _lastResolvedSkiSupportNormalTime = -999f;
+        _lastResolvedSkiSupportNormalSource = "teleport-reset";
+
+        CancelEndContactFlattenRecovery();
+        _landingEvaluationConsumedForCurrentAirborne = false;
+
         _skiForward = Vector3.ProjectOnPlane(worldRotation * Vector3.forward, Vector3.up).normalized;
+
         if (_skiForward.sqrMagnitude < 0.0001f)
             _skiForward = Vector3.forward;
 
@@ -2212,14 +2792,15 @@ public class SkiController : MonoBehaviour
 
         _tipContactAccumTime = 0f;
         _hasNonSkiGroundContact = false;
+        _lastNonSkiGroundContactTime = -999f;
 
         _lastGroundedTime = -999f;
         _lastJumpTime = -999f;
         _airborneStartTime = Time.time;
         _airbornePeakY = worldPosition.y;
 
-        if (leftSkiContact != null) leftSkiContact.NotifySkiModelChanged();
-        if (rightSkiContact != null) rightSkiContact.NotifySkiModelChanged();
+        if (leftSkiContact != null) leftSkiContact.ResetContactState();
+        if (rightSkiContact != null) rightSkiContact.ResetContactState();
 
         _rb.position = worldPosition;
         _rb.rotation = worldRotation;
@@ -2230,6 +2811,7 @@ public class SkiController : MonoBehaviour
         if (rightSkiContact != null) rightSkiContact.ManualSampleGround();
 
         CheckGround();
+        UpdateSkiSupportNormalAuthority(Time.fixedDeltaTime);
 
         if (snapToGround && preventSkiTerrainClipping)
         {
@@ -2239,6 +2821,7 @@ public class SkiController : MonoBehaviour
             if (rightSkiContact != null) rightSkiContact.ManualSampleGround();
 
             CheckGround();
+            UpdateSkiSupportNormalAuthority(Time.fixedDeltaTime);
         }
 
         _wasControlsGrounded = IsGroundedForControls;
@@ -2465,14 +3048,25 @@ public class SkiController : MonoBehaviour
 
     private bool TryGetExternalInput(out SkiInputFrame input)
     {
-        if (HasExternalInputSource)
+        bool hasAssignedSource =
+            externalInputSourceBehaviour != null &&
+            externalInputSourceBehaviour.isActiveAndEnabled &&
+            _externalInputSource != null;
+
+        if (!hasAssignedSource)
         {
-            input = _externalInputSource.GetSkiInput();
-            return true;
+            input = SkiInputFrame.Neutral;
+            return false;
         }
 
-        input = SkiInputFrame.Neutral;
-        return false;
+        if (!_externalInputSource.HasInput())
+        {
+            input = SkiInputFrame.Neutral;
+            return false;
+        }
+
+        input = _externalInputSource.GetSkiInput();
+        return true;
     }
 
     // ----------------------------------------------------------------------
@@ -2482,11 +3076,146 @@ public class SkiController : MonoBehaviour
     private void OnValidate()
     {
         CacheExternalInputSource();
+#if UNITY_EDITOR
+        WarnIfLayerMaskContains(groundLayers, "Default", "SkiController.groundLayers should only include Ground. Default props may be grindable, but are not terrain ground.");
+        WarnIfLayerMaskContains(groundLayers, "NPC", "SkiController.groundLayers should not include NPC.");
+        WarnIfLayerMaskContains(groundLayers, "Player", "SkiController.groundLayers should not include Player.");
+        WarnIfLayerMaskContains(grindableLayers, "NPC", "SkiController.grindableLayers should not include NPC.");
+        WarnIfLayerMaskContains(grindableLayers, "Player", "SkiController.grindableLayers should not include Player.");
+#endif
     }
+
+    private static void CacheCharacterLayers()
+    {
+        if (_npcLayer == -2)
+            _npcLayer = LayerMask.NameToLayer("NPC");
+
+        if (_playerLayer == -2)
+            _playerLayer = LayerMask.NameToLayer("Player");
+    }
+
+    private bool IsOwnCollider(Collider c)
+    {
+        if (c == null)
+            return false;
+
+        if (_rb != null && c.attachedRigidbody == _rb)
+            return true;
+
+        if (c.transform == transform || c.transform.IsChildOf(transform))
+            return true;
+
+        return false;
+    }
+
+    private bool IsCharacterCollider(Collider c)
+    {
+        if (c == null)
+            return false;
+
+        CacheCharacterLayers();
+        int layer = c.gameObject.layer;
+        return (_npcLayer >= 0 && layer == _npcLayer) ||
+               (_playerLayer >= 0 && layer == _playerLayer);
+    }
+
+    private bool IsValidGroundCollider(Collider c)
+    {
+        if (c == null)
+            return false;
+
+        if (IsOwnCollider(c) || IsCharacterCollider(c))
+            return false;
+
+        return (groundLayers.value & (1 << c.gameObject.layer)) != 0;
+    }
+
+    private string GetGroundHitRejectReason(Collider c, Vector3 normal)
+    {
+        if (c == null)
+            return "no-hit";
+
+        if (IsOwnCollider(c))
+            return "own-collider";
+
+        if (IsCharacterCollider(c))
+            return "character-collider";
+
+        if ((groundLayers.value & (1 << c.gameObject.layer)) == 0)
+            return "not-in-groundLayers";
+
+        if (!IsRideableNormal(normal))
+            return "non-rideable-normal";
+
+        return "accepted";
+    }
+
+    private bool TryGetBestGroundHit(Vector3 origin, float radius, Vector3 direction, float maxDistance, out RaycastHit bestHit)
+    {
+        bestHit = default;
+        _lastGroundProbeAcceptedCollider = null;
+        _lastGroundProbeIgnoredCollider = null;
+        _lastGroundProbeIgnoredReason = "no-hit";
+        _lastGroundProbeAcceptedDistance = float.PositiveInfinity;
+        _lastGroundProbeAcceptedNormal = Vector3.up;
+
+        int count = Physics.SphereCastNonAlloc(
+            origin,
+            radius,
+            direction,
+            _groundHitBuffer,
+            maxDistance,
+            groundLayers,
+            QueryTriggerInteraction.Ignore);
+
+        float bestDistance = float.PositiveInfinity;
+        bool found = false;
+
+        for (int i = 0; i < count; i++)
+        {
+            RaycastHit hit = _groundHitBuffer[i];
+            string rejectReason = GetGroundHitRejectReason(hit.collider, hit.normal);
+            if (rejectReason != "accepted")
+            {
+                if (_lastGroundProbeIgnoredCollider == null)
+                    _lastGroundProbeIgnoredCollider = hit.collider;
+
+                _lastGroundProbeIgnoredReason = rejectReason;
+                continue;
+            }
+
+            if (hit.distance < bestDistance)
+            {
+                bestDistance = hit.distance;
+                bestHit = hit;
+                found = true;
+            }
+        }
+
+        if (found)
+        {
+            _lastGroundProbeAcceptedCollider = bestHit.collider;
+            _lastGroundProbeAcceptedDistance = bestHit.distance;
+            _lastGroundProbeAcceptedNormal = bestHit.normal.sqrMagnitude > 0.0001f ? bestHit.normal.normalized : Vector3.up;
+            _lastGroundProbeIgnoredReason = "accepted";
+        }
+
+        return found;
+    }
+
+#if UNITY_EDITOR
+    private void WarnIfLayerMaskContains(LayerMask mask, string layerName, string message)
+    {
+        int layer = LayerMask.NameToLayer(layerName);
+        if (layer >= 0 && (mask.value & (1 << layer)) != 0)
+            Debug.LogWarning($"[{nameof(SkiController)}] {message}", this);
+    }
+#endif
 
     private void Awake()
     {
         _rb = GetComponent<Rigidbody>();
+        CacheCharacterLayers();
         CacheExternalInputSource();
 
         _rb.freezeRotation = true;
@@ -2937,6 +3666,7 @@ public class SkiController : MonoBehaviour
         _nonSkiGroundContactUpDot = bestUpDot;
         _nonSkiGroundContactPoint = bestPoint;
         _nonSkiGroundContactNormal = bestNormal;
+        _lastNonSkiGroundContactTime = Time.time;
     }
 
     private void EvaluateObstacleImpactCollision(Collision collision)
@@ -3058,6 +3788,10 @@ public class SkiController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        _dbgGroundForceRanLastFixed = false;
+        _dbgSkateRanLastFixed = false;
+        _dbgPoleRanLastFixed = false;
+
         // Sample per-ski ground contact deterministically at the start of physics.
         // This prevents 'airborne' states when ski colliders are touching but the body casts miss.
         if (leftSkiContact != null) leftSkiContact.ManualSampleGround();
@@ -3067,6 +3801,8 @@ public class SkiController : MonoBehaviour
         bool wasControlsGrounded = _wasControlsGrounded;
 
         CheckGround();
+        ValidateEndContactFlattenRecoveryState();
+        UpdateSkiSupportNormalAuthority(Time.fixedDeltaTime);
 
         if (_stacked)
         {
@@ -3103,9 +3839,15 @@ public class SkiController : MonoBehaviour
 
         // Do not run terrain penetration correction while grinding in-air;
         // it can fight rail motion and adds unnecessary work every physics step.
-        if (preventSkiTerrainClipping && !grindingSurface && (HasAnySkiContact || _isGrounded))
+        bool shouldRunSkiClearance =
+            preventSkiTerrainClipping &&
+            !grindingSurface &&
+            (_isGrounded || _bodyNearGround || _skiContactPlausibleForBody || HasAnySkiContact);
+
+        if (shouldRunSkiClearance)
             ResolveSkiTerrainPenetration(hardSnap: false);
 
+        ApplyEndContactFlattenRecovery(Time.fixedDeltaTime);
 
         // Custom gravity: full gravity in air, tangential-only gravity when grounded.
         // This prevents "stalling mid-slope" and removes double-gravity ambiguity.
@@ -3248,12 +3990,19 @@ public class SkiController : MonoBehaviour
         // stickiness inside ApplyGroundForces (see below).
 
         if (_movementMode == MovementMode.Skiing ||
-                 _movementMode == MovementMode.Landing)
+         _movementMode == MovementMode.Landing)
         {
             ApplyGroundForces();
+            _dbgGroundForceRanLastFixed = true;
+
+            ApplyGrindLowSpeedTractionAssist(Time.fixedDeltaTime);
             ApplyGrindHybridOrientationControl(Time.fixedDeltaTime);
+
             DetectAndApplySkatePushes();
+            _dbgSkateRanLastFixed = true;
             ApplyPoleForces();
+            _dbgPoleRanLastFixed = true;
+
             AlignToSkisAndSlope();
         }
         else
@@ -3269,6 +4018,24 @@ public class SkiController : MonoBehaviour
     // ----------------------------------------------------------------------
     // INPUT
     // ----------------------------------------------------------------------
+    private void ClearRawInputState(bool clearJumpState)
+    {
+        _rawLeftLegInput = 0f;
+        _rawRightLegInput = 0f;
+        _rawLeanInput = 0f;
+        _rawPolesPressed = false;
+        _rawTuckPressed = false;
+        _rawPosePressed = false;
+
+        if (!clearJumpState)
+            return;
+
+        _jumpQueued = false;
+        _jumpHeld = false;
+        _jumpReleaseQueued = false;
+        _jumpMustFireWhileGrinding = false;
+    }
+
     private void ReadInputs()
     {
         if (TryGetExternalInput(out SkiInputFrame externalInput))
@@ -3287,6 +4054,12 @@ public class SkiController : MonoBehaviour
                 externalInput.jumpReleasedThisFrame,
                 externalInput.jumpHeld);
 
+            return;
+        }
+
+        if (!acceptPlayerInput)
+        {
+            ClearRawInputState(clearJumpState: true);
             return;
         }
 
@@ -3360,7 +4133,7 @@ public class SkiController : MonoBehaviour
             return;
         }
 
-        bool grounded = _isGrounded;
+        bool grounded = IsGroundedForControls;
         bool pressed = _rawPolesPressed && grounded;
 
         // Planar speed on the current ground, used to modulate stroke speed.
@@ -3549,6 +4322,7 @@ public class SkiController : MonoBehaviour
     {
         bool haveSkiContact = HasAnySkiContact;
         bool haveSkiHardContact = HasAnySkiCollisionContact;
+        bool haveSkiEndGroundContact = HasAnySkiEndGroundContact;
         bool haveRideableSkiContact = TryGetRideableSkiLandingNormal(out Vector3 skiLandingNormal);
 
         if (_stacked)
@@ -3563,6 +4337,11 @@ public class SkiController : MonoBehaviour
         if (Time.time - _lastJumpTime < minJumpUngroundedTime && !haveSkiHardContact)
         {
             _isGrounded = false;
+            _bodyNearGround = false;
+            _skiContactPlausibleForBody = false;
+            _probeOnlyGrounded = false;
+            _probeOnlyEndGrounded = false;
+            _lastGroundRefreshSource = "jump-suppressed";
             _groundNormal = Vector3.up;
             return;
         }
@@ -3586,28 +4365,105 @@ public class SkiController : MonoBehaviour
         bool IsRideable(Vector3 n) => IsRideableNormal(n);
 
 
-        if (Physics.SphereCast(centerOrigin, groundCheckRadius, Vector3.down,
-                               out RaycastHit centerHit, maxDist, groundLayers,
-                               QueryTriggerInteraction.Ignore))
+        if (TryGetBestGroundHit(centerOrigin, groundCheckRadius, Vector3.down, maxDist, out RaycastHit centerHit))
         {
             float contactGap = Mathf.Max(0f, centerHit.distance - groundCheckHeight);
+            _lastMeasuredGroundGap = contactGap;
             float allowedGap = haveSkiContact ? groundContactDistanceWhenSkiContact : groundContactDistance;
+            _lastBodyProbeHit = true;
+            _lastBodyProbeDistance = centerHit.distance;
+            _lastBodyProbeGap = contactGap;
+            _lastBodyProbeAllowedGap = allowedGap;
+            _lastBodyProbeAcceptedButTooFar = contactGap > allowedGap;
 
             if (contactGap <= allowedGap && IsRideable(centerHit.normal))
             {
                 nearGround = true;
                 rawNormal = centerHit.normal.normalized;
                 _lastGroundedTime = Time.time;
+                _lastRealSupportTime = Time.time;
+                _lastGroundedFrom = "body-collision";
+                _lastGroundRefreshSource = "body-ground";
             }
+        }
+        else
+        {
+            _lastMeasuredGroundGap = float.PositiveInfinity;
+            _lastBodyProbeHit = false;
+            _lastBodyProbeDistance = float.PositiveInfinity;
+            _lastBodyProbeGap = float.PositiveInfinity;
+            _lastBodyProbeAllowedGap = haveSkiContact ? groundContactDistanceWhenSkiContact : groundContactDistance;
+            _lastBodyProbeAcceptedButTooFar = false;
         }
 
         _nearGroundForJump = nearGround;
 
         bool wasGroundedBefore = _isGrounded;
 
-        // Grounded for physics if we are near the ground by cast OR we have direct ski contact.
-        // This prevents state flicker when the body cast misses for a frame.
-        _isGrounded = nearGround || haveSkiContact;
+        bool skiFallbackGrounded = false;
+        SkiGroundFallbackResult skiFallback = default;
+        bool hasAuthoritativeSkiContacts =
+            (leftSkiContact != null && leftSkiContact.isActiveAndEnabled) ||
+            (rightSkiContact != null && rightSkiContact.isActiveAndEnabled);
+
+        if (!hasAuthoritativeSkiContacts && !nearGround && useSkiTransformGroundFallback && !_grindActive)
+        {
+            skiFallbackGrounded = TryGetSkiGroundFallback(out skiFallback);
+        }
+        else if (hasAuthoritativeSkiContacts)
+        {
+            _lastSkiFallbackFreshHit = false;
+            _lastSkiFallbackSource = "ignored-ski-contact-authoritative";
+        }
+
+        bool hasBodyCollisionSupport =
+            _hasNonSkiGroundContact &&
+            _nonSkiGroundContactUpDot >= 0.25f &&
+            (Time.time - _lastNonSkiGroundContactTime) <= Time.fixedDeltaTime * 2.5f;
+        bool hasSkiCollisionSupport = HasAnySkiCollisionContact;
+        bool collisionCoyoteSupport =
+            !hasBodyCollisionSupport &&
+            !hasSkiCollisionSupport &&
+            !nearGround &&
+            (Time.time - _lastRealSupportTime) <= controlCoyoteTime;
+
+        bool hasStableSkiSupport = hasBodyCollisionSupport || hasSkiCollisionSupport || collisionCoyoteSupport;
+
+        bool hasEndOnlySupport =
+            !hasStableSkiSupport &&
+            (haveSkiEndGroundContact || (skiFallbackGrounded && skiFallback.isEndContact));
+
+        _bodyNearGround = nearGround;
+        _skiContactPlausibleForBody = nearGround || hasStableSkiSupport;
+        _isGrounded = nearGround || hasStableSkiSupport;
+
+        if (_isGrounded || hasStableSkiSupport || nearGround)
+        {
+            CancelEndContactFlattenRecovery();
+        }
+
+        _probeOnlyGrounded = false;
+        _probeOnlyEndGrounded = false;
+        _probeOnlyGroundGap = skiFallbackGrounded ? skiFallback.gap : _lastMeasuredGroundGap;
+        _probeOnlyGroundSource =
+            skiFallbackGrounded ? skiFallback.source :
+            haveSkiEndGroundContact ? "probe-end-contact" :
+            "none";
+
+        if (hasStableSkiSupport && !nearGround)
+        {
+            _lastGroundedTime = Time.time;
+            _lastRealSupportTime = (hasBodyCollisionSupport || hasSkiCollisionSupport)
+                ? Time.time
+                : _lastRealSupportTime;
+            _lastGroundedFrom = hasBodyCollisionSupport ? "body-collision" : hasSkiCollisionSupport ? "ski-collision" : "collision-coyote";
+            _lastGroundRefreshSource = _lastGroundedFrom;
+        }
+        else if (!_isGrounded)
+        {
+            _lastGroundedFrom = hasEndOnlySupport ? "end-contact-decision" : "none";
+            _lastGroundRefreshSource = _lastBodyProbeAcceptedButTooFar ? "none-body-gap-too-large" : "none-no-ground-hit";
+        }
 
         // Update physics ground normal ONLY when the body cast says we're near ground.
         // Otherwise keep the last good normal (do NOT snap to Vector3.up).
@@ -3641,6 +4497,30 @@ public class SkiController : MonoBehaviour
                     _movementMode = MovementMode.Skiing;
                 }
             }
+        }
+        else if (!wasGroundedBefore && skiFallbackGrounded && skiFallback.isEndContact)
+        {
+            _groundNormal = skiFallback.normal.sqrMagnitude > 0.0001f ? skiFallback.normal.normalized : Vector3.up;
+            _airAngularVelocity = Vector3.MoveTowards(
+                _airAngularVelocity,
+                Vector3.zero,
+                Mathf.Max(0f, endContactFlattenAngularDamp) * Time.fixedDeltaTime);
+
+            if (!TryStartNoseTailLandingFromFallback(skiFallback))
+                EvaluateLanding();
+        }
+        else if (!wasGroundedBefore && haveSkiEndGroundContact)
+        {
+            _groundNormal = haveRideableSkiContact && skiLandingNormal.sqrMagnitude > 0.0001f
+                ? skiLandingNormal.normalized
+                : Vector3.up;
+            _airAngularVelocity = Vector3.MoveTowards(
+                _airAngularVelocity,
+                Vector3.zero,
+                Mathf.Max(0f, endContactFlattenAngularDamp) * Time.fixedDeltaTime);
+
+            if (!TryStartNoseTailLandingFromSkiContacts())
+                EvaluateLanding();
         }
         else if (!wasGroundedBefore && haveRideableSkiContact)
         {
@@ -3681,11 +4561,13 @@ public class SkiController : MonoBehaviour
         // If the body cast is not near ground but skis ARE contacting, keep the physics plane fresh
         // from the ski contacts. This prevents "stale ground normal" -> tangential gravity misprojection
         // -> micro hops and rocking on steepening slopes.
-        if (!nearGround && haveSkiContact)
+        if (!nearGround && hasStableSkiSupport)
         {
             Vector3 n = Vector3.zero;
 
-            if (haveRideableSkiContact)
+            if (skiFallbackGrounded)
+                n = skiFallback.normal;
+            else if (haveRideableSkiContact)
                 n = skiLandingNormal;
 
             if (n.sqrMagnitude > 0.0001f)
@@ -3695,9 +4577,383 @@ public class SkiController : MonoBehaviour
                 _groundNormal = Vector3.Slerp(_groundNormal, n.normalized, t);
             }
 
-            _lastGroundedTime = Time.time;
+            if (hasStableSkiSupport)
+            {
+                _lastGroundedTime = Time.time;
+                if (skiFallbackGrounded)
+                {
+                    _lastMeasuredGroundGap = skiFallback.gap;
+                    _lastGroundRefreshSource = skiFallback.source;
+                }
+                else
+                {
+                    _lastGroundRefreshSource = "ski-stable-support";
+                }
+            }
         }
 
+    }
+
+    private bool IsSkiContactPlausibleForBodyHeight()
+    {
+        Vector3 origin = transform.position + Vector3.up * groundCheckHeight;
+
+        float maxDistance =
+            groundCheckHeight +
+            Mathf.Max(groundCheckDistance, maxSkiOnlyGroundedBodyGap);
+
+        if (!TryGetBestGroundHit(origin, groundCheckRadius, Vector3.down, maxDistance, out RaycastHit hit))
+        {
+            _lastMeasuredGroundGap = float.PositiveInfinity;
+            return false;
+        }
+
+        float bodyGap = Mathf.Max(0f, hit.distance - groundCheckHeight);
+        _lastMeasuredGroundGap = bodyGap;
+
+        if (bodyGap > maxSkiOnlyGroundedBodyGap)
+        {
+            return false;
+        }
+
+        _lastGroundRefreshSource = "ski-plausible";
+        return true;
+    }
+
+    private bool TryGetSkiGroundFallback(out SkiGroundFallbackResult result)
+    {
+        result = default;
+        result.gap = float.PositiveInfinity;
+        result.normal = Vector3.up;
+        result.source = "none";
+        _lastSkiFallbackFreshHit = false;
+        _lastSkiFallbackSource = "none";
+
+        if (!useSkiTransformGroundFallback)
+            return false;
+
+        bool found = false;
+        found |= TryConsiderSkiGroundFallbackPoint(GetSkiProbePoint(leftSkiContact, leftSki, SkiContact.SkiProbeRegion.Mid), "left-mid", false, 0, ref result);
+        found |= TryConsiderSkiGroundFallbackPoint(GetSkiProbePoint(rightSkiContact, rightSki, SkiContact.SkiProbeRegion.Mid), "right-mid", false, 0, ref result);
+        found |= TryConsiderSkiGroundFallbackPoint(GetSkiProbePoint(leftSkiContact, leftSki, SkiContact.SkiProbeRegion.Front), "left-tip", true, 1, ref result);
+        found |= TryConsiderSkiGroundFallbackPoint(GetSkiProbePoint(rightSkiContact, rightSki, SkiContact.SkiProbeRegion.Front), "right-tip", true, 1, ref result);
+        found |= TryConsiderSkiGroundFallbackPoint(GetSkiProbePoint(leftSkiContact, leftSki, SkiContact.SkiProbeRegion.Rear), "left-tail", true, -1, ref result);
+        found |= TryConsiderSkiGroundFallbackPoint(GetSkiProbePoint(rightSkiContact, rightSki, SkiContact.SkiProbeRegion.Rear), "right-tail", true, -1, ref result);
+        if (leftSkiContact != null && leftSkiContact.UseBottomEndProbes)
+        {
+            found |= TryConsiderSkiGroundFallbackPoint(leftSkiContact.GetBottomEndProbeWorldPosition(SkiContact.SkiProbeRegion.Front), "left-tip-bottom", true, 1, ref result);
+            found |= TryConsiderSkiGroundFallbackPoint(leftSkiContact.GetBottomEndProbeWorldPosition(SkiContact.SkiProbeRegion.Rear), "left-tail-bottom", true, -1, ref result);
+        }
+        if (rightSkiContact != null && rightSkiContact.UseBottomEndProbes)
+        {
+            found |= TryConsiderSkiGroundFallbackPoint(rightSkiContact.GetBottomEndProbeWorldPosition(SkiContact.SkiProbeRegion.Front), "right-tip-bottom", true, 1, ref result);
+            found |= TryConsiderSkiGroundFallbackPoint(rightSkiContact.GetBottomEndProbeWorldPosition(SkiContact.SkiProbeRegion.Rear), "right-tail-bottom", true, -1, ref result);
+        }
+
+        if (found)
+        {
+            _lastSkiTransformFallbackTime = Time.time;
+            _lastSkiTransformFallbackNormal = result.normal;
+            _lastSkiTransformFallbackGap = result.gap;
+            _lastGroundProbeAcceptedCollider = result.collider;
+            _lastGroundProbeAcceptedDistance = result.hitDistance;
+            _lastGroundProbeAcceptedNormal = result.normal;
+            _lastGroundProbeIgnoredReason = "accepted";
+            _lastSkiFallbackFreshHit = true;
+            _lastSkiFallbackSource = result.source;
+            _lastSkiFallbackFreshTime = Time.time;
+            return true;
+        }
+
+        if ((Time.time - _lastSkiTransformFallbackTime) <= skiTransformFallbackCoyoteTime)
+        {
+            result.found = true;
+            result.freshHit = false;
+            result.source = "coyote";
+            result.normal = _lastSkiTransformFallbackNormal.sqrMagnitude > 0.0001f
+                ? _lastSkiTransformFallbackNormal.normalized
+                : Vector3.up;
+            result.gap = _lastSkiTransformFallbackGap;
+            _lastSkiFallbackSource = "coyote";
+            return result.gap <= skiTransformFallbackMaxGap;
+        }
+
+        return false;
+    }
+
+    private Vector3 GetSkiProbePoint(SkiContact contact, Transform fallbackTransform, SkiContact.SkiProbeRegion region)
+    {
+        if (contact != null)
+            return contact.GetProbeWorldPosition(region);
+
+        return fallbackTransform != null ? fallbackTransform.position : transform.position;
+    }
+
+    private bool TryConsiderSkiGroundFallbackPoint(
+        Vector3 probePoint,
+        string source,
+        bool isEndContact,
+        int endSign,
+        ref SkiGroundFallbackResult best)
+    {
+        float probeUp = Mathf.Max(0.01f, isEndContact ? skiEndFallbackProbeUp : skiTransformFallbackProbeUp);
+        float probeDown = Mathf.Max(0.01f, isEndContact ? skiEndFallbackProbeDown : skiTransformFallbackProbeDown);
+        float radius = Mathf.Max(0.001f, isEndContact ? skiEndFallbackRadius : skiTransformFallbackRadius);
+        float maxGap = Mathf.Max(0f, isEndContact ? skiEndFallbackMaxGap : skiTransformFallbackMaxGap);
+        float maxDistance = probeUp + probeDown;
+
+        Vector3 origin = probePoint + Vector3.up * probeUp;
+        if (!TryGetBestGroundHit(origin, radius, Vector3.down, maxDistance, out RaycastHit hit))
+            return false;
+
+        float gap = Mathf.Max(0f, Vector3.Dot(probePoint - hit.point, Vector3.up));
+        if (gap > maxGap || gap >= best.gap)
+            return false;
+
+        best.found = true;
+        best.freshHit = true;
+        best.point = hit.point;
+        best.normal = hit.normal.sqrMagnitude > 0.0001f ? hit.normal.normalized : Vector3.up;
+        best.gap = gap;
+        best.collider = hit.collider;
+        best.isEndContact = isEndContact;
+        best.endSign = endSign;
+        best.source = source;
+        best.hitDistance = hit.distance;
+        return true;
+    }
+
+    private bool BeginEndContactFlattenRecovery(Vector3 contactNormal, int endSign, string source)
+    {
+        if (!CanStartEndContactFlattenRecovery(contactNormal))
+            return false;
+
+        Vector3 n;
+        float bestDistance;
+        int candidateSign;
+
+        if (TryGetEndContactFlattenRecoveryCandidate(out n, out bestDistance, out candidateSign))
+        {
+            endSign = candidateSign;
+            _lastEndContactFlattenRecoveryProbeDistance = bestDistance;
+        }
+        else
+        {
+            n = contactNormal.sqrMagnitude > 0.0001f
+                ? contactNormal.normalized
+                : (_groundNormal.sqrMagnitude > 0.0001f ? _groundNormal.normalized : Vector3.up);
+        }
+
+        _endContactFlattenRecoveryStartedAt = Time.time;
+        _endContactFlattenRecoveryUntil = Time.time + Mathf.Max(0.02f, endContactFlattenRecoveryDuration);
+        _endContactFlattenRecoveryNormal = n;
+        _endContactFlattenRecoverySign = endSign;
+
+        _skiEndSlideState = SkiEndSlideState.None;
+        _skiEndSlide01 = 0f;
+
+        _groundNormal = n;
+        _alignNormal = n;
+
+        _landingAssistUntil = Time.time + Mathf.Max(landingAlignBoostDuration, endContactFlattenRecoveryDuration);
+        _lastGroundRefreshSource = source;
+        _lastNoseTailLandingSource = $"{source}-flatten-recovery";
+
+        // This is intentionally NOT a grounded state.
+        // Do not update _lastGroundedTime, _lastGroundedFrom, or _movementMode here.
+
+        _airAngularVelocity = Vector3.MoveTowards(
+            _airAngularVelocity,
+            Vector3.zero,
+            Mathf.Max(0f, endContactFlattenAngularDamp) * Time.fixedDeltaTime);
+
+        PreserveLandingVelocityOnSlope(
+            Mathf.Clamp01(landingProjectionStrength * endContactFlattenRecoveryProjection));
+
+        return true;
+    }
+
+    private void ApplyEndContactFlattenRecovery(float dt)
+    {
+        ValidateEndContactFlattenRecoveryState();
+
+        if (!IsEndContactFlattenRecoveryActive || _rb == null)
+            return;
+
+        Vector3 n = _endContactFlattenRecoveryNormal.sqrMagnitude > 0.0001f
+            ? _endContactFlattenRecoveryNormal.normalized
+            : (_groundNormal.sqrMagnitude > 0.0001f ? _groundNormal.normalized : Vector3.up);
+
+        _groundNormal = Vector3.Slerp(_groundNormal, n, 1f - Mathf.Exp(-alignNormalSmoothSpeed * dt));
+        _alignNormal = Vector3.Slerp(_alignNormal, n, 1f - Mathf.Exp(-alignNormalSmoothSpeed * dt));
+
+        // If the player is charging/releasing jump, do not apply corrective force.
+        if (HasPendingJumpIntent)
+        {
+            _lastGroundRefreshSource = "end-contact-flatten-recovery-jump-ready";
+            return;
+        }
+
+        float awaySpeed = Vector3.Dot(_rb.linearVelocity, n);
+        if (awaySpeed > 0f && endContactFlattenRecoveryAwayDamp > 0f)
+        {
+            _rb.AddForce(-n * awaySpeed * endContactFlattenRecoveryAwayDamp, ForceMode.Acceleration);
+        }
+
+        if (endContactFlattenRecoveryDownAccel > 0f)
+        {
+            _rb.AddForce(-n * endContactFlattenRecoveryDownAccel, ForceMode.Acceleration);
+        }
+
+        if (endContactFlattenRecoveryAngularDamp > 0f)
+        {
+            _rb.angularVelocity = Vector3.MoveTowards(
+                _rb.angularVelocity,
+                Vector3.zero,
+                endContactFlattenRecoveryAngularDamp * dt);
+        }
+
+        _airAngularVelocity = Vector3.MoveTowards(
+            _airAngularVelocity,
+            Vector3.zero,
+            Mathf.Max(0f, endContactFlattenAngularDamp) * dt);
+
+        _lastGroundRefreshSource = "end-contact-flatten-recovery-corrective";
+    }
+
+    private bool TryStartNoseTailLandingFromFallback(SkiGroundFallbackResult fallback)
+    {
+        if (!fallback.found || !fallback.isEndContact || fallback.endSign == 0)
+            return false;
+
+        if (!IsRideableNormal(fallback.normal))
+            return false;
+
+        Vector3 n = fallback.normal.sqrMagnitude > 0.0001f ? fallback.normal.normalized : Vector3.up;
+        float planarSpeed = _rb != null ? Vector3.ProjectOnPlane(_rb.linearVelocity, n).magnitude : 0f;
+
+        if (planarSpeed <= noseTailSlideFlattenBelowSpeed)
+        {
+            return BeginEndContactFlattenRecovery(n, fallback.endSign, $"{fallback.source}-low-speed");
+        }
+
+        if (!enableNoseTailSlides || planarSpeed < noseTailSlideMinSpeed)
+        {
+            return false;
+        }
+
+        float leanMatch = Mathf.InverseLerp(noseTailSlideLeanThreshold, 1f, _forwardLean * fallback.endSign);
+        if (leanMatch <= 0f)
+        {
+            return false;
+        }
+
+        float speed01 = Mathf.InverseLerp(
+            noseTailSlideMinSpeed,
+            Mathf.Max(noseTailSlideMinSpeed + 0.01f, noseTailSlideFullSpeed),
+            planarSpeed);
+
+        bool left = fallback.source.StartsWith("left", System.StringComparison.Ordinal);
+        _skiEndSlideState = left
+            ? (fallback.endSign > 0 ? SkiEndSlideState.LeftNose : SkiEndSlideState.LeftTail)
+            : (fallback.endSign > 0 ? SkiEndSlideState.RightNose : SkiEndSlideState.RightTail);
+
+        _skiEndSlide01 = Mathf.Clamp01(speed01 * leanMatch);
+        _lastSkiEndSlideTime = Time.time;
+        _landingAssistUntil = Time.time + landingAlignBoostDuration;
+        _lastGroundRefreshSource = fallback.source;
+        _lastNoseTailLandingSource = fallback.source;
+        _lastGroundedFrom = "explicit-slide";
+        _movementMode = MovementMode.Landing;
+
+        PreserveLandingVelocityOnSlope(Mathf.Clamp01(landingProjectionStrength * 0.75f));
+        return true;
+    }
+
+    private bool TryStartNoseTailLandingFromSkiContacts()
+    {
+        bool leftValid = TryGetSkiEndSlide(leftSkiContact, out int leftEndSign, out _);
+        bool rightValid = TryGetSkiEndSlide(rightSkiContact, out int rightEndSign, out _);
+
+        if (!leftValid && !rightValid)
+            return false;
+
+        int signSum = (leftValid ? leftEndSign : 0) + (rightValid ? rightEndSign : 0);
+
+        if (leftValid && rightValid && signSum == 0)
+        {
+            _skiEndSlideState = SkiEndSlideState.Mixed;
+            _skiEndSlide01 = 0f;
+            _lastNoseTailLandingSource = "mixed-end-contact";
+            return false;
+        }
+
+        int dominantEndSign = signSum >= 0 ? 1 : -1;
+
+        Vector3 n = Vector3.zero;
+        if (leftValid && leftSkiContact != null && leftSkiContact.ContactNormal.sqrMagnitude > 0.0001f)
+            n += leftSkiContact.ContactNormal.normalized;
+        if (rightValid && rightSkiContact != null && rightSkiContact.ContactNormal.sqrMagnitude > 0.0001f)
+            n += rightSkiContact.ContactNormal.normalized;
+
+        if (n.sqrMagnitude <= 0.0001f)
+            n = _groundNormal.sqrMagnitude > 0.0001f ? _groundNormal.normalized : Vector3.up;
+        else
+            n.Normalize();
+
+        SkiContact sourceContact = leftValid ? leftSkiContact : rightSkiContact;
+        string source = GetSkiEndContactSource(sourceContact);
+
+        float planarSpeed = _rb != null ? Vector3.ProjectOnPlane(_rb.linearVelocity, n).magnitude : 0f;
+
+        if (planarSpeed <= noseTailSlideFlattenBelowSpeed)
+        {
+            return BeginEndContactFlattenRecovery(n, dominantEndSign, $"{source}-low-speed");
+        }
+
+        if (!enableNoseTailSlides || planarSpeed < noseTailSlideMinSpeed)
+        {
+            return false;
+        }
+
+        float leanMatch = Mathf.InverseLerp(noseTailSlideLeanThreshold, 1f, _forwardLean * dominantEndSign);
+        if (leanMatch <= 0f)
+        {
+            return false;
+        }
+
+        _skiEndSlideState = ResolveSkiEndSlideState(leftValid, rightValid, leftEndSign, rightEndSign);
+        _skiEndSlide01 = Mathf.Clamp01(
+            Mathf.InverseLerp(
+                noseTailSlideMinSpeed,
+                Mathf.Max(noseTailSlideMinSpeed + 0.01f, noseTailSlideFullSpeed),
+                planarSpeed) * leanMatch);
+
+        if (_skiEndSlideState == SkiEndSlideState.Mixed)
+            return false;
+
+        _lastSkiEndSlideTime = Time.time;
+        _landingAssistUntil = Time.time + landingAlignBoostDuration;
+        _lastNoseTailLandingSource = source;
+        _lastGroundedFrom = "explicit-slide";
+        _movementMode = MovementMode.Landing;
+
+        PreserveLandingVelocityOnSlope(Mathf.Clamp01(landingProjectionStrength * 0.75f));
+        return true;
+    }
+
+    private static string GetSkiEndContactSource(SkiContact contact)
+    {
+        if (contact == null)
+            return "none";
+
+        if (contact.HasCollisionEndContact)
+            return "collision-end-contact";
+
+        if (contact.ProbeTipHit || contact.ProbeTailHit)
+            return "probe-end-contact";
+
+        return "ski-end-contact";
     }
 
     private void UpdateStackedGroundingOnly(
@@ -3713,16 +4969,10 @@ public class SkiController : MonoBehaviour
         Vector3 centerOrigin = transform.position + Vector3.up * groundCheckHeight;
         float maxDist = groundCheckHeight + groundCheckDistance;
 
-        if (Physics.SphereCast(
-                centerOrigin,
-                groundCheckRadius,
-                Vector3.down,
-                out RaycastHit centerHit,
-                maxDist,
-                groundLayers,
-                QueryTriggerInteraction.Ignore))
+        if (TryGetBestGroundHit(centerOrigin, groundCheckRadius, Vector3.down, maxDist, out RaycastHit centerHit))
         {
             float contactGap = Mathf.Max(0f, centerHit.distance - groundCheckHeight);
+            _lastMeasuredGroundGap = contactGap;
             float allowedGap = haveSkiContact
                 ? groundContactDistanceWhenSkiContact
                 : groundContactDistance;
@@ -3732,11 +4982,18 @@ public class SkiController : MonoBehaviour
                 nearGround = true;
                 rawNormal = centerHit.normal.normalized;
                 _lastGroundedTime = Time.time;
+                _lastGroundRefreshSource = "stacked-body-ground";
             }
+        }
+        else
+        {
+            _lastMeasuredGroundGap = float.PositiveInfinity;
         }
 
         _nearGroundForJump = nearGround;
-        _isGrounded = nearGround || haveSkiContact;
+        _bodyNearGround = nearGround;
+        _skiContactPlausibleForBody = haveSkiContact && IsSkiContactPlausibleForBodyHeight();
+        _isGrounded = nearGround || _skiContactPlausibleForBody;
 
         if (nearGround)
         {
@@ -3750,11 +5007,12 @@ public class SkiController : MonoBehaviour
                 _groundNormal = Vector3.Slerp(_groundNormal, rawNormal, lerp);
             }
         }
-        else if (haveRideableSkiContact && skiLandingNormal.sqrMagnitude > 0.0001f)
+        else if (_skiContactPlausibleForBody && haveRideableSkiContact && skiLandingNormal.sqrMagnitude > 0.0001f)
         {
             float lerp = 1f - Mathf.Exp(-alignNormalSmoothSpeed * Time.fixedDeltaTime);
             _groundNormal = Vector3.Slerp(_groundNormal, skiLandingNormal.normalized, lerp);
             _lastGroundedTime = Time.time;
+            _lastGroundRefreshSource = "stacked-ski-plausible";
         }
     }
 
@@ -3763,18 +5021,20 @@ public class SkiController : MonoBehaviour
         normal = Vector3.zero;
 
         if (leftSkiContact != null &&
-            leftSkiContact.IsGrounded &&
+            (leftSkiContact.HasStableSupportContact || leftSkiContact.HasEndContact) &&
             IsRideableNormal(leftSkiContact.ContactNormal) &&
-            (leftSkiContact.BaseContactAlignment >= minBaseAlignForGroundNormal ||
+            (leftSkiContact.HasEndContact ||
+             leftSkiContact.BaseContactAlignment >= minBaseAlignForGroundNormal ||
              TryGetSkiEndSlide(leftSkiContact, out _, out _)))
         {
             normal += leftSkiContact.ContactNormal;
         }
 
         if (rightSkiContact != null &&
-            rightSkiContact.IsGrounded &&
+            (rightSkiContact.HasStableSupportContact || rightSkiContact.HasEndContact) &&
             IsRideableNormal(rightSkiContact.ContactNormal) &&
-            (rightSkiContact.BaseContactAlignment >= minBaseAlignForGroundNormal ||
+            (rightSkiContact.HasEndContact ||
+             rightSkiContact.BaseContactAlignment >= minBaseAlignForGroundNormal ||
              TryGetSkiEndSlide(rightSkiContact, out _, out _)))
         {
             normal += rightSkiContact.ContactNormal;
@@ -3810,6 +5070,11 @@ public class SkiController : MonoBehaviour
     {
         // Only relevant when not grinding; grinding has its own constraint system.
         if (_grindActive)
+            return;
+
+        // Grounded/ski-plausible contact should never be demoted into airborne wall scrape.
+        // Uneven terrain can produce a steep contact on one ski while the body or other ski is still rideable.
+        if (_isGrounded || _bodyNearGround || _skiContactPlausibleForBody)
             return;
 
         // Gather wall normals from skis if present.
@@ -4024,12 +5289,9 @@ public class SkiController : MonoBehaviour
 
             Vector3 origin = skiT.position + up * skiProbeUp;
 
-            if (Physics.Raycast(origin, -up, out RaycastHit hit, dist, groundLayers, QueryTriggerInteraction.Ignore))
+            if (TryGetBestGroundHit(origin, 0.01f, -up, dist, out RaycastHit hit))
             {
                 gotAnyHit = true;
-
-                if (!IsRideableNormal(hit.normal))
-                    return;
 
                 // Signed distance of ski point above ground along "up".
                 float signedDist = Vector3.Dot(skiT.position - hit.point, up);
@@ -4053,8 +5315,11 @@ public class SkiController : MonoBehaviour
         if (!preventSkiTerrainClipping || _rb == null)
             return;
 
-        // Prefer ground normal when grounded; otherwise use world up.
-        Vector3 up = (_groundNormal.sqrMagnitude > 0.0001f) ? _groundNormal.normalized : Vector3.up;
+        // Prefer ground normal when grounded; use world up for approximate near-ground/probe support
+        // so stale slope normals do not lift sideways while recovering clearance.
+        Vector3 up = (_isGrounded && _groundNormal.sqrMagnitude > 0.0001f)
+            ? _groundNormal.normalized
+            : Vector3.up;
 
         int frame = Time.frameCount;
 
@@ -4219,6 +5484,24 @@ public class SkiController : MonoBehaviour
 
     void EvaluateLanding()
     {
+        bool hasLandingEventSupport =
+            _isGrounded ||
+            HasAnySkiCollisionContact ||
+            _hasNonSkiGroundContact ||
+            IsEndContactFlattenRecoveryActive ||
+            _skiEndSlideState != SkiEndSlideState.None;
+
+        // Do not repeatedly evaluate/flicker landing while only speculative probes are nearby.
+        if (!hasLandingEventSupport)
+            return;
+
+        // Landing is a transition event. It should not fire every FixedUpdate while
+        // we hover/coyote/recover toward true contact.
+        if (_landingEvaluationConsumedForCurrentAirborne)
+            return;
+
+        _landingEvaluationConsumedForCurrentAirborne = true;
+
         float now = Time.time;
         float airTime = Mathf.Max(0f, now - _airborneStartTime);
 
@@ -4695,8 +5978,10 @@ public class SkiController : MonoBehaviour
             TriggerStack(ComputeStackTorqueAxisFromPoint(_nonSkiGroundContactPoint));
         }
 
-        // Consume the cache. OnCollisionStay will repopulate next physics step if still colliding.
-        _hasNonSkiGroundContact = false;
+        // Keep the cache through this physics step so CheckGround can consume
+        // body/root collision as stable support. Expire it if callbacks stop.
+        if (Time.time - _lastNonSkiGroundContactTime > Time.fixedDeltaTime * 2.5f)
+            _hasNonSkiGroundContact = false;
     }
 
     /// <summary>
@@ -5241,14 +6526,15 @@ public class SkiController : MonoBehaviour
         baseAlignment = 0f;
 
         if (contact == null ||
-            !contact.IsGrounded ||
-            !contact.HasTipContact ||
+            !contact.HasEndContact ||
             contact.EndContactSign == 0 ||
             !IsRideableNormal(contact.ContactNormal))
             return false;
 
         endSign = contact.EndContactSign;
-        baseAlignment = contact.BaseContactAlignment;
+        baseAlignment = contact.HasCollisionEndContact
+            ? Mathf.Max(contact.BaseContactAlignment, noseTailSlideMinBaseAlignment)
+            : contact.BaseContactAlignment;
         return true;
     }
 
@@ -5569,8 +6855,9 @@ public class SkiController : MonoBehaviour
         bool poseStyleAllowed =
             !_stacked &&
             _rawPosePressed &&
-            (_grindActive || (!IsGroundedForControls && !HasAnySkiContact));
+            (_grindActive || (!IsGroundedForControls && !_skiContactPlausibleForBody));
 
+        _dbgPoseInputActive = poseStyleAllowed;
         float targetAirStyle = poseStyleAllowed ? 1f : 0f;
         _airStyle01 = Mathf.MoveTowards(_airStyle01, targetAirStyle, airStyleBlendSpeed * Time.deltaTime);
         _airStyle01 = Mathf.Clamp01(_airStyle01);
@@ -6607,6 +7894,90 @@ public class SkiController : MonoBehaviour
     // GROUND PHYSICS (DOWNHILL, FRICTION, CARVE STEERING)
     // ----------------------------------------------------------------------
 
+    private float GetGrindTraction01()
+    {
+        if (!_grindActive)
+            return 1f;
+
+        float buildTime = Mathf.Max(0.01f, grindTractionBuildTime);
+        float buildT = Mathf.Clamp01(_grindTime / buildTime);
+
+        float strength = Mathf.Clamp01(_grindStrengthSmoothed);
+        float traction = Mathf.Lerp(
+            Mathf.Clamp01(grindMinTractionFactor),
+            1f,
+            buildT);
+
+        return Mathf.Clamp01(traction * Mathf.Lerp(0.5f, 1f, strength));
+    }
+
+    private float GetGrindSkateForceScale()
+    {
+        if (!_grindActive)
+            return 1f;
+
+        return Mathf.Max(0f, grindSkateImpulseMultiplier) * GetGrindTraction01();
+    }
+
+    private float GetGrindPolePushScale()
+    {
+        if (!_grindActive)
+            return 1f;
+
+        return Mathf.Max(0f, grindPolePushMultiplier) * GetGrindTraction01();
+    }
+
+    private float GetGrindPoleBrakeScale()
+    {
+        if (!_grindActive)
+            return 1f;
+
+        return Mathf.Clamp01(grindPoleBrakeMultiplier);
+    }
+
+    private void ApplyGrindLowSpeedTractionAssist(float dt)
+    {
+        if (!_grindActive || _rb == null || _stacked || dt <= 0f)
+            return;
+
+        if (grindLowSpeedDriveAccel <= 0f || grindLowSpeedDriveMaxSpeed <= 0.01f)
+            return;
+
+        Vector3 n = _grindNormal.sqrMagnitude > 0.0001f
+            ? _grindNormal.normalized
+            : (_groundNormal.sqrMagnitude > 0.0001f ? _groundNormal.normalized : Vector3.up);
+
+        Vector3 planeVelocity = Vector3.ProjectOnPlane(_rb.linearVelocity, n);
+        float speed = planeVelocity.magnitude;
+
+        float speedT = 1f - Mathf.Clamp01(speed / Mathf.Max(0.01f, grindLowSpeedDriveMaxSpeed));
+        if (speedT <= 0f)
+            return;
+
+        Vector3 skiDir = GetCombinedSkiForwardOnPlane();
+        if (skiDir.sqrMagnitude < 0.0001f)
+            skiDir = Vector3.ProjectOnPlane(transform.forward, n);
+
+        if (skiDir.sqrMagnitude < 0.0001f)
+            return;
+
+        skiDir.Normalize();
+
+        float leanIntent = Mathf.InverseLerp(0.05f, 0.65f, _forwardLean);
+        float skateIntent = Mathf.InverseLerp(0.45f, 1f, Mathf.Abs(GetCurrentSkateInput()));
+        float poleIntent = _rawPolesPressed ? 0.8f : 0f;
+
+        float intent = Mathf.Clamp01(Mathf.Max(leanIntent, skateIntent, poleIntent));
+        if (intent <= 0.001f)
+            return;
+
+        float traction = GetGrindTraction01();
+
+        _rb.AddForce(
+            skiDir * (grindLowSpeedDriveAccel * traction * speedT * intent),
+            ForceMode.Acceleration);
+    }
+
     private void ApplyGroundForces()
     {
         Vector3 velocity = _rb.linearVelocity;
@@ -6816,7 +8187,11 @@ public class SkiController : MonoBehaviour
             (leftSkiContact != null && leftSkiContact.HasCollisionContact) ||
             (rightSkiContact != null && rightSkiContact.HasCollisionContact);
 
-        bool canJumpNow = (_isGrounded || hardGrounded || _grindActive);
+        bool recoveryJumpGround =
+            endContactFlattenRecoveryAllowsJump &&
+            IsEndContactFlattenRecoveryActive;
+
+        bool canJumpNow = (_isGrounded || hardGrounded || _grindActive || recoveryJumpGround);
 
         if (!canJumpNow)
         {
@@ -6966,6 +8341,7 @@ public class SkiController : MonoBehaviour
         // 3. Apply the impulse.
         // ------------------------------------------------------------------
         _rb.AddForce(jumpDir * jumpForce, ForceMode.VelocityChange);
+        CancelEndContactFlattenRecovery();
 
         // Exertion: jumping costs soreness proportional to the impulse.
         if (sorenessMeter != null && sorenessPerJumpImpulse > 0f)
@@ -6993,9 +8369,9 @@ public class SkiController : MonoBehaviour
     // SKATE / WADDLE IMPULSES
     // ----------------------------------------------------------------------
 
-    private void DetectAndApplySkatePushes()
+    private void DetectAndApplySkatePushes(float impulseScale = 1f)
     {
-        if (!_isGrounded || _stacked || !HasLegInputs)
+        if (!IsGroundedForControls || _stacked || !HasLegInputs)
         {
             _lastSkateInput = GetCurrentSkateInput();
             return;
@@ -7051,6 +8427,10 @@ public class SkiController : MonoBehaviour
         float leanT = Mathf.Clamp01((_forwardLean + 1f) * 0.5f);
         float impulse = (skateImpulse * _gearTuning.skateImpulseMul) * leanT * speedFactor;
 
+        impulse *= Mathf.Clamp01(impulseScale);
+        if (impulse <= 0.0001f)
+            return;
+
         // ------------------------------------------------------------
         // Uphill penalty: reduce (and optionally counter) skate pushes
         // when the skier is attempting to push uphill on steep slopes.
@@ -7094,6 +8474,14 @@ public class SkiController : MonoBehaviour
         float perfMult = GetPerformanceMult();
         impulse *= perfMult;
 
+        // Grindables behave like ice: player-applied traction still works,
+        // but it builds gradually and is weaker than on snow.
+        if (_grindActive)
+            impulse *= GetGrindSkateForceScale();
+
+        if (impulse <= 0.0001f)
+            return;
+
         _rb.AddForce(pushDir * impulse, ForceMode.VelocityChange);
 
         // Exertion: skating costs more when pushing uphill.
@@ -7123,14 +8511,18 @@ public class SkiController : MonoBehaviour
     // ----------------------------------------------------------------------
     // POLE FORCES
     // ----------------------------------------------------------------------
-    void ApplyPoleForces()
+    void ApplyPoleForces(float forceScale = 1f)
     {
-        // Only apply pole forces when the rider is grounded and poles are available.
-        if (!_isGrounded || !HasPolesInput)
+        // Only apply pole forces when the rider has grounded-style control support.
+        if (!IsGroundedForControls || !HasPolesInput)
             return;
 
         // No forces from idle.
         if (_polePhase == PoleStrokePhase.Idle)
+            return;
+
+        forceScale = Mathf.Clamp01(forceScale);
+        if (forceScale <= 0.0001f)
             return;
 
         Vector3 vel = _rb.linearVelocity;
@@ -7190,7 +8582,11 @@ public class SkiController : MonoBehaviour
                         * entryStrength
                         * (0.4f + 0.6f * leanT)
                         * downhillFactor
-                        * speedFactor;
+                        * speedFactor
+                        * forceScale;
+
+                    if (_grindActive)
+                        accel *= GetGrindPolePushScale();
 
                     Vector3 skiDir = GetCombinedSkiForwardOnPlane();
                     if (skiDir.sqrMagnitude > 0.0001f)
@@ -7216,10 +8612,14 @@ public class SkiController : MonoBehaviour
 
                         // Braking strength scales with phase + speed.
                         float brake =
-                            poleBrakeStrength
-                            * (0.35f + 0.65f * phaseT)
-                            * Mathf.Clamp01(speed / 8f)
-                            * (0.7f + 0.3f * (1f - leanT)); // leaning forward reduces brake a touch
+                             poleBrakeStrength
+                             * (0.35f + 0.65f * phaseT)
+                             * Mathf.Clamp01(speed / 8f)
+                             * (0.7f + 0.3f * (1f - leanT))
+                             * forceScale;
+
+                        if (_grindActive)
+                            brake *= GetGrindPoleBrakeScale();
 
                         _rb.AddForce(brakeDir * brake, ForceMode.Acceleration);
 
@@ -7243,7 +8643,11 @@ public class SkiController : MonoBehaviour
                         * followStrength
                         * (0.55f + 0.45f * leanT)
                         * downhillFactor
-                        * speedFactor;
+                        * speedFactor
+                        * forceScale;
+
+                    if (_grindActive)
+                        impulse *= GetGrindPolePushScale();
 
                     Vector3 skiDir = GetCombinedSkiForwardOnPlane();
                     if (skiDir.sqrMagnitude > 0.0001f)
@@ -7282,6 +8686,177 @@ public class SkiController : MonoBehaviour
     // ORIENTATION (SKIS DRIVE FORWARD)
     // ----------------------------------------------------------------------
 
+    private void UpdateSkiSupportNormalAuthority(float dt)
+    {
+        if (_stacked)
+            return;
+
+        bool canUseSupportNormal =
+            HasAnySkiCollisionContact ||
+            _hasNonSkiGroundContact ||
+            _skiEndSlideState != SkiEndSlideState.None ||
+            IsEndContactFlattenRecoveryActive ||
+            _isGrounded;
+
+        if (!canUseSupportNormal)
+            return;
+
+        if (!TryResolveSkiSupportNormal(out Vector3 targetNormal, out string source))
+        {
+            if (Time.time - _lastResolvedSkiSupportNormalTime <= Mathf.Max(0f, skiSupportNormalCacheTime) &&
+                _resolvedSkiSupportNormal.sqrMagnitude > 0.0001f)
+            {
+                targetNormal = _resolvedSkiSupportNormal.normalized;
+                source = "cached";
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        if (!IsRideableNormal(targetNormal))
+            return;
+
+        float t = 1f - Mathf.Exp(-Mathf.Max(0.01f, skiSupportNormalResolveSpeed) * Mathf.Max(0f, dt));
+
+        if (_resolvedSkiSupportNormal.sqrMagnitude <= 0.0001f)
+            _resolvedSkiSupportNormal = targetNormal.normalized;
+        else
+            _resolvedSkiSupportNormal = Vector3.Slerp(_resolvedSkiSupportNormal, targetNormal.normalized, t).normalized;
+
+        _lastResolvedSkiSupportNormalTime = Time.time;
+        _lastResolvedSkiSupportNormalSource = source;
+
+        // Feed both the physics plane and visual pitch/roll plane. This is intentionally
+        // separate from grounded authority: it only corrects slope alignment.
+        _groundNormal = Vector3.Slerp(
+            _groundNormal.sqrMagnitude > 0.0001f ? _groundNormal.normalized : Vector3.up,
+            _resolvedSkiSupportNormal,
+            t).normalized;
+
+        _alignNormal = Vector3.Slerp(
+            _alignNormal.sqrMagnitude > 0.0001f ? _alignNormal.normalized : Vector3.up,
+            _resolvedSkiSupportNormal,
+            t).normalized;
+    }
+
+    private bool TryResolveSkiSupportNormal(out Vector3 normal, out string source)
+    {
+        Vector3 weighted = Vector3.zero;
+        float totalWeight = 0f;
+        bool usedSki = false;
+        string resolvedSource = "none";
+
+        void AddNormal(Vector3 n, float weight, string label)
+        {
+            if (n.sqrMagnitude <= 0.0001f || weight <= 0f)
+                return;
+
+            n = n.normalized;
+            if (!IsRideableNormal(n))
+                return;
+
+            // Overlap-poll collision normals can be world-up. Keep them as weak evidence;
+            // terrain/probe normals should dominate slope alignment.
+            float slopeAngle = Vector3.Angle(n, Vector3.up);
+            float adjustedWeight = slopeAngle < 1f ? weight * 0.15f : weight;
+
+            weighted += n * adjustedWeight;
+            totalWeight += adjustedWeight;
+
+            if (string.IsNullOrEmpty(resolvedSource) || resolvedSource == "none")
+                resolvedSource = label;
+            else if (!resolvedSource.Contains(label))
+                resolvedSource += "+" + label;
+        }
+
+        void AddSkiContactNormal(SkiContact contact, string prefix)
+        {
+            if (contact == null)
+                return;
+
+            if (contact.HasCollisionContact)
+            {
+                AddNormal(contact.ContactNormal, 1.0f, prefix + "-collision");
+                usedSki = true;
+            }
+
+            if (contact.ProbeBaseHit)
+            {
+                AddNormal(contact.ProbeBaseNormal, 3.0f, prefix + "-base-probe");
+                usedSki = true;
+            }
+
+            if (contact.ProbeTipHit)
+            {
+                float w = contact.HasEndContact ? 2.0f : 1.0f;
+                AddNormal(contact.ProbeTipNormal, w, prefix + "-tip-probe");
+                usedSki = true;
+            }
+
+            if (contact.ProbeTailHit)
+            {
+                float w = contact.HasEndContact ? 2.0f : 1.0f;
+                AddNormal(contact.ProbeTailNormal, w, prefix + "-tail-probe");
+                usedSki = true;
+            }
+        }
+
+        AddSkiContactNormal(leftSkiContact, "left");
+        AddSkiContactNormal(rightSkiContact, "right");
+
+        bool terrainRayAvailable =
+            _lastGroundProbeAcceptedCollider != null &&
+            _lastGroundProbeAcceptedNormal.sqrMagnitude > 0.0001f &&
+            IsRideableNormal(_lastGroundProbeAcceptedNormal);
+
+        Vector3 terrainRayNormal = terrainRayAvailable
+            ? _lastGroundProbeAcceptedNormal.normalized
+            : Vector3.up;
+
+        if (terrainRayAvailable)
+        {
+            // The root/body ray often has the correct terrain normal even when ski collision
+            // support came from overlap polling and ContactNormal is world-up.
+            float raySlope = Vector3.Angle(terrainRayNormal, Vector3.up);
+            float skiSlope = totalWeight > 0.0001f && weighted.sqrMagnitude > 0.0001f
+                ? Vector3.Angle(weighted.normalized, Vector3.up)
+                : 0f;
+
+            float rayWeight = 1.25f;
+
+            if (usedSki && raySlope >= terrainRayNormalOverrideAngle && skiSlope < terrainRayNormalOverrideAngle)
+                rayWeight = 5.0f;
+            else if (!usedSki)
+                rayWeight = 3.0f;
+
+            AddNormal(terrainRayNormal, rayWeight, "ground-ray");
+        }
+
+        if (totalWeight <= 0.0001f || weighted.sqrMagnitude <= 0.0001f)
+        {
+            normal = Vector3.up;
+            source = "none";
+            return false;
+        }
+
+        normal = weighted.normalized;
+        source = resolvedSource;
+
+        // Final override: if weighted normal is still basically world-up but the accepted
+        // terrain ray is clearly sloped, use the terrain normal. This specifically fixes
+        // overlap-poll contacts visually flattening onto world-up.
+        if (terrainRayAvailable &&
+            Vector3.Angle(normal, Vector3.up) < terrainRayNormalOverrideAngle &&
+            Vector3.Angle(terrainRayNormal, Vector3.up) >= terrainRayNormalOverrideAngle)
+        {
+            normal = terrainRayNormal;
+            source = "ground-ray-override";
+        }
+
+        return true;
+    }
     private void AlignToSkisAndSlope()
     {
 
@@ -7428,6 +9003,8 @@ public class SkiController : MonoBehaviour
     {
         _airEntryTime = Time.time;
         _airLeanBaseline = _rawLeanInput;
+
+        _landingEvaluationConsumedForCurrentAirborne = false;
 
         // Prevent immediate forward tipping when the player is already leaning at takeoff.
         // Pitch control in air will be driven by delta-from-baseline (see ApplyAirControl).
@@ -7732,7 +9309,7 @@ public class SkiController : MonoBehaviour
 
         // If controls consider us grounded (including grinding), do NOT apply air controls.
         // Instead gently damp any carried air angular velocity.
-        if (IsGroundedForControls || HasAnySkiContact)
+        if (IsGroundedForControls)
         {
             _airAngularVelocity = Vector3.MoveTowards(
                 _airAngularVelocity,
@@ -7817,7 +9394,10 @@ public class SkiController : MonoBehaviour
             ? _groundNormal.normalized
             : Vector3.up;
 
-        Vector3 planarVelocity = Vector3.ProjectOnPlane(_rb.linearVelocity, groundUp);
+        Vector3 planarVelocity = _rb != null
+            ? Vector3.ProjectOnPlane(_rb.linearVelocity, groundUp)
+            : Vector3.zero;
+
         float planarSpeed = planarVelocity.magnitude;
 
         bool hasContact = TryGetSimpleGrindSurface(
@@ -7833,7 +9413,9 @@ public class SkiController : MonoBehaviour
             return;
         }
 
-        if (planarSpeed < Mathf.Max(0f, grindMinPlanarSpeed))
+        bool speedAllowsDistance = planarSpeed >= Mathf.Max(0f, grindMinPlanarSpeed);
+
+        if (!speedAllowsDistance && !grindAllowsStationaryContactSupport)
         {
             ResetGrindingState();
             return;
@@ -7870,7 +9452,18 @@ public class SkiController : MonoBehaviour
         _grindNormal = groundUp;
         _grindDeltaToRail = closestPoint - GetGrindReferencePoint();
 
-        UpdateSimpleGrindDistance(dt, closestPoint);
+        if (speedAllowsDistance)
+        {
+            UpdateSimpleGrindDistance(dt, closestPoint);
+        }
+        else
+        {
+            // Allow grounded-style grind support while stationary/slow, but do not
+            // inflate trick distance until the player actually moves.
+            _lastGrindClosestPoint = closestPoint;
+            _grindRawEndSign = ResolveCurrentGrindEndSign();
+        }
+
         UpdateGrindStance(dt);
         _grindDominantEndSign = (int)_grindStance;
     }
@@ -7966,32 +9559,145 @@ public class SkiController : MonoBehaviour
 
         Collider best = null;
         float bestScore = float.PositiveInfinity;
+        string bestSource = "none";
+        _dbgGrindRejectReason = "no-candidate";
 
-        void Consider(Collider c, float priorityBonus)
+        void Consider(Collider c, float priorityBonus, Vector3 refPoint, string source)
         {
-            if (c == null || !IsColliderSimpleGrindable(c))
+            if (c == null)
                 return;
 
-            float score = Vector3.Distance(c.ClosestPoint(reference), reference) - priorityBonus;
+            if (!IsColliderSimpleGrindable(c))
+            {
+                _dbgGrindRejectReason = $"candidate-not-grindable:{c.name}";
+                return;
+            }
+
+            Vector3 closest = c.ClosestPoint(refPoint);
+            float dist = Vector3.Distance(closest, refPoint);
+            float score = dist - priorityBonus;
 
             if (score < bestScore)
             {
                 bestScore = score;
                 best = c;
+                bestSource = source;
+                _dbgGrindRejectReason = "accepted";
             }
         }
 
-        // 1. This is the important new path:
-        // if the ski is grounded on a collider that is also grindable, count it.
-        Consider(contact.PrimaryContactCollider, 0.35f);
+        void ConsiderNearbyOverlap(Vector3 point, float priorityBonus, string source)
+        {
+            if (!useNearbyGrindableProbeSearch)
+                return;
 
-        // 2. Existing non-ground collision/trigger contacts still count.
+            float radius = Mathf.Max(0.01f, grindContactProbeRadius);
+
+            int count = Physics.OverlapSphereNonAlloc(
+                point,
+                radius,
+                _grindOverlapBuffer,
+                ~0,
+                QueryTriggerInteraction.Collide);
+
+            if (count <= 0)
+            {
+                if (_dbgGrindRejectReason == "no-candidate")
+                    _dbgGrindRejectReason = $"{source}:no-overlap";
+                return;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                Collider c = _grindOverlapBuffer[i];
+                _grindOverlapBuffer[i] = null;
+
+                if (c == null)
+                    continue;
+
+                Consider(c, priorityBonus, point, source + "-overlap");
+            }
+        }
+
+        void ConsiderNearbyCast(Vector3 point, float priorityBonus, string source)
+        {
+            if (!useNearbyGrindableProbeSearch)
+                return;
+
+            float radius = Mathf.Max(0.01f, grindContactProbeRadius);
+            float up = Mathf.Max(0.01f, grindContactProbeUp);
+            float down = Mathf.Max(0.01f, grindContactProbeDown);
+
+            Vector3 origin = point + Vector3.up * up;
+            float maxDistance = up + down;
+
+            int count = Physics.SphereCastNonAlloc(
+                origin,
+                radius,
+                Vector3.down,
+                _grindHitBuffer,
+                maxDistance,
+                ~0,
+                QueryTriggerInteraction.Collide);
+
+            if (count <= 0)
+            {
+                if (_dbgGrindRejectReason == "no-candidate")
+                    _dbgGrindRejectReason = $"{source}:no-cast-hit";
+                return;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                RaycastHit hit = _grindHitBuffer[i];
+                _grindHitBuffer[i] = default;
+
+                Collider c = hit.collider;
+                if (c == null)
+                    continue;
+
+                // Use the hit point as the reference so broad flat surfaces score correctly.
+                Vector3 refPoint = hit.point.sqrMagnitude > 0.0001f ? hit.point : point;
+                Consider(c, priorityBonus + 0.04f, refPoint, source + "-cast");
+            }
+        }
+
+        void ConsiderProbePoint(Vector3 point, float priorityBonus, string source)
+        {
+            ConsiderNearbyOverlap(point, priorityBonus, source);
+            ConsiderNearbyCast(point, priorityBonus, source);
+        }
+
+        // 1. Existing direct contact paths.
+        Consider(contact.PrimaryContactCollider, 0.35f, reference, "primary-contact");
+
         foreach (Collider c in contact.AnyCollisionOtherColliders)
         {
             if (contact.HasCurrentContactWith(c))
-                Consider(c, 0f);
+                Consider(c, 0.05f, reference, "any-contact");
         }
 
+        // 2. Probe/ski searches. Overlap catches true contact; spherecast catches the
+        // large flat Default-layer surface case where the skier is visually standing
+        // on a grindable but no ski snow-ground probe/collision is active.
+        ConsiderProbePoint(reference, nearbyGrindableProbePriority, "ski-transform");
+
+        ConsiderProbePoint(
+            contact.GetProbeWorldPosition(SkiContact.SkiProbeRegion.Mid),
+            nearbyGrindableProbePriority + 0.08f,
+            "base-probe");
+
+        ConsiderProbePoint(
+            contact.GetProbeWorldPosition(SkiContact.SkiProbeRegion.Front),
+            nearbyGrindableProbePriority,
+            "tip-probe");
+
+        ConsiderProbePoint(
+            contact.GetProbeWorldPosition(SkiContact.SkiProbeRegion.Rear),
+            nearbyGrindableProbePriority,
+            "tail-probe");
+
+        _dbgGrindCandidateSource = best != null ? bestSource : "none";
         return best;
     }
 
@@ -8000,12 +9706,15 @@ public class SkiController : MonoBehaviour
         if (c == null)
             return false;
 
+        if (IsOwnCollider(c) || IsCharacterCollider(c))
+            return false;
+
         bool layerOk = (grindableLayers.value & (1 << c.gameObject.layer)) != 0;
         if (layerOk)
             return true;
 
-        ResolveGrindProviders(c, out LiftLine ll, out FencePath fp);
-        return ll != null || fp != null;
+        ResolveGrindProviders(c, out LiftLine liftLine, out FencePath fencePath);
+        return liftLine != null || fencePath != null;
     }
 
     private void ResolveSimpleGrindContactData(
@@ -8038,17 +9747,17 @@ public class SkiController : MonoBehaviour
             }
         }
 
-        if (fp != null)
-        {
-            if (fp.TryGetClosestPointOnPath(referencePoint, out _, out Vector3 cp, out Vector3 tan))
-            {
-                closestPoint = cp;
-                tangent = tan.sqrMagnitude > 0.0001f ? tan.normalized : GetPreferredGrindDirection();
-                surfaceKind = GrindSurfaceKind.FencePath;
-                sourceName = fp.name;
-                return;
-            }
-        }
+        //if (fp != null)
+        //{
+        //    if (fp.TryGetClosestPointOnPath(referencePoint, out _, out Vector3 cp, out Vector3 tan))
+        //    {
+        //        closestPoint = cp;
+        //        tangent = tan.sqrMagnitude > 0.0001f ? tan.normalized : GetPreferredGrindDirection();
+        //        surfaceKind = GrindSurfaceKind.FencePath;
+        //        sourceName = fp.name;
+        //        return;
+        //    }
+        //}
 
         closestPoint = c.ClosestPoint(referencePoint);
 
@@ -8163,12 +9872,12 @@ public class SkiController : MonoBehaviour
             if (ll != null && ll.TryGetClosestPointOnBand(worldPoint, out _, out Vector3 cp, out _))
                 return Vector3.Distance(worldPoint, cp);
         }
-        else if (_grindSurfaceKind == GrindSurfaceKind.FencePath)
-        {
-            ResolveGrindProviders(_grindActiveCollider, out _, out FencePath fp);
-            if (fp != null && fp.TryGetClosestPointOnPath(worldPoint, out _, out Vector3 cp, out _))
-                return Vector3.Distance(worldPoint, cp);
-        }
+        //else if (_grindSurfaceKind == GrindSurfaceKind.FencePath)
+        //{
+        //    ResolveGrindProviders(_grindActiveCollider, out _, out FencePath fp);
+        //    if (fp != null && fp.TryGetClosestPointOnPath(worldPoint, out _, out Vector3 cp, out _))
+        //        return Vector3.Distance(worldPoint, cp);
+        //}
 
         Vector3 cpImplicit = _grindActiveCollider.ClosestPoint(worldPoint);
         return Vector3.Distance(worldPoint, cpImplicit);
@@ -8271,6 +9980,40 @@ public class SkiController : MonoBehaviour
 
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private static string DescribeColliderForDebug(Collider c)
+    {
+        if (c == null)
+            return "(none)";
+
+        int layer = c.gameObject.layer;
+        return $"{c.name}/{LayerMask.LayerToName(layer)}";
+    }
+
+    private static string DescribeLayerMaskForDebug(LayerMask mask)
+    {
+        if (mask.value == 0)
+            return "0 (none)";
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.Append(mask.value);
+        sb.Append(" (");
+        bool wrote = false;
+        for (int i = 0; i < 32; i++)
+        {
+            if ((mask.value & (1 << i)) == 0)
+                continue;
+
+            if (wrote)
+                sb.Append(", ");
+
+            string layerName = LayerMask.LayerToName(i);
+            sb.Append(string.IsNullOrEmpty(layerName) ? i.ToString() : layerName);
+            wrote = true;
+        }
+        sb.Append(')');
+        return sb.ToString();
+    }
+
     private void OnGUI()
     {
         if (!showDebugHUD)
@@ -8289,7 +10032,8 @@ public class SkiController : MonoBehaviour
         _debugScroll = GUILayout.BeginScrollView(_debugScroll, false, true);
 
         GUILayout.Label($"Mode: {_movementMode}    Stacked: {_stacked}");
-        GUILayout.Label($"isGrounded (casts): {_isGrounded}    HasAnySkiContact: {HasAnySkiContact}    IsGroundedForCtrl: {IsGroundedForControls}");
+        GUILayout.Label($"physicsGrounded: {_isGrounded}    controlGrounded: {IsGroundedForControls}    HasAnySkiContact: {HasAnySkiContact}");
+        GUILayout.Label($"bodyNearGround: {_bodyNearGround}    skiPlausible: {_skiContactPlausibleForBody}    groundGap: {_lastMeasuredGroundGap:F2}    refresh: {_lastGroundRefreshSource}");
 
         Vector3 velPlane = Vector3.ProjectOnPlane(_rb.linearVelocity, _groundNormal);
         GUILayout.Label($"PlanarSpeed: {velPlane.magnitude:F2} m/s    ForwardLean: {_forwardLean:F2}");
@@ -8316,7 +10060,8 @@ public class SkiController : MonoBehaviour
             string activeName = _grindActiveCollider != null ? _grindActiveCollider.name : "(none)";
             GUILayout.Label($"TouchingGrindable: {touchingGrindableHud}    IsGrinding: {_grindActive}    GroundedForControls: {IsGroundedForControls}");
             GUILayout.Label($"ActiveCollider: {activeName}    TouchCollider: {touchName}");
-            GUILayout.Label($"Source: {(_dbgGrindSource ?? "(none)")}    Distance: {_grindDistance:F2} m    Strength: {_grindStrengthSmoothed:F2}");
+            GUILayout.Label($"Source: {(_dbgGrindSource ?? "(none)")}    CandidateSource: {_dbgGrindCandidateSource}    Reject: {_dbgGrindRejectReason}");
+            GUILayout.Label($"Distance: {_grindDistance:F2} m    Strength: {_grindStrengthSmoothed:F2}");
             GUILayout.Label($"Stance: {_grindStance}    Time: {_grindTime:F2}s    SurfaceKind: {_grindSurfaceKind}");
             GUILayout.Label($"ClosestPoint: {_grindClosestPoint}    Tangent: {_grindTangent}");
             GUILayout.Label($"Distance: {_grindDistance:F2} m    RawEndSign: {_grindRawEndSign}    DominantEndSign: {_grindDominantEndSign}");
@@ -8353,19 +10098,25 @@ public class SkiController : MonoBehaviour
 
             if (leftSkiContact != null)
             {
+                Collider leftContact = leftSkiContact.PrimaryContactCollider;
                 GUILayout.Label(
                     $"LEFT: grounded={leftSkiContact.IsGrounded}  end={leftSkiContact.EndContactSign}  endZ={leftSkiContact.EndContactLocalZ:F2}  " +
                     $"tipOrTail={leftSkiContact.HasTipContact}  baseAlign={leftSkiContact.BaseContactAlignment:F2}");
-                GUILayout.Label($"LEFT N: {leftSkiContact.ContactNormal}  P: {leftSkiContact.ContactPoint}");
+                GUILayout.Label($"LEFT N: {leftSkiContact.ContactNormal}  P: {leftSkiContact.ContactPoint}  C: {DescribeColliderForDebug(leftContact)}");
             }
 
             if (rightSkiContact != null)
             {
+                Collider rightContact = rightSkiContact.PrimaryContactCollider;
                 GUILayout.Label(
                     $"RIGHT: grounded={rightSkiContact.IsGrounded}  end={rightSkiContact.EndContactSign}  endZ={rightSkiContact.EndContactLocalZ:F2}  " +
                     $"tipOrTail={rightSkiContact.HasTipContact}  baseAlign={rightSkiContact.BaseContactAlignment:F2}");
-                GUILayout.Label($"RIGHT N: {rightSkiContact.ContactNormal}  P: {rightSkiContact.ContactPoint}");
+                GUILayout.Label($"RIGHT N: {rightSkiContact.ContactNormal}  P: {rightSkiContact.ContactPoint}  C: {DescribeColliderForDebug(rightContact)}");
             }
+
+            GUILayout.Label($"Grind: active={_grindActive} collider={DescribeColliderForDebug(_grindActiveCollider)}");
+            GUILayout.Label($"GroundLayers: {DescribeLayerMaskForDebug(groundLayers)}");
+            GUILayout.Label($"GrindableLayers: {DescribeLayerMaskForDebug(grindableLayers)}");
         }
 
         GUILayout.EndScrollView();

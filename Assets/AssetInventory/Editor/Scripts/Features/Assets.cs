@@ -449,6 +449,13 @@ namespace AssetInventory
                 .GroupBy(asset => asset.AssetId)
                 .ToDictionary(group => group.Key, group => group.First());
 
+            ResolveParents(assets, assetDict);
+        }
+
+        internal static void ResolveParents(List<AssetInfo> assets, Dictionary<int, AssetInfo> assetDict)
+        {
+            if (assets == null || assetDict == null) return;
+
             foreach (AssetInfo asset in assets)
             {
                 if (asset == null) continue;

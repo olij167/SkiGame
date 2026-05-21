@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eb0b79ca674831643b04680710f7db70, type: 3}
+  m_Name: BeginnerLessonDialogueProfile
+  m_EditorClassIdentifier: Assembly-CSharp::SkiGame.Progression.QuestDialogueProfileSO
+  questDefinition: {fileID: 11400000, guid: 2d3a8f3c1b2749e7a6c14a1c0f6b3210, type: 2}
+  defaultSpeakerIdentityId: instructor
+  onAvailableSequence: {fileID: 0}
+  onOfferedSequence: {fileID: 0}
+  onAcceptedSequence: {fileID: 11400000, guid: ca940f20bd9b43a43b5abb117c19c175, type: 2}
+  reminderTopic: 
+  onObjectivesCompleteSequence: {fileID: 0}
+  onReadyToTurnInSequence: {fileID: 0}
+  onTurnedInSequence: {fileID: 0}
+  onCompletedSequence: {fileID: 0}
+  stageBindings: []
+  objectiveBindings: []
+  availableAmbientTopic: instructor.pre_lesson
+  inProgressAmbientTopic: tutorialProgress
+  readyToTurnInAmbientTopic: tutorialReady
+  completedAmbientTopic: tutorialComplete

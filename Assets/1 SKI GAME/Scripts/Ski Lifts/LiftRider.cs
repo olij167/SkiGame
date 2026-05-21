@@ -4,6 +4,7 @@ using UnityEngine.InputSystem;
 using SkiGame.Progression;
 using SkiGame.UI;
 
+[DefaultExecutionOrder(1100)]
 public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
 {
     [Header("Dependencies")]
@@ -33,6 +34,17 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
     [Tooltip("How often (seconds) we attempt to attach while held/buffered.")]
     [SerializeField] private float attachAttemptInterval = 0.05f;
 
+    [Header("Chair Follow")]
+    [SerializeField] private bool hardFollowChairAttachPoint = true;
+    [SerializeField] private bool useRigidbodyPositionForChairFollow = true;
+    [SerializeField] private float maxChairAttachErrorBeforeSnap = 0.05f;
+
+    [Header("Debug")]
+    [SerializeField] private bool logLiftAttachDebug;
+    [SerializeField] private bool drawLiftAttachDebugGizmos;
+    [SerializeField] private bool logAttachedChairFollowDebug;
+    [SerializeField, Min(0.1f)] private float attachedChairFollowLogInterval = 1f;
+
     [Header("Input")]
     [Tooltip("Input action used to attach/detach from lifts (e.g. Player/Interact).")]
     [SerializeField] private InputActionReference liftInput;
@@ -45,6 +57,7 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
 
     private float _attachBufferUntilTime;
     private float _nextAttachAttemptTime;
+    private float _nextAttachedFollowLogTime;
 
     // Non-alloc overlap cache
     private readonly Collider[] _overlapHits = new Collider[32];
@@ -93,9 +106,12 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
 
     private void OnEnable()
     {
-        WorldInteractionPromptRegistry.Register(this);
+        if (!IsNpcRider())
+            WorldInteractionPromptRegistry.Register(this);
 
-        // Hook into the assigned InputActionReference
+        if (IsNpcRider())
+            return;
+
         if (liftInput != null && liftInput.action != null)
         {
             liftInput.action.started += OnLiftInput;
@@ -107,7 +123,11 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
 
     private void OnDisable()
     {
-        WorldInteractionPromptRegistry.Unregister(this);
+        if (!IsNpcRider())
+            WorldInteractionPromptRegistry.Unregister(this);
+
+        if (IsNpcRider())
+            return;
 
         if (liftInput != null && liftInput.action != null)
         {
@@ -197,7 +217,7 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
         // Attachment assist: while held or buffered, keep attempting to attach.
         if (!isAttached)
         {
-            if (_activeQueueGate != null)
+            if (_activeQueueGate != null && _queuedViaAutoBoarding)
                 UpdateAutoQueueMovement();
 
             if (!_blockAttachUntilRelease)
@@ -232,6 +252,46 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
             velChange = Vector3.ProjectOnPlane(velChange, Vector3.up);
             rb.AddForce(velChange, ForceMode.Acceleration);
         }
+
+        if (logAttachedChairFollowDebug && isAttached && isChairMode && currentCarrier != null && Time.time >= _nextAttachedFollowLogTime)
+        {
+            _nextAttachedFollowLogTime = Time.time + attachedChairFollowLogInterval;
+            LogLiftAttachState("Attached chair follow tick");
+        }
+    }
+
+    private void LateUpdate()
+    {
+        HardFollowChairAttachPointIfNeeded();
+    }
+
+    private void HardFollowChairAttachPointIfNeeded()
+    {
+        if (!hardFollowChairAttachPoint || !isAttached || !isChairMode || currentCarrier == null || currentCarrier.attachPoint == null)
+            return;
+
+        Transform attach = currentCarrier.attachPoint;
+        float attachError = Vector3.Distance(transform.position, attach.position);
+        bool shouldLogError = logLiftAttachDebug && attachError > maxChairAttachErrorBeforeSnap;
+
+        if (rb != null && rb.isKinematic && useRigidbodyPositionForChairFollow)
+        {
+            rb.position = attach.position;
+            rb.rotation = attach.rotation;
+        }
+        else
+        {
+            transform.SetPositionAndRotation(attach.position, attach.rotation);
+        }
+
+        if (transform.parent == attach)
+        {
+            transform.localPosition = Vector3.zero;
+            transform.localRotation = Quaternion.identity;
+        }
+
+        if (shouldLogError)
+            Debug.Log($"[LiftRider] {name}: Chair attach error {attachError:0.000} exceeded {maxChairAttachErrorBeforeSnap:0.000}; hard-snapped to attach point.", this);
     }
 
     /// <summary>
@@ -347,6 +407,7 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
 
     public void OnAttachedToCarrier(LiftCarrier carrier)
     {
+        Vector3 beforeParentPosition = transform.position;
         currentCarrier = carrier;
         isAttached = true;
         isChairMode = (carrier.mode == LiftCarrierMode.Chair);
@@ -374,7 +435,8 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
         else if (carrier != null)
             liftId = carrier.gameObject.name;
 
-        RegisterLiftUsed(liftId);
+        if (IsPlayerControlled())
+            RegisterLiftUsed(liftId);
 
         if (isChairMode)
         {
@@ -409,8 +471,13 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
             ApplyChairLiftSeatedPose();
 
             transform.SetParent(carrier.attachPoint, true);
+            if (logLiftAttachDebug)
+                Debug.Log($"[LiftRider] {name}: Chair attach before local zero carrier='{carrier.name}' attachPoint='{(carrier.attachPoint != null ? carrier.attachPoint.name : "none")}' attachWorld={(carrier.attachPoint != null ? carrier.attachPoint.position.ToString("F3") : "none")} riderBefore={beforeParentPosition.ToString("F3")}", this);
+
             transform.localPosition = Vector3.zero;
             transform.localRotation = Quaternion.identity;
+
+            LogLiftAttachState("Chair attach after local zero");
 
             if (skiController) skiController.enabled = false;
             if (walkingController) walkingController.enabled = false;
@@ -628,12 +695,38 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
         return best;
     }
 
-    private bool IsPlayerPromptSource()
+    public bool IsNpcRider()
     {
-        if (CompareTag("NPC") || transform.root.CompareTag("NPC"))
+        if (GetComponentInParent<NpcSkierBrain>() != null)
+            return true;
+
+        NpcIdentity identity = GetComponentInParent<NpcIdentity>();
+        if (identity != null && !IsLayerNamed(gameObject, "Player") && !IsLayerNamed(transform.root.gameObject, "Player"))
+            return true;
+
+        if (IsLayerNamed(gameObject, "NPC") || IsLayerNamed(transform.root.gameObject, "NPC"))
+            return true;
+
+        return HasTagSafe(gameObject, "NPC") || HasTagSafe(transform.root.gameObject, "NPC");
+    }
+
+    public bool IsPlayerControlled()
+    {
+        if (IsNpcRider())
             return false;
 
-        return CompareTag("Player") || transform.root.CompareTag("Player");
+        if (IsLayerNamed(gameObject, "Player") || IsLayerNamed(transform.root.gameObject, "Player"))
+            return true;
+
+        return HasTagSafe(gameObject, "Player") || HasTagSafe(transform.root.gameObject, "Player");
+    }
+
+    private bool IsPlayerPromptSource()
+    {
+        if (IsNpcRider())
+            return false;
+
+        return IsPlayerControlled();
     }
 
     public bool IsPromptAvailable
@@ -694,11 +787,6 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
 
             return carrier.mode == LiftCarrierMode.Chair ? "Board Lift" : "Grab T-Bar";
         }
-    }
-
-    private bool IsPlayerControlled()
-    {
-        return !CompareTag("NPC") && !transform.root.CompareTag("NPC");
     }
 
     private bool ShouldUseGateBoarding()
@@ -844,12 +932,77 @@ public class LiftRider : MonoBehaviour, IWorldInteractionPromptSource
     }
 
     public int PromptPriority => isAttached ? 100 : 60;
+
+    [ContextMenu("Print Lift Attach Debug State")]
+    private void PrintLiftAttachDebugState()
+    {
+        LogLiftAttachState("Context menu");
+    }
+
+    [ContextMenu("Print Rider Classification Debug State")]
+    private void PrintRiderClassificationDebugState()
+    {
+        Debug.Log(
+            $"[LiftRider] {name}: rider classification\n" +
+            $"isNpc={IsNpcRider()} isPlayerControlled={IsPlayerControlled()} promptSource={IsPlayerPromptSource()}\n" +
+            $"objectLayer={LayerMask.LayerToName(gameObject.layer)} rootLayer={LayerMask.LayerToName(transform.root.gameObject.layer)} tag={tag} rootTag={transform.root.tag}\n" +
+            $"hasNpcBrain={GetComponentInParent<NpcSkierBrain>() != null} hasNpcIdentity={GetComponentInParent<NpcIdentity>() != null} liftInput={(liftInput != null ? liftInput.name : "none")}",
+            this);
+    }
+
+    private void LogLiftAttachState(string reason)
+    {
+        if (!logLiftAttachDebug && reason != "Context menu")
+            return;
+
+        Transform attach = currentCarrier != null ? currentCarrier.attachPoint : null;
+        float attachError = attach != null ? Vector3.Distance(transform.position, attach.position) : -1f;
+        Debug.Log(
+            $"[LiftRider] {name}: {reason}\n" +
+            $"attached={isAttached} chair={isChairMode} carrier={(currentCarrier != null ? currentCarrier.name : "none")} attachPoint={(attach != null ? attach.name : "none")} parent={(transform.parent != null ? transform.parent.name : "none")}\n" +
+            $"isNpc={IsNpcRider()} isPlayerControlled={IsPlayerControlled()} nearbyGate={(_nearbyBoardGate != null ? _nearbyBoardGate.name : "none")} activeQueueGate={(_activeQueueGate != null ? _activeQueueGate.name : "none")} authorizedLine={(_authorizedBoardLine != null ? _authorizedBoardLine.name : "none")}\n" +
+            $"riderWorld={transform.position.ToString("F3")} riderLocal={transform.localPosition.ToString("F3")} attachWorld={(attach != null ? attach.position.ToString("F3") : "none")} attachError={attachError:0.000}\n" +
+            $"rbKinematic={(rb != null && rb.isKinematic)} rbDetectCollisions={(rb != null && rb.detectCollisions)}",
+            this);
+    }
+
+    private static bool IsLayerNamed(GameObject go, string layerName)
+    {
+        if (go == null || string.IsNullOrWhiteSpace(layerName))
+            return false;
+
+        int layer = LayerMask.NameToLayer(layerName);
+        return layer >= 0 && go.layer == layer;
+    }
+
+    private static bool HasTagSafe(GameObject go, string tagName)
+    {
+        if (go == null || string.IsNullOrWhiteSpace(tagName))
+            return false;
+
+        try
+        {
+            return go.CompareTag(tagName);
+        }
+        catch (UnityException)
+        {
+            return false;
+        }
+    }
+
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {
         // Visualise the detection radius in the editor
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position, liftDetectionRadius);
+
+        if (drawLiftAttachDebugGizmos && currentCarrier != null && currentCarrier.attachPoint != null)
+        {
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawWireSphere(currentCarrier.attachPoint.position, 0.2f);
+            Gizmos.DrawLine(transform.position, currentCarrier.attachPoint.position);
+        }
     }
 #endif
 }

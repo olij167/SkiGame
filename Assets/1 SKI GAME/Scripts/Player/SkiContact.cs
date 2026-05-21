@@ -9,6 +9,16 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class SkiContact : MonoBehaviour
 {
+    private const string ProbeDebugVersion = "SkiContact Probe Debug v3 - explicit-source";
+
+    private enum ProbeGeometrySource
+    {
+        ExplicitTransform,
+        ManualLocalZ,
+        InferredColliderBounds,
+        FallbackDefault
+    }
+
     [Tooltip("True if this is the left ski; false for right. Only for clarity / debugging.")]
     public bool isLeftSki = true;
 
@@ -40,6 +50,15 @@ public class SkiContact : MonoBehaviour
 
     [Tooltip("Max additional distance (beyond probeUpOffset) that still counts as true contact. Lower = stricter grounding.")]
     [SerializeField] private float probeContactDistance = 0.12f;
+
+    [Tooltip("Max additional distance for front/rear ski-end probes. Higher than base contact so pitched tip/tail landings can reacquire snow.")]
+    [SerializeField] private float endProbeContactDistance = 0.35f;
+
+    [Tooltip("Extra tolerance for front/rear probes when the high-origin recovery probe is used.")]
+    [SerializeField] private float endProbeRecoveryExtraContactDistance = 0.45f;
+
+    [Tooltip("Tip/tail probes only count as dominant end contact when they are this much closer than base support.")]
+    [SerializeField] private float endDominanceMargin = 0.04f;
 
     [Tooltip("Extra probe/contact distance granted when the ski is in a rolled or pitched authored pose.")]
     [SerializeField] private float posedProbeExtraContactDistance = 0.3f;
@@ -77,8 +96,34 @@ public class SkiContact : MonoBehaviour
     [Tooltip("Extra upward start offset used by the high-origin recovery probe. Higher values help fix false-airborne cases but can feel stickier if overused.")]
     [SerializeField] private float recoveryProbeExtraUpOffset = 0.35f;
 
+    [Header("Probe Geometry Overrides")]
+    [SerializeField] private Transform explicitTipProbe;
+    [SerializeField] private Transform explicitTailProbe;
+    [SerializeField] private Transform explicitBaseProbe;
+    [SerializeField] private Transform explicitTipBottomProbe;
+    [SerializeField] private Transform explicitTailBottomProbe;
+    [SerializeField] private bool useBottomEndProbes = true;
+    [SerializeField] private float bottomEndProbeLocalYOffset = -0.08f;
+    [SerializeField] private bool useManualLocalProbeZ;
+    [SerializeField] private float manualTipLocalZ = 0.85f;
+    [SerializeField] private float manualTailLocalZ = -0.85f;
+    [SerializeField] private float fallbackSkiHalfLength = 1.45f;
+
+    [Tooltip("Small expansion used when polling this ski's existing colliders for Ground contact. This is collision discovery, not probe support.")]
+    [SerializeField] private float collisionPollSkin = 0.025f;
+
+    public Transform ExplicitTipBottomProbe => explicitTipBottomProbe;
+    public Transform ExplicitTailBottomProbe => explicitTailBottomProbe;
+    public bool UseBottomEndProbes => useBottomEndProbes;
+
     /// <summary>True if this ski currently has any ground contact this frame.</summary>
     public bool IsGrounded { get; private set; }
+
+    public bool HasBaseSupport { get; private set; }
+    public bool HasGroundCollision => _hasCollisionContact;
+    public bool HasStableSupport => _hasCollisionContact;
+    public bool HasEndContact { get; private set; }
+    public bool HasAnyProbeContact => _probeBaseHit || _probeTipHit || _probeTailHit;
 
     /// <summary>True if the last ground contact was predominantly on the tip region of the ski.</summary>
     public bool HasTipContact { get; private set; }
@@ -130,16 +175,114 @@ public class SkiContact : MonoBehaviour
 
     public Vector3 GetProbeWorldPosition(SkiProbeRegion region)
     {
+        return GetProbeWorldPositionWithSource(region, out _);
+    }
+
+    private Vector3 GetProbeWorldPositionWithSource(SkiProbeRegion region, out ProbeGeometrySource source)
+    {
+        if (!_geometryInitialized)
+            EnsureGeometry();
+
+        switch (region)
+        {
+            case SkiProbeRegion.Front:
+                if (explicitTipProbe != null)
+                {
+                    source = ProbeGeometrySource.ExplicitTransform;
+                    return explicitTipProbe.position;
+                }
+                break;
+            case SkiProbeRegion.Rear:
+                if (explicitTailProbe != null)
+                {
+                    source = ProbeGeometrySource.ExplicitTransform;
+                    return explicitTailProbe.position;
+                }
+                break;
+            case SkiProbeRegion.Mid:
+                if (explicitBaseProbe != null)
+                {
+                    source = ProbeGeometrySource.ExplicitTransform;
+                    return explicitBaseProbe.position;
+                }
+                break;
+        }
+
         float z = 0f;
         switch (region)
         {
-            case SkiProbeRegion.Front: z = _localTipZ; break;
-            case SkiProbeRegion.Rear: z = _localTailZ; break;
+            case SkiProbeRegion.Front:
+                source = useManualLocalProbeZ ? ProbeGeometrySource.ManualLocalZ : (_inferredGeometryValid ? ProbeGeometrySource.InferredColliderBounds : ProbeGeometrySource.FallbackDefault);
+                z = useManualLocalProbeZ ? manualTipLocalZ : _localTipZ;
+                break;
+            case SkiProbeRegion.Rear:
+                source = useManualLocalProbeZ ? ProbeGeometrySource.ManualLocalZ : (_inferredGeometryValid ? ProbeGeometrySource.InferredColliderBounds : ProbeGeometrySource.FallbackDefault);
+                z = useManualLocalProbeZ ? manualTailLocalZ : _localTailZ;
+                break;
             case SkiProbeRegion.Mid:
-            default: z = 0f; break; // bindings/base region
+            default:
+                source = ProbeGeometrySource.FallbackDefault;
+                z = 0f;
+                break; // bindings/base region
         }
 
         return transform.TransformPoint(new Vector3(0f, 0f, z));
+    }
+
+    private ProbeGeometrySource GetProbeSource(SkiProbeRegion region)
+    {
+        GetProbeWorldPositionWithSource(region, out ProbeGeometrySource source);
+        return source;
+    }
+
+    private string DescribeProbeSource(SkiProbeRegion region)
+    {
+        Transform explicitTransform = null;
+        switch (region)
+        {
+            case SkiProbeRegion.Front:
+                explicitTransform = explicitTipProbe;
+                break;
+            case SkiProbeRegion.Rear:
+                explicitTransform = explicitTailProbe;
+                break;
+            case SkiProbeRegion.Mid:
+                explicitTransform = explicitBaseProbe;
+                break;
+        }
+
+        Vector3 world = GetProbeWorldPositionWithSource(region, out ProbeGeometrySource source);
+        Vector3 local = transform.InverseTransformPoint(world);
+        string explicitPath = explicitTransform != null ? GetTransformPath(explicitTransform) : "(none)";
+        bool active = explicitTransform != null && explicitTransform.gameObject.activeInHierarchy;
+        bool child = explicitTransform != null && explicitTransform.IsChildOf(transform);
+        bool far = local.magnitude > 8f;
+        return $"source={source} transform={explicitPath} active={active} childOfSki={child} far={far} local={local.ToString("F3")} world={world.ToString("F3")} localZ={local.z:0.000}";
+    }
+
+    public Vector3 GetBottomEndProbeWorldPosition(SkiProbeRegion region)
+    {
+        if (region == SkiProbeRegion.Front && explicitTipBottomProbe != null)
+            return explicitTipBottomProbe.position;
+
+        if (region == SkiProbeRegion.Rear && explicitTailBottomProbe != null)
+            return explicitTailBottomProbe.position;
+
+        Vector3 endPoint = GetProbeWorldPosition(region);
+        return endPoint + (-transform.up * Mathf.Abs(bottomEndProbeLocalYOffset));
+    }
+
+    private string DescribeBottomProbeSource(SkiProbeRegion region)
+    {
+        Transform explicitTransform = region == SkiProbeRegion.Front ? explicitTipBottomProbe : explicitTailBottomProbe;
+        Vector3 world = GetBottomEndProbeWorldPosition(region);
+        Vector3 local = transform.InverseTransformPoint(world);
+        string source = explicitTransform != null ? ProbeGeometrySource.ExplicitTransform.ToString() : $"DerivedFrom{GetProbeSource(region)}";
+        string explicitPath = explicitTransform != null ? GetTransformPath(explicitTransform) : "(none)";
+        bool active = explicitTransform != null && explicitTransform.gameObject.activeInHierarchy;
+        bool child = explicitTransform != null && explicitTransform.IsChildOf(transform);
+        bool far = local.magnitude > 8f;
+        return $"source={source} transform={explicitPath} active={active} childOfSki={child} far={far} local={local.ToString("F3")} world={world.ToString("F3")} localZ={local.z:0.000}";
     }
 
 
@@ -194,22 +337,48 @@ public class SkiContact : MonoBehaviour
     private Collider _probeBaseCollider;
     private Collider _probeTipCollider;
     private Collider _probeTailCollider;
+    private float _probeBaseDistance = float.PositiveInfinity;
+    private float _probeTipDistance = float.PositiveInfinity;
+    private float _probeTailDistance = float.PositiveInfinity;
+
+    public bool ProbeBaseHit => _probeBaseHit;
+    public bool ProbeTipHit => _probeTipHit;
+    public bool ProbeTailHit => _probeTailHit;
+    public Collider ProbeBaseCollider => _probeBaseCollider;
+    public Collider ProbeTipCollider => _probeTipCollider;
+    public Collider ProbeTailCollider => _probeTailCollider;
+    public float ProbeBaseDistance => _probeBaseDistance;
+    public float ProbeTipDistance => _probeTipDistance;
+    public float ProbeTailDistance => _probeTailDistance;
+
+    public Vector3 ProbeBaseNormal => _probeBaseNormal.sqrMagnitude > 0.0001f ? _probeBaseNormal.normalized : Vector3.up;
+    public Vector3 ProbeTipNormal => _probeTipNormal.sqrMagnitude > 0.0001f ? _probeTipNormal.normalized : Vector3.up;
+    public Vector3 ProbeTailNormal => _probeTailNormal.sqrMagnitude > 0.0001f ? _probeTailNormal.normalized : Vector3.up;
+    public Vector3 CollisionContactNormal => _collisionContactNormal.sqrMagnitude > 0.0001f ? _collisionContactNormal.normalized : Vector3.up;
 
     // NOTE: Do not sample in this script's FixedUpdate.
     // SkiController will call this deterministically at the start of its FixedUpdate.
     public void ManualSampleGround()
     {
         SampleGround();
+        RefreshCollisionContactFromOwnColliders();
     }
 
     private float _localTipZ;
     private float _localTailZ;
     private bool _geometryInitialized;
+    private bool _inferredGeometryValid;
+    private bool _usingFallbackGeometry;
+    private string _geometryWarning;
 
     // Collision-based contact cache (used when rays miss but colliders touch).
     private bool _hasCollisionContact;
     private Vector3 _collisionContactPoint;
     private Vector3 _collisionContactNormal;
+    private float _lastCollisionContactTime = -999f;
+    private string _lastCollisionSource = "none";
+    private Collider _lastCollisionThisCollider;
+    private string _lastCollisionPollRejectReason = "none";
 
     // NEW: which collider we are actually touching (so SkiController can detect grindables without global searches)
     private Collider _collisionOtherCollider;
@@ -221,6 +390,22 @@ public class SkiContact : MonoBehaviour
     private Vector3 _wallContactNormal;
     private Collider _wallOtherCollider;
 
+    private bool _collisionEndContact;
+    private int _collisionEndSign;
+    private float _collisionEndLocalZ;
+    private Vector3 _collisionEndPoint;
+    private Vector3 _collisionEndNormal = Vector3.up;
+    private Collider _collisionEndCollider;
+
+    private Rigidbody _ownerRigidbody;
+    private Transform _ownerRoot;
+    private Collider[] _ownContactColliders;
+    private static int _npcLayer = -2;
+    private static int _playerLayer = -2;
+
+
+    private readonly RaycastHit[] _probeHitBuffer = new RaycastHit[12];
+    private readonly Collider[] _collisionOverlapBuffer = new Collider[16];
     /// <summary>True if we have a collision contact on groundLayers that is too steep to be considered ground.</summary>
     public bool HasWallContact => _hasWallContact;
 
@@ -233,8 +418,40 @@ public class SkiContact : MonoBehaviour
     /// <summary>The collider we are scraping (can be null).</summary>
     public Collider WallOtherCollider => _wallOtherCollider;
 
+    public bool HasCollisionEndContact => _collisionEndContact;
+    public int CollisionEndSign => _collisionEndSign;
+    public float CollisionEndLocalZ => _collisionEndLocalZ;
+    public Vector3 CollisionEndPoint => _collisionEndPoint;
+    public Vector3 CollisionEndNormal => _collisionEndNormal;
+    public Collider CollisionEndCollider => _collisionEndCollider;
+
     /// <summary>True if we have an active collision-derived ground contact.</summary>
     public bool HasCollisionContact => _hasCollisionContact;
+    public float LastCollisionContactTime => _lastCollisionContactTime;
+    public string LastCollisionSource => _lastCollisionSource;
+    public Collider LastCollisionThisCollider => _lastCollisionThisCollider;
+    public string LastCollisionPollRejectReason => _lastCollisionPollRejectReason;
+
+    /// <summary>
+    /// True when this ski has stable physical support from an actual valid ground collision.
+    /// </summary>
+    public bool HasStableSupportContact => HasStableSupport;
+
+    /// <summary>True when this ski's base/under-foot probe sees ground. Probe info only; not physical support.</summary>
+    public bool HasBaseSupportContact => HasBaseSupport;
+
+    /// <summary>True when this ski has collision-derived ground support.</summary>
+    public bool HasCollisionSupportContact => _hasCollisionContact;
+
+    /// <summary>
+    /// True when only an end-region probe/contact is active. This is useful for
+    /// landing classification, nose/tail slides, and temporary recovery, but it
+    /// should not be treated as full skiing support by SkiController.
+    /// </summary>
+    public bool HasProbeOnlyEndContact =>
+        !HasStableSupport &&
+        HasEndContact &&
+        EndContactSign != 0;
 
     /// <summary>The collider we are touching for the last cached collision contact (can be null).</summary>
     public Collider CollisionOtherCollider => _collisionOtherCollider;
@@ -253,7 +470,69 @@ public class SkiContact : MonoBehaviour
     public IEnumerable<Collider> AnyCollisionOtherColliders => _anyCollisionOtherColliders;
 
     public Vector3 CollisionContactPoint => _collisionContactPoint;
-    public Vector3 CollisionContactNormal => _collisionContactNormal;
+    private void Awake()
+    {
+        _ownerRigidbody = GetComponentInParent<Rigidbody>();
+        _ownerRoot = _ownerRigidbody != null ? _ownerRigidbody.transform : transform.root;
+        RefreshOwnContactColliders();
+        CacheCharacterLayers();
+    }
+
+    private void RefreshOwnContactColliders()
+    {
+        _ownContactColliders = GetComponentsInChildren<Collider>(true);
+    }
+
+    private static void CacheCharacterLayers()
+    {
+        if (_npcLayer == -2)
+            _npcLayer = LayerMask.NameToLayer("NPC");
+
+        if (_playerLayer == -2)
+            _playerLayer = LayerMask.NameToLayer("Player");
+    }
+
+    private bool IsOwnCollider(Collider c)
+    {
+        if (c == null)
+            return false;
+
+        if (_ownerRigidbody != null && c.attachedRigidbody == _ownerRigidbody)
+            return true;
+
+        if (_ownerRoot != null && c.transform.IsChildOf(_ownerRoot))
+            return true;
+
+        return false;
+    }
+
+    private bool IsCharacterLayer(Collider c)
+    {
+        if (c == null)
+            return false;
+
+        CacheCharacterLayers();
+        int layer = c.gameObject.layer;
+        return (_npcLayer >= 0 && layer == _npcLayer) ||
+               (_playerLayer >= 0 && layer == _playerLayer);
+    }
+
+    private bool IsValidExternalGroundCollider(Collider c)
+    {
+        if (c == null)
+            return false;
+
+        if (IsOwnCollider(c) || IsCharacterLayer(c))
+            return false;
+
+        return (groundLayers.value & (1 << c.gameObject.layer)) != 0;
+    }
+
+    private bool IsValidExternalContactCollider(Collider c)
+    {
+        return c != null && !IsOwnCollider(c) && !IsCharacterLayer(c);
+    }
+
     /// <summary>
     /// Actively probes for ground under this ski using one or two vertical
     /// (world-down) rays. We deliberately avoid using transform.up so we still
@@ -267,20 +546,15 @@ public class SkiContact : MonoBehaviour
         Vector3 worldDown = Vector3.down;
         float poseContactExtra = ComputePoseProbeExtraDistance();
         float maxDist = probeDistance + probeUpOffset + poseContactExtra;
-        float contactMaxDist = Mathf.Max(0.001f, probeUpOffset + probeContactDistance + poseContactExtra);
+        float baseContactMaxDist = Mathf.Max(0.001f, probeUpOffset + probeContactDistance + poseContactExtra);
+        float endContactMaxDist = Mathf.Max(0.001f, probeUpOffset + endProbeContactDistance + poseContactExtra);
 
         // Base / under-foot
-        Vector3 baseOrigin = transform.position + worldUp * probeUpOffset;
+        Vector3 baseOrigin = GetProbeWorldPosition(SkiProbeRegion.Mid) + worldUp * probeUpOffset;
 
         // Tip and tail origins
-        Vector3 tipOrigin = baseOrigin;
-        Vector3 tailOrigin = baseOrigin;
-
-        if (_geometryInitialized)
-        {
-            tipOrigin = transform.TransformPoint(new Vector3(0f, 0f, _localTipZ)) + worldUp * probeUpOffset;
-            tailOrigin = transform.TransformPoint(new Vector3(0f, 0f, _localTailZ)) + worldUp * probeUpOffset;
-        }
+        Vector3 tipOrigin = GetProbeWorldPosition(SkiProbeRegion.Front) + worldUp * probeUpOffset;
+        Vector3 tailOrigin = GetProbeWorldPosition(SkiProbeRegion.Rear) + worldUp * probeUpOffset;
 
         bool IsProbeRideable(RaycastHit h)
         {
@@ -288,19 +562,47 @@ public class SkiContact : MonoBehaviour
             return Vector3.Dot(n, Vector3.up) >= minProbeUpDot;
         }
 
-        bool TrySphereDown(Vector3 origin, float extraMaxDistance, out RaycastHit hit)
+        bool TrySphereDown(Vector3 origin, float extraMaxDistance, out RaycastHit bestHit)
         {
-            return Physics.SphereCast(
+            bestHit = default;
+
+            int count = Physics.SphereCastNonAlloc(
                 origin,
                 probeSphereRadius,
                 worldDown,
-                out hit,
+                _probeHitBuffer,
                 maxDist + extraMaxDistance,
                 groundLayers,
                 QueryTriggerInteraction.Ignore);
+
+            float bestDistance = float.PositiveInfinity;
+            bool found = false;
+
+            for (int i = 0; i < count; i++)
+            {
+                RaycastHit hit = _probeHitBuffer[i];
+
+                if (hit.collider == null)
+                    continue;
+
+                if (!IsValidExternalGroundCollider(hit.collider))
+                    continue;
+
+                if (!IsProbeRideable(hit))
+                    continue;
+
+                if (hit.distance < bestDistance)
+                {
+                    bestDistance = hit.distance;
+                    bestHit = hit;
+                    found = true;
+                }
+            }
+
+            return found;
         }
 
-        bool TryProbeBest(Vector3 origin, out RaycastHit bestHit)
+        bool TryProbeBest(Vector3 origin, bool isEndProbe, out RaycastHit bestHit)
         {
             bool found = false;
             bestHit = default;
@@ -310,7 +612,10 @@ public class SkiContact : MonoBehaviour
                 if (!TrySphereDown(probeOrigin, extraMaxDistance, out RaycastHit hit))
                     return false;
 
-                float allowedContactDistance = contactMaxDist + Mathf.Max(0f, extraMaxDistance);
+                float allowedContactDistance = isEndProbe ? endContactMaxDist : baseContactMaxDist;
+                allowedContactDistance += Mathf.Max(0f, extraMaxDistance);
+                if (isEndProbe && extraMaxDistance > 0f)
+                    allowedContactDistance += Mathf.Max(0f, endProbeRecoveryExtraContactDistance);
                 if (hit.distance > allowedContactDistance || !IsProbeRideable(hit))
                     return false;
 
@@ -356,14 +661,19 @@ public class SkiContact : MonoBehaviour
         _probeBaseHit = false;
         _probeTipHit = false;
         _probeTailHit = false;
+        HasBaseSupport = false;
+        HasEndContact = false;
         _probeBaseCollider = null;
         _probeTipCollider = null;
         _probeTailCollider = null;
+        _probeBaseDistance = float.PositiveInfinity;
+        _probeTipDistance = float.PositiveInfinity;
+        _probeTailDistance = float.PositiveInfinity;
 
         // Probe hits
-        bool gotBase = TryProbeBest(baseOrigin, out RaycastHit baseHit);
-        bool gotTip = TryProbeBest(tipOrigin, out RaycastHit tipHit);
-        bool gotTail = TryProbeBest(tailOrigin, out RaycastHit tailHit);
+        bool gotBase = TryProbeBest(baseOrigin, false, out RaycastHit baseHit);
+        bool gotTip = TryProbeBest(tipOrigin, true, out RaycastHit tipHit);
+        bool gotTail = TryProbeBest(tailOrigin, true, out RaycastHit tailHit);
         bool gotFrontMid = false;
         bool gotRearMid = false;
         RaycastHit frontMidHit = default;
@@ -375,8 +685,8 @@ public class SkiContact : MonoBehaviour
             Vector3 frontMidOrigin = Vector3.Lerp(baseOrigin, tipOrigin, probeFraction);
             Vector3 rearMidOrigin = Vector3.Lerp(baseOrigin, tailOrigin, probeFraction);
 
-            gotFrontMid = TryProbeBest(frontMidOrigin, out frontMidHit);
-            gotRearMid = TryProbeBest(rearMidOrigin, out rearMidHit);
+            gotFrontMid = TryProbeBest(frontMidOrigin, true, out frontMidHit);
+            gotRearMid = TryProbeBest(rearMidOrigin, true, out rearMidHit);
 
             if (!gotTip && gotFrontMid)
             {
@@ -391,12 +701,28 @@ public class SkiContact : MonoBehaviour
             }
         }
 
+        if (useBottomEndProbes)
+        {
+            if (!gotTip)
+            {
+                Vector3 tipBottomOrigin = GetBottomEndProbeWorldPosition(SkiProbeRegion.Front) + worldUp * probeUpOffset;
+                gotTip = TryProbeBest(tipBottomOrigin, true, out tipHit);
+            }
+
+            if (!gotTail)
+            {
+                Vector3 tailBottomOrigin = GetBottomEndProbeWorldPosition(SkiProbeRegion.Rear) + worldUp * probeUpOffset;
+                gotTail = TryProbeBest(tailBottomOrigin, true, out tailHit);
+            }
+        }
+
         if (gotBase)
         {
             _probeBaseHit = true;
             _probeBasePoint = baseHit.point;
             _probeBaseNormal = (baseHit.normal.sqrMagnitude > 0.0001f) ? baseHit.normal.normalized : Vector3.up;
             _probeBaseCollider = baseHit.collider;
+            _probeBaseDistance = baseHit.distance;
         }
 
         if (gotTip)
@@ -405,6 +731,7 @@ public class SkiContact : MonoBehaviour
             _probeTipPoint = tipHit.point;
             _probeTipNormal = (tipHit.normal.sqrMagnitude > 0.0001f) ? tipHit.normal.normalized : Vector3.up;
             _probeTipCollider = tipHit.collider;
+            _probeTipDistance = tipHit.distance;
         }
 
         if (gotTail)
@@ -413,31 +740,28 @@ public class SkiContact : MonoBehaviour
             _probeTailPoint = tailHit.point;
             _probeTailNormal = (tailHit.normal.sqrMagnitude > 0.0001f) ? tailHit.normal.normalized : Vector3.up;
             _probeTailCollider = tailHit.collider;
+            _probeTailDistance = tailHit.distance;
         }
 
+        HasBaseSupport = gotBase;
         bool anyProbeHit = gotBase || gotTip || gotTail;
         bool anyHit = _hasCollisionContact || anyProbeHit;
 
-        // If no hits, apply coyote time (keep last contact briefly)
+        // If no fresh hit exists, clear the ski support immediately. Control coyote
+        // lives in SkiController; SkiContact should report current physical/probe state.
         if (!anyHit)
         {
-            bool withinCoyote =
-                IsGrounded &&
-                (Time.time - LastContactTime) <= contactCoyoteTime;
+            IsGrounded = false;
+            HasBaseSupport = false;
+            HasEndContact = false;
+            HasTipContact = false;
+            EndContactSign = 0;
+            EndContactLocalZ = 0f;
+            BaseContactAlignment = 0f;
 
-            if (!withinCoyote)
-            {
-                IsGrounded = false;
-                HasTipContact = false;
-                EndContactSign = 0;
-                EndContactLocalZ = 0f;
-                BaseContactAlignment = 0f;
-
-                _probeBaseHit = false;
-                _probeTipHit = false;
-                _probeTailHit = false;
-            }
-
+            _probeBaseHit = false;
+            _probeTipHit = false;
+            _probeTailHit = false;
             _hasCollisionContact = false;
             return;
         }
@@ -484,7 +808,7 @@ public class SkiContact : MonoBehaviour
             ContactNormal = Vector3.Slerp(ContactNormal, targetNormal, t);
         }
 
-        IsGrounded = true;
+        IsGrounded = HasStableSupport;
         LastContactTime = Time.time;
 
         // How "flat" is the ski on the contact? 1 = base-down, 0 = on edge, -1 = upside down.
@@ -500,13 +824,17 @@ public class SkiContact : MonoBehaviour
             BaseContactAlignment = Mathf.Lerp(BaseContactAlignment, rawAlign, tAlign);
         }
 
-        // End-region detection (tip OR tail) using probe hits only (stable + cheap)
+        // End-region detection: tip/tail only dominate when base support is absent
+        // or the end probe is meaningfully closer than the base.
         bool endish = false;
         float bestAbsEndZ = 0f;
         float bestEndZ = 0f;
         int bestEndSign = 0;
 
-        if (gotTip)
+        bool tipDominatesBase = gotTip && (!HasBaseSupport || tipHit.distance + endDominanceMargin < baseHit.distance);
+        bool tailDominatesBase = gotTail && (!HasBaseSupport || tailHit.distance + endDominanceMargin < baseHit.distance);
+
+        if (gotTip && tipDominatesBase)
         {
             float z = transform.InverseTransformPoint(tipHit.point).z;
             if (z > tipRegionLocalZThreshold)
@@ -522,7 +850,7 @@ public class SkiContact : MonoBehaviour
             }
         }
 
-        if (gotTail)
+        if (gotTail && tailDominatesBase)
         {
             float z = transform.InverseTransformPoint(tailHit.point).z;
             if (z < tailRegionLocalZThreshold)
@@ -538,7 +866,15 @@ public class SkiContact : MonoBehaviour
             }
         }
 
+        if (!endish && _hasCollisionContact && _collisionEndContact && !HasBaseSupport)
+        {
+            endish = true;
+            bestEndZ = _collisionEndLocalZ;
+            bestEndSign = _collisionEndSign;
+        }
+
         HasTipContact = endish; // legacy name: "tip OR tail"
+        HasEndContact = endish;
         EndContactLocalZ = endish ? bestEndZ : 0f;
         EndContactSign = endish ? bestEndSign : 0;
     }
@@ -564,54 +900,105 @@ public class SkiContact : MonoBehaviour
             return;
 
         _geometryInitialized = true;
+        _inferredGeometryValid = false;
+        _usingFallbackGeometry = false;
+        _geometryWarning = string.Empty;
+
+        if (useManualLocalProbeZ)
+        {
+            _localTipZ = manualTipLocalZ;
+            _localTailZ = manualTailLocalZ;
+            return;
+        }
 
         // Sensible fallbacks if we can't inspect a collider.
-        _localTipZ = 0.5f;
-        _localTailZ = -0.5f;
+        float fallbackHalfLength = Mathf.Max(0.05f, fallbackSkiHalfLength);
+        _localTipZ = fallbackHalfLength;
+        _localTailZ = -fallbackHalfLength;
+        _usingFallbackGeometry = true;
 
         // Try to infer the ski's local tip & tail positions from its collider bounds.
-        Collider col = GetComponentInChildren<Collider>();
-        if (col == null)
+        Collider[] colliders = GetComponentsInChildren<Collider>(true);
+        if (colliders == null || colliders.Length == 0)
             return;
-
-        Bounds b = col.bounds;
-        Vector3 c = b.center;
-        Vector3 e = b.extents;
 
         float maxLocalZ = float.NegativeInfinity;
         float minLocalZ = float.PositiveInfinity;
+        bool usedSolidCollider = false;
 
-        // Build the 8 corners of the bounds, transform to local, and find
-        // the furthest points along local +Z (tip) and local -Z (tail).
-        for (int ix = -1; ix <= 1; ix += 2)
+        void ConsiderCollider(Collider col)
         {
-            for (int iy = -1; iy <= 1; iy += 2)
+            if (col == null)
+                return;
+
+            Bounds b = col.bounds;
+            Vector3 c = b.center;
+            Vector3 e = b.extents;
+
+            for (int ix = -1; ix <= 1; ix += 2)
             {
-                for (int iz = -1; iz <= 1; iz += 2)
+                for (int iy = -1; iy <= 1; iy += 2)
                 {
-                    Vector3 worldCorner = new Vector3(
-                        c.x + ix * e.x,
-                        c.y + iy * e.y,
-                        c.z + iz * e.z);
+                    for (int iz = -1; iz <= 1; iz += 2)
+                    {
+                        Vector3 worldCorner = new Vector3(
+                            c.x + ix * e.x,
+                            c.y + iy * e.y,
+                            c.z + iz * e.z);
 
-                    Vector3 localCorner = transform.InverseTransformPoint(worldCorner);
+                        Vector3 localCorner = transform.InverseTransformPoint(worldCorner);
 
-                    if (localCorner.z > maxLocalZ)
-                        maxLocalZ = localCorner.z;
-                    if (localCorner.z < minLocalZ)
-                        minLocalZ = localCorner.z;
+                        if (localCorner.z > maxLocalZ)
+                            maxLocalZ = localCorner.z;
+                        if (localCorner.z < minLocalZ)
+                            minLocalZ = localCorner.z;
+                    }
                 }
             }
         }
 
-        if (!float.IsNegativeInfinity(maxLocalZ))
+        for (int i = 0; i < colliders.Length; i++)
         {
-            _localTipZ = maxLocalZ;
+            Collider col = colliders[i];
+            if (col == null || col.isTrigger)
+                continue;
+
+            ConsiderCollider(col);
+            usedSolidCollider = true;
         }
 
-        if (!float.IsPositiveInfinity(minLocalZ))
+        if (!usedSolidCollider)
         {
-            _localTailZ = minLocalZ;
+            for (int i = 0; i < colliders.Length; i++)
+                ConsiderCollider(colliders[i]);
+        }
+
+        if (!float.IsNegativeInfinity(maxLocalZ) && !float.IsPositiveInfinity(minLocalZ))
+        {
+            float length = Mathf.Abs(maxLocalZ - minLocalZ);
+            bool sane =
+                length >= 0.25f &&
+                length <= 6f &&
+                Mathf.Abs(maxLocalZ) <= 4f &&
+                Mathf.Abs(minLocalZ) <= 4f &&
+                maxLocalZ > 0f &&
+                minLocalZ < 0f;
+
+            if (sane)
+            {
+                _localTipZ = maxLocalZ;
+                _localTailZ = minLocalZ;
+                _inferredGeometryValid = true;
+                _usingFallbackGeometry = false;
+            }
+            else
+            {
+                _geometryWarning = $"Rejected inferred probe bounds tip={maxLocalZ:0.000} tail={minLocalZ:0.000} length={length:0.000}; using fallback +/-{fallbackHalfLength:0.000}.";
+            }
+        }
+        else
+        {
+            _geometryWarning = $"No collider bounds available for probe inference; using fallback +/-{fallbackHalfLength:0.000}.";
         }
     }
 
@@ -630,6 +1017,8 @@ public class SkiContact : MonoBehaviour
         if (collision == null || collision.contactCount <= 0)
             return;
 
+        ClearCollisionEndContact();
+
         // Cache *any* collision contact (NOT layer-filtered) so systems like grinding
         // can detect rails/props that are not part of groundLayers.
         {
@@ -638,20 +1027,23 @@ public class SkiContact : MonoBehaviour
         }
 
         // Only treat as "ground collision contact" if the other object is on groundLayers.
-        int otherLayer = collision.gameObject.layer;
-        if ((groundLayers.value & (1 << otherLayer)) == 0)
-            return;
-
         // Pick the "most ground-like" contact (highest up-dot).
         float bestUpDot = -1f;
         Vector3 bestPoint = default;
         Vector3 bestNormal = default;
         Collider bestOther = null;
+        Collider bestThis = null;
 
         for (int i = 0; i < collision.contactCount; i++)
         {
             ContactPoint cp = collision.GetContact(i);
             Vector3 n = GetUpwardNormal(cp.normal);
+
+            if (cp.thisCollider != null && !cp.thisCollider.transform.IsChildOf(transform))
+                continue;
+
+            if (!IsValidExternalGroundCollider(cp.otherCollider))
+                continue;
 
             float upDot = Vector3.Dot(n, Vector3.up);
             if (upDot > bestUpDot)
@@ -660,12 +1052,19 @@ public class SkiContact : MonoBehaviour
                 bestPoint = cp.point;
                 bestNormal = n;
                 bestOther = cp.otherCollider;
+                bestThis = cp.thisCollider;
             }
         }
+
+        if (bestOther == null)
+            return;
 
         // If it's too steep to be ground, cache as a "wall contact" instead of grounding.
         if (bestUpDot < minCollisionUpDot)
         {
+            _hasCollisionContact = false;
+            _collisionOtherCollider = null;
+            ClearCollisionEndContact();
             _hasWallContact = true;
             _wallContactPoint = bestPoint;
             _wallContactNormal = bestNormal;
@@ -673,14 +1072,254 @@ public class SkiContact : MonoBehaviour
             return;
         }
 
-        // Otherwise this is valid ground-like collision contact.
+        CacheGroundCollisionContact(bestPoint, bestNormal, bestOther, bestThis, "collision-callback");
+    }
+
+    private void CacheGroundCollisionContact(Vector3 point, Vector3 normal, Collider other, Collider thisCollider, string source)
+    {
         _hasWallContact = false;
         _wallOtherCollider = null;
 
+        Vector3 resolvedNormal = ResolveGroundNormalForCollisionSupport(other, point, normal);
+
         _hasCollisionContact = true;
-        _collisionContactPoint = bestPoint;
-        _collisionContactNormal = bestNormal;
-        _collisionOtherCollider = bestOther;
+        _collisionContactPoint = point;
+        _collisionContactNormal = resolvedNormal.sqrMagnitude > 0.0001f ? resolvedNormal.normalized : Vector3.up;
+        _collisionOtherCollider = other;
+        _lastCollisionContactTime = Time.time;
+        _lastCollisionSource = string.IsNullOrEmpty(source) ? "unknown" : source;
+        _lastCollisionThisCollider = thisCollider;
+        _lastCollisionPollRejectReason = "accepted";
+
+        float localZ = transform.InverseTransformPoint(point).z;
+        bool isTip = localZ >= tipRegionLocalZThreshold;
+        bool isTail = localZ <= tailRegionLocalZThreshold;
+
+        _collisionEndContact = isTip || isTail;
+        _collisionEndSign = isTip ? 1 : isTail ? -1 : 0;
+        _collisionEndLocalZ = _collisionEndContact ? localZ : 0f;
+        _collisionEndPoint = point;
+        _collisionEndNormal = _collisionContactNormal;
+        _collisionEndCollider = other;
+
+        // Keep the public contact normal slope-aware even when support came from overlap polling.
+        // This is support classification + terrain-normal resolution, not probe-based grounding.
+        ContactNormal = _collisionContactNormal;
+        ContactPoint = point;
+        LastContactTime = Time.time;
+    }
+
+    private Vector3 ResolveGroundNormalForCollisionSupport(Collider expectedGroundCollider, Vector3 supportPoint, Vector3 fallbackNormal)
+    {
+        Vector3 weighted = Vector3.zero;
+        float totalWeight = 0f;
+
+        void AddProbeNormal(bool hit, Collider collider, Vector3 normal, float distance, float baseWeight)
+        {
+            if (!hit || collider == null)
+                return;
+
+            if (expectedGroundCollider != null && collider != expectedGroundCollider)
+                return;
+
+            Vector3 n = GetUpwardNormal(normal);
+            if (n.sqrMagnitude <= 0.0001f)
+                return;
+
+            float upDot = Vector3.Dot(n.normalized, Vector3.up);
+            if (upDot < minProbeUpDot)
+                return;
+
+            // Closer probes should be trusted more. Clamp so tiny distances do not explode.
+            float distanceWeight = 1f / Mathf.Max(0.08f, distance);
+            float w = Mathf.Max(0.01f, baseWeight) * distanceWeight;
+
+            weighted += n.normalized * w;
+            totalWeight += w;
+        }
+
+        // Prefer actual terrain normals from ski probes. The overlap-poll support normal
+        // is often world-up because it is derived from ClosestPoint/bounds separation.
+        AddProbeNormal(_probeBaseHit, _probeBaseCollider, _probeBaseNormal, _probeBaseDistance, 2.5f);
+        AddProbeNormal(_probeTipHit, _probeTipCollider, _probeTipNormal, _probeTipDistance, 1.4f);
+        AddProbeNormal(_probeTailHit, _probeTailCollider, _probeTailNormal, _probeTailDistance, 1.4f);
+
+        if (totalWeight > 0.0001f && weighted.sqrMagnitude > 0.0001f)
+            return weighted.normalized;
+
+        // If probes missed this frame, ray/spherecast near the support point to recover
+        // the terrain normal. This still does not grant support; it only resolves normal.
+        if (TryResolveGroundNormalNearPoint(supportPoint, expectedGroundCollider, out Vector3 sampledNormal))
+            return sampledNormal;
+
+        Vector3 fallback = GetUpwardNormal(fallbackNormal);
+        if (fallback.sqrMagnitude > 0.0001f && Vector3.Dot(fallback.normalized, Vector3.up) >= minCollisionUpDot)
+            return fallback.normalized;
+
+        if (ContactNormal.sqrMagnitude > 0.0001f && Vector3.Dot(ContactNormal.normalized, Vector3.up) >= minCollisionUpDot)
+            return ContactNormal.normalized;
+
+        return Vector3.up;
+    }
+
+    private bool TryResolveGroundNormalNearPoint(Vector3 supportPoint, Collider expectedGroundCollider, out Vector3 normal)
+    {
+        normal = Vector3.up;
+
+        Vector3 origin = supportPoint + Vector3.up * Mathf.Max(0.08f, probeUpOffset + 0.08f);
+        float maxDistance = Mathf.Max(
+            0.25f,
+            probeUpOffset + probeDistance + ComputePoseProbeExtraDistance() + 0.2f);
+
+        int count = Physics.SphereCastNonAlloc(
+            origin,
+            Mathf.Max(0.01f, probeSphereRadius),
+            Vector3.down,
+            _probeHitBuffer,
+            maxDistance,
+            groundLayers,
+            QueryTriggerInteraction.Ignore);
+
+        float bestDistance = float.PositiveInfinity;
+        Vector3 bestNormal = Vector3.up;
+        bool found = false;
+
+        for (int i = 0; i < count; i++)
+        {
+            RaycastHit hit = _probeHitBuffer[i];
+
+            if (hit.collider == null)
+                continue;
+
+            if (expectedGroundCollider != null && hit.collider != expectedGroundCollider)
+                continue;
+
+            if (!IsValidExternalGroundCollider(hit.collider))
+                continue;
+
+            Vector3 n = GetUpwardNormal(hit.normal);
+            if (n.sqrMagnitude <= 0.0001f)
+                continue;
+
+            if (Vector3.Dot(n.normalized, Vector3.up) < minProbeUpDot)
+                continue;
+
+            if (hit.distance < bestDistance)
+            {
+                bestDistance = hit.distance;
+                bestNormal = n.normalized;
+                found = true;
+            }
+        }
+
+        if (!found)
+            return false;
+
+        normal = bestNormal;
+        return true;
+    }
+
+    private void RefreshCollisionContactFromOwnColliders()
+    {
+        if (_ownContactColliders == null || _ownContactColliders.Length == 0)
+            RefreshOwnContactColliders();
+
+        if (_ownContactColliders == null || _ownContactColliders.Length == 0)
+            return;
+
+        float bestUpDot = -1f;
+        Vector3 bestPoint = default;
+        Vector3 bestNormal = Vector3.up;
+        Collider bestOther = null;
+        Collider bestThis = null;
+        bool sawCandidate = false;
+        _lastCollisionPollRejectReason = "no-overlap";
+
+        for (int i = 0; i < _ownContactColliders.Length; i++)
+        {
+            Collider own = _ownContactColliders[i];
+            if (own == null || !own.enabled || own.isTrigger || !own.transform.IsChildOf(transform))
+                continue;
+
+            Bounds b = own.bounds;
+            Vector3 halfExtents = b.extents + Vector3.one * Mathf.Max(0.001f, collisionPollSkin);
+            int count = Physics.OverlapBoxNonAlloc(
+                b.center,
+                halfExtents,
+                _collisionOverlapBuffer,
+                Quaternion.identity,
+                groundLayers,
+                QueryTriggerInteraction.Ignore);
+
+            if (count <= 0)
+                continue;
+
+            sawCandidate = true;
+            for (int h = 0; h < count; h++)
+            {
+                Collider other = _collisionOverlapBuffer[h];
+                if (other == null)
+                    continue;
+
+                if (!IsValidExternalGroundCollider(other))
+                {
+                    _lastCollisionPollRejectReason = "invalid-ground-collider";
+                    continue;
+                }
+
+                Vector3 point = other.ClosestPoint(b.center);
+                Vector3 n = b.center - point;
+                if (n.sqrMagnitude <= 0.000001f)
+                    n = Vector3.up;
+                else
+                    n.Normalize();
+
+                n = GetUpwardNormal(n);
+                float upDot = Vector3.Dot(n, Vector3.up);
+                if (upDot < minCollisionUpDot)
+                {
+                    _lastCollisionPollRejectReason = "non-rideable-normal";
+                    continue;
+                }
+
+                if (upDot > bestUpDot)
+                {
+                    bestUpDot = upDot;
+                    bestPoint = point;
+                    bestNormal = n;
+                    bestOther = other;
+                    bestThis = own;
+                }
+            }
+        }
+
+        if (bestOther != null)
+        {
+            CacheGroundCollisionContact(bestPoint, bestNormal, bestOther, bestThis, "collider-overlap-poll");
+            return;
+        }
+
+        if (!sawCandidate)
+            _lastCollisionPollRejectReason = "no-ground-overlap";
+
+        if (_hasCollisionContact && Time.time - _lastCollisionContactTime > Time.fixedDeltaTime * 2.5f)
+        {
+            _hasCollisionContact = false;
+            _collisionOtherCollider = null;
+            _lastCollisionSource = "expired";
+            _lastCollisionThisCollider = null;
+            ClearCollisionEndContact();
+        }
+    }
+
+    private void ClearCollisionEndContact()
+    {
+        _collisionEndContact = false;
+        _collisionEndSign = 0;
+        _collisionEndLocalZ = 0f;
+        _collisionEndPoint = default;
+        _collisionEndNormal = Vector3.up;
+        _collisionEndCollider = null;
     }
 
     private void OnTriggerStay(Collider other)
@@ -712,13 +1351,19 @@ public class SkiContact : MonoBehaviour
             _wallOtherCollider = null;
         }
 
+        if (other != null && other == _collisionEndCollider)
+            ClearCollisionEndContact();
+
         // Only clear the "ground collision" cache if this was a ground-layer collision.
-        int otherLayer = collision.gameObject.layer;
-        if ((groundLayers.value & (1 << otherLayer)) == 0)
+        if (!IsValidExternalGroundCollider(other))
+            return;
+
+        if (_collisionOtherCollider != null && other != _collisionOtherCollider)
             return;
 
         _hasCollisionContact = false;
         _collisionOtherCollider = null;
+        ClearCollisionEndContact();
     }
 
     /// <summary>
@@ -792,6 +1437,8 @@ public class SkiContact : MonoBehaviour
     public void ResetContactState()
     {
         IsGrounded = false;
+        HasBaseSupport = false;
+        HasEndContact = false;
         HasTipContact = false;
 
         ContactNormal = Vector3.up;
@@ -816,11 +1463,19 @@ public class SkiContact : MonoBehaviour
         _probeBaseNormal = Vector3.up;
         _probeTipNormal = Vector3.up;
         _probeTailNormal = Vector3.up;
+        _probeBaseDistance = float.PositiveInfinity;
+        _probeTipDistance = float.PositiveInfinity;
+        _probeTailDistance = float.PositiveInfinity;
 
         _hasCollisionContact = false;
         _collisionContactPoint = default;
         _collisionContactNormal = Vector3.up;
         _collisionOtherCollider = null;
+        _lastCollisionContactTime = -999f;
+        _lastCollisionSource = "reset";
+        _lastCollisionThisCollider = null;
+        _lastCollisionPollRejectReason = "reset";
+        ClearCollisionEndContact();
 
         _hasWallContact = false;
         _wallContactPoint = default;
@@ -834,12 +1489,122 @@ public class SkiContact : MonoBehaviour
     public void NotifySkiModelChanged()
     {
         _geometryInitialized = false;
+        RefreshOwnContactColliders();
         ResetContactState();
+    }
+
+    [ContextMenu("Print Ski Probe Geometry Debug")]
+    public void PrintSkiProbeGeometryDebug()
+    {
+        EnsureGeometry();
+
+        Debug.Log(
+            $"[{nameof(SkiContact)}] Probe Geometry Debug: {name}\n" +
+            $"version={ProbeDebugVersion}\n" +
+            $"localTipZ={_localTipZ:0.000} localTailZ={_localTailZ:0.000} manual={useManualLocalProbeZ} inferredValid={_inferredGeometryValid} usingFallback={_usingFallbackGeometry} warning={(_geometryWarning ?? string.Empty)}\n" +
+            $"baseProbe: {DescribeProbeSource(SkiProbeRegion.Mid)}\n" +
+            $"tipProbe: {DescribeProbeSource(SkiProbeRegion.Front)}\n" +
+            $"tailProbe: {DescribeProbeSource(SkiProbeRegion.Rear)}\n" +
+            $"tipBottomAssigned={explicitTipBottomProbe != null} tailBottomAssigned={explicitTailBottomProbe != null} useBottomEndProbes={useBottomEndProbes} bottomEndProbeLocalYOffset={bottomEndProbeLocalYOffset:0.000}\n" +
+            $"bottomTipProbe: {DescribeBottomProbeSource(SkiProbeRegion.Front)}\n" +
+            $"bottomTailProbe: {DescribeBottomProbeSource(SkiProbeRegion.Rear)}\n" +
+            $"probeUpOffset={probeUpOffset:0.000} probeDistance={probeDistance:0.000} probeContactDistance={probeContactDistance:0.000} endProbeContactDistance={endProbeContactDistance:0.000} poseExtra={ComputePoseProbeExtraDistance():0.000}\n" +
+            $"baseHit={_probeBaseHit} baseCollider={DescribeCollider(_probeBaseCollider)} baseDistance={_probeBaseDistance:0.000}\n" +
+            $"tipHit={_probeTipHit} tipCollider={DescribeCollider(_probeTipCollider)} tipDistance={_probeTipDistance:0.000}\n" +
+            $"tailHit={_probeTailHit} tailCollider={DescribeCollider(_probeTailCollider)} tailDistance={_probeTailDistance:0.000}\n" +
+            $"hasCollisionContact={_hasCollisionContact} lastCollisionAge={(Time.time - _lastCollisionContactTime):0.000}s collisionCollider={DescribeCollider(_collisionOtherCollider)} collisionSource={_lastCollisionSource} thisCollider={DescribeCollider(_lastCollisionThisCollider)} pollReject={_lastCollisionPollRejectReason}\n" +
+            $"collisionEndContact={_collisionEndContact} collisionEndSign={_collisionEndSign} collisionEndLocalZ={_collisionEndLocalZ:0.000} collisionEndCollider={DescribeCollider(_collisionEndCollider)} collisionEndNormal={_collisionEndNormal.ToString("F3")} collisionEndPoint={_collisionEndPoint.ToString("F3")}",
+            this);
+    }
+
+    private static string DescribeCollider(Collider c)
+    {
+        if (c == null)
+            return "(none)";
+
+        int layer = c.gameObject.layer;
+        string layerName = LayerMask.LayerToName(layer);
+        return $"{c.name}/{(string.IsNullOrEmpty(layerName) ? layer.ToString() : layerName)}";
+    }
+
+    private static string GetTransformPath(Transform t)
+    {
+        if (t == null)
+            return "(none)";
+
+        string path = t.name;
+        Transform current = t.parent;
+        while (current != null)
+        {
+            path = current.name + "/" + path;
+            current = current.parent;
+        }
+
+        return path;
+    }
+
+    [ContextMenu("Validate Ski Probe Setup")]
+    private void ValidateSkiProbeSetup()
+    {
+        _geometryInitialized = false;
+        EnsureGeometry();
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        bool pass = true;
+
+        void CheckProbe(string label, Transform probe, bool required)
+        {
+            if (probe == null)
+            {
+                if (required)
+                {
+                    pass = false;
+                    sb.AppendLine($"{label}: missing");
+                }
+                return;
+            }
+
+            Vector3 local = transform.InverseTransformPoint(probe.position);
+            bool child = probe.IsChildOf(transform);
+            bool far = local.magnitude > 8f;
+            if (!child || far)
+                pass = false;
+
+            sb.AppendLine($"{label}: {GetTransformPath(probe)} local={local.ToString("F3")} childOfSki={child} far={far} active={probe.gameObject.activeInHierarchy}");
+        }
+
+        CheckProbe("BaseProbe", explicitBaseProbe, false);
+        CheckProbe("TipProbe", explicitTipProbe, false);
+        CheckProbe("TailProbe", explicitTailProbe, false);
+        CheckProbe("TipBottomProbe", explicitTipBottomProbe, false);
+        CheckProbe("TailBottomProbe", explicitTailBottomProbe, false);
+
+        Vector3 baseLocal = transform.InverseTransformPoint(GetProbeWorldPosition(SkiProbeRegion.Mid));
+        Vector3 tipLocal = transform.InverseTransformPoint(GetProbeWorldPosition(SkiProbeRegion.Front));
+        Vector3 tailLocal = transform.InverseTransformPoint(GetProbeWorldPosition(SkiProbeRegion.Rear));
+        Vector3 tipBottomLocal = transform.InverseTransformPoint(GetBottomEndProbeWorldPosition(SkiProbeRegion.Front));
+        Vector3 tailBottomLocal = transform.InverseTransformPoint(GetBottomEndProbeWorldPosition(SkiProbeRegion.Rear));
+
+        bool orderOk = tipLocal.z > baseLocal.z && baseLocal.z > tailLocal.z;
+        bool bottomOk = tipBottomLocal.y <= tipLocal.y + 0.05f && tailBottomLocal.y <= tailLocal.y + 0.05f;
+        bool explicitLongitudinal = explicitTipProbe != null && explicitTailProbe != null;
+        pass &= orderOk && bottomOk && (explicitLongitudinal || !_usingFallbackGeometry);
+
+        sb.AppendLine($"orderOk={orderOk} bottomOk={bottomOk} explicitLongitudinal={explicitLongitudinal} inferredValid={_inferredGeometryValid} usingFallback={_usingFallbackGeometry}");
+        if (!string.IsNullOrEmpty(_geometryWarning))
+            sb.AppendLine(_geometryWarning);
+        sb.AppendLine("Recommended cube ski local positions:");
+        sb.AppendLine("BaseProbe=(0,-0.035,0), TipProbe=(0,0,1.45), TailProbe=(0,0,-1.45), TipBottomProbe=(0,-0.035,1.45), TailBottomProbe=(0,-0.035,-1.45)");
+
+        Debug.Log($"[{nameof(SkiContact)}] Validate Ski Probe Setup: {(pass ? "PASS" : "CHECK")}\n{sb}", this);
     }
 
     private void AddAnyCollisionOtherCollider(Collider other)
     {
         if (other == null)
+            return;
+
+        if (!IsValidExternalContactCollider(other))
             return;
 
         _anyCollisionOtherColliders.Add(other);
@@ -882,8 +1647,33 @@ public class SkiContact : MonoBehaviour
     }
 
 #if UNITY_EDITOR
+    private void OnValidate()
+    {
+        _geometryInitialized = false;
+        WarnIfLayerMaskContains(groundLayers, "Default", "SkiContact.groundLayers should not include Default. Default props can be grindable, but are not terrain ground.");
+        WarnIfLayerMaskContains(groundLayers, "NPC", "SkiContact.groundLayers should not include NPC.");
+        WarnIfLayerMaskContains(groundLayers, "Player", "SkiContact.groundLayers should not include Player.");
+    }
+
+    private void WarnIfLayerMaskContains(LayerMask mask, string layerName, string message)
+    {
+        int layer = LayerMask.NameToLayer(layerName);
+        if (layer >= 0 && (mask.value & (1 << layer)) != 0)
+            Debug.LogWarning($"[{nameof(SkiContact)}] {message}", this);
+    }
+#endif
+
+#if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {
+        EnsureGeometry();
+
+        DrawProbeGizmo(SkiProbeRegion.Mid, _probeBaseHit ? Color.green : Color.gray);
+        DrawProbeGizmo(SkiProbeRegion.Front, _probeTipHit ? Color.cyan : Color.yellow);
+        DrawProbeGizmo(SkiProbeRegion.Rear, _probeTailHit ? Color.magenta : Color.yellow);
+        DrawBottomProbeGizmo(SkiProbeRegion.Front, Color.blue);
+        DrawBottomProbeGizmo(SkiProbeRegion.Rear, Color.red);
+
         Vector3 pos = transform.position;
 
         // Ski forward projected onto a flat plane (world up).
@@ -910,6 +1700,33 @@ public class SkiContact : MonoBehaviour
 
         // Tiny sphere at ski position for reference.
         Gizmos.DrawWireSphere(pos, 0.02f);
+    }
+
+    private void DrawProbeGizmo(SkiProbeRegion region, Color color)
+    {
+        Vector3 basePoint = GetProbeWorldPosition(region);
+        Vector3 origin = basePoint + Vector3.up * probeUpOffset;
+        float radius = Mathf.Max(0.005f, probeSphereRadius);
+        float length = Mathf.Max(0.01f, probeDistance + probeUpOffset + ComputePoseProbeExtraDistance());
+
+        Gizmos.color = color;
+        Gizmos.DrawWireSphere(origin, radius);
+        Gizmos.DrawLine(origin, origin + Vector3.down * length);
+    }
+
+    private void DrawBottomProbeGizmo(SkiProbeRegion region, Color color)
+    {
+        if (!useBottomEndProbes)
+            return;
+
+        Vector3 basePoint = GetBottomEndProbeWorldPosition(region);
+        Vector3 origin = basePoint + Vector3.up * probeUpOffset;
+        float radius = Mathf.Max(0.005f, probeSphereRadius * 0.75f);
+        float length = Mathf.Max(0.01f, probeDistance + probeUpOffset + ComputePoseProbeExtraDistance());
+
+        Gizmos.color = color;
+        Gizmos.DrawWireCube(origin, Vector3.one * radius * 2f);
+        Gizmos.DrawLine(origin, origin + Vector3.down * length);
     }
 #endif
 }

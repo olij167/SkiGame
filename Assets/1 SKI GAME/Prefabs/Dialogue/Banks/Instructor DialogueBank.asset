@@ -1,0 +1,345 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78f60e84cf6c47f99eb9c744ba1f1757, type: 3}
+  m_Name: Instructor DialogueBank
+  m_EditorClassIdentifier: Assembly-CSharp::NpcDialogueBankSO
+  lines:
+  - id: instructor_pre_lesson_skate
+    topic: instructor.pre_lesson
+    trigger: 1
+    audience: 0
+    priority: 18
+    weight: 1
+    text: Alternate {input:LeftSki} and {input:RightSki} to skate forward.
+    duration: 10
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: instructor_pre_lesson_lean
+    topic: instructor.pre_lesson
+    trigger: 0
+    audience: 0
+    priority: 18
+    weight: 1
+    text: Lean forward with {input:Lean:positive} to build speed, and lean back with
+      {input:Lean:negative} to slow down
+    duration: 10
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: instructor_pre_lesson_talk
+    topic: instructor.pre_lesson
+    trigger: 1
+    audience: 0
+    priority: 20
+    weight: 1
+    text: Hey I'm {npcName}. Come talk to me if you want ski lessons
+    duration: 6
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 1
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: instructor_pre_lesson_poles
+    topic: instructor.pre_lesson
+    trigger: 1
+    audience: 0
+    priority: 17
+    weight: 1
+    text: Tap {input:Poles} to propel yourself forwards, or hold it to drag your
+      poles, which decreases speed
+    duration: 10
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: instructor_pre_lesson_jump
+    topic: instructor.pre_lesson
+    trigger: 1
+    audience: 0
+    priority: 17
+    weight: 1
+    text: Tap {input:Jump} to do a small hop, or hold it to jump higher
+    duration: 10
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: instructor_pre_lesson_tuck
+    topic: instructor.pre_lesson
+    trigger: 1
+    audience: 0
+    priority: 17
+    weight: 1
+    text: Hold {input:Tuck} to do crouch down and gain more speed down slopes
+    duration: 12
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: instructor_pre_lesson_aerial_lean
+    topic: instructor.pre_lesson
+    trigger: 1
+    audience: 0
+    priority: 17
+    weight: 1
+    text: Lean [{input:Lean:positive} / {input:Lean:negative}] and Turn [{input:LeftSki}
+      / {input:RightSki}] in the air to control your orientation
+    duration: 12
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: instructor_pre_lesson_aerial_trick
+    topic: instructor.pre_lesson
+    trigger: 1
+    audience: 0
+    priority: 17
+    weight: 1
+    text: Hold {input:Pose} mid-air to perform a trick pose depending on your current
+      orientation and held inputs.
+    duration: 12
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: instructor_pre_lesson_landing
+    topic: instructor.pre_lesson
+    trigger: 1
+    audience: 0
+    priority: 17
+    weight: 1
+    text: While landing, if your skis are misaligned to the slope or your movement
+      direction you will fall over
+    duration: 10
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: instructor_pre_lesson_resort
+    topic: instructor.pre_lesson
+    trigger: 1
+    audience: 0
+    priority: 17
+    weight: 1
+    text: If you start to get sore you can head to the ski resort to rest and recover
+    duration: 8
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: instructor_pre_lesson_blackout
+    topic: instructor.pre_lesson
+    trigger: 1
+    audience: 0
+    priority: 17
+    weight: 1
+    text: Be careful out there, push yourself too far and you might black out!
+    duration: 8
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: instructor_pre_lesson_equipskis
+    topic: instructor.pre_lesson
+    trigger: 1
+    audience: 0
+    priority: 17
+    weight: 1
+    text: If you fall over you can Hold {input:EquipSkis} to take your skis off and
+      recover, and hold it again to put them back on
+    duration: 12
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: tutorialProgress
+    topic: tutorialProgress
+    trigger: 7
+    audience: 0
+    priority: 17
+    weight: 1
+    text: How are you going with it?
+    duration: 12
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: tutorialReady
+    topic: tutorialReady
+    trigger: 6
+    audience: 0
+    priority: 17
+    weight: 1
+    text: Nice work! Come back and chat with me for your next task.
+    duration: 12
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: tutorialComplete
+    topic: tutorialComplete
+    trigger: 6
+    audience: 0
+    priority: 17
+    weight: 1
+    text: You'll be a pro in no time!
+    duration: 12
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: tutorialReplay
+    topic: tutorialReplay
+    trigger: 6
+    audience: 0
+    priority: 17
+    weight: 1
+    text: Want to go over some lessons again?
+    duration: 12
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  - id: tutorialBlocked
+    topic: tutorialBlocked
+    trigger: 6
+    audience: 0
+    priority: 17
+    weight: 1
+    text: Sorry, not right now.
+    duration: 12
+    cooldown: 0
+    avoidImmediateRepeat: 1
+    showSpeakerName: 0
+    preferImportantStyle: 0
+    importance: 3
+    styleOverride: {fileID: 11400000, guid: 9fc456c8f3efc8e42a2553235116c026, type: 2}
+    responseGroupId: 
+    sequenceIndex: 0
+    speakerRole: 
+    socialTopicId: 
+    requirements: []
+  allowTriggerFallbackWhenTopicMissing: 0

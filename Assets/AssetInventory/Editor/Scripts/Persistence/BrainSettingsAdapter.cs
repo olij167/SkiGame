@@ -21,6 +21,8 @@ namespace AssetInventory
             ? BrainSettings.DEFAULT_OLLAMA_SERVICE_URL
             : _settings.ollamaServiceUrl;
 
+        public int OllamaParallelRequests => _settings.ollamaParallelRequests;
+
         // LM Studio settings
         public string LMStudioModel => _settings.lmStudioModel;
 
@@ -41,6 +43,7 @@ namespace AssetInventory
         public int AIMinSize => _settings.aiMinSize;
         public int AIMaxCaptionLength => _settings.aiMaxCaptionLength;
         public float AIPause => _settings.aiPause;
+        public int AITimeout => _settings.aiTimeout;
         public bool LogAICaptions => _settings.logAICaptions;
         public bool AIContinueOnEmpty => _settings.aiContinueOnEmpty;
     }

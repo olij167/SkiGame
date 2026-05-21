@@ -132,11 +132,7 @@ public sealed class NpcDialogueDirector : MonoBehaviour
         var resolvedLine = line.Clone();
         ApplyContextOverrides(resolvedLine, context);
         string speakerName = agent.ResolveSpeakerName(context);
-        string resolvedText = NpcDialogueTokenResolver.Resolve(resolvedLine.text, context, speakerName, InputActions);
-        if (string.IsNullOrWhiteSpace(resolvedText))
-            return false;
-
-        if (!presenter.TryPresent(speakerName, resolvedText, resolvedLine, forceInterrupt))
+        if (!presenter.TryPresent(speakerName, resolvedLine, context, InputActions, forceInterrupt))
             return false;
 
         StampCooldowns(agent, resolvedLine);
@@ -149,6 +145,13 @@ public sealed class NpcDialogueDirector : MonoBehaviour
     {
         CleanupActivePresentations();
         return CountVisibleAmbientBubbles() < maxVisibleAmbientBubbles && _activePresentations.Count < maxVisibleBubbles;
+    }
+
+    public string GetAmbientBudgetDebugString()
+    {
+        CleanupActivePresentations();
+        int ambientCount = CountVisibleAmbientBubbles();
+        return $"ambientBudget={ambientCount}/{maxVisibleAmbientBubbles} totalBudget={_activePresentations.Count}/{maxVisibleBubbles} canShowAmbient={ambientCount < maxVisibleAmbientBubbles && _activePresentations.Count < maxVisibleBubbles}";
     }
 
     private bool CanAgentSpeak(NpcDialogueAgent agent, bool ambientLike)

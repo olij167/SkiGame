@@ -1,0 +1,196 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a82c7fbc5134ac49f6b3e6f9d9ea05a, type: 3}
+  m_Name: LiftAttendant NpcSocialAppearanceProfile
+  m_EditorClassIdentifier: Assembly-CSharp::NpcSocialAppearanceProfileSO
+  catalogOverride: {fileID: 11400000, guid: 910ae87307a846b4a969a31a944358e7, type: 2}
+  basePresets: []
+  usePresetAsFullAppearance: 0
+  fillMissingPresetSlotsFromCatalogue: 1
+  equipmentChances:
+    useGeneratorChances: 1
+    hatChance: 0.75
+    jacketChance: 0.9
+    glovesChance: 0.8
+    bootsChance: 0.9
+    accessoryChance: 0.45
+  colourPlan:
+    harmonyMode: 2
+    randomizeHarmonyMode: 1
+    allowedHarmonyModes: 0100000002000000
+    anchorRanges:
+    - hueMin: 0.57
+      hueMax: 0.64
+      saturationMin: 0.45
+      saturationMax: 0.9
+      valueMin: 0.35
+      valueMax: 0.8
+    skinRanges:
+    - hueMin: 0
+      hueMax: 1
+      saturationMin: 0.18
+      saturationMax: 0.55
+      valueMin: 0.35
+      valueMax: 0.95
+    eyeRanges:
+    - hueMin: 0
+      hueMax: 1
+      saturationMin: 0.12
+      saturationMax: 0.75
+      valueMin: 0.18
+      valueMax: 0.85
+    primaryRanges:
+    - hueMin: 0.57
+      hueMax: 0.64
+      saturationMin: 0.35
+      saturationMax: 0.85
+      valueMin: 0.3
+      valueMax: 0.8
+    secondaryRanges:
+    - hueMin: 0
+      hueMax: 1
+      saturationMin: 0.45
+      saturationMax: 0.9
+      valueMin: 0.55
+      valueMax: 1
+    harmonySlots: []
+    elementOverrides: []
+  optionPoolRules:
+  - elements: -1
+    allowedOptions: []
+    equipChance: 0.5
+    includeCatalogueOptionsOfMatchingType: 1
+  colourRules:
+  - label: Skin
+    elements: 1
+    target: 3
+    channelId: 
+    specificOptions: []
+    ranges:
+    - hueMin: 0
+      hueMax: 1
+      saturationMin: 0.18
+      saturationMax: 0.55
+      valueMin: 0.35
+      valueMax: 0.95
+    useHarmonyOffset: 0
+    harmonySlot: 0
+    weight: 1
+  - label: Gear - Primary
+    elements: 384
+    target: 0
+    channelId: 
+    specificOptions: []
+    ranges:
+    - hueMin: 0
+      hueMax: 1
+      saturationMin: 0.05
+      saturationMax: 0.9
+      valueMin: 0.05
+      valueMax: 0.95
+    useHarmonyOffset: 0
+    harmonySlot: 0
+    weight: 1
+  - label: Gear - Secondary
+    elements: 384
+    target: 1
+    channelId: secondary
+    specificOptions: []
+    ranges:
+    - hueMin: 0
+      hueMax: 1
+      saturationMin: 0.05
+      saturationMax: 0.9
+      valueMin: 0.05
+      valueMax: 0.95
+    useHarmonyOffset: 0
+    harmonySlot: 0
+    weight: 1
+  - label: Eyes
+    elements: 2
+    target: 2
+    channelId: 
+    specificOptions: []
+    ranges:
+    - hueMin: 0
+      hueMax: 1
+      saturationMin: 0.6
+      saturationMax: 0.95
+      valueMin: 0.05
+      valueMax: 0.95
+    useHarmonyOffset: 0
+    harmonySlot: 0
+    weight: 1
+  - label: Wearables - Primary
+    elements: 116
+    target: 0
+    channelId: 
+    specificOptions: []
+    ranges:
+    - hueMin: 0
+      hueMax: 1
+      saturationMin: 0.45
+      saturationMax: 0.9
+      valueMin: 0.35
+      valueMax: 0.95
+    useHarmonyOffset: 0
+    harmonySlot: 0
+    weight: 1
+  - label: Wearables - Secondary
+    elements: 116
+    target: 1
+    channelId: secondary
+    specificOptions: []
+    ranges:
+    - hueMin: 0
+      hueMax: 1
+      saturationMin: 0.45
+      saturationMax: 0.9
+      valueMin: 0.35
+      valueMax: 0.95
+    useHarmonyOffset: 0
+    harmonySlot: 0
+    weight: 1
+  - label: Jacket - Primary
+    elements: 8
+    target: 0
+    channelId: 
+    specificOptions: []
+    ranges:
+    - hueMin: 0
+      hueMax: 1
+      saturationMin: 0.45
+      saturationMax: 0.9
+      valueMin: 0.35
+      valueMax: 0.95
+    useHarmonyOffset: 0
+    harmonySlot: 0
+    weight: 1
+  - label: Jacket - Secondary
+    elements: 8
+    target: 1
+    channelId: secondary
+    specificOptions: []
+    ranges:
+    - hueMin: 0
+      hueMax: 1
+      saturationMin: 0.45
+      saturationMax: 0.9
+      valueMin: 0.35
+      valueMax: 0.95
+    useHarmonyOffset: 0
+    harmonySlot: 0
+    weight: 1
+  useHarmonyFallback: 1
+  allowedHarmonyModes: 0000000001000000020000000300000004000000
+  colourVariance: 0.5
+  paletteVariation: 0.5

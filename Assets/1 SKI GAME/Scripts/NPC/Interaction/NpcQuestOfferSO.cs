@@ -35,6 +35,27 @@ public sealed class NpcQuestOfferSO : ScriptableObject
     [SerializeField, TextArea(2, 5)] private string turnInDialogue;
     [SerializeField, TextArea(2, 5)] private string replayDialogue;
 
+    [Header("Dialogue Sequences")]
+    [SerializeField] private NpcDialogueSequenceSO offerSequence;
+    [SerializeField] private NpcDialogueSequenceSO acceptedSequence;
+    [SerializeField] private NpcDialogueSequenceSO inProgressSequence;
+    [SerializeField] private NpcDialogueSequenceSO readyToTurnInSequence;
+    [SerializeField] private NpcDialogueSequenceSO completedSequence;
+    [SerializeField] private NpcDialogueSequenceSO replaySequence;
+    [SerializeField] private NpcDialogueSequenceSO failedSequence;
+    [SerializeField] private QuestDialogueProfileSO dialogueProfile;
+
+    [Header("Ambient Dialogue Topics")]
+    [SerializeField] private NpcDialogueBankSO ambientDialogueBankOverride;
+    [SerializeField] private string availableAmbientTopic;
+    [SerializeField] private string inProgressAmbientTopic;
+    [SerializeField] private string readyToTurnInAmbientTopic;
+    [SerializeField] private string completedAmbientTopic;
+    [SerializeField] private string replayAmbientTopic;
+    [SerializeField] private string blockedAmbientTopic;
+    [SerializeField, Min(0f)] private float ambientWeight = 1f;
+    [SerializeField, Min(0f)] private float ambientCooldown = 8f;
+
     [Header("Availability")]
     [SerializeField] private List<QuestDefinitionSO> requiredCompletedQuests = new();
     [SerializeField] private List<QuestDefinitionSO> blockedByCompletedQuests = new();
@@ -60,6 +81,23 @@ public sealed class NpcQuestOfferSO : ScriptableObject
     public string CompletedDialogue => completedDialogue;
     public string TurnInDialogue => turnInDialogue;
     public string ReplayDialogue => replayDialogue;
+    public NpcDialogueSequenceSO OfferSequence => offerSequence;
+    public NpcDialogueSequenceSO AcceptedSequence => acceptedSequence;
+    public NpcDialogueSequenceSO InProgressSequence => inProgressSequence;
+    public NpcDialogueSequenceSO ReadyToTurnInSequence => readyToTurnInSequence;
+    public NpcDialogueSequenceSO CompletedSequence => completedSequence;
+    public NpcDialogueSequenceSO ReplaySequence => replaySequence;
+    public NpcDialogueSequenceSO FailedSequence => failedSequence;
+    public QuestDialogueProfileSO DialogueProfile => dialogueProfile;
+    public NpcDialogueBankSO AmbientDialogueBankOverride => ambientDialogueBankOverride;
+    public string AvailableAmbientTopic => availableAmbientTopic;
+    public string InProgressAmbientTopic => inProgressAmbientTopic;
+    public string ReadyToTurnInAmbientTopic => readyToTurnInAmbientTopic;
+    public string CompletedAmbientTopic => completedAmbientTopic;
+    public string ReplayAmbientTopic => replayAmbientTopic;
+    public string BlockedAmbientTopic => blockedAmbientTopic;
+    public float AmbientWeight => ambientWeight;
+    public float AmbientCooldown => ambientCooldown;
     public IReadOnlyList<QuestDefinitionSO> RequiredCompletedQuests => requiredCompletedQuests;
     public IReadOnlyList<QuestDefinitionSO> BlockedByCompletedQuests => blockedByCompletedQuests;
     public bool ShowWhenAvailable => showWhenAvailable;

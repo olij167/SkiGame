@@ -44,6 +44,7 @@ namespace AssetInventory
         public long selectionSize;
 
         public int noTextBelow;
+        public bool LastClickAlt;
         public bool enlargeTiles;
         public bool centerTiles;
         public bool onlySingleSelection;
@@ -83,6 +84,7 @@ namespace AssetInventory
         private int _selectionMax;
         private int _lastSelectionTile;
         private List<AssetInfo> _allPackages;
+        private Dictionary<int, AssetInfo> _allPackagesDict;
         private Action _bulkHandler;
         private Rect _lastRect;
 
@@ -91,6 +93,10 @@ namespace AssetInventory
             packages = visiblePackages;
             _textGenerator = textGenerator;
             _allPackages = allPackages;
+            _allPackagesDict = allPackages?
+                .Where(asset => asset != null)
+                .GroupBy(asset => asset.AssetId)
+                .ToDictionary(group => group.Key, group => group.First());
             _bulkHandler = bulkHandler;
             _selection = new GUIContent[contents != null ? contents.Length : 0];
             MarkGridSelection(true);
@@ -153,6 +159,16 @@ namespace AssetInventory
             _leftOffset = centerTiles ? (actualWidth - tileSize * cells) / 2f : 0f;
             HandleContextMenuPreGrid(cells);
 
+            // Detect double-clicks during the mouse event before SelectionGrid consumes it.
+            // The callback must NOT be invoked during the layout phase (or mid-grid) since
+            // it can repaint, change selection, or open windows, which corrupts the
+            // GUILayout group stack of the surrounding scroll view (causing scroll resets
+            // on rapid clicks). Only left-button double-clicks count.
+            bool doubleClicked = Event.current.type == EventType.MouseDown
+                && Event.current.button == 0
+                && Event.current.clickCount > 1
+                && IsMouseOverGrid;
+
             GUILayout.BeginHorizontal();
             if (centerTiles) GUILayout.Space(_leftOffset);
             selectionTile = GUILayout.SelectionGrid(selectionTile, contents, cells, tileStyle);
@@ -171,15 +187,6 @@ namespace AssetInventory
             }
             GUILayout.EndHorizontal();
 
-            if (Event.current.type == EventType.Layout)
-            {
-                // handle double-clicks
-                if (Event.current.clickCount > 1)
-                {
-                    if (IsMouseOverGrid) OnDoubleClick?.Invoke(packages.ElementAt(selectionTile));
-                }
-            }
-
             // Post-grid context menu handling no longer needed; pre-grid handler covers it
 
             // Update keyboard focus state and grid layout info
@@ -188,6 +195,28 @@ namespace AssetInventory
 
             // Handle keyboard commands for navigation
             HandleKeyboardCommands();
+
+            // Fire double-click callback after all layout operations are complete.
+            // Deferred via EditorApplication.delayCall so it runs OUTSIDE the current
+            // OnGUI pass entirely. Otherwise the callback (which may open windows,
+            // load assets, or change selection state) can corrupt the GUILayout
+            // group stack of the surrounding scroll view, producing
+            // "Invalid GUILayout state" errors and scroll-position resets on
+            // rapid clicks.
+            if (doubleClicked && packages != null)
+            {
+                int count = packages.Count();
+                if (selectionTile >= 0 && selectionTile < count)
+                {
+                    AssetInfo clicked = packages.ElementAt(selectionTile);
+                    Action<AssetInfo> handler = OnDoubleClick;
+                    if (handler != null)
+                    {
+                        LastClickAlt = Event.current != null && Event.current.alt;
+                        EditorApplication.delayCall += () => handler(clicked);
+                    }
+                }
+            }
         }
 
         private int EnsureValidGridState()
@@ -659,7 +688,7 @@ namespace AssetInventory
             selectionSize = selectionItems.Sum(item => item.Size);
             selectionPackageCount = selectionItems.GroupBy(item => item.AssetId).Count();
             selectionItems.ForEach(info => info.CheckIfInProject());
-            Assets.ResolveParents(selectionItems, _allPackages);
+            Assets.ResolveParents(selectionItems, _allPackagesDict);
             _bulkHandler?.Invoke();
         }
 

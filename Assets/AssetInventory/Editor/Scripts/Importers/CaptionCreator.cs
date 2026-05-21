@@ -95,8 +95,9 @@ namespace AssetInventory
 
             int chunkSize = 1;
 
-            // Blip and LMStudio support batching
+            // Blip, Ollama and LMStudio all support batching
             if (AI.Config.aiBackend == 0) chunkSize = AI.Config.blipChunkSize;
+            if (AI.Config.aiBackend == 1) chunkSize = AI.Config.ollamaParallelRequests;
             if (AI.Config.aiBackend == 2) chunkSize = AI.Config.lmStudioParallelRequests;
 
             bool toolChainWorking = true;
@@ -124,7 +125,7 @@ namespace AssetInventory
 
                 await Task.Run(async () =>
                 {
-                    List<CaptionResult> captions = await CaptionImage(previewFiles);
+                    List<CaptionResult> captions = await CaptionImage(previewFiles, null, AI.Actions.CancellationToken);
                     if (captions != null && captions.Count > 0)
                     {
                         for (int j = 0; j < captions.Count; j++)
@@ -157,13 +158,13 @@ namespace AssetInventory
         /// <summary>
         /// Generates captions for a list of image files using the configured AI backend.
         /// </summary>
-        public static async Task<List<CaptionResult>> CaptionImage(List<string> filenames, string modelName = null)
+        public static async Task<List<CaptionResult>> CaptionImage(List<string> filenames, string modelName = null, System.Threading.CancellationToken cancellationToken = default)
         {
             // Prepare prompts for each file
             List<string> prompts = filenames.Select(PreparePrompt).ToList();
 
             // Use the Brain package's CaptionEngine
-            List<CaptionResult> brainResults = await CaptionEngine.CaptionImages(filenames, prompts, modelName);
+            List<CaptionResult> brainResults = await CaptionEngine.CaptionImages(filenames, prompts, modelName, null, cancellationToken);
 
             // Convert to Asset Inventory's CaptionResult format
             return brainResults?.Select(r => new CaptionResult {path = r.path, caption = r.caption}).ToList();

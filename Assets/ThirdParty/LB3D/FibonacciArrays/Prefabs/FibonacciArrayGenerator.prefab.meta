@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: e04c8ad67fdefdc4e83f83000d8f5e1f
+timeCreated: 1505275407
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 101245
+  packageName: 'Fibonacci Arrays [Optimal Spacing Script]'
+  packageVersion: 1.2.0
+  assetPath: Assets/ThirdParty/LB3D/FibonacciArrays/Prefabs/FibonacciArrayGenerator.prefab
+  uploadId: 395887

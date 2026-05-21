@@ -1,0 +1,3 @@
+{player}, {playerName}, {objectName}, {locationName}...
+Oh of course! How could I forget {newToken}! 
+lets also try... {fakeToken}

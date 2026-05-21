@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 39aacfc39e3540fda2736b577ec2a397
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {fileID: 2800000, guid: 8e8847a22d15ef848bb5900ebc08b595, type: 3}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 214714
+  packageName: RaycastPro
+  packageVersion: 1.1.5
+  assetPath: Assets/ThirdParty/Plugins/RaycastPro/Core/RaySensors/AlphaRay.cs
+  uploadId: 840452

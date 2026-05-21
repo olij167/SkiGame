@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f5e571b9a30dfd34babbffe3e80da66a
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 231462
+  packageName: Easy Array Modifier
+  packageVersion: 1.0
+  assetPath: Assets/ThirdParty/ArrayModifier/Materials/Mat1.mat
+  uploadId: 522576

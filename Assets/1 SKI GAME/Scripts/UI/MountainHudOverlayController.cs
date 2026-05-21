@@ -2722,13 +2722,16 @@ namespace SkiGame.Progression
 
             var cfg = skiPassManager.Config;
 
-            AddOrUpdatePassPanelEntry(
-                dst,
-                cfg.GetPassIdForLevel(skiPassManager.CurrentLevel),
-                skiPassManager.CurrentLevel,
-                skiPassManager.GetCurrentPassDisplayName(),
-                isCurrent: true,
-                isPermanent: skiPassManager.IsPassPermanentlyUnlocked(skiPassManager.CurrentLevel));
+            if (skiPassManager.CurrentLevel >= 0)
+            {
+                AddOrUpdatePassPanelEntry(
+                    dst,
+                    skiPassManager.GetCurrentPassId(),
+                    skiPassManager.CurrentLevel,
+                    skiPassManager.GetCurrentPassDisplayName(),
+                    isCurrent: true,
+                    isPermanent: skiPassManager.IsPassPermanentlyUnlocked(skiPassManager.CurrentLevel));
+            }
 
             var profile = Profile;
             if (profile != null && profile.permanentlyUnlockedPassLevels != null)

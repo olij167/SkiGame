@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 8a15e340d761cf54a971a1912ac39def
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {fileID: 2800000, guid: d29eacca1c4d52a469916c682d1b812d, type: 3}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 214714
+  packageName: RaycastPro
+  packageVersion: 1.1.5
+  assetPath: Assets/ThirdParty/Plugins/RaycastPro/Core/RaySensors/NavMeshRay.cs
+  uploadId: 840452

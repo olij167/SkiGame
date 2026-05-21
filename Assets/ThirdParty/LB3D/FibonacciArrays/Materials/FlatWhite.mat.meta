@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 413ed3d84e0a0ae4e97f4622d0181bce
+timeCreated: 1506124201
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 101245
+  packageName: 'Fibonacci Arrays [Optimal Spacing Script]'
+  packageVersion: 1.2.0
+  assetPath: Assets/ThirdParty/LB3D/FibonacciArrays/Materials/FlatWhite.mat
+  uploadId: 395887

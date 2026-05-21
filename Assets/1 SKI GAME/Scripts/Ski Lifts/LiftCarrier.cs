@@ -16,7 +16,7 @@ public class LiftCarrier : MonoBehaviour
 
     public bool CanAttach(LiftRider rider)
     {
-        if (!rider || riders.Contains(rider))
+        if (!rider || attachPoint == null || riders.Contains(rider))
             return false;
 
         // For chairs, you may want a maximum seat count
@@ -28,7 +28,7 @@ public class LiftCarrier : MonoBehaviour
         return dist <= attachRadius;
     }
 
-    public bool AttachRider(LiftRider rider)
+    public bool AttachRider(LiftRider rider, LiftBoardGate sourceGate = null)
     {
         if (!CanAttach(rider))
             return false;
@@ -41,16 +41,35 @@ public class LiftCarrier : MonoBehaviour
 
         // --- Ski Pass gate (authoritative) ---
         var passMgr = SkiPassManager.Instance;
-        if (passMgr != null && line != null)
+        bool raisedAccessResult = false;
+        bool playerControlled = rider != null && rider.IsPlayerControlled();
+        if (playerControlled && passMgr != null && line != null)
         {
             if (!passMgr.CanUseLift(line))
             {
                 string requiredName = line.GetRequiredPassDisplayName();
                 LiftAccessPopupBus.RaiseDenied(requiredName);
+                LiftAccessResultBus.Raise(LiftAccessResultUtility.Build(
+                    rider,
+                    sourceGate,
+                    this,
+                    line,
+                    false,
+                    LiftAccessResultUtility.DetermineDeniedReason(passMgr, line),
+                    LiftAccessResultPhase.AccessChecked));
                 return false;
             }
 
             LiftAccessPopupBus.RaiseAllowed(passMgr.GetCurrentPassDisplayName());
+            LiftAccessResultBus.Raise(LiftAccessResultUtility.Build(
+                rider,
+                sourceGate,
+                this,
+                line,
+                true,
+                LiftAccessResultReason.Allowed,
+                sourceGate != null ? LiftAccessResultPhase.CarrierAttached : LiftAccessResultPhase.DirectCarrierAttach));
+            raisedAccessResult = true;
         }
 
         riders.Add(rider);
@@ -59,6 +78,18 @@ public class LiftCarrier : MonoBehaviour
             rider.ConsumeBoardAuthorization(line);
 
         rider.OnAttachedToCarrier(this);
+        if (!raisedAccessResult)
+        {
+            LiftAccessResultBus.Raise(LiftAccessResultUtility.Build(
+                rider,
+                sourceGate,
+                this,
+                line,
+                true,
+                LiftAccessResultReason.Allowed,
+                sourceGate != null ? LiftAccessResultPhase.CarrierAttached : LiftAccessResultPhase.DirectCarrierAttach));
+        }
+
         return true;
     }
 
@@ -92,5 +123,21 @@ public class LiftCarrier : MonoBehaviour
             Gizmos.color = mode == LiftCarrierMode.Chair ? Color.cyan : Color.yellow;
             Gizmos.DrawWireSphere(attachPoint.position, attachRadius);
         }
+    }
+
+    private void OnValidate()
+    {
+        if (attachPoint == null)
+        {
+            Debug.LogWarning($"[{nameof(LiftCarrier)}] {name} has no attach point assigned.", this);
+            return;
+        }
+
+        if (!attachPoint.IsChildOf(transform))
+            Debug.LogWarning($"[{nameof(LiftCarrier)}] {name} attach point '{attachPoint.name}' is not under this carrier hierarchy.", this);
+
+        var hanger = GetComponentInChildren<LiftCarrierHanger>(true);
+        if (hanger != null && hanger.hanger != null && !attachPoint.IsChildOf(hanger.hanger))
+            Debug.LogWarning($"[{nameof(LiftCarrier)}] {name} attach point '{attachPoint.name}' is not under hanger '{hanger.hanger.name}'. This is allowed for custom rigs, but chair follow may look wrong.", this);
     }
 }

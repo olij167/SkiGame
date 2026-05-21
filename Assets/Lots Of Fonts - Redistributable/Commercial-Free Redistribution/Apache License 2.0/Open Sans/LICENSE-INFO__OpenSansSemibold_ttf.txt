@@ -1,0 +1,30 @@
+Font license audit note
+=======================
+Font file: OpenSansSemibold.ttf
+Original archive path: OpenSans/OpenSansSemibold.ttf
+Resolved zip entry: Lots of fonts/OpenSans/OpenSansSemibold.ttf
+Grouped family: Open Sans
+Internal family: Open Sans
+Full name: Open Sans Semibold
+Style: Semibold
+
+Audit status: Commercial-free use
+License basis: Apache License 2.0
+Recommendation: OK for commercial use
+Evidence: embedded metadata / bundled license / Google Fonts
+Source/local file from audit: local metadata; https://www.apache.org/licenses/LICENSE-2.0; https://fonts.google.com/faq
+Generic/official license URL used by builder: https://www.apache.org/licenses/LICENSE-2.0.txt
+
+Notes:
+Archive metadata/license indicates Apache 2.0; newer Google Fonts copies of some families may now be OFL.
+
+Embedded font metadata:
+- License description: Licensed under the Apache License, Version 2.0
+- License URL: http://www.apache.org/licenses/LICENSE-2.0
+- Copyright: Digitized data copyright © 2011, Google Corporation.
+
+Copied local license/readme files:
+- Lots Of Fonts - Redistributable/Commercial-Free Redistribution/Apache License 2.0/Open Sans/SOURCE_LICENSES/License!.txt
+- Lots Of Fonts - Redistributable/Commercial-Free Redistribution/Apache License 2.0/Open Sans/SOURCE_LICENSES/License!.txt.meta
+
+This file is generated from an audit manifest. It is not legal advice.

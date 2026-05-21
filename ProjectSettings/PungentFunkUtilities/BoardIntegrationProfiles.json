@@ -1,0 +1,98 @@
+{
+    "schemaVersion": 1,
+    "lastSavedUtc": "2026-05-12T10:35:20.9638801Z",
+    "profiles": [
+        {
+            "id": "default-authoring-import",
+            "displayName": "Default Authoring Import",
+            "description": "Explicitly import notes, utilities, tokens, documentation links, audit issues, help topics, and rich documents when their providers are installed.",
+            "sourceLabel": "Authoring Providers",
+            "sourceScopes": 1,
+            "refreshMode": 0,
+            "propagationDirection": 0,
+            "includedKinds": [
+                10,
+                50,
+                110,
+                100,
+                80,
+                60,
+                70,
+                90,
+                20,
+                40,
+                120
+            ],
+            "includedProviderIds": [],
+            "includedSourceTypeNames": [],
+            "excludedSourceTypeNames": [],
+            "explicitRootPaths": [],
+            "fieldMappings": [],
+            "relationMappings": [],
+            "groupMappings": [],
+            "updateExistingNodes": true,
+            "createMissingNodes": true,
+            "createProviderGroups": true,
+            "updateExistingEdges": true,
+            "createMissingEdges": true,
+            "updateExistingGroups": true,
+            "createMissingGroups": true,
+            "markStaleMissingSources": false,
+            "maxItemsPerRefresh": 80,
+            "nodeSpacingX": 280.0,
+            "nodeSpacingY": 150.0
+        },
+        {
+            "id": "71126fa4cd234efba1a900b99672a9a2",
+            "displayName": "Component Selection Import",
+            "description": "Preview selected GameObjects, Components, and explicit asset roots as board nodes, with SerializedObject reference fields as edges.",
+            "sourceLabel": "Unity Selection",
+            "sourceScopes": -1,
+            "refreshMode": 0,
+            "propagationDirection": 10,
+            "includedKinds": [],
+            "includedProviderIds": [],
+            "includedSourceTypeNames": [],
+            "excludedSourceTypeNames": [],
+            "explicitRootPaths": [],
+            "fieldMappings": [
+                {
+                    "enabled": true,
+                    "sourcePath": "brakeLeanStrength",
+                    "target": 50,
+                    "targetKey": "componentType",
+                    "fallbackValue": ""
+                }
+            ],
+            "relationMappings": [
+                {
+                    "enabled": true,
+                    "includeObjectReferenceFields": true,
+                    "sourcePropertyPathContains": "m_Material",
+                    "edgeTypeKey": "",
+                    "labelPrefix": "",
+                    "onlyWhenTargetIncluded": true
+                }
+            ],
+            "groupMappings": [
+                {
+                    "enabled": true,
+                    "groupBy": 30,
+                    "titlePrefix": "NPC Skier",
+                    "styleKey": "group"
+                }
+            ],
+            "updateExistingNodes": true,
+            "createMissingNodes": true,
+            "createProviderGroups": false,
+            "updateExistingEdges": true,
+            "createMissingEdges": true,
+            "updateExistingGroups": true,
+            "createMissingGroups": true,
+            "markStaleMissingSources": false,
+            "maxItemsPerRefresh": 80,
+            "nodeSpacingX": 280.0,
+            "nodeSpacingY": 150.0
+        }
+    ]
+}

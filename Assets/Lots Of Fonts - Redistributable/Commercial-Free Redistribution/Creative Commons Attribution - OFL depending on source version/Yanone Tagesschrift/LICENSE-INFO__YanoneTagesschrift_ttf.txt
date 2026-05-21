@@ -1,0 +1,29 @@
+Font license audit note
+=======================
+Font file: YanoneTagesschrift.ttf
+Original archive path: yanone-tagesschrift/YanoneTagesschrift.ttf
+Resolved zip entry: Lots of fonts/yanone-tagesschrift/YanoneTagesschrift.ttf
+Grouped family: Yanone Tagesschrift
+Internal family: Yanone Tagesschrift
+Full name: Yanone Tagesschrift
+Style: Regular
+
+Audit status: Commercial-free use
+License basis: Creative Commons Attribution / OFL depending on source version
+Recommendation: OK for commercial use
+Evidence: embedded metadata / 1001Fonts / source mirrors
+Source/local file from audit: https://www.1001fonts.com/yanone-tagesschrift-font.html
+Generic/official license URL used by builder: https://openfontlicense.org/open-font-license-official-text/
+
+Notes:
+Archive metadata says Creative Commons BY; later/open-source notices often identify OFL. Preserve attribution if using this archived file.
+
+Embedded font metadata:
+- License description: Creative Commons "By" License
+- License URL: http://creativecommons.org/licenses/by/2.0/de/
+- Copyright: Copyright (c) Yanone, 2005. All rights reserved.
+
+Copied local license/readme files:
+- None found near the original font file. Use the license URL/evidence above for manual verification.
+
+This file is generated from an audit manifest. It is not legal advice.

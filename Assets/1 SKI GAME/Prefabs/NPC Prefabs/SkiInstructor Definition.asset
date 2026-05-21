@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: SkiInstructor Definition
   m_EditorClassIdentifier: Assembly-CSharp::NpcCharacterDefinitionSO
   identityId: instructor
-  displayName: Coach Berry
+  displayName: Instructor Chad
   role: 2
   factionOrGroup: Ski School
   portrait: {fileID: 0}
   nameplateColor: {r: 0.1254902, g: 0.5647059, b: 0.8156863, a: 1}
-  defaultDialogueBank: {fileID: 11400000, guid: ca2af3ea00d6a7b4c8462412e66aa28d, type: 2}
+  defaultDialogueBank: {fileID: 11400000, guid: 481414fbc9a79164bb13a43546a66d39, type: 2}
   appearancePreset: {fileID: 11400000, guid: ba35e9809226a674c9b867aa6f3c32b6, type: 2}
   socialTags:
   - instructor

@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &1
+MonoBehaviour:
+  m_ObjectHideFlags: 53
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8ac79e6a56ef4240a974e5579213d60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PungentFunk.Utilities.Editor::PungentFunk.Utilities.Editor.Core.Help.PungentUtilityHelpAnnotationStorage
+  bookmarks:
+  - id: 68e2b8f3a31a44288d0ca075625e0763
+    topicStableId: utilities-browser/filters-search/filters-search
+    anchorId: quick-use
+    title: 'Bookmark: Quick use guide'
+    excerpt: Use Search for names, tags, categories, modules, menu paths, package
+      IDs, package names, docs, and descriptions. Toggle filter panels when you need
+      package state, favourites, history, or display settings.
+    createdUtc: 2026-05-11T01:31:59.7984562Z
+  - id: c93c022746b644ae96d64934e441388a
+    topicStableId: documentation-links/backlog/backlog
+    anchorId: quick-use
+    title: 'Bookmark: Quick use guide'
+    excerpt: Open, copy, restore, or remove archived versions from the backlog when
+      reviewing old references or rolling a link back.
+    createdUtc: 2026-05-11T01:32:23.2609927Z
+  - id: 7a32e475b1524dd3a0cc06d9dc8d5b64
+    topicStableId: documentation-links/backlog/backlog
+    anchorId: feature:remove-backlog
+    title: 'Bookmark: Remove archived version'
+    excerpt: Remove deletes the archived metadata entry for that old target.
+    createdUtc: 2026-05-11T01:33:24.0190388Z
+  - id: c3bd2d39cfdb4b0dbceca50b078f02df
+    topicStableId: documentation-links/selected-document-details/selected-document-details
+    anchorId: related
+    title: 'Bookmark: Related'
+    excerpt: Related topics, utilities, notes, and documentation links.
+    createdUtc: 2026-05-12T02:10:53.7781074Z

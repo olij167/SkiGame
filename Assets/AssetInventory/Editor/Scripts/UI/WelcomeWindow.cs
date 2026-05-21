@@ -65,7 +65,7 @@ namespace AssetInventory
             GUILayout.Space(6);
             if (GUILayout.Button("Join Community", GUILayout.Width(120), GUILayout.Height(30)))
             {
-                Application.OpenURL(AI.DISCORD_LINK);
+                AI.OpenURL(AI.DISCORD_LINK);
             }
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
@@ -111,7 +111,7 @@ namespace AssetInventory
                 }
             }
 
-            Application.OpenURL(AI.HOME_LINK);
+            AI.OpenURL(AI.HOME_LINK);
         }
     }
 }

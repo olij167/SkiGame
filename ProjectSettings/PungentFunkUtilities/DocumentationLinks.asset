@@ -1,0 +1,113 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &1
+MonoBehaviour:
+  m_ObjectHideFlags: 53
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 053db8bab0f32d1458976cdc48886feb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PungentFunk.Utilities.Editor::PungentFunk.Utilities.Editor.Core.PungentUtilityDocumentationLinks
+  _links:
+  - id: 6f16ca4c244a48129afe7cf55f638197
+    displayName: Design Bible
+    description: 
+    category: 
+    versionLabel: Current
+    assetGuid: ea5e1bc947230764a96082e9ad3b2833
+    externalPath: 
+    utilityIds:
+    - audio-catalog-coverage
+    updatedUtcTicks: 0
+    backlog: []
+    order: 0
+  - id: 22add3084da7418cad7e4f6293e65a00
+    displayName: Script Audit
+    description: 
+    category: 
+    versionLabel: Current
+    assetGuid: d7e987be2c1f44140bc4c20bce828e8d
+    externalPath: 
+    utilityIds: []
+    updatedUtcTicks: 639137412209952690
+    backlog:
+    - versionLabel: Current
+      assetGuid: e98ae009cb16ebc419a355a4f5511495
+      externalPath: 
+      notes: 
+      archivedUtcTicks: 639137412209952690
+    order: 1
+  - id: 28e6f562fa6e4e6da7240c0894084fbc
+    displayName: Feature Inventory
+    description: 
+    category: 
+    versionLabel: Current
+    assetGuid: ec85711f55870384b95f3d4be7e8666e
+    externalPath: 
+    utilityIds: []
+    updatedUtcTicks: 639137397528230660
+    backlog:
+    - versionLabel: Current
+      assetGuid: 07d2269ee20b1b64baf6702505dd2bb2
+      externalPath: 
+      notes: 
+      archivedUtcTicks: 639137397528210178
+    order: 2
+  - id: 590d681b2f9346c6a8268a9faf014d78
+    displayName: Feature Spreadsheet
+    description: 
+    category: 
+    versionLabel: Current
+    assetGuid: 7e297fa363fe4ad42bb1ec753f7abab9
+    externalPath: 
+    utilityIds: []
+    updatedUtcTicks: 639137412074587618
+    backlog:
+    - versionLabel: Current
+      assetGuid: 8757aac6b28b31d459262a298f5e0dec
+      externalPath: 
+      notes: 
+      archivedUtcTicks: 639137412074572295
+    order: 3
+  - id: f006e9f8fb2d4b88b4fc0629d41ba50e
+    displayName: Asset Placement Lab Documentation
+    description: 
+    category: Scene Tools
+    versionLabel: Current
+    assetGuid: 
+    externalPath: 
+    utilityIds: []
+    updatedUtcTicks: 0
+    backlog: []
+    order: 4
+  - id: 6e87af747cf241c093301685fe8fdd93
+    displayName: Documentation
+    description: 
+    category: 
+    versionLabel: Current
+    assetGuid: 
+    externalPath: https://pungentfunk.net
+    utilityIds: []
+    updatedUtcTicks: 639139202350701217
+    backlog:
+    - versionLabel: Current
+      assetGuid: 
+      externalPath: https://pungentfunk.net
+      notes: 
+      archivedUtcTicks: 639139202350686052
+    order: 5
+  - id: afd1f5a16a554a6ca8744b896a849627
+    displayName: Documentation
+    description: 
+    category: 
+    versionLabel: Current
+    assetGuid: 
+    externalPath: 
+    utilityIds: []
+    updatedUtcTicks: 0
+    backlog: []
+    order: 6

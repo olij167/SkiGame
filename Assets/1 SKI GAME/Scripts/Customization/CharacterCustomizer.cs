@@ -82,6 +82,7 @@ public class CharacterCustomizer : MonoBehaviour
     private Vector3 _leftEyeBaseSize;
     private Vector3 _rightEyeBaseSize;
     private Texture _currentSkinTexture;
+    private Sprite _currentEyeSpriteOverride;
 
     private GameObject _currentHatInstance;
     private GameObject _currentJacketInstance;
@@ -316,8 +317,11 @@ public class CharacterCustomizer : MonoBehaviour
         Texture eyeTexture = null;
 
         if (spriteOverride != null)
+            _currentEyeSpriteOverride = spriteOverride;
+
+        if (_currentEyeSpriteOverride != null)
         {
-            eyeTexture = spriteOverride.texture;
+            eyeTexture = _currentEyeSpriteOverride.texture;
         }
         else if (eyeOptions != null && eyeOptions.Length > 0)
         {
@@ -378,6 +382,10 @@ public class CharacterCustomizer : MonoBehaviour
     [ContextMenu("Randomise Eye Style")]
     public void SetRandomEyeStyle()
     {
+        _currentEyeSpriteOverride = null;
+        if (eyeOptions == null || eyeOptions.Length == 0)
+            return;
+
         selectedEyeOption = Random.Range(0, eyeOptions.Length);
         eyeColour = Random.ColorHSV(0f, 1f, 0.25f, 1f, 0.1f, .75f);
 
@@ -389,6 +397,7 @@ public class CharacterCustomizer : MonoBehaviour
         if (eyeOptions == null || eyeOptions.Length == 0)
             return;
 
+        _currentEyeSpriteOverride = null;
         selectedEyeOption = Mathf.Clamp(index, 0, eyeOptions.Length - 1);
         RefreshEyePresentation();
     }
@@ -998,7 +1007,8 @@ public class CharacterCustomizer : MonoBehaviour
         if (sprite == null)
             return;
 
-        RefreshEyePresentation(sprite);
+        _currentEyeSpriteOverride = sprite;
+        RefreshEyePresentation();
     }
 
     public void SetSkinPatternTexture(Texture tex)

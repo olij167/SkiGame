@@ -17,7 +17,7 @@ namespace AssetInventory
 {
     public static class AI
     {
-        public const string VERSION = "4.2.0";
+        public const string VERSION = "4.3.1";
         public const string DEFINE_SYMBOL = "ASSET_INVENTORY";
         public const string DEFINE_SYMBOL_OLLAMA = "BRAIN_OLLAMA";
         public const string DEFINE_SYMBOL_HIDE_AI = DEFINE_SYMBOL + "_HIDE_AI";
@@ -759,11 +759,32 @@ namespace AssetInventory
             SaveConfig();
         }
 
+        public static void OpenURL(string url)
+        {
+            if (Config.browserType == 1 && !string.IsNullOrWhiteSpace(Config.customBrowserPath))
+            {
+                try
+                {
+#if UNITY_EDITOR_OSX
+                    System.Diagnostics.Process.Start("open", $"-a \"{Config.customBrowserPath}\" \"{url}\"");
+#else
+                    System.Diagnostics.Process.Start(Config.customBrowserPath, url);
+#endif
+                    return;
+                }
+                catch (Exception e)
+                {
+                    UnityEngine.Debug.LogError($"Could not open URL with custom browser '{Config.customBrowserPath}': {e.Message}. Falling back to system default.");
+                }
+            }
+            Application.OpenURL(url);
+        }
+
         public static void OpenStoreURL(string url)
         {
             AskForAffiliate();
             if (Config.useAffiliateLinks) url += $"?{AFFILIATE_PARAM}";
-            Application.OpenURL(url);
+            OpenURL(url);
         }
 
         internal static void AskForAffiliate()
